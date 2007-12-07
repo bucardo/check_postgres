@@ -23,7 +23,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 3;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.0.15';
+our $VERSION = '1.0.16';
 
 use vars qw/ %opt $PSQL $res $COM $SQL /;
 
@@ -2169,7 +2169,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes check_postgres.pl version 1.0.15
+This documents describes check_postgres.pl version 1.0.16
 
 =head1 SYNOPSIS
 
@@ -2250,7 +2250,8 @@ Connection options can be grouped: --host=a,b --host=c --port=1234 --port=3344
 would connect to a-1234, b-1234, and c-3344. Note that once set, an option 
 carries over until it is changed again.
 
-Example1: 
+Examples:
+
   --host=a,b --port=5433 --db=c
   Connects twice to port 5433, using database c, to hosts a and b
   a-5433-c b-5433-c
@@ -2339,6 +2340,33 @@ critical is an effective way to turn warnings off and always give a critical.
 The current supported actions are:
 
 =over 4
+
+=item B<backends> (symlink: C<check_postgres_backends>)
+
+Checks the current number of connections for one or more databases, and optionally comparing it to the maximum 
+allowed, which is determined the the 'max_connections' setting. The warning and option can take one of three forms. 
+First, a simple number can be given, which represents the number of connections at which the alert will be given. 
+This choice does not use the max_connections setting. Second, the percentage of available connections can be given. 
+Third, a negative number can be given which represents the number of connections left until max_connections is 
+reached. The default values for warning and critical are '90%' and '95%'. This action also supports the use of the 
+include and exclude options to filter out specific databases: see the INCLUDES section below for more detail.
+
+Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 140.
+  check_postgres_backends --host=quirm --warning=120 --critical=150
+
+Example 2: Give a critical when we reach 75% of our max_connections setting on hosts lancre or lancre2.
+  check_postgres_backends --warning='75%' --critical='75%' --host=lancre,lancre2
+
+Example 2: Give a critical when we reach 75% of our max_connections setting on hosts lancre or lancre2.
+  check_postgres_backends --warning='75%' --critical='75%' --host=lancre,lancre2
+
+Example 3: Give a warning when there are only 10 more connection slots left on host plasmid, and a critical 
+when we have only 5 left.
+  check_postgres_backends --warning=-10 --critical=-5 --host=plasmid
+
+Example 4: Check all databases except those with "test" in their name, but allow ones that are named "pg_greatest". Connect as port 5432 on the first two hosts, and as port 5433 on the third one. We want to always throw a critical when we reach 30 or more connections.
+
+ check_postgres_backends --dbhost=hong,kong --dbhost=fooey --dbport=5432 --dbport=5433 --warning=30 --critical=30 --exclude="~test" --include="pg_greatest,~prod"
 
 =item B<bloat> (symlink: C<check_postgres_bloat>)
 
@@ -2498,34 +2526,6 @@ the logfile either works (OK) or does not (CRITICAL).
 
 Example 1: On port 5432, ensure the logfile is being written to the file /home/greg/pg8.2.log
   check_postgres_logfile --port=5432 --logfile=/home/greg/pg8.2.log
-
-=item B<backends> (symlink: C<check_postgres_backends>)
-
-Checks the current number of connections for one or more databases, and optionally comparing it to the maximum 
-allowed, which is determined the the 'max_connections' setting. The warning and option can take one of three forms. 
-First, a simple number can be given, which represents the number of connections at which the alert will be given. 
-This choice does not use the max_connections setting. Second, the percentage of available connections can be given. 
-Third, a negative number can be given which represents the number of connections left until max_connections is 
-reached. The default values for warning and critical are '90%' and '95%'. This action also supports the use of the 
-include and exclude options to filter out specific databases: see the INCLUDES section below for more detail.
-
-Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 140.
-  check_postgres_backends --host=quirm --warning=120 --critical=150
-
-Example 2: Give a critical when we reach 75% of our max_connections setting on hosts lancre or lancre2.
-  check_postgres_backends --warning='75%' --critical='75%' --host=lancre,lancre2
-
-Example 2: Give a critical when we reach 75% of our max_connections setting on hosts lancre or lancre2.
-  check_postgres_backends --warning='75%' --critical='75%' --host=lancre,lancre2
-
-Example 3: Give a warning when there are only 10 more connection slots left on host plasmid, and a critical 
-when we have only 5 left.
-  check_postgres_backends --warning=-10 --critical=-5 --host=plasmid
-
-Example 4: Check all databases except those with "test" in their name, but allow ones that are named "pg_greatest". Connect as port 5432 on the first two hosts, and as port 5433 on the third one. We want to always throw a critical when we reach 30 or more connections.
-
- check_postgres_backends --dbhost=hong,kong --dbhost=fooey --dbport=5432 --dbport=5433 --warning=30 --critical=30 --exclude="~test" --include="pg_greatest,~prod"
-
 
 =item B<query_runtime> (symlink: C<check_postgres_query_runtime>)
 
