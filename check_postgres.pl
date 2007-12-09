@@ -253,8 +253,8 @@ my $checksumre = qr{^[a-f0-9]{32}$};
 
 ## If in test mode, verify that we can run each requested action
 my %testaction = (
-				  last_vacuum   => 'ON: stats_row_level',
-				  last_analyze  => 'ON: stats_row_level',
+				  last_vacuum   => 'ON: stats_row_level VERSION: 8.2',
+				  last_analyze  => 'ON: stats_row_level VERSION: 8.2',
 				  database_size => 'VERSION: 8.1',
 				  relation_size => 'VERSION: 8.1',
 				  table_size    => 'VERSION: 8.1',
