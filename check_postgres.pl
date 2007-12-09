@@ -23,7 +23,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 3;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.0.16';
+our $VERSION = '1.0.17';
 
 use vars qw/ %opt $PSQL $res $COM $SQL /;
 
@@ -2169,7 +2169,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes check_postgres.pl version 1.0.16
+This documents describes check_postgres.pl version 1.0.17
 
 =head1 SYNOPSIS
 
@@ -2477,11 +2477,12 @@ Example 2: Warn if the table products is over 4 GB in size, and give a critical 
 =item B<last_vacuum> (symlink: C<check_postgres_last_vacuum>)
 
 Checks how long it has been since vacuum (or analyze) was last run on each table in one or more databases. This requires 
-that stats_rows_level is enabled. Tables can be excluded and included: see the INCLUDE section below for details. The 
-units for --warning and --critical are times. Valid units are seconds, minutes, hours, and days; all can be abbreviated 
-to the first letter. If no units are given, 'seconds' is assumed. The default values are '1 day' and '2 days'.
-Please note that there are cases in which this field does not get automatically populated. If certain tables are 
-giving you problems, make sure that they have dead rows to vacuum, or just exclude them from the test.
+that stats_rows_level is enabled, and the target database must be version 8.2 or higher. Tables can be excluded and 
+included: see the INCLUDE section below for details. The units for --warning and --critical are times. Valid units are 
+seconds, minutes, hours, and days; all can be abbreviated to the first letter. If no units are given, 'seconds' is assumed. 
+The default values are '1 day' and '2 days'. Please note that there are cases in which this field does not get 
+automatically populated. If certain tables are giving you problems, make sure that they have dead rows to vacuum, 
+or just exclude them from the test.
 
 Example 1: Warn if any table has not been vacuumed in 3 days, and give a critical at a week, for host wormwood
   check_last_vacuum --host=wormwood --warning='3d' --critical='7d'
