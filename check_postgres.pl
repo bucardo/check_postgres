@@ -2702,6 +2702,20 @@ Some actions require access to external programs. If psql is not explicitly spec
 Development happens using the git system. You can clone the latest version by doing:
  git-clone http://bucardo.org/nagios_postgres.git
 
+=head1 HISTORY
+
+=over 4
+
+=item B<Version 1.0.17>
+
+Actions 'last_vacuum' and 'last_analyze' are 8.2 only (Robert Treat)
+
+=item B<Version 1.0.16>
+
+First public release, December 2007
+
+=back
+
 =head1 BUGS AND LIMITATIONS
 
 The 'logfile' action does not know how to handle a log_destination of 'syslog' yet.
