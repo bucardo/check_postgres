@@ -242,7 +242,7 @@ $opt{defaultdb} = $psql_version >= 7.4 ? 'postgres' : 'template1';
 ## For options that take a size e.g. --critical="10 GB"
 my $sizere = qr{^\s*(\d+\.?\d?)\s*([bkmgtpz])?\w*$}i; ## Don't care about the rest of the string
 
-## For options that take a time e.g. --critical="10 minutes"
+## For options that take a time e.g. --critical="10 minutes" Fractions are allowed.
 my $timere = qr{^\s*(\d+(?:\.\d+)?)\s*(\w*)\s*$}i;
 
 ## For options that must be specified in seconds
@@ -719,11 +719,16 @@ sub size_in_seconds {
 
 	my ($string,$type) = @_;
 
+	return '' if ! length $string;
 	if ($string !~ $timere) {
-		ndie "Value for '$type' must be a valid time\n";
+		my $l = substr($type,0,1);
+		ndie qq{Value for '$type' must be a valid time. Examples: -$l 1s  -$l "10 minutes"\n};
 	}
 	my ($val,$unit) = ($1,lc substr($2||'s',0,1));
-	return $val * ($unit eq 's' ? 1 : $unit eq 'm' ? 60 : $unit eq 'h' ? 3600 : 86600);
+	my $tempval = sprintf "%.9f", $val * ($unit eq 's' ? 1 : $unit eq 'm' ? 60 : $unit eq 'h' ? 3600 : 86600);
+	$tempval =~ s/0+$//;
+	$tempval = int $tempval if $tempval =~ /\.$/;
+	return $tempval;
 
 } ## end of size_in_seconds
 
@@ -785,26 +790,36 @@ sub validate_range {
 	my $type = $arg->{type} or ndie qq{validate_range must be provided a 'type'\n};
 
 	## The 'default default' is an empty string, which should fail all mandatory tests
-	my $warning  = exists $opt{warning}  ? $opt{warning}  : $arg->{default_warning}  || '';
-	my $critical = exists $opt{critical} ? $opt{critical} : $arg->{default_critical} || '';
+	## We only set the 'arg' default if neither option is provided.
+	my $warning  = exists $opt{warning}  ? $opt{warning}  :
+		exists $opt{critical} ? '' : $arg->{default_warning}  || '';
+	my $critical = exists $opt{critical} ? $opt{critical} : 
+		exists $opt{warning} ? '' : $arg->{default_critical} || '';
 
 	if ('seconds' eq $type) {
-		if ($warning !~ $timesecre) {
-			ndie qq{Invalid argument to 'warning' option: must be number of seconds\n};
+		if (length $warning) {
+			if ($warning !~ $timesecre) {
+				ndie qq{Invalid argument to 'warning' option: must be number of seconds\n};
+			}
+			$warning = $1;
 		}
-		$warning = $1;
-		if ($critical !~ $timesecre) {
-			ndie qq{Invalid argument to 'critical' option: must be number of seconds\n};
-		}
-		$critical = $1;
-		if ($warning > $critical) {
-			ndie qq{The 'warning' option ($warning s) cannot be larger than the 'critical' option ($critical s)\n};
+		if (length $critical) {
+			if ($critical !~ $timesecre) {
+				ndie qq{Invalid argument to 'critical' option: must be number of seconds\n};
+			}
+			$critical = $1;
+			if (length $warning and $warning > $critical) {
+				ndie qq{The 'warning' option ($warning s) cannot be larger than the 'critical' option ($critical s)\n};
+			}
 		}
 	}
 	elsif ('time' eq $type) {
 		$critical = size_in_seconds($critical, 'critical');
 		$warning = size_in_seconds($warning, 'warning');
-		if ($warning > $critical) {
+		if (! length $critical and ! length $warning) {
+			ndie qq{Must provide a warning and/or critical time\n};
+		}
+		if (length $warning and length $critical and $warning > $critical) {
 			ndie qq{The 'warning' option ($warning s) cannot be larger than the 'critical' option ($critical s)\n};
 		}
 	}
@@ -822,16 +837,23 @@ sub validate_range {
 		}
 	}
 	elsif ('size' eq $type) {
-		if ($critical !~ $sizere) {
-			ndie "Invalid size for 'critical' option\n";
+		if (length $critical) {
+			if ($critical !~ $sizere) {
+				ndie "Invalid size for 'critical' option\n";
+			}
+			$critical = size_in_bytes($1,$2);
 		}
-		$critical = size_in_bytes($1,$2);
-		if ($warning !~ $sizere) {
-			ndie "Invalid size for 'warning' option\n";
+		if (length $warning) {
+			if ($warning !~ $sizere) {
+				ndie "Invalid size for 'warning' option\n";
+			}
+			$warning = size_in_bytes($1,$2);
+			if (length $critical and $warning > $critical) {
+				ndie qq{The 'warning' option ($warning bytes) cannot be larger than the 'critical' option ($critical bytes)\n};
+			}
 		}
-		$warning = size_in_bytes($1,$2);
-		if ($warning > $critical) {
-			ndie qq{The 'warning' option ($warning bytes) cannot be larger than the 'critical' option ($critical bytes)\n};
+		elsif (!length $critical) {
+			ndie qq{Must provide a warning and/or critical size\n};
 		}
 	}
 	elsif ($type =~ /integer/) {
@@ -850,7 +872,7 @@ sub validate_range {
 		}
 	}
 	elsif ('restringex' eq $type) {
-		if (!length $critical and !length $warning) {
+		if (! length $critical and ! length $warning) {
 			ndie qq{Must provide a 'warning' or 'critical' option\n};
 		}
 		if (length $critical and length $warning) {
@@ -887,7 +909,7 @@ sub validate_range {
 	}
 
 	if ($arg->{both}) {
-		if (!length $warning or !length $critical) {
+		if (! length $warning or ! length $critical) {
 			ndie qq{Must provide both 'warning' and 'critical' options\n};
 		}
 	}
@@ -895,7 +917,7 @@ sub validate_range {
 		if (length $warning and length $critical) {
 			ndie qq{Can only provide 'warning' OR 'critical' option\n};
 		}
-		if (!length $warning and !length $critical) {
+		if (! length $warning and ! length $critical) {
 			ndie qq{Must provide either 'critical' or 'warning' option\n};
 		}
 	}
@@ -1135,10 +1157,10 @@ sub check_database_size {
 		for (sort {$s{$b}[0] <=> $s{$a}[0] or $a cmp $b } keys %s) {
 			$msg .= "$_: $s{$_}[0] ($s{$_}[1]) ";
 		}
-		if ($max >= $critical) {
+		if (length $critical and $max >= $critical) {
 			push @{$critical{$Header}} => $msg;
 		}
-		elsif ($max >= $warning) {
+		elsif (length $warning and $max >= $warning) {
 			push @{$warning{$Header}} => $msg;
 		}
 		else {
@@ -1301,7 +1323,7 @@ sub check_disk_space {
 
 sub check_relation_size {
 
-	my $relkind = shift || 'Relation';
+	my $relkind = shift || 'relation';
 
 	## Check the size of one or more relations
 	## By default, checks all relations
@@ -1317,7 +1339,7 @@ sub check_relation_size {
 
 	$SQL = q{SELECT pg_relation_size(oid), pg_size_pretty(pg_relation_size(oid)), relkind, relname };
 	$SQL .= sprintf 'FROM pg_class WHERE relkind = %s',
-		$relkind eq 'Table' ? q{'r'} : $relkind eq 'Index' ? q{'i'} : q{'r' OR relkind = 'i'};
+		$relkind eq 'table' ? q{'r'} : $relkind eq 'index' ? q{'i'} : q{'r' OR relkind = 'i'};
 
 	my $info = run_command($SQL);
 
@@ -1344,8 +1366,8 @@ sub check_relation_size {
 			next;
 		}
 
-		my $msg = sprintf qq{largest %s is "$nmax": $pmax},
-			$kmax eq 'r' ? 'table' : 'index';
+		my $msg = sprintf qq{largest %s is %s"$nmax": $pmax},
+			$relkind, $relkind eq 'relation' ? ($kmax eq 'r' ? 'table ' : 'index ') : '';
 		if ($max >= $critical) {
 			push @{$critical{$Header}} => $msg;
 		}
@@ -1360,10 +1382,10 @@ sub check_relation_size {
 
 } ## end of check_relations_size
 sub check_table_size {
-	return check_relation_size('Table');
+	return check_relation_size('table');
 }
 sub check_index_size {
-	return check_relation_size('Index');
+	return check_relation_size('index');
 }
 
 
@@ -1514,7 +1536,7 @@ sub check_locks {
 		$err{$name} = $val;
 	}
 	if (! keys %err and $critical !~ /^\d+$/) {
-		ndie qq{Invalid 'critical' option\n};
+		ndie qq{Invalid 'critical' option: must be number of locks, or "type1=#;type2=#"\n};
 	}
 
 	my %warn;
@@ -1524,7 +1546,7 @@ sub check_locks {
 		$warn{$name} = $val;
 	}
 	if (! keys %warn and $warning !~ /^\d+$/) {
-		ndie qq{Invalid 'warning' option\n};
+		ndie qq{Invalid 'warning' option: must be number of locks, or "type1=#;type2=#"\n};
 	}
 
 	$SQL = q{SELECT granted, mode, datname FROM pg_locks l JOIN pg_database d ON (d.oid=l.database)};
@@ -1643,7 +1665,7 @@ sub check_logfile {
 			next;
 		}
 
-		if ($db->{slurp} !~ /^\s*(\w+)\n\s*(.+?)\n\s*(.+?)\n\s*(\w+)/sm) {
+		if ($db->{slurp} !~ /^\s*(\w+)\n\s*(.+?)\n\s*(.+?)\n\s*(\w*)/sm) {
 			push @{$unknown{$Header}} => qq{invalid info: $db->{slurp}};
 			next;
 		}
@@ -1864,10 +1886,10 @@ sub check_query_runtime {
 		my $totalseconds = $1 / 1000.0;
 
 		my $msg = qq{query runtime: $totalseconds seconds};
-		if ($totalseconds >= $critical) {
+		if (length $critical and $totalseconds >= $critical) {
 			push @{$critical{$Header}} => $msg;
 		}
-		elsif ($totalseconds >= $warning) {
+		elsif (length $warning and $totalseconds >= $warning) {
 			push @{$warning{$Header}} => $msg;
 		}
 		else {
@@ -2044,10 +2066,10 @@ sub check_timesync {
 		my $localpretty = sprintf '%d-%02d-%02d %02d:%02d:%02d', $l[5]+1900, $l[4], $l[3],$l[2],$l[1],$l[0];
 		my $msg = qq{timediff=$diff DB=$pgpretty Local=$localpretty};
 
-		if ($diff >= $critical) {
+		if (length $critical and $diff >= $critical) {
 			push @{$critical{$Header}} => $msg;
 		}
-		elsif ($diff >= $warning and $warning) { ## Special exception for --warning=0
+		elsif (length $warning and $diff >= $warning) {
 			push @{$warning{$Header}} => $msg;
 		}
 		else {
@@ -2112,11 +2134,11 @@ sub check_version {
 
 	## Compare version with what we think it should be
 	## Warning and critical are the major and minor (e.g. 8.3)
-	## or the major, minor, and revision (e.g. 8.2.4)
+	## or the major, minor, and revision (e.g. 8.2.4 or even 8.3beta4)
 
 	my ($warning, $critical) = validate_range({type => 'version'});
 
-	my ($warnfull, $critfull) = (($warning =~ /\.\d+\./ ? 1 : 0),($critical =~ /\.\d+\./ ? 1 : 0));
+	my ($warnfull, $critfull) = (($warning =~ /^\d+\.\d+$/ ? 0 : 1),($critical =~ /^\d+\.\d+$/ ? 0 : 1));
 	my $info = run_command('SELECT version()');
 
 	for my $db (@{$info->{db}}) {
@@ -2582,15 +2604,14 @@ Example 2: Make sure no settings have changed and warn if so, using the checksum
 =item B<timesync> (symlink: C<check_postgres_timesync>)
 
 Compares the local system time with the time reported by one or more databases. The warning and critical options represent 
-the number of seconds at which the warning or critical should be given. If either is not specified, the default values 
-are used, which are '2' and '5'. The warning cannot be greater than the critical. Due to the non-exact nature of this tests, 
-a value of '0' or '1' is not recommended. However, a warning of '0' is ignored in order to 'turn off' warning and 
-make this a critical-only check.
+the number of seconds at which the warning or critical should be given. If neither is specified, the default values 
+are used, which are '2' and '5'. The warning cannot be greater than the critical. Due to the non-exact nature of this 
+test, a value of '0' or '1' is not recommended.
 
 The string returned shows the time difference as well as the time on each side written out.
 
 Example 1: Check that databases on hosts ankh, morpork, and klatch are no more than 3 seconds off from the local time:
-  check_postgres_timesync --host=ankh,morpork.klatch --critical=3 --warning=0
+  check_postgres_timesync --host=ankh,morpork.klatch --critical=3
 
 =item B<txn_wraparound> (symlink: C<check_postgres_txn_wraparound>)
 
@@ -2707,6 +2728,16 @@ Development happens using the git system. You can clone the latest version by do
 =over 4
 
 =item B<Version 1.0.17>
+
+Allow for a single warning or error to the 'timesync' action.
+
+Allow for exact matching of beta versions with 'version' action.
+
+Redo the default arguments to only populate when neither 'warning' nor 'critical' is provided.
+
+Allow just warning OR critical to be given for the 'timesync' action.
+
+Remove 'redirect_stderr' requirement from 'logfile' due to 8.3 changes.
 
 Actions 'last_vacuum' and 'last_analyze' are 8.2 only (Robert Treat)
 
