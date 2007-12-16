@@ -58,9 +58,6 @@ my $YELLNAME = 1;
 ## please email the author as it probably indicates something 
 ## that could be made into a command-line option or moved above.
 
-## Ye olde Nagios exit codes
-my ($OK,$WARNING,$CRITICAL,$UNKNOWN) = (0,1,2,3);
-
 ## Messages are stored in these until the final output via finishup()
 my (%ok, %warning, %critical, %unknown);
 
@@ -206,23 +203,19 @@ if ($opt{showtime}) {
 		import Time::HiRes qw/gettimeofday tv_interval sleep/;
 	};
 	if ($@) {
-		die "Cannot find Time::HiRes, needed if 'showtime' is true\n";
+		die q{Cannot find Time::HiRes, needed if 'showtime' is true\n};
 	}
 }
 
 ## Build symlinked copies of this file
 build_symlinks() if $action =~ /^build_symlinks/; ## Does not return, may be 'build_symlinks_force'
 
-## XXXX GREG
-$opt{port} = [5830];
-$opt{dbuser} = ['greg'];
-
 ## We don't (usually) want to die, but want a graceful Nagios-like exit instead
 sub ndie {
 	my $msg = shift;
 	chomp $msg;
 	print "ERROR: $msg\n";
-	exit $UNKNOWN;
+	exit 4;
 }
 
 ## Everything from here on out needs psql, so find and verify a working version:
@@ -250,7 +243,7 @@ $opt{defaultdb} = $psql_version >= 7.4 ? 'postgres' : 'template1';
 
 ## Standard messages. Use these whenever possible when building actions.
 
-my %template = 
+my %template =
 	(
 	 'T-EXCLUDE-DB'    => 'No matching databases found due to exclusion/inclusion options',
 	 'T-EXCLUDE-FS'    => 'No matching file systems found due to exclusion/inclusion options',
@@ -309,7 +302,7 @@ sub finishup {
 		if ($opt{showperf}) {
 			print '| ';
 			for (sort keys %$type) {
-				printf "%s ", join $SEP => map { $_->[1] } @{$type->{$_}};
+				printf '%s ', join $SEP => map { $_->[1] } @{$type->{$_}};
 			}
 		}
 		print "\n";
@@ -318,22 +311,22 @@ sub finishup {
 	if (keys %critical) {
 		print 'CRITICAL: ';
 		dumpresult(\%critical);
-		exit $CRITICAL;
+		exit 2;
 	}
 	if (keys %warning) {
 		print 'WARNING: ';
 		dumpresult(\%warning);
-		exit $WARNING;
+		exit 1;
 	}
 	if (keys %ok) {
 		print 'OK: ';
 		dumpresult(\%ok);
-		exit $OK;
+		exit 0;
 	}
 	if (keys %unknown) {
 		print 'UNKNOWN: ';
 		dumpresult(\%unknown);
-		exit $UNKNOWN;
+		exit 4;
 	}
 
 	die $USAGE;
@@ -703,7 +696,7 @@ sub run_command {
 				ndie qq{Command timed out! Consider boosting --timeout higher than $timeout\n};
 			}
 			else {
-				ndie qq{Unknown error inside of the "run_command" function};
+				ndie q{Unknown error inside of the "run_command" function};
 			}
 		}
 
@@ -781,7 +774,7 @@ sub size_in_seconds {
 		ndie qq{Value for '$type' must be a valid time. Examples: -$l 1s  -$l "10 minutes"\n};
 	}
 	my ($val,$unit) = ($1,lc substr($2||'s',0,1));
-	my $tempval = sprintf "%.9f", $val * ($unit eq 's' ? 1 : $unit eq 'm' ? 60 : $unit eq 'h' ? 3600 : 86600);
+	my $tempval = sprintf '%.9f', $val * ($unit eq 's' ? 1 : $unit eq 'm' ? 60 : $unit eq 'h' ? 3600 : 86600);
 	$tempval =~ s/0+$//;
 	$tempval = int $tempval if $tempval =~ /\.$/;
 	return $tempval;
@@ -849,7 +842,7 @@ sub validate_range {
 	## We only set the 'arg' default if neither option is provided.
 	my $warning  = exists $opt{warning}  ? $opt{warning}  :
 		exists $opt{critical} ? '' : $arg->{default_warning}  || '';
-	my $critical = exists $opt{critical} ? $opt{critical} : 
+	my $critical = exists $opt{critical} ? $opt{critical} :
 		exists $opt{warning} ? '' : $arg->{default_critical} || '';
 
 	if ('seconds' eq $type) {
@@ -1586,8 +1579,7 @@ sub check_last_vacuum_analyze {
 	$SQL = q{SELECT nspname, relname, CASE WHEN v IS NULL THEN -1 ELSE round(extract(epoch FROM now()-v)) END, }
 		   .qq{ CASE WHEN v IS NULL THEN '?' ELSE TO_CHAR(v, '$SHOWTIME') END FROM (}
 		   .qq{SELECT nspname, relname, pg_stat_get_last_${type}_time(c.oid) AS v FROM pg_class c, pg_namespace n }
-		   .qq{WHERE relkind = 'r' AND n.oid = c.relnamespace }
-		   .q{ORDER BY 2) AS foo};
+		   .q{WHERE relkind = 'r' AND n.oid = c.relnamespace ORDER BY 2) AS foo};
 	if ($opt{perflimit}) {
 		$SQL .= " ORDER BY 3 DESC LIMIT $opt{perflimit}";
 	}
@@ -1811,7 +1803,7 @@ sub check_logfile {
 				$logfile = '/var/log/messages';
 				if (open my $cfh, '<', '/etc/syslog.conf') {
 					while (<$cfh>) {
-						if (/\bxxx$facility\.(?!none).+?([\w\/]+)$/i) {
+						if (/\b$facility\.(?!none).+?([\w\/]+)$/i) {
 							$logfile = $1;
 						}
 					}
@@ -1917,7 +1909,7 @@ sub check_query_runtime {
 	my $queryname = $opt{queryname} || '';
 
 	if ($queryname !~ /^[\w\.]+(?:\(\))?$/) {
-		ndie qq{Invalid queryname option: must be a simple view name};
+		ndie q{Invalid queryname option: must be a simple view name};
 	}
 
 	$SQL = "EXPLAIN ANALYZE SELECT COUNT(1) FROM $queryname";
@@ -2041,7 +2033,7 @@ sub check_settings_checksum {
 
 		my $msg = "checksum: $checksum";
 		if ($critical and $critical ne $checksum) {
-			add_critial $msg;
+			add_critical $msg;
 		}
 		elsif ($warning and $warning ne $checksum) {
 			add_warning $msg;
