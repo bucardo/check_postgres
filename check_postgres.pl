@@ -23,9 +23,9 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 3;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.0.17';
+our $VERSION = '1.1.0';
 
-use vars qw/ %opt $PSQL $res $COM $SQL /;
+use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
 ## If psql is not in your path, it is recommended that hardcode it here,
 ## as an alternative to the --PSQL option
@@ -36,6 +36,9 @@ my $NO_PSQL_OPTION = 1;
 
 ## Which user to connect as if --dbuser is not given
 $opt{defaultuser} = 'postgres';
+
+## If true, we show "after the pipe" statistics
+$opt{showperf} = 1;
 
 ## If true, we show how long each query took by default. Requires Time::HiRes to be installed.
 $opt{showtime} = 1;
@@ -74,6 +77,8 @@ die $USAGE unless
 			   'version|V',
 			   'verbose+',
 			   'help|h',
+			   'showperf=i',
+			   'perflimit=i',
 			   'showtime=i',
 			   'timeout|t=i',
 			   'test',
@@ -114,25 +119,26 @@ if ($opt{version}) {
 
 ## Quick hash to put normal action information in one place:
 my $action_info = {
- backends            => 'Number of connections, compared to max_connections',
- bloat               => 'Check for table and index bloat.',
- connection          => 'Simple connection check. No warning/critical options.',
- database_size       => 'Checks the size of databases. Can --include and --exclude',
- disk_space          => 'Checks space of local disks Postgres is using. Must be run from the same box!',
- index_size          => 'Checks the size of indexes only',
- table_size          => 'Checks the size of tables only',
- relation_size       => 'Checks the size of tables and indexes',
- last_analyze        => 'Check the maximum time in seconds since any one table has been analyzed.',
- last_vacuum         => 'Check the maximum time in seconds since any one table has been vacuumed.',
- listener            => 'Checks for a specific listener. Start with "~" to make it a regex.',
- locks               => 'Checks the number of locks',
- logfile             => 'Checks that the logfile is being written to correctly.',
- query_runtime       => 'Check how long a specific query takes to run.',
- query_time          => 'Checks the maximum running time of current queries.',
- settings_checksum   => 'Check that no settings have changed since the last check.',
- timesync            => 'Compare DB time to localtime. Warning and critical are seconds difference',
- txn_wraparound      => 'See how close databases are getting to transaction ID wraparound',
- version             => 'Check for proper version. Can be major.minor, or major.minor.revision',
+ # Name                 # clusterwide? # helpstring
+ backends            => [1, 'Number of connections, compared to max_connections'],
+ bloat               => [0, 'Check for table and index bloat.'],
+ connection          => [0, 'Simple connection check. No warning/critical options.'],
+ database_size       => [0, 'Checks the size of databases. Can --include and --exclude'],
+ disk_space          => [1, 'Checks space of local disks Postgres is using. Must be run from the same box!'],
+ index_size          => [0, 'Checks the size of indexes only'],
+ table_size          => [0, 'Checks the size of tables only'],
+ relation_size       => [0, 'Checks the size of tables and indexes'],
+ last_analyze        => [0, 'Check the maximum time in seconds since any one table has been analyzed.'],
+ last_vacuum         => [0, 'Check the maximum time in seconds since any one table has been vacuumed.'],
+ listener            => [0, 'Checks for a specific listener. Start with "~" to make it a regex.'],
+ locks               => [0, 'Checks the number of locks'],
+ logfile             => [1, 'Checks that the logfile is being written to correctly.'],
+ query_runtime       => [0, 'Check how long a specific query takes to run.'],
+ query_time          => [1, 'Checks the maximum running time of current queries.'],
+ settings_checksum   => [0, 'Check that no settings have changed since the last check.'],
+ timesync            => [0, 'Compare DB time to localtime. Warning and critical are seconds difference'],
+ txn_wraparound      => [1, 'See how close databases are getting to transaction ID wraparound'],
+ version             => [1, 'Check for proper version. Can be major.minor, or major.minor.revision'],
 };
 
 my $action_usage = '';
@@ -141,7 +147,7 @@ for (keys %$action_info) {
 	$longname = length($_) if length($_) > $longname;
 }
 for (sort keys %$action_info) {
-	$action_usage .= sprintf " %-*s - %s\n", 2+$longname, $_, $action_info->{$_};
+	$action_usage .= sprintf " %-*s - %s\n", 2+$longname, $_, $action_info->{$_}[1];
 }
 
 if ($opt{help}) {
@@ -207,6 +213,10 @@ if ($opt{showtime}) {
 ## Build symlinked copies of this file
 build_symlinks() if $action =~ /^build_symlinks/; ## Does not return, may be 'build_symlinks_force'
 
+## XXXX GREG
+$opt{port} = [5830];
+$opt{dbuser} = ['greg'];
+
 ## We don't (usually) want to die, but want a graceful Nagios-like exit instead
 sub ndie {
 	my $msg = shift;
@@ -216,7 +226,6 @@ sub ndie {
 }
 
 ## Everything from here on out needs psql, so find and verify a working version:
-
 if ($NO_PSQL_OPTION) {
 	delete $opt{PSQL};
 }
@@ -238,6 +247,99 @@ $res =~ /^psql \(PostgreSQL\) (\d+\.\d+)/ or ndie qq{Could not determine psql ve
 my $psql_version = int $1;
 
 $opt{defaultdb} = $psql_version >= 7.4 ? 'postgres' : 'template1';
+
+## Standard messages. Use these whenever possible when building actions.
+
+my %template = 
+	(
+	 'T-EXCLUDE-DB'    => 'No matching databases found due to exclusion/inclusion options',
+	 'T-EXCLUDE-FS'    => 'No matching file systems found due to exclusion/inclusion options',
+	 'T-EXCLUDE-REL'   => 'No matching relations found due to exclusion/inclusion options',
+	 'T-EXCLUDE-SET'   => 'No matching settings found due to exclusion/inclusion options',
+	 'T-EXCLUDE-TABLE' => 'No matching tables found due to exclusion/inclusion options',
+	 'T-BAD-QUERY'     => 'Invalid query returned:',
+	 );
+
+sub add_response {
+	my ($type,$msg) = @_;
+
+	my $header = sprintf q{%s%s%s},
+		$action_info->{$action}[0] ? '' : qq{DB "$db->{dbname}" },
+			$db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
+				$db->{port} eq '5432' ? '' : qq{(port=$db->{port}) };
+	$header =~ s/\s+$//;
+	my $perf = "time=$db->{totaltime}";
+	if ($db->{perf}) {
+		$perf .= " $db->{perf}";
+	}
+	$msg =~ s/(T-[\w\-]+)/$template{$1}/g;
+	push @{$type->{$header}} => [$msg,$perf];
+}
+
+sub add_unknown {
+	my $msg = shift || $db->{error};
+	add_response \%unknown, $msg;
+}
+sub add_critical {
+	add_response \%critical, shift;
+}
+sub add_warning {
+	add_response \%warning, shift;
+}
+sub add_ok {
+	add_response \%ok, shift;
+}
+
+
+sub finishup {
+
+	## Final output
+	## These are meant to be compact and terse: sometimes messages go to pagers
+
+	$action =~ s/^\s*(\S+)\s*$/$1/;
+	my $service = sprintf "%s$action", $FANCYNAME ? 'postgres_' : '';
+	printf '%s ', $YELLNAME ? uc $service : $service;
+
+	sub dumpresult {
+		my $SEP = ' * ';
+		my $type = shift;
+		for (sort keys %$type) {
+			printf "$_ %s ", join $SEP => map { $_->[0] } @{$type->{$_}};
+		}
+		if ($opt{showperf}) {
+			print '| ';
+			for (sort keys %$type) {
+				printf "%s ", join $SEP => map { $_->[1] } @{$type->{$_}};
+			}
+		}
+		print "\n";
+	}
+
+	if (keys %critical) {
+		print 'CRITICAL: ';
+		dumpresult(\%critical);
+		exit $CRITICAL;
+	}
+	if (keys %warning) {
+		print 'WARNING: ';
+		dumpresult(\%warning);
+		exit $WARNING;
+	}
+	if (keys %ok) {
+		print 'OK: ';
+		dumpresult(\%ok);
+		exit $OK;
+	}
+	if (keys %unknown) {
+		print 'UNKNOWN: ';
+		dumpresult(\%unknown);
+		exit $UNKNOWN;
+	}
+
+	die $USAGE;
+
+} ## end of finishup
+
 
 ## For options that take a size e.g. --critical="10 GB"
 my $sizere = qr{^\s*(\d+\.?\d?)\s*([bkmgtpz])?\w*$}i; ## Don't care about the rest of the string
@@ -406,68 +508,8 @@ sub build_symlinks {
 } ## end of build_symlinks
 
 
-sub finishup {
-
-	## Final output
-	## These are meant to be compact and terse: sometimes messages go to pagers
-
-	my $SEP = ' * ';
-
-	$action =~ s/^\s*(\S+)\s*$/$1/;
-	my $service = sprintf "%s$action", $FANCYNAME ? 'postgres_' : '';
-	printf '%s ', $YELLNAME ? uc $service : $service;
-	if (keys %critical) {
-		print 'CRITICAL: ';
-		for (sort keys %critical) {
-			printf "$_ %s ", join $SEP => @{$critical{$_}};
-		}
-		print "\n";
-		exit $CRITICAL;
-	}
-	if (keys %warning) {
-		print 'WARNING: ';
-		for (sort keys %warning) {
-			printf "$_ %s ", join $SEP => @{$warning{$_}};
-		}
-		print "\n";
-		exit $WARNING;
-	}
-	if (keys %ok) {
-		print 'OK: ';
-		for (sort keys %ok) {
-			printf "$_ %s ", join $SEP => @{$ok{$_}};
-		}
-		print "\n";
-		exit $OK;
-	}
-	if (keys %unknown) {
-		print 'UNKNOWN: ';
-		for (sort keys %unknown) {
-			printf "$_ %s ", join $SEP => @{$unknown{$_}};
-		}
-		print "\n";
-		exit $UNKNOWN;
-	}
-
-	die $USAGE;
-
-} ## end of finishup
 
 
-sub make_header {
-
-	my $db = shift;
-	my $arg = shift || {};
-
-	my $header = sprintf q{%s%s%s%s},
-		$opt{showtime} ? qq{[time=$db->{totaltime}s] } : '',
-			$arg->{nodb} ? '' : qq{DB "$db->{dbname}" },
-				$db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
-					$db->{port} eq '5432' ? '' : qq{(port=$db->{port}) };
-	$header =~ s/\s+$//;
-	return $header;
-
-} ## end of make_header
 
 
 sub pretty_size {
@@ -609,30 +651,30 @@ sub run_command {
 	## Create another one to catch any errors
 	($errfh,$errorfile) = tempfile('nagios_psql_stderr.XXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
 
-	for my $t (@target) {
+	for $db (@target) {
 
 		## Just to keep things clean:
 		truncate $tempfh, 0;
 		truncate $errfh, 0;
 
 		## Store this target in the global target list
-		push @{$info->{db}}, $t;
+		push @{$info->{db}}, $db;
 
-		$t->{pname} = "port=$t->{port} host=$t->{host} db=$t->{dbname} user=$t->{dbuser}";
-		my @args = ('-q', '-U', "$t->{dbuser}", '-d', $t->{dbname}, '-t');
-		if ($t->{host} ne '<none>') {
-			push @args => '-h', $t->{host};
-			$host{$t->{host}}++; ## For the overall count
+		$db->{pname} = "port=$db->{port} host=$db->{host} db=$db->{dbname} user=$db->{dbuser}";
+		my @args = ('-q', '-U', "$db->{dbuser}", '-d', $db->{dbname}, '-t');
+		if ($db->{host} ne '<none>') {
+			push @args => '-h', $db->{host};
+			$host{$db->{host}}++; ## For the overall count
 		}
-		push @args => '-p', $t->{port};
+		push @args => '-p', $db->{port};
 
-		if (defined $t->{pass}) {
+		if (defined $db->{pass}) {
 			## Make a custom PGPASSFILE. Far better to simply use your own .pgpass of course
 			($passfh,$passfile) = tempfile('nagios.XXXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
 			$VERBOSE >= 3 and warn "Created temporary pgpass file $passfile\n";
 			$ENV{PGPASSFILE} = $passfile;
 			printf $passfh "%s:%s:%s:%s:%s\n",
-				$t->{host} eq '<none>' ? '*' : $t->{host}, $t->{port}, $t->{dbname}, $t->{dbuser}, $t->{dbpass};
+				$db->{host} eq '<none>' ? '*' : $db->{host}, $db->{port}, $db->{dbname}, $db->{dbuser}, $db->{dbpass};
 			close $passfh or ndie qq{Could not close $passfile: $!\n};
 		}
 
@@ -665,26 +707,40 @@ sub run_command {
 			}
 		}
 
-		$t->{totaltime} = sprintf '%.2f', $opt{showtime} ? tv_interval($start) : 0;
+		$db->{totaltime} = sprintf '%.2f', $opt{showtime} ? tv_interval($start) : 0;
 
 		if ($res) {
-			$t->{fail} = $res;
+			$db->{fail} = $res;
 			$VERBOSE >= 3 and !$arg->{failok} and warn qq{System call failed with a $res\n};
 			seek $errfh, 0, 0;
 			{
 				local $/;
-				$t->{error} = <$errfh> || '';
-				$t->{error} =~ s/\s*$//;
-				$t->{error} =~ s/^psql: //;
+				$db->{error} = <$errfh> || '';
+				$db->{error} =~ s/\s*$//;
+				$db->{error} =~ s/^psql: //;
+			}
+			if (!$db->{ok} and !$arg->{failok}) {
+				add_unknown;
+				## Remove it from the returned hash
+				pop @{$info->{db}};
 			}
 		}
 		else {
 			seek $tempfh, 0, 0;
 			{
 				local $/;
-				$t->{slurp} = <$tempfh>;
+				$db->{slurp} = <$tempfh>;
 			}
-			$t->{ok} = 1;
+			$db->{ok} = 1;
+			## If we were provided with a regex, check and bail if it fails
+			if ($arg->{regex}) {
+				if ($db->{slurp} !~ $arg->{regex}) {
+					add_unknown qq{T-BAD-QUERY $db->{slurp}};
+					## Remove it from the returned hash
+					pop @{$info->{db}};
+				}
+			}
+
 		}
 
 	} ## end each database
@@ -883,17 +939,24 @@ sub validate_range {
 		$string =~ /^\w+$/ or die qq{Invalid option\n};
 	}
 	elsif ('size or percent' eq $type) {
-		if ($critical =~ $sizere) {
-			$critical = size_in_bytes($1,$2);
+		if (length $critical) {
+			if ($critical =~ $sizere) {
+				$critical = size_in_bytes($1,$2);
+			}
+			elsif ($critical !~ /^\d\d?\%$/) {
+				ndie qq{Invalid 'critical' option: must be size or percentage\n};
+			}
 		}
-		elsif ($critical !~ /^\d\d?\%$/) {
-			ndie qq{Invalid 'critical' option: must be size or percentage\n};
+		if (length $warning) {
+			if ($warning =~ $sizere) {
+				$warning = size_in_bytes($1,$2);
+			}
+			elsif ($warning !~ /^\d\d?\%$/) {
+				ndie qq{Invalid 'warning' option: must be size or percentage\n};
+			}
 		}
-		if ($warning =~ $sizere) {
-			$warning = size_in_bytes($1,$2);
-		}
-		elsif ($warning !~ /^\d\d?\%$/) {
-			ndie qq{Invalid 'warning' option: must be size or percentage\n};
+		elsif (! length $critical) {
+			ndie qq{Must provide a warning and/or critical size\n};
 		}
 	}
 	elsif ('checksum' eq $type) {
@@ -902,6 +965,32 @@ sub validate_range {
 		}
 		if (length $warning and $warning !~ $checksumre) {
 			ndie qq{Invalid 'warning' option: must be a checksum\n};
+		}
+	}
+	elsif ('multival' eq $type) { ## Simple number, or foo=#;bar=#
+		my %err;
+		while ($critical =~ /(\w+)\s*=\s*(\d+)/gi) {
+			my ($name,$val) = (lc $1,$2);
+			$name =~ s/lock$//;
+			$err{$name} = $val;
+		}
+		if (keys %err) {
+			$critical = \%err;
+		}
+		elsif (length $critical and $critical !~ /^\d+$/) {
+			ndie qq{Invalid 'critical' option: must be number of locks, or "type1=#;type2=#"\n};
+		}
+		my %warn;
+		while ($warning =~ /(\w+)\s*=\s*(\d+)/gi) {
+			my ($name,$val) = (lc $1,$2);
+			$name =~ s/lock$//;
+			$warn{$name} = $val;
+		}
+		if (keys %warn) {
+			$warning = \%warn;
+		}
+		elsif (length $warning and $warning !~ /^\d+$/) {
+			ndie qq{Invalid 'warning' option: must be number of locks, or "type1=#;type2=#"\n};
 		}
 	}
 	else {
@@ -927,6 +1016,98 @@ sub validate_range {
 } ## end of validate_range
 
 
+sub check_backends {
+
+	## Check the number of connections
+	## It makes no sense to run this more than once on the same cluster
+	## Need to be superuser, else only your queries will be visible
+	## Warning and criticals can take three forms:
+	## critical = 12 -- complain if there are 12 or more connections
+	## critical = 95% -- complain if >= 95% of available connections are used
+	## critical = -5 -- complain if there are only 5 or fewer connection slots left
+	## Can also ignore databases with exclude, and limit with include
+	## The former two options only work with simple numbers - no percentage or negative
+
+	my $warning  = $opt{warning}  || '90%';
+	my $critical = $opt{critical} || '95%';
+
+	my $validre = qr{^(\-?)(\d+)(\%?)$};
+	if ($warning !~ $validre) {
+		ndie "Warning for number of users must be a number or percentage\n";
+	}
+	my ($w1,$w2,$w3) = ($1,$2,$3);
+	if ($critical !~ $validre) {
+		ndie "Critical for number of users must be a number or percentage\n";
+	}
+	my ($e1,$e2,$e3) = ($1,$2,$3);
+
+	if ($w2 > $e2 and $w1 eq $e1 and $w3 eq $e3 and $w1 eq '') {
+		ndie qq{Makes no sense for warning to be greater than critical!\n};
+	}
+	if ($w2 < $e2 and $w1 eq $e1 and $w3 eq $e3 and $w1 eq '-') {
+		ndie qq{Makes no sense for warning to be less than critical!\n};
+	}
+	if (($w1 and $w3) or ($e1 and $e3)) {
+		ndie qq{Cannot specify a negative percent!\n};
+	}
+
+	$SQL = q{SELECT setting FROM pg_settings WHERE name = 'max_connections'};
+	$SQL = "SELECT COUNT(*), ($SQL), datname FROM pg_stat_activity GROUP BY 2,3";
+	my $info = run_command($SQL, {regex => qr[\s*\d+ \| \d+\s+\|] } );
+
+	for $db (@{$info->{db}}) {
+
+		my ($limit,$total) = 0;
+	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+)\s+\|\s+(\w+)\s*/gsm) {
+			$limit ||= $2;
+			my ($current,$dbname) = ($1,$3);
+			next SLURP if skip_item($dbname);
+			$db->{perf} .= " $dbname=$current";
+			$total += $current;
+		}
+		if (!$total) {
+			add_unknown 'T-EXCLUDE-DB';
+			next;
+		}
+		my $msg = qq{$total of $limit connections};
+		my $ok = 1;
+		if ($e1) { ## minus
+			$ok = 0 if $limit-$total >= $e2;
+		}
+		elsif ($e3) { ## percent
+			my $nowpercent = $total/$limit*100;
+			$ok = 0 if $nowpercent >= $e2;
+		}
+		else { ## raw number
+			$ok = 0 if $total >= $e2;
+		}
+		if (!$ok) {
+			add_critical $msg;
+			next;
+		}
+
+		if ($w1) {
+			$ok = 0 if $limit-$total >= $w2;
+		}
+		elsif ($w3) {
+			my $nowpercent = $total/$limit*100;
+			$ok = 0 if $nowpercent >= $w2;
+		}
+		else {
+			$ok = 0 if $total >= $w2;
+		}
+		if (!$ok) {
+			add_warning $msg;
+			next;
+		}
+		add_ok $msg;
+	}
+	return;
+
+} ## end of check_backends
+
+
+
 sub check_bloat {
 
 	## Check how bloated the tables and indexes are
@@ -942,8 +1123,13 @@ sub check_bloat {
 	## Example: --critical="25 GB" --include="mylargetable"
 
 	## Don't bother with tables or indexes unless they have at least this many bloated pages
-	my $MINPAGES = 10;
-	my $MINIPAGES = 15;
+	my $MINPAGES = 0;
+	my $MINIPAGES = 10;
+
+	my $LIMIT = 10;
+	if ($opt{perflimit}) {
+		$LIMIT = $opt{perflimit};
+	}
 
 	my ($warning, $critical) = validate_range
 		({
@@ -1003,7 +1189,7 @@ FROM (
   LEFT JOIN pg_class c2 ON c2.oid = i.indexrelid
 ) AS sml
 WHERE sml.relpages - otta > $MINPAGES OR ipages - iotta > $MINIPAGES
-ORDER BY wastedbytes DESC LIMIT 10
+ORDER BY wastedbytes DESC LIMIT $LIMIT
 };
 
 	my $info = run_command($SQL);
@@ -1017,20 +1203,14 @@ ORDER BY wastedbytes DESC LIMIT 10
 	my $E = qr{ (\d+ \w+)\s*};
 	my $L = qr{$N$N$D$D$D$F$D$D$S$N$D$D$D$F$D$D$E$};
 	my %seenit;
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db);
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
-			next;
-		}
-
+	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /$L/) {
-			push @{$ok{$Header}} => q{no relations meet the minimum bloat criteria};
+			add_ok q{no relations meet the minimum bloat criteria};
 			next;
 		}
-
+		## Not a 'regex' to run_command as we need to check the above first.
 		if ($db->{slurp} !~ /\d+\s*\| \d+/) {
-			push @{$unknown{$Header}} => qq{invalid bloat info: $db->{slurp}};
+			add_unknown qq{T-BAD-QUERY $db->{slurp}};
 			next;
 		}
 
@@ -1046,14 +1226,15 @@ ORDER BY wastedbytes DESC LIMIT 10
 
 			## Do the table first if we haven't seen it
 			if (! $seenit{"$schema.$table"}++) {
+				$db->{perf} .= " wb_$schema.$table=$wb";
 				my $msg = qq{table $schema.$table rows:$tups pages:$pages shouldbe:$otta (${bloat}X)};
-				$msg .= qq{ wasted bytes:$wb wasted size: $ws};
+				$msg .= qq{ wasted size:$wb ($ws)};
 				## The key here is the wastedbytes
 				if ($wb >= $critical) {
-					push @{$critical{$Header}} => $msg;
+					add_critical $msg;
 				}
 				elsif ($wb >= $warning) {
-					push @{$warning{$Header}} => $msg;
+					add_warning $msg;
 				}
 				else {
 					($max = $wb, $maxmsg = $msg) if $wb > $max;
@@ -1061,13 +1242,14 @@ ORDER BY wastedbytes DESC LIMIT 10
 			}
 			## Now the index, if it exists
 			if ($index ne '?') {
+				$db->{perf} .= " wb_$index=$iwb";
 				my $msg = qq{index '$index' rows:$irows pages:$ipages shouldbe:$iotta (${ibloat}X)};
-				$msg .= qq{ wasted bytes:$iwb wasted size: $iws};
+				$msg .= qq{ wasted bytes:$iwb ($iws)};
 				if ($iwb >= $critical) {
-					push @{$critical{$Header}} => $msg;
+					add_critical $msg;
 				}
 				elsif ($iwb >= $warning) {
-					push @{$warning{$Header}} => $msg;
+					add_warning $msg;
 				}
 				else {
 					($max = $iwb, $maxmsg = $msg) if $iwb > $max;
@@ -1075,10 +1257,10 @@ ORDER BY wastedbytes DESC LIMIT 10
 			}
 		}
 		if ($max == -1) {
-			push @{$unknown{$Header}} => 'No matching relations found due to exclusion/inclusion options';
+			add_unknown 'T-EXCLUDE-REL';
 		}
 		elsif ($max != -1) {
-			push @{$ok{$Header}} => $maxmsg;
+			add_ok $maxmsg;
 		}
 	}
 	return;
@@ -1089,24 +1271,21 @@ ORDER BY wastedbytes DESC LIMIT 10
 sub check_connection {
 
 	## Check the connection, get the connection time and version
-	## No comparisons made: warning and critical are ignored
+	## No comparisons made: warning and critical are not allowed
+
+	if ($opt{warning} or $opt{critical}) {
+		ndie qq{No warning or critical options are needed\n};
+	}
 
 	my $info = run_command('SELECT version()');
 
-	## Parse it out and return our information (add to global)
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db);
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
-			next;
-		}
-
+	## Parse it out and return our information
+	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /PostgreSQL (\S+)/o) {
-			push @{$unknown{$Header}} => qq{invalid version string: $db->{slurp}};
+			add_unknown "T-BAD-QUERY $db->{slurp}";
 			next;
 		}
-
-		push @{$ok{$Header}} => qq{version $1};
+		add_ok "version $1";
 	}
 	return;
 
@@ -1126,45 +1305,39 @@ sub check_database_size {
 	my ($warning, $critical) = validate_range({type => 'size'});
 
 	$SQL = q{SELECT pg_database_size(oid), pg_size_pretty(pg_database_size(oid)), datname FROM pg_database};
-	my $info = run_command($SQL);
+	if ($opt{perflimit}) {
+		$SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
+	}
 
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db, { nodb => 1 });
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
-			next;
-		}
+	my $info = run_command($SQL, {regex => qr[\d+ \|] } );
 
-		if ($db->{slurp} !~ /\d+\s+\| \d+/) {
-			push @{$unknown{$Header}} => qq{invalid pg_stat_activity: $db->{slurp}};
-			next;
-		}
-
+	for $db (@{$info->{db}}) {
 		my $max = -1;
 		my %s;
-		while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\S+)/gsm) {
+	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\S+)/gsm) {
 			my ($size,$psize,$name) = ($1,$2,$3);
 			next SLURP if skip_item($name);
 			$max=$size if $size > $max;
 			$s{$name} = [$size,$psize];
 		}
 		if ($max < 0) {
-			push @{$unknown{$Header}} => 'No matching databases found due to exclusion/inclusion options';
+			add_unknown 'T-EXCLUDE-DB';
 			next;
 		}
 
 		my $msg = '';
 		for (sort {$s{$b}[0] <=> $s{$a}[0] or $a cmp $b } keys %s) {
 			$msg .= "$_: $s{$_}[0] ($s{$_}[1]) ";
+			$db->{perf} .= " $_=$s{$_}[0]";
 		}
 		if (length $critical and $max >= $critical) {
-			push @{$critical{$Header}} => $msg;
+			add_critical $msg;
 		}
 		elsif (length $warning and $max >= $warning) {
-			push @{$warning{$Header}} => $msg;
+			add_warning $msg;
 		}
 		else {
-			push @{$ok{$Header}} => $msg;
+			add_ok $msg;
 		}
 	}
 	return;
@@ -1191,7 +1364,7 @@ sub check_disk_space {
 
 	-x '/bin/df' or ndie qq{Could not find required executable /bin/df\n};
 
-	## Figure out where everything is
+	## Figure out where everything is.
 	$SQL = q{SELECT 'S', name, setting FROM pg_settings WHERE name = 'data_directory' }
 		. q{ OR name ='log_directory' }
 		. q{ UNION ALL }
@@ -1201,27 +1374,21 @@ sub check_disk_space {
 
 	my %dir; ## 1 = normal 2 = been checked -1 = does not exist
 	my %seenfs;
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db, { nodb => 1 });
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
-			next;
-		}
-
+	for $db (@{$info->{db}}) {
 		my %i;
 		while ($db->{slurp} =~ /([ST])\s+\| (\w+)\s+\| (\S*)\s*/g) {
 			my ($st,$name,$val) = ($1,$2,$3);
 			$i{$st}{$name} = $val;
 		}
 		if (! exists $i{S}{data_directory}) {
-			push @{$unknown{$Header}} => 'Could not determine data_directory: are you using a superuser?';
+			add_unknown 'Could not determine data_directory: are you connecting as a superuser?';
 			next;
 		}
 		my ($datadir,$logdir) = ($i{S}{data_directory},$i{S}{log_directory}||'');
 
 		if (!exists $dir{$datadir}) {
 			if (! -d $datadir) {
-				push @{$unknown{$Header}} => qq{could not find data directory "$datadir"};
+				add_unknown qq{could not find data directory "$datadir"};
 				$dir{$datadir} = -1;
 				next;
 			}
@@ -1284,36 +1451,42 @@ sub check_disk_space {
 
 			my $msg = qq{FS $fs mounted on $mount is using $prettyused of $prettytotal ($percent%)};
 
+			$db->{perf} = "$fs=$used";
+
 			my $ok = 1;
-			if (index($critical,'%')>=0) {
-				(my $critical2 = $critical) =~ s/\%//;
-				if ($percent >= $critical2) {
-					push @{$critical{$Header}} => $msg;
+			if (length $critical) {
+				if (index($critical,'%')>=0) {
+					(my $critical2 = $critical) =~ s/\%//;
+					if ($percent >= $critical2) {
+						add_critical $msg;
+						$ok = 0;
+					}
+				}
+				elsif ($used >= $critical) {
+					add_critical $msg;
 					$ok = 0;
 				}
 			}
-			elsif ($used >= $critical) {
-				push @{$critical{$Header}} => $msg;
-				$ok = 0;
-			}
-			if (index($warning,'%')>=0) {
-				(my $warning2 = $warning) =~ s/\%//;
-				if ($percent >= $warning2) {
-					push @{$warning{$Header}} => $msg;
+			if (length $warning) {
+				if (index($warning,'%')>=0) {
+					(my $warning2 = $warning) =~ s/\%//;
+					if ($percent >= $warning2) {
+						add_warning $msg;
+						$ok = 0;
+					}
+				}
+				elsif ($used >= $warning) {
+					add_warning $msg;
 					$ok = 0;
 				}
-			}
-			elsif ($used >= $warning) {
-				push @{$warning{$Header}} => $msg;
-				$ok = 0;
 			}
 			if ($ok) {
-				push @{$ok{$Header}} => $msg;
+				add_ok $msg;
 			}
 		} ## end each dir
 
 		if (!$gotone) {
-			push @{$unknown{$Header}} => 'No matching file systems found due to exclusion/inclusion options';
+			add_unknown 'T-EXCLUDE-FS';
 		}
 	}
 	return;
@@ -1337,45 +1510,44 @@ sub check_relation_size {
 
 	$VERBOSE >= 3 and warn "Warning and critical are now $warning and $critical\n";
 
-	$SQL = q{SELECT pg_relation_size(oid), pg_size_pretty(pg_relation_size(oid)), relkind, relname };
-	$SQL .= sprintf 'FROM pg_class WHERE relkind = %s',
+	$SQL = q{SELECT pg_relation_size(c.oid), pg_size_pretty(pg_relation_size(c.oid)), relkind, relname, nspname };
+	$SQL .= sprintf 'FROM pg_class c, pg_namespace n WHERE relkind = %s AND n.oid = c.relnamespace',
 		$relkind eq 'table' ? q{'r'} : $relkind eq 'index' ? q{'i'} : q{'r' OR relkind = 'i'};
+
+	if ($opt{perflimit}) {
+		$SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
+	}
 
 	my $info = run_command($SQL);
 
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db);
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
-			next;
-		}
-
+	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /\d+\s+\|\s+\d+/) {
-			push @{$unknown{$Header}} => qq{invalid pg_class: $db->{slurp}};
+			add_unknown "T-BAD-QUERY $db->{slurp}";
 			next;
 		}
 
 		my ($max,$pmax,$kmax,$nmax) = (-1,0,0,'?');
-	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\w)\s*\| (\S+)/gsm) {
-			my ($size,$psize,$kind,$name) = ($1,$2,$3,$4);
+	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\w)\s*\| (\S+)\s+\| (\S+)/gsm) {
+			my ($size,$psize,$kind,$name,$schema) = ($1,$2,$3,$4,$5);
 			next SLURP if skip_item($name);
+			$db->{perf} .= " $schema.$name=$size";
 			($max=$size, $pmax=$psize, $kmax=$kind, $nmax=$name) if $size > $max;
 		}
 		if ($max < 0) {
-			push @{$unknown{$Header}} => 'No matching relations found due to exclusion/inclusion options';
+			add_unknown 'T-EXCLUDE-REL';
 			next;
 		}
 
 		my $msg = sprintf qq{largest %s is %s"$nmax": $pmax},
 			$relkind, $relkind eq 'relation' ? ($kmax eq 'r' ? 'table ' : 'index ') : '';
 		if ($max >= $critical) {
-			push @{$critical{$Header}} => $msg;
+			add_critical $msg;
 		}
 		elsif ($max >= $warning) {
-			push @{$warning{$Header}} => $msg;
+			add_warning $msg;
 		}
 		else {
-			push @{$ok{$Header}} => $msg;
+			add_ok $msg;
 		}
 	}
 	return;
@@ -1411,29 +1583,24 @@ sub check_last_vacuum_analyze {
 		  });
 
 	## Do include/exclude earlier for large pg_classes?
-	$SQL = q{SELECT relname, CASE WHEN v IS NULL THEN -1 ELSE round(extract(epoch FROM now()-v)) END, }
+	$SQL = q{SELECT nspname, relname, CASE WHEN v IS NULL THEN -1 ELSE round(extract(epoch FROM now()-v)) END, }
 		   .qq{ CASE WHEN v IS NULL THEN '?' ELSE TO_CHAR(v, '$SHOWTIME') END FROM (}
-		   .qq{SELECT relname, pg_stat_get_last_${type}_time(oid) AS v FROM pg_class WHERE relkind = 'r' }
-		   .q{ORDER BY 1) AS foo};
-	my $info = run_command($SQL);
+		   .qq{SELECT nspname, relname, pg_stat_get_last_${type}_time(c.oid) AS v FROM pg_class c, pg_namespace n }
+		   .qq{WHERE relkind = 'r' AND n.oid = c.relnamespace }
+		   .q{ORDER BY 2) AS foo};
+	if ($opt{perflimit}) {
+		$SQL .= " ORDER BY 3 DESC LIMIT $opt{perflimit}";
+	}
+	my $info = run_command($SQL, { regex => qr[\S+\s+\| \S+\s+\|] } );
 
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db, { nodb => 1 });
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
-			next;
-		}
-
-		if ($db->{slurp} !~ /^ \w+\s+\|\s+\-?\d+/) {
-			push @{$unknown{$Header}} => qq{invalid $type times: $db->{slurp}};
-			next;
-		}
+	for $db (@{$info->{db}}) {
 		my $maxtime = -2;
 		my $maxptime = '?';
 		my $maxrel = '?';
-		SLURP: while ($db->{slurp} =~ /(\S+)\s+\|\s+(\-?\d+) \| (.+)\s*$/gm) {
-			my ($name,$time,$ptime) = ($1,$2,$3);
+		SLURP: while ($db->{slurp} =~ /(\S+)\s+\| (\S+)\s+\|\s+(\-?\d+) \| (.+)\s*$/gm) {
+			my ($schema,$name,$time,$ptime) = ($1,$2,$3,$4);
 			next SLURP if skip_item($name);
+			$db->{perf} .= " $schema.$name=$time" if $time >= 0;
 			if ($time > $maxtime) {
 				$maxtime = $time;
 				$maxrel = $name;
@@ -1441,22 +1608,22 @@ sub check_last_vacuum_analyze {
 			}
 		}
 		if ($maxtime == -2) {
-			push @{$unknown{$Header}} => 'No matching tables found due to inclusion/exclusion options';
+			add_unknown 'T-EXCLUDE-TABLES';
 		}
 		elsif ($maxtime == -1) {
-			push @{$unknown{$Header}} => sprintf "No matching tables have ever been $type%s",
+			add_unknown sprintf "No matching tables have ever been $type%s",
 				$type eq 'vacuum' ? 'ed' : 'd';
 		}
 		else {
 			my $msg = "$maxrel: $maxptime ($maxtime s)";
 			if ($maxtime >= $critical) {
-				push @{$critical{$Header}} => $msg;
+				add_critical $msg;
 			}
 			elsif ($maxtime >= $warning) {
-				push @{$warning{$Header}} => $msg;
+				add_warning $msg;
 			}
 			else {
-				push @{$ok{$Header}} => $msg;
+				add_ok $msg;
 			}
 		}
 	}
@@ -1485,28 +1652,22 @@ sub check_listener {
 	$SQL = "SELECT count(*) FROM pg_listener WHERE relname $regex '$string'";
 	my $info = run_command($SQL);
 
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db);
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
-			next;
-		}
-
+	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /(\d+)/) {
-			push @{$unknown{$Header}} => qq{invalid pg_database: $db->{slurp}};
+			add_unknown "T-BAD_QUERY $db->{slurp}";
 			next;
 		}
-
 		my $count = $1;
+		$db->{perf} .= " listening=$count";
 		my $msg = "listeners found: $count";
 		if ($count >= 1) {
-			push @{$ok{$Header}} => $msg;
+			add_ok $msg;
 		}
-		elsif ($warning) {
-			push @{$warning{$Header}} => $msg;
+		elsif ($critical) {
+			add_critical $msg;
 		}
 		else {
-			push @{$critical{$Header}} => $msg;
+			add_warning $msg;
 		}
 	}
 	return;
@@ -1526,46 +1687,20 @@ sub check_locks {
 	## Lock names are case-insensitive, and do not need the "lock" at the end.
 	## Example: --warning=100 --critical="total=200;exclusive=20;waiting=5"
 
-	my $warning  = $opt{warning}  || 100;
-	my $critical = $opt{critical} || 150;
-
-	my %err;
-	while ($critical =~ /(\w+)\s*=\s*(\d+)/gi) {
-		my ($name,$val) = (lc $1,$2);
-		$name =~ s/lock$//;
-		$err{$name} = $val;
-	}
-	if (! keys %err and $critical !~ /^\d+$/) {
-		ndie qq{Invalid 'critical' option: must be number of locks, or "type1=#;type2=#"\n};
-	}
-
-	my %warn;
-	while ($warning =~ /(\w+)\s*=\s*(\d+)/gi) {
-		my ($name,$val) = (lc $1,$2);
-		$name =~ s/lock$//;
-		$warn{$name} = $val;
-	}
-	if (! keys %warn and $warning !~ /^\d+$/) {
-		ndie qq{Invalid 'warning' option: must be number of locks, or "type1=#;type2=#"\n};
-	}
+	my ($warning, $critical) = validate_range
+		({
+		  type             => 'multival',
+		  default_warning  => 100,
+		  default_critical => 150,
+		  });
 
 	$SQL = q{SELECT granted, mode, datname FROM pg_locks l JOIN pg_database d ON (d.oid=l.database)};
-	my $info = run_command($SQL);
+	my $info = run_command($SQL, { regex => qr[\s*\w+\s*\|\s*] });
 
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db, { nodb => 1 });
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
-			next;
-		}
-
-		if ($db->{slurp} !~ /\s*\w+\s*\|\s*/) {
-			push @{$unknown{$Header}} => qq{invalid pg_database: $db->{slurp}};
-			next;
-		}
-
+	for $db (@{$info->{db}}) {
 		my $gotone = 0;
 		my %lock = (total => 0);
+		my %dblock;
 	  SLURP: while ($db->{slurp} =~ /([tf])\s*\|\s*(\w+)\s*\|\s*(\w+)\s+/gsm) {
 			my ($granted,$mode,$dbname) = ($1,lc $2,$3);
 			next SLURP if skip_item($dbname);
@@ -1575,43 +1710,43 @@ sub check_locks {
 			$lock{$mode}++;
 			$lock{waiting}++ if $granted ne 't';
 			$lock{$dbname}++; ## We assume nobody names their db 'rowexclusivelock'
+			$dblock{$dbname}++;
+		}
+		for (sort keys %dblock) {
+			$db->{perf} .= " $_=$dblock{$_}";
 		}
 
 		if (!$gotone) {
-			push @{$unknown{$Header}} => 'No matching databases found due to include/exclude options';
+			add_unknown 'T-EXCLUDE-DB';
 		}
 
 		## If not specific errors, just use the total
 		my $ok = 1;
-		if (! keys %err) {
-			if ($lock{total} >= $critical) {
-				push @{$critical{$Header}} => qq{total locks: $lock{total}};
-				$ok = 0;
-			}
-		}
-		else {
+		if (ref $critical) {
 			for my $type (keys %lock) {
-				next if ! exists $err{$type};
-				if ($lock{$type} >= $err{$type}) {
-					push @{$critical{$Header}} => qq{total "$type" locks: $lock{$type}};
+				next if ! exists $critical->{$type};
+				if ($lock{$type} >= $critical->{$type}) {
+					add_critical qq{total "$type" locks: $lock{$type}};
 					$ok = 0;
 				}
 			}
 		}
-		if (! keys %warn) {
-			if ($lock{total} >= $warning) {
-				push @{$warning{$Header}} => qq{total locks: $lock{total}};
-				$ok = 0;
-			}
+		elsif (length $critical and $lock{total} >= $critical) {
+			add_critical qq{total locks: $lock{total}};
+			$ok = 0;
 		}
-		else {
+		if (ref $warning) {
 			for my $type (keys %lock) {
-				next if ! exists $warn{$type};
-				if ($lock{$type} >= $warn{$type}) {
-					push @{$warning{$Header}} => qq{total "$type" locks: $lock{$type}};
+				next if ! exists $warning->{$type};
+				if ($lock{$type} >= $warning->{$type}) {
+					add_warning qq{total "$type" locks: $lock{$type}};
 					$ok = 0;
 				}
 			}
+		}
+		elsif (length $warning and $lock{total} >= $warning) {
+			add_warning qq{total locks: $lock{total}};
+			$ok = 0;
 		}
 		if ($ok) {
 			my %show;
@@ -1628,7 +1763,7 @@ sub check_locks {
 			for (sort keys %show) {
 				$msg .= sprintf "$_=%d ", $lock{$_} || 0;
 			}
-			push @{$ok{$Header}} => qq{$msg};
+			add_ok $msg;
 		}
 	}
 	return;
@@ -1646,11 +1781,12 @@ sub check_logfile {
 	## Example: --logfile="/syslog/%Y-m%-d%/H%/postgres.log"
 	## Critical and warning are not used: it's either ok or critical.
 
-	## Figure out where the logs are going right not
-	$SQL = q{SELECT CASE WHEN length(setting)<1 THEN '?' ELSE setting END FROM pg_settings WHERE name };
-	$SQL .= q{IN ('log_destination','log_directory','log_filename','redirect_stderr') ORDER BY name};
+	my $critwarn = $opt{warning} ? 0 : 1;
 
-	my $logfilere = qr{^[\w_\s\/%\-\.]+$}; ## }{
+	$SQL = q{SELECT CASE WHEN length(setting)<1 THEN '?' ELSE setting END FROM pg_settings WHERE name };
+	$SQL .= q{IN ('log_destination','log_directory','log_filename','syslog_facility','redirect_stderr') ORDER BY name};
+
+	my $logfilere = qr{^[\w_\s\/%\-\.]+$};
 	if (exists $opt{logfile} and $opt{logfile} !~ $logfilere) {
 		ndie qq{Invalid logfile option\n};
 	}
@@ -1658,19 +1794,12 @@ sub check_logfile {
 	my $info = run_command($SQL);
 	$VERBOSE >= 3 and warn Dumper $info;
 
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db, { nodb => 1 });
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
+	for $db (@{$info->{db}}) {
+		if ($db->{slurp} !~ /^\s*(\w+)\n\s*(.+?)\n\s*(.+?)\n\s*(\w+)\n\s*(\w*)/sm) {
+			add_unknown "T-BAD-QUERY $db->{slurp}";
 			next;
 		}
-
-		if ($db->{slurp} !~ /^\s*(\w+)\n\s*(.+?)\n\s*(.+?)\n\s*(\w*)/sm) {
-			push @{$unknown{$Header}} => qq{invalid info: $db->{slurp}};
-			next;
-		}
-
-		my ($dest,$dir,$file,$redirect) = ($1,$2,$3,$4);
+		my ($dest,$dir,$file,$facility,$redirect) = ($1,$2,$3,$4,$5);
 
 		## Figure out what we think the log file will be
 		my $logfile ='';
@@ -1678,7 +1807,18 @@ sub check_logfile {
 			$logfile = $opt{logfile};
 		} else {
 			if ($dest eq 'syslog') {
-				ndie "Database is using syslog, please specify path with --logfile option\n";
+				## We'll make a best effort to figure out where it is. Using the --logfile option is preferred.
+				$logfile = '/var/log/messages';
+				if (open my $cfh, '<', '/etc/syslog.conf') {
+					while (<$cfh>) {
+						if (/\bxxx$facility\.(?!none).+?([\w\/]+)$/i) {
+							$logfile = $1;
+						}
+					}
+				}
+				if (!$logfile or ! -e $logfile) {
+					ndie "Database is using syslog, please specify path with --logfile option (fac=$facility)\n";
+				}
 			} elsif ($dest eq 'stderr') {
 				if ($redirect ne 'yes') {
 					ndie qq{Logfile output has been redirected to stderr: please provide a filename\n};
@@ -1702,24 +1842,29 @@ sub check_logfile {
 		$VERBOSE >= 3 and warn "Final logfile: $logfile\n";
 		
 		if (! -e $logfile) {
-			push @{$critical{$Header}} => qq{logfile "$logfile" does not exist!};
+			if ($critwarn)  {
+				add_unknown qq{logfile "$logfile" does not exist!};
+			}
+			else {
+				add_warning qq{logfile "$logfile" does not exist!};
+			}
 			next;
 		}
 		my $logfh;
 		unless (open $logfh, '<', $logfile) {
-			push @{$critical{$Header}} => qq{logfile "$logfile" failed to open: $!\n};
+			add_unknown qq{logfile "$logfile" failed to open: $!\n};
 			next;
 		}
 		seek($logfh, 0, 2) or ndie qq{Seek on $logfh failed: $!\n};
 
 		## Throw a custom error string
-		my $smallsearch = sprintf 'Random=%s', int rand(999999999);
+		my $smallsearch = sprintf 'Random=%s', int rand(999999999999);
 		my $funky = sprintf "$ME this_statement_will_fail DB=$db->{dbname} PID=$$ Time=%s $smallsearch",
 			scalar localtime;
 
 		## Cause an error on just this target
 		delete $db->{ok}; delete $db->{slurp}; delete $db->{totaltime};
-		my $badinfo = run_command("SELECT $funky",{failok => 1, target => $db});
+		my $badinfo = run_command("SELECT $funky", {failok => 1, target => $db} );
 
 		my $MAXSLEEPTIME = 3;
 		my $SLEEP = 0.5;
@@ -1735,117 +1880,23 @@ sub check_logfile {
 			}
 			$MAXSLEEPTIME -= $SLEEP;
 			redo if $MAXSLEEPTIME > 0;
-			push @{$critical{$Header}} => qq{fails logging to: $logfile};
+			if ($critwarn) {
+				add_critical qq{fails logging to: $logfile};
+			}
+			else {
+				add_warning qq{fails logging to: $logfile};
+			}
 		}
 		close $logfh or ndie qq{Could not close $logfh: $!\n};
 
 		if ($found == 1) {
-			push @{$ok{$Header}} => qq{logs to: $logfile};
+			add_ok qq{logs to: $logfile};
 		}
 	}
 	return;
 
 } ## end of check_logfile
 
-
-sub check_backends {
-
-	## Check the number of connections
-	## It makes no sense to run this more than once on the same cluster
-	## Need to be superuser, else only your queries will be visible
-	## Warning and criticals can take three forms:
-	## critical = 12 -- complain if there are 12 or more connections
-	## critical = 95% -- complain if >= 95% of available connections are used
-	## critical = -5 -- complain if there are only 5 or fewer connection slots left
-	## Can also ignore databases with exclude, and limit with include
-	## The former two options only work with simple numbers - no percentage or negative
-
-	my $warning  = $opt{warning}  || '90%';
-	my $critical = $opt{critical} || '95%';
-
-	my $validre = qr{^(\-?)(\d+)(\%?)$};
-	if ($warning !~ $validre) {
-		ndie "Warning for number of users must be a number or percentage\n";
-	}
-	my ($w1,$w2,$w3) = ($1,$2,$3);
-	if ($critical !~ $validre) {
-		ndie "Critical for number of users must be a number or percentage\n";
-	}
-	my ($e1,$e2,$e3) = ($1,$2,$3);
-
-	if ($w2 > $e2 and $w1 eq $e1 and $w3 eq $e3 and $w1 eq '') {
-		ndie qq{Makes no sense for warning to be greater than critical!\n};
-	}
-	if ($w2 < $e2 and $w1 eq $e1 and $w3 eq $e3 and $w1 eq '-') {
-		ndie qq{Makes no sense for warning to be less than critical!\n};
-	}
-	if (($w1 and $w3) or ($e1 and $e3)) {
-		ndie qq{Cannot specify a negative percent!\n};
-	}
-
-	$SQL = q{SELECT setting FROM pg_settings WHERE name = 'max_connections'};
-	$SQL = "SELECT COUNT(*), ($SQL), datname FROM pg_stat_activity GROUP BY 2,3";
-	my $info = run_command($SQL);
-
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db, { nodb => 1} );
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
-			next;
-		}
-
-		if ($db->{slurp} !~ /\s*\d+ | \d+\s+\| /) {
-			push @{$unknown{$Header}} => qq{returned invalid pg_stat_activity info: $db->{slurp}};
-			next;
-		}
-
-		my ($limit,$total) = 0;
-	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+)\s+\|\s+(\w+)\s*/gsm) {
-			$limit ||= $2;
-			my ($current,$dbname) = ($1,$3);
-			next SLURP if skip_item($dbname);
-			$total += $current;
-		}
-		if (!$total) {
-			push @{$unknown{$Header}} => 'No matching databases found due to inclusion/exclusion options';
-			next;
-		}
-		my $msg = qq{$total of $limit connections};
-		my $ok = 1;
-		if ($e1) { ## minus
-			$ok = 0 if $limit-$total >= $e2;
-		}
-		elsif ($e3) { ## percent
-			my $nowpercent = $total/$limit*100;
-			$ok = 0 if $nowpercent >= $e2;
-		}
-		else { ## raw number
-			$ok = 0 if $total >= $e2;
-		}
-		if (!$ok) {
-			push @{$critical{$Header}} => $msg;
-			next;
-		}
-
-		if ($w1) {
-			$ok = 0 if $limit-$total >= $w2;
-		}
-		elsif ($w3) {
-			my $nowpercent = $total/$limit*100;
-			$ok = 0 if $nowpercent >= $w2;
-		}
-		else {
-			$ok = 0 if $total >= $w2;
-		}
-		if (!$ok) {
-			push @{$warning{$Header}} => $msg;
-			next;
-		}
-		push @{$ok{$Header}} => $msg;
-	}
-	return;
-
-} ## end of check_backends
 
 
 sub check_query_runtime {
@@ -1872,28 +1923,23 @@ sub check_query_runtime {
 	$SQL = "EXPLAIN ANALYZE SELECT COUNT(1) FROM $queryname";
 	my $info = run_command($SQL);
 
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db);
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
-			next;
-		}
+	for $db (@{$info->{db}}) {
 
 		if ($db->{slurp} !~ /Total runtime: (\d+\.\d+) ms\s*$/s) {
-			push @{$unknown{$Header}} => qq{invalid explain analyze: $db->{slurp}};
+			add_unknown "T-BAD-QUERY $db->{slurp}";
 			next;
 		}
 		my $totalseconds = $1 / 1000.0;
-
+		$db->{perf} = " qtime=$totalseconds";
 		my $msg = qq{query runtime: $totalseconds seconds};
 		if (length $critical and $totalseconds >= $critical) {
-			push @{$critical{$Header}} => $msg;
+			add_critical $msg;
 		}
 		elsif (length $warning and $totalseconds >= $warning) {
-			push @{$warning{$Header}} => $msg;
+			add_warning $msg;
 		}
 		else {
-			push @{$ok{$Header}} => $msg;
+			add_ok $msg;
 		}
 	}
 
@@ -1920,19 +1966,9 @@ sub check_query_time {
 
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) }.
 		q{FROM pg_stat_activity WHERE current_query <> '<IDLE>' GROUP BY 1};
-	my $info = run_command($SQL);
+	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+] } );
 
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db, { nodb => 1 });
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
-			next;
-		}
-
-		if ($db->{slurp} !~ /\s*.+?\s+\|\s+\d+/) {
-			push @{$unknown{$Header}} => qq{invalid pg_stat_activity: $db->{slurp}};
-			next;
-		}
+	for $db (@{$info->{db}}) {
 
 		my $max = -1;
 	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\d+)\s*/gsm) {
@@ -1940,20 +1976,21 @@ sub check_query_time {
 			next SLURP if skip_item($dbname);
 			$max = $current if $current > $max;
 		}
+		$db->{perf} .= " maxtime:$max";
 		if ($max < 0) {
-			push @{$unknown{$Header}} => 'No matching databases found due to exclusion/inclusion optoins';
+			add_unknown 'T-EXCLUDE-DB';
 			next;
 		}
 
 		my $msg = qq{longest query: ${max}s};
-		if ($max >= $critical) {
-			push @{$critical{$Header}} => $msg;
+		if (length $critical and $max >= $critical) {
+			add_critical $msg;
 		}
-		elsif ($max >= $warning) {
-			push @{$warning{$Header}} => $msg;
+		elsif (length $warning and $max >= $warning) {
+			add_warning $msg;
 		}
 		else {
-			push @{$ok{$Header}} => $msg;
+			add_ok $msg;
 		}
 	}
 	return;
@@ -1983,19 +2020,9 @@ sub check_settings_checksum {
 	}
 
 	$SQL = 'SELECT name, setting FROM pg_settings ORDER BY name';
-	my $info = run_command($SQL);
+	my $info = run_command($SQL, { regex => qr[client_encoding] });
 
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db);
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
-			next;
-		}
-
-		if ($db->{slurp} !~ /client_encoding/s) {
-			push @{$unknown{$Header}} => qq{invalid pg_settings: $db->{slurp}};
-			next;
-		}
+	for $db (@{$info->{db}}) {
 
 		(my $string = $db->{slurp}) =~ s/\s+$/\n/;
 
@@ -2007,23 +2034,23 @@ sub check_settings_checksum {
 			$newstring .= "$line\n";
 		}
 		if (! length $newstring) {
-			push @{$unknown{$Header}} => 'No matching settings found due to exclusion/inclusion options';
+			add_unknown 'T-EXCLUDE-SET';
 		}
 
 		my $checksum = Digest::MD5::md5_hex($newstring);
 
 		my $msg = "checksum: $checksum";
 		if ($critical and $critical ne $checksum) {
-			push @{$critical{$Header}} => $msg;
+			add_critial $msg;
 		}
 		elsif ($warning and $warning ne $checksum) {
-			push @{$warning{$Header}} => $msg;
+			add_warning $msg;
 		}
 		elsif (!$critical and !$warning) {
-			push @{$unknown{$Header}} => $msg;
+			add_unknown $msg;
 		}
 		else {
-			push @{$ok{$Header}} => $msg;
+			add_ok $msg;
 		}
 	}
 
@@ -2049,31 +2076,26 @@ sub check_timesync {
 	my $localepoch = time;
 	my @l = localtime;
 
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db);
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
-			next;
-		}
-
+	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /(\d+) \| (.+)/) {
-			push @{$unknown{$Header}} => qq{invalid time: $db->{slurp}};
+			add_unknown "T-BAD-QUERY $db->{slurp}";
 			next;
 		}
-
 		my ($pgepoch,$pgpretty) = ($1,$2);
+
 		my $diff = abs($pgepoch - $localepoch);
+		$db->{perf} = " diff:$diff";
 		my $localpretty = sprintf '%d-%02d-%02d %02d:%02d:%02d', $l[5]+1900, $l[4], $l[3],$l[2],$l[1],$l[0];
 		my $msg = qq{timediff=$diff DB=$pgpretty Local=$localpretty};
 
 		if (length $critical and $diff >= $critical) {
-			push @{$critical{$Header}} => $msg;
+			add_critical $msg;
 		}
 		elsif (length $warning and $diff >= $warning) {
-			push @{$warning{$Header}} => $msg;
+			add_warning $msg;
 		}
 		else {
-			push @{$ok{$Header}} => $msg;
+			add_ok $msg;
 		}
 	}
 	return;
@@ -2096,32 +2118,22 @@ sub check_txn_wraparound {
 		  });
 
 	$SQL = q{SELECT datname, age(datfrozenxid) FROM pg_database WHERE datallowconn is true};
-	my $info = run_command($SQL);
+	my $info = run_command($SQL, { regex => qr[\w+\s+\|\s+\d+] } );
 
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db, {nodb => 1});
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query_failed: $db->{error}};
-			next;
-		}
-
-		if ($db->{slurp} !~ /\w+\s+\|\s+\d+/) {
-			push @{$unknown{$Header}} => qq{invalid pg_database: $db->{slurp}};
-			next;
-		}
+	for $db (@{$info->{db}}) {
 		while ($db->{slurp} =~ /(\S+)\s+\|\s+(\d+)/gsm) {
-			## Need time to not be in the same bucket!
 			my ($dbname,$dbtxns) = ($1,$2);
-			my $msg = qq{DB "$dbname" age: $dbtxns};
+			my $msg = qq{$dbname: $dbtxns};
+			$db->{perf} .= " $dbname=$dbtxns";
 			$VERBOSE >= 3 and warn $msg;
 			if (length $critical and $dbtxns >= $critical) {
-				push @{$critical{$Header}} => $msg;
+				add_critical $msg;
 			}
 			elsif (length $warning and $dbtxns >= $warning) {
-				push @{$warning{$Header}} => $msg;
+				add_warning $msg;
 			}
 			else {
-				push @{$ok{$Header}} => $msg;
+				add_ok $msg;
 			}
 		}
 	}
@@ -2141,18 +2153,11 @@ sub check_version {
 	my ($warnfull, $critfull) = (($warning =~ /^\d+\.\d+$/ ? 0 : 1),($critical =~ /^\d+\.\d+$/ ? 0 : 1));
 	my $info = run_command('SELECT version()');
 
-	for my $db (@{$info->{db}}) {
-		my $Header = make_header($db, {nodb => 1});
-		if (!$db->{ok}) {
-			push @{$unknown{$Header}} => qq{query failed: $db->{error}};
-			next;
-		}
-
+	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /PostgreSQL ((\d+\.\d+)(\w+|\.\d+))/o) {
-			push @{$unknown{$Header}} => qq{invalid version: $db->{slurp}};
+			add_unknown "T-BAD-QUERY $db->{slurp}";
 			next;
 		}
-
 		my ($full,$version,$revision) = ($1,$2,$3||'?');
 		$revision =~ s/^\.//;
 
@@ -2160,19 +2165,19 @@ sub check_version {
 		if (length $critical) {
 			if (($critfull and $critical ne $full)
 				or (!$critfull and $critical ne $version)) {
-				push @{$critical{$Header}} => qq{version $full, but expected $critical};
+				add_critical qq{version $full, but expected $critical};
 				$ok = 0;
 			}
 		}
 		elsif (length $warning) {
 			if (($warnfull and $warning ne $full)
 				or (!$warnfull and $warning ne $version)) {
-				push @{$warning{$Header}} => qq{version $full, but expected $warning};
+				add_warning qq{version $full, but expected $warning};
 				$ok = 0;
 			}
 		}
 		if ($ok) {
-			push @{$ok{$Header}} => qq{version $full};
+			add_ok "version $full";
 		}
 	}
 	return;
@@ -2191,7 +2196,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes check_postgres.pl version 1.0.17
+This documents describes check_postgres.pl version 1.1.0
 
 =head1 SYNOPSIS
 
@@ -2324,9 +2329,22 @@ issuing C<-v -v -v>) turns on debugging information for this program which is se
 
 Enables test mode. See the L</TEST MODE> section below.
 
+=item B<--showperf=VAL>
+
+Determines if we output performance data in standard Nagios format (at end of string, after a pipe symbol, using 
+name=value). VAL should be 0 or 1. The default is 1.
+
+=item B<--perflimit=i>
+
+Sets a limit s to how many items of interest are reported back when using the B<showperf> option. This only has 
+an effect for actions that return a large number of items, such as B<table_size>. The default is 0, or no limit.
+Be careful when using this with --include or --exclude, as those restrictions are done after the query has 
+been run, and thus your limit may not include the items you want.
+
 =item B<--showtime=VAL>
 
 Determines if the time taken to run each query is shown in the output. VAL should be 0 or 1. The default is 1.
+No effect unless showperf is on.
 
 =item B<--action=NAME>
 
@@ -2488,6 +2506,9 @@ can have units of bytes, kilobytes, megabytes, gigabytes, terabytes, or exabytes
 first letter, only. If no units are given, bytes is assumed. There are no default values: both warning and critical 
 must be given. The return text shows the size of the largest relation found.
 
+If the B<showperf> option is enabled, I<all> of the relations with their sizes will be given. To prevent this, is 
+is recommended that you set the B<perflimit>, which will cause the query to do a C<ORDER BY size DESC LIMIT (perflimit)>.
+
 Example 1: Give a critical if any table is larger than 600MB on host burrick.
   check_postgres_table_size --critical='600 MB' --warning='600 MB' --host=burrick
 
@@ -2540,15 +2561,19 @@ or if over 20 exclusive locks exist, or if over 5 connections are waiting for a 
 =item B<logfile> (symlink: C<check_postgres_logfile>)
 
 Ensures that the logfile is in the expected location and is being logged to. This action issues a command that throws 
-a critical on each database it is checking, and ensures that the message shows up in the logs. It scans the various 
-log_* settings inside of Postgres to figure out where the logs should be. Alternatively, you can provide the name 
-of the logfile with the --logfile option. This is especially useful if the logs have a custom rotation scheme driven 
-be an external program. The --logfile option supports the following escape characters: %Y %m %d %H, which represent 
-the current year, month, date, and hour respectively. The --warning and --critical options are not used for this action: 
-the logfile either works (OK) or does not (CRITICAL).
+an error on each database it is checking, and ensures that the message shows up in the logs. It scans the various 
+log_* settings inside of Postgres to figure out where the logs should be. If you are using syslog, it does a rough 
+but not foolproof scan of /etc/syslog,conf. Alternatively, you can provide the name of the logfile with the --logfile 
+option. This is especially useful if the logs have a custom rotation scheme driven be an external program. The 
+--logfile option supports the following escape characters: %Y %m %d %H, which represent the current year, month, date, 
+and hour respectively. An error is always reported as critical unless the warning option has been passed in as a 
+non-zero value. Other than that specific usage, the --warning and --critical options should not be used.
 
 Example 1: On port 5432, ensure the logfile is being written to the file /home/greg/pg8.2.log
   check_postgres_logfile --port=5432 --logfile=/home/greg/pg8.2.log
+
+Example 2: Same as above, but raise a warning, not a critical
+  check_postgres_logfile --port=5432 --logfile=/home/greg/pg8.2.log -w 1
 
 =item B<query_runtime> (symlink: C<check_postgres_query_runtime>)
 
@@ -2727,9 +2752,15 @@ Development happens using the git system. You can clone the latest version by do
 
 =over 4
 
-=item B<Version 1.0.17>
+=item B<Version 1.1.0>
 
-Allow for a single warning or error to the 'timesync' action.
+Fixes, enhancements, and performance tracking, December 2007
+
+Add performance data tracking via --showperf and --perflimit
+
+Lots of refactoring and cleanup of how actions handle arguments.
+
+Do basic checks to figure out syslog file for 'logfile' action.
 
 Allow for exact matching of beta versions with 'version' action.
 
@@ -2748,8 +2779,6 @@ First public release, December 2007
 =back
 
 =head1 BUGS AND LIMITATIONS
-
-The 'logfile' action does not know how to handle a log_destination of 'syslog' yet.
 
 The index bloat size optimization is still very rough.
 
@@ -2786,5 +2815,4 @@ IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
 
 =cut
-
 
