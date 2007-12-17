@@ -117,25 +117,25 @@ if ($opt{version}) {
 ## Quick hash to put normal action information in one place:
 my $action_info = {
  # Name                 # clusterwide? # helpstring
- backends            => [1, 'Number of connections, compared to max_connections'],
+ backends            => [1, 'Number of connections, compared to max_connections.'],
  bloat               => [0, 'Check for table and index bloat.'],
- connection          => [0, 'Simple connection check. No warning/critical options.'],
- database_size       => [0, 'Checks the size of databases. Can --include and --exclude'],
- disk_space          => [1, 'Checks space of local disks Postgres is using. Must be run from the same box!'],
+ connection          => [0, 'Simple connection check.'],
+ database_size       => [0, 'Report if a database is too big'],
+ disk_space          => [1, 'Checks space of local disks Postgres is using.'],
  index_size          => [0, 'Checks the size of indexes only'],
  table_size          => [0, 'Checks the size of tables only'],
  relation_size       => [0, 'Checks the size of tables and indexes'],
  last_analyze        => [0, 'Check the maximum time in seconds since any one table has been analyzed.'],
  last_vacuum         => [0, 'Check the maximum time in seconds since any one table has been vacuumed.'],
- listener            => [0, 'Checks for a specific listener. Start with "~" to make it a regex.'],
+ listener            => [0, 'Checks for specific listeners.'],
  locks               => [0, 'Checks the number of locks'],
  logfile             => [1, 'Checks that the logfile is being written to correctly.'],
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
  settings_checksum   => [0, 'Check that no settings have changed since the last check.'],
- timesync            => [0, 'Compare DB time to localtime. Warning and critical are seconds difference'],
+ timesync            => [0, 'Compare database time to local system time.'],
  txn_wraparound      => [1, 'See how close databases are getting to transaction ID wraparound'],
- version             => [1, 'Check for proper version. Can be major.minor, or major.minor.revision'],
+ version             => [1, 'Check for proper Postgres version.'],
 };
 
 my $action_usage = '';
@@ -196,6 +196,9 @@ Or simply visit: http://bucardo.org/nagios_postgres/
 
 $action =~ /\w/ or die $USAGE;
 
+## Build symlinked copies of this file
+build_symlinks() if $action =~ /^build_symlinks/; ## Does not return, may be 'build_symlinks_force'
+
 ## Die if Time::HiRes is needed but not found
 if ($opt{showtime}) {
 	eval {
@@ -203,19 +206,16 @@ if ($opt{showtime}) {
 		import Time::HiRes qw/gettimeofday tv_interval sleep/;
 	};
 	if ($@) {
-		die q{Cannot find Time::HiRes, needed if 'showtime' is true\n};
+		die qq{Cannot find Time::HiRes, needed if 'showtime' is true\n};
 	}
 }
-
-## Build symlinked copies of this file
-build_symlinks() if $action =~ /^build_symlinks/; ## Does not return, may be 'build_symlinks_force'
 
 ## We don't (usually) want to die, but want a graceful Nagios-like exit instead
 sub ndie {
 	my $msg = shift;
 	chomp $msg;
 	print "ERROR: $msg\n";
-	exit 4;
+	exit 3;
 }
 
 ## Everything from here on out needs psql, so find and verify a working version:
@@ -261,7 +261,7 @@ sub add_response {
 			$db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
 				$db->{port} eq '5432' ? '' : qq{(port=$db->{port}) };
 	$header =~ s/\s+$//;
-	my $perf = "time=$db->{totaltime}";
+	my $perf = $opt{showtime} ? "time=$db->{totaltime}" : '';
 	if ($db->{perf}) {
 		$perf .= " $db->{perf}";
 	}
@@ -326,7 +326,7 @@ sub finishup {
 	if (keys %unknown) {
 		print 'UNKNOWN: ';
 		dumpresult(\%unknown);
-		exit 4;
+		exit 3;
 	}
 
 	die $USAGE;
@@ -1219,7 +1219,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 
 			## Do the table first if we haven't seen it
 			if (! $seenit{"$schema.$table"}++) {
-				$db->{perf} .= " wb_$schema.$table=$wb";
+				$db->{perf} .= " $schema.$table=$wb";
 				my $msg = qq{table $schema.$table rows:$tups pages:$pages shouldbe:$otta (${bloat}X)};
 				$msg .= qq{ wasted size:$wb ($ws)};
 				## The key here is the wastedbytes
@@ -1235,7 +1235,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 			}
 			## Now the index, if it exists
 			if ($index ne '?') {
-				$db->{perf} .= " wb_$index=$iwb";
+				$db->{perf} .= " $index=$iwb" if $iwb;
 				my $msg = qq{index '$index' rows:$irows pages:$ipages shouldbe:$iotta (${ibloat}X)};
 				$msg .= qq{ wasted bytes:$iwb ($iws)};
 				if ($iwb >= $critical) {
@@ -1533,10 +1533,10 @@ sub check_relation_size {
 
 		my $msg = sprintf qq{largest %s is %s"$nmax": $pmax},
 			$relkind, $relkind eq 'relation' ? ($kmax eq 'r' ? 'table ' : 'index ') : '';
-		if ($max >= $critical) {
+		if (length $critical and $max >= $critical) {
 			add_critical $msg;
 		}
-		elsif ($max >= $warning) {
+		elsif (length $warning and $max >= $warning) {
 			add_warning $msg;
 		}
 		else {
@@ -1776,7 +1776,7 @@ sub check_logfile {
 	my $critwarn = $opt{warning} ? 0 : 1;
 
 	$SQL = q{SELECT CASE WHEN length(setting)<1 THEN '?' ELSE setting END FROM pg_settings WHERE name };
-	$SQL .= q{IN ('log_destination','log_directory','log_filename','syslog_facility','redirect_stderr') ORDER BY name};
+	$SQL .= q{IN ('log_destination','log_directory','log_filename','redirect_stderr','syslog_facility') ORDER BY name};
 
 	my $logfilere = qr{^[\w_\s\/%\-\.]+$};
 	if (exists $opt{logfile} and $opt{logfile} !~ $logfilere) {
@@ -1787,12 +1787,13 @@ sub check_logfile {
 	$VERBOSE >= 3 and warn Dumper $info;
 
 	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /^\s*(\w+)\n\s*(.+?)\n\s*(.+?)\n\s*(\w+)\n\s*(\w*)/sm) {
+		if ($db->{slurp} !~ /^\s*(\w+)\n\s*(.+?)\n\s*(.+?)\n\s*(\w*)\n\s*(\w+)/sm) {
 			add_unknown "T-BAD-QUERY $db->{slurp}";
 			next;
 		}
-		my ($dest,$dir,$file,$facility,$redirect) = ($1,$2,$3,$4,$5);
+		my ($dest,$dir,$file,$redirect,$facility) = ($1,$2,$3,$4,$5);
 
+		$VERBOSE >=3 and warn "Dest is $dest, dir is $dir, file is $file, facility is $facility\n";
 		## Figure out what we think the log file will be
 		my $logfile ='';
 		if (exists $opt{logfile} and $opt{logfile} =~ /\w/) {
