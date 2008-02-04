@@ -23,7 +23,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 3;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.1.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -44,7 +44,7 @@ $opt{showperf} = 1;
 $opt{showtime} = 1;
 
 ## Default time display format, used for last_vacuum and last_analyze
-my $SHOWTIME = 'HH24:MI FMMonth D, YYYY';
+my $SHOWTIME = 'HH24:MI FMMonth DD, YYYY';
 
 ## Always prepend 'postgres_' to the name of the service in the output string
 my $FANCYNAME = 1;
@@ -2189,7 +2189,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes check_postgres.pl version 1.1.0
+This documents describes check_postgres.pl version 1.1.1
 
 =head1 SYNOPSIS
 
@@ -2745,6 +2745,10 @@ Development happens using the git system. You can clone the latest version by do
 
 =over 4
 
+=item B<Version 1.1.1>
+
+Switch vacuum and analyze date output to use 'DD', not 'D'. (Glyn Astill)
+
 =item B<Version 1.1.0>
 
 Fixes, enhancements, and performance tracking, December 2007
@@ -2785,7 +2789,7 @@ Greg Sabino Mullane <greg@endpoint.com>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2007 Greg Sabino Mullane <greg@endpoint.com>.
+Copyright (c) 2007-2008 Greg Sabino Mullane <greg@endpoint.com>.
 
 Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions are met:
