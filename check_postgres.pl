@@ -17,7 +17,7 @@ use Getopt::Long qw/GetOptions/;
 Getopt::Long::Configure('no_ignore_case');
 use File::Basename qw/basename/;
 use File::Temp qw/tempfile tempdir/;
-File::Temp->safe_level( File::Temp::MEDIUM );
+File::Temp->safe_level( File::Temp::MEDIUM ); ## no critic
 use Data::Dumper qw/Dumper/;
 $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 3;
@@ -202,8 +202,8 @@ build_symlinks() if $action =~ /^build_symlinks/; ## Does not return, may be 'bu
 ## Die if Time::HiRes is needed but not found
 if ($opt{showtime}) {
 	eval {
-		require Time::HiRes;
-		import Time::HiRes qw/gettimeofday tv_interval sleep/;
+		require Time::HiRes; ## no critic
+		import Time::HiRes qw/gettimeofday tv_interval sleep/; ## no critic
 	};
 	if ($@) {
 		die qq{Cannot find Time::HiRes, needed if 'showtime' is true\n};
@@ -269,7 +269,7 @@ sub add_response {
 	push @{$type->{$header}} => [$msg,$perf];
 }
 
-sub add_unknown {
+sub add_unknown { ## no critic
 	my $msg = shift || $db->{error};
 	add_response \%unknown, $msg;
 }
@@ -680,7 +680,7 @@ sub run_command {
 		my $timeout = $arg->{timeout} || $opt{timeout};
 		alarm 0;
 
-		my $start = $opt{showtime} ? [gettimeofday()] : 0;
+		my $start = $opt{showtime} ? [gettimeofday()] : 0; ## no critic
 		open my $oldstderr, '>&', STDERR or ndie "Could not dupe STDERR\n";
 		open STDERR, '>', $errorfile or ndie qq{Could not open STDERR?!\n};
 		eval {
@@ -700,7 +700,7 @@ sub run_command {
 			}
 		}
 
-		$db->{totaltime} = sprintf '%.2f', $opt{showtime} ? tv_interval($start) : 0;
+		$db->{totaltime} = sprintf '%.2f', $opt{showtime} ? tv_interval($start) : 0; ## no critic
 
 		if ($res) {
 			$db->{fail} = $res;
@@ -751,7 +751,7 @@ sub run_command {
 } ## end of run_command
 
 
-sub size_in_bytes {
+sub size_in_bytes { ## no critic (RequireArgUnpacking)
 
 	## Given a number and a unit, return the number of bytes.
 
