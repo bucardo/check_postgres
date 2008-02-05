@@ -197,7 +197,7 @@ Or simply visit: http://bucardo.org/nagios_postgres/
 $action =~ /\w/ or die $USAGE;
 
 ## Build symlinked copies of this file
-build_symlinks() if $action =~ /^build_symlinks/; ## Does not return, may be 'build_symlinks_force'
+build_symlinks() if $action =~ /build_symlinks/; ## Does not return, may be 'build_symlinks_force'
 
 ## Die if Time::HiRes is needed but not found
 if ($opt{showtime}) {
