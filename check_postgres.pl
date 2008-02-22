@@ -3,7 +3,7 @@
 ## Perform many different checks against Postgres databases.
 ## Designed primarily as a Nagios script.
 ## Run with --help for a summary.
-## 
+##
 ## Greg Sabino Mullane <greg@endpoint.com>
 ## End Point Corporation http://www.endpoint.com/
 ## BSD licensed, see complete license at bottom of this script
@@ -20,10 +20,10 @@ use File::Temp qw/tempfile tempdir/;
 File::Temp->safe_level( File::Temp::MEDIUM ); ## no critic
 use Data::Dumper qw/Dumper/;
 $Data::Dumper::Varname = 'POSTGRES';
-$Data::Dumper::Indent = 3;
+$Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.1.1';
+our $VERSION = '1.2.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -72,7 +72,7 @@ die $USAGE unless
 	GetOptions(
 			   \%opt,
 			   'version|V',
-			   'verbose+',
+			   'verbose|v+',
 			   'help|h',
 			   'showperf=i',
 			   'perflimit=i',
@@ -120,22 +120,23 @@ my $action_info = {
  backends            => [1, 'Number of connections, compared to max_connections.'],
  bloat               => [0, 'Check for table and index bloat.'],
  connection          => [0, 'Simple connection check.'],
- database_size       => [0, 'Report if a database is too big'],
+ database_size       => [0, 'Report if a database is too big.'],
  disk_space          => [1, 'Checks space of local disks Postgres is using.'],
- index_size          => [0, 'Checks the size of indexes only'],
- table_size          => [0, 'Checks the size of tables only'],
- relation_size       => [0, 'Checks the size of tables and indexes'],
+ index_size          => [0, 'Checks the size of indexes only.'],
+ table_size          => [0, 'Checks the size of tables only.'],
+ relation_size       => [0, 'Checks the size of tables and indexes.'],
  last_analyze        => [0, 'Check the maximum time in seconds since any one table has been analyzed.'],
  last_vacuum         => [0, 'Check the maximum time in seconds since any one table has been vacuumed.'],
  listener            => [0, 'Checks for specific listeners.'],
- locks               => [0, 'Checks the number of locks'],
+ locks               => [0, 'Checks the number of locks.'],
  logfile             => [1, 'Checks that the logfile is being written to correctly.'],
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
  settings_checksum   => [0, 'Check that no settings have changed since the last check.'],
  timesync            => [0, 'Compare database time to local system time.'],
- txn_wraparound      => [1, 'See how close databases are getting to transaction ID wraparound'],
+ txn_wraparound      => [1, 'See how close databases are getting to transaction ID wraparound.'],
  version             => [1, 'Check for proper Postgres version.'],
+ wal_files           => [1, 'Check the number of WAL files in the pg_log directory'],
 };
 
 my $action_usage = '';
@@ -291,7 +292,9 @@ sub finishup {
 
 	$action =~ s/^\s*(\S+)\s*$/$1/;
 	my $service = sprintf "%s$action", $FANCYNAME ? 'postgres_' : '';
-	printf '%s ', $YELLNAME ? uc $service : $service;
+	if (keys %critical or keys %warning or keys %ok or keys %unknown) {
+		printf '%s ', $YELLNAME ? uc $service : $service;
+	}
 
 	sub dumpresult {
 		my $SEP = ' * ';
@@ -457,6 +460,9 @@ check_txn_wraparound() if $action eq 'txn_wraparound';
 
 ## Compare DB versions. warning = just major.minor, critical = full string
 check_version() if $action eq 'version';
+
+## Check the number of WAL files. warning and critical are numbers
+check_wal_files() if $action eq 'wal_files';
 
 finishup();
 
@@ -995,7 +1001,12 @@ sub validate_range {
 			ndie qq{Must provide both 'warning' and 'critical' options\n};
 		}
 	}
-	if ($arg->{onlyone}) {
+	if ($arg->{leastone}) {
+		if (! length $warning and ! length $critical) {
+			ndie qq{Must provide at least a 'warning' or 'critical' option\n};
+		}
+	}
+	elsif ($arg->{onlyone}) {
 		if (length $warning and length $critical) {
 			ndie qq{Can only provide 'warning' OR 'critical' option\n};
 		}
@@ -1487,6 +1498,64 @@ sub check_disk_space {
 } ## end of check_disk_space
 
 
+sub check_wal_files {
+
+	## Check on the number of WAL files in use
+	## Must run as a superuser in the database (to examine 'data_directory' setting)
+	## Critical and warning are the number of files
+	## Example: --critical=40
+	## NOTE: Needs to run on the same system (for now)
+
+	my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
+
+	## Figure out where the pg_xlog directory is
+	$SQL = q{SELECT setting FROM pg_settings WHERE name = 'data_directory'};
+
+	my $info = run_command($SQL);
+
+	my %xlogdir;
+	for $db (@{$info->{db}}) {
+		if ($db->{slurp} !~ /\s*(.+)/) {
+			add_unknown qq{T-BAD-QUERY $db->{slurp}};
+			next;
+		}
+		my $datadir = $1;
+		if (!exists $xlogdir{$datadir}) {
+			if (! -d $datadir) {
+				add_unknown qq{could not find data directory "$datadir"};
+				next;
+			}
+			## Check if the WAL files are on a separate disk
+			my $xlogdir = "$datadir/pg_xlog";
+			if (! -d $xlogdir) {
+				add_unknown qq{could not find pg_xlog directory "$xlogdir"};
+				next;
+			}
+
+			my $dh;
+			if (! opendir $dh, $xlogdir) {
+				add_unknown qq{could not open pg_xlog directory "$xlogdir"};
+				next;
+			}
+			my $numfiles = grep { /[A-F0-9]+/ } readdir $dh;
+			closedir $dh;
+			my $msg = qq{$numfiles};
+			if (length $critical and $numfiles > $critical) {
+				add_critical $msg;
+			}
+			elsif (length $warning and $numfiles > $warning) {
+				add_warning $msg;
+			}
+			else {
+				add_ok $msg;
+			}
+		}
+	}
+	return;
+
+} ## end of check_wal_files
+
+
 sub check_relation_size {
 
 	my $relkind = shift || 'relation';
@@ -1787,11 +1856,11 @@ sub check_logfile {
 	$VERBOSE >= 3 and warn Dumper $info;
 
 	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /^\s*(\w+)\n\s*(.+?)\n\s*(.+?)\n\s*(\w*)\n\s*(\w+)/sm) {
+		if ($db->{slurp} !~ /^\s*(\w+)\n\s*(.+?)\n\s*(.+?)\n\s*(\w*)\n\s*(\w*)/sm) {
 			add_unknown "T-BAD-QUERY $db->{slurp}";
 			next;
 		}
-		my ($dest,$dir,$file,$redirect,$facility) = ($1,$2,$3,$4,$5);
+		my ($dest,$dir,$file,$redirect,$facility) = ($1,$2,$3,$4,$5||'?');
 
 		$VERBOSE >=3 and warn "Dest is $dest, dir is $dir, file is $file, facility is $facility\n";
 		## Figure out what we think the log file will be
@@ -2189,7 +2258,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes check_postgres.pl version 1.1.1
+This documents describes check_postgres.pl version 1.2.0
 
 =head1 SYNOPSIS
 
@@ -2217,7 +2286,7 @@ http://bucardo.org/nagios_postgres/
 
 check_postgres.pl is a Perl script that runs many different tests against 
 one or more Postgres databases. It uses the psql program to gather the 
-information, and returns one of three exit codes used by Nagios, as well 
+information, and returns one of four exit codes used by Nagios, as well 
 as a short description of the results. The exit codes are:
 
 =over 2
@@ -2647,6 +2716,21 @@ Example 1: Check the default values for the localhost database
 Example 2: Check port 6000 and give a critical at 1.7 billion transactions left:
   check_postgres_txn_wraparound --port=600 --critical=1_700_000_000t
 
+=item B<wal_files> (symlink: C<check_postgres_wal_files>)
+
+Checks how many WAL files exist in the pg_xlog file, which is found off of your data directory, sometimes 
+as a symlink to another disk for performance reasons. This must be run as a superuser, in order to 
+read the "data_directory" value from the pg_settings view. The warning and critical are simply the 
+number of files in the pg_xlog directory. What number to set this to will vary, but a general guideline 
+is to put a number slightly higher than what is normally there, to catch problems early.
+
+Normally, WAL files are closed and then re-used, but a long-running open transaction, or a faulty 
+log shipping method, may cause Postgres to create too many files. Ultimately, this will cause the 
+disk they are on to run out of space, at which point Postgres will shut down.
+
+Example 1: Check that the number of WAL files is 20 or less on localhost
+  check_postgres_txn_wraparound --host=localhost --critical=20
+
 =item B<version> (symlink: C<check_version>)
 
 Checks that the required version of Postgres is running. The --warning and --critical arguments (only one is required) 
@@ -2744,6 +2828,21 @@ Development happens using the git system. You can clone the latest version by do
 =head1 HISTORY
 
 =over 4
+
+=item B<Version 1.2.0>
+
+Add the check_wal_files method, which counts the number of WAL files
+in your pg_xlog directory.
+
+Fix some typos in the docs.
+
+Explicitly allow -v as an argument.
+
+Allow for a null syslog_facility in check_logfile
+
+=item B<Version 1.1.2>
+
+Fix error preventing --action=rebuild_symlinks from working.
 
 =item B<Version 1.1.1>
 
