@@ -134,6 +134,8 @@ my $action_info = {
  query_time          => [1, 'Checks the maximum running time of current queries.'],
  settings_checksum   => [0, 'Check that no settings have changed since the last check.'],
  timesync            => [0, 'Compare database time to local system time.'],
+ txn_idle            => [1, 'Checks the maximum "idle in transaction" time.'],
+ txn_time            => [1, 'Checks the maximum open transaction time.'],
  txn_wraparound      => [1, 'See how close databases are getting to transaction ID wraparound.'],
  version             => [1, 'Check for proper Postgres version.'],
  wal_files           => [1, 'Check the number of WAL files in the pg_log directory'],
@@ -357,7 +359,8 @@ my %testaction = (
 				  relation_size => 'VERSION: 8.1',
 				  table_size    => 'VERSION: 8.1',
 				  index_size    => 'VERSION: 8.1',
-				  txn_start     => 'VERSION: 8.3',
+				  txn_idle      => 'VERSION: 8.3',
+				  txn_time      => 'VERSION: 8.3',
 );
 if ($opt{test}) {
 	print "BEGIN TEST MODE\n";
@@ -463,6 +466,12 @@ check_version() if $action eq 'version';
 
 ## Check the number of WAL files. warning and critical are numbers
 check_wal_files() if $action eq 'wal_files';
+
+## Check the maximum transaction age of all connections
+check_txn_time() if $action eq 'txn_time';
+
+## Check the maximum age of idle in transaction connections
+check_txn_idle() if $action eq 'txn_idle';
 
 finishup();
 
@@ -1902,7 +1911,7 @@ sub check_logfile {
 		$logfile =~ s/%H/$H/g;
 
 		$VERBOSE >= 3 and warn "Final logfile: $logfile\n";
-		
+
 		if (! -e $logfile) {
 			if ($critwarn)  {
 				add_unknown qq{logfile "$logfile" does not exist!};
@@ -2058,6 +2067,102 @@ sub check_query_time {
 	return;
 
 } ## end of check_query_time
+
+
+sub check_txn_time {
+
+	## Check the length of running transactions
+	## It makes no sense to run this more than once on the same cluster
+	## Warning and critical are time limits - defaults to seconds
+	## Valid units: s[econd], m[inute], h[our], d[ay]
+	## All above may be written as plural as well (e.g. "2 hours")
+	## Can also ignore databases with exclude and limit with include
+
+	my ($warning, $critical) = validate_range
+		({
+		  type             => 'time',
+		  });
+
+	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-xact_start)),0)) }.
+		q{FROM pg_stat_activity WHERE xact_start IS NOT NULL GROUP BY 1};
+	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+] } );
+
+	for $db (@{$info->{db}}) {
+
+		my $max = -1;
+	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\d+)\s*/gsm) {
+			my ($dbname,$current) = ($1,$2);
+			next SLURP if skip_item($dbname);
+			$max = $current if $current > $max;
+		}
+		$db->{perf} .= " maxtime:$max";
+		if ($max < 0) {
+			add_unknown 'T-EXCLUDE-DB';
+			next;
+		}
+
+		my $msg = qq{longest txn: ${max}s};
+		if (length $critical and $max >= $critical) {
+			add_critical $msg;
+		}
+		elsif (length $warning and $max >= $warning) {
+			add_warning $msg;
+		}
+		else {
+			add_ok $msg;
+		}
+	}
+	return;
+
+} ## end of check_txn_time
+
+
+sub check_txn_idle {
+
+	## Check the length of "idle in transaction" connections
+	## It makes no sense to run this more than once on the same cluster
+	## Warning and critical are time limits - defaults to seconds
+	## Valid units: s[econd], m[inute], h[our], d[ay]
+	## All above may be written as plural as well (e.g. "2 hours")
+	## Can also ignore databases with exclude and limit with include
+
+	my ($warning, $critical) = validate_range
+		({
+		  type             => 'time',
+		  });
+
+	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-xact_start)),0)) }.
+		q{FROM pg_stat_activity WHERE current_query = '<IDLE> in transaction' GROUP BY 1};
+	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+] } );
+
+	for $db (@{$info->{db}}) {
+
+		my $max = -1;
+	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\d+)\s*/gsm) {
+			my ($dbname,$current) = ($1,$2);
+			next SLURP if skip_item($dbname);
+			$max = $current if $current > $max;
+		}
+		$db->{perf} .= " maxtime:$max";
+		if ($max < 0) {
+			add_unknown 'T-EXCLUDE-DB';
+			next;
+		}
+
+		my $msg = qq{longest idle in txn: ${max}s};
+		if (length $critical and $max >= $critical) {
+			add_critical $msg;
+		}
+		elsif (length $warning and $max >= $warning) {
+			add_warning $msg;
+		}
+		else {
+			add_ok $msg;
+		}
+	}
+	return;
+
+} ## end of check_txn_idle
 
 
 sub check_settings_checksum {
@@ -2663,6 +2768,30 @@ Example 1: Give a warning if any query has been running longer than 3 minutes, a
 Example 2: Using default values (2 and 5 minutes), check all databases except those starting with 'template'.
   check_postgres_query_time --port=5432 --exclude=~^template
 
+=item B<txn_time> (symlink: C<check_postgres_txn_time>)
+
+Checks the length of open transactions on one or more databases. It makes no sense to run this more than once 
+on the same cluster (all databases are returned no matter where you connect from). Databases can be included or 
+excluded with the --include and --exclude option: see the INCLUDE section below for more details. The warning and 
+critical options are an amount of time, and must be provided (no default). Valid units are 'seconds', 'minutes', 
+'hours', or 'days'. Each may be written singular or abbreviated to just the first letter. If no units are given, 
+the unit is assumed to be seconds. Requires Postgres 8.3 or better.
+
+Example 1: Give a critical if any transaction has been open for more than 10 minutes:
+  check_postgres_txn_time --port=5432 --critical='10 minutes'
+
+=item B<txn_idle> (symlink: C<check_postgres_txn_idle>)
+
+Checks the length of "idle in transaction" queries on one or more databases. It makes no sense to run this more than once 
+on the same cluster (all databases are returned no matter where you connect from). Databases can be included or 
+excluded with the --include and --exclude option: see the INCLUDE section below for more details. The warning and 
+critical options are an amount of time, and must be provided (no default). Valid units are 'seconds', 'minutes', 
+'hours', or 'days'. Each may be written singular or abbreviated to just the first letter. If no units are given, 
+the unit is assumed to be seconds. Requires Postgres 8.3 or better.
+
+Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:
+  check_postgres_txn_idle --port=5432 --warning='15 seconds'
+
 =item B<rebuild_symlinks>
 
 =item B<rebuild_symlinks_force>
@@ -2839,6 +2968,10 @@ Fix some typos in the docs.
 Explicitly allow -v as an argument.
 
 Allow for a null syslog_facility in check_logfile
+
+=item B<Version 1.2.0>
+
+Add in txn_idle and txn_time actions.
 
 =item B<Version 1.1.2>
 
