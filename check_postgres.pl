@@ -23,7 +23,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.3.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2363,7 +2363,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes check_postgres.pl version 1.2.0
+This documents describes check_postgres.pl version 1.3.0
 
 =head1 SYNOPSIS
 
@@ -2958,6 +2958,10 @@ Development happens using the git system. You can clone the latest version by do
 
 =over 4
 
+=item B<Version 1.3.0>
+
+Add in txn_idle and txn_time actions.
+
 =item B<Version 1.2.0>
 
 Add the check_wal_files method, which counts the number of WAL files
@@ -2968,10 +2972,6 @@ Fix some typos in the docs.
 Explicitly allow -v as an argument.
 
 Allow for a null syslog_facility in check_logfile
-
-=item B<Version 1.2.0>
-
-Add in txn_idle and txn_time actions.
 
 =item B<Version 1.1.2>
 
