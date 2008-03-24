@@ -23,7 +23,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.3.0';
+our $VERSION = '1.3.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -359,7 +359,7 @@ my %testaction = (
 				  relation_size => 'VERSION: 8.1',
 				  table_size    => 'VERSION: 8.1',
 				  index_size    => 'VERSION: 8.1',
-				  txn_idle      => 'VERSION: 8.3',
+				  txn_idle      => 'VERSION: 8.2',
 				  txn_time      => 'VERSION: 8.3',
 );
 if ($opt{test}) {
@@ -2137,7 +2137,7 @@ sub check_txn_idle {
 		  type             => 'time',
 		  });
 
-	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-xact_start)),0)) }.
+	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) }.
 		q{FROM pg_stat_activity WHERE current_query = '<IDLE> in transaction' GROUP BY 1};
 	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+], emptyok => 1 } );
 
@@ -2375,7 +2375,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes check_postgres.pl version 1.3.0
+This documents describes check_postgres.pl version 1.3.1
 
 =head1 SYNOPSIS
 
@@ -2969,6 +2969,10 @@ Development happens using the git system. You can clone the latest version by do
 =head1 HISTORY
 
 =over 4
+
+=item B<Version 1.3.1>
+
+Have txn_idle use query_start, not xact_start
 
 =item B<Version 1.3.0>
 
