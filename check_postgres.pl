@@ -549,6 +549,8 @@ sub run_command {
 	## "failok" - don't report if we failed
 	## "target" - use this targetlist instead of generating one
 	## "timeout" - change the timeout from the default of $opt{timeout}
+	## "regex" - the query must match this or we throw an error
+	## "emptyok" - it's okay to not match any rows at all
 
 	my $string = shift;
 	my $arg = shift || {};
@@ -564,8 +566,8 @@ sub run_command {
 	## Multi-args are grouped together: host, port, dbuser, dbpass
 	## Grouped are kept together for first pass
 	## The final arg in a group is passed on
-	## 
-	## Examples: 
+	##
+	## Examples:
 	## --host=a,b --port=5433 --db=c
 	## Connects twice to port 5433, using database c, to hosts a and b
 	## a-5433-c b-5433-c
@@ -740,8 +742,12 @@ sub run_command {
 				$db->{slurp} = <$tempfh>;
 			}
 			$db->{ok} = 1;
+
+			## Allow an empty query (no matching rows) if requested
+			if ($arg->{emptyok} and $arg->{slurp} =~ /^\s*$/o) {
+			}
 			## If we were provided with a regex, check and bail if it fails
-			if ($arg->{regex}) {
+			elsif ($arg->{regex}) {
 				if ($db->{slurp} !~ $arg->{regex}) {
 					add_unknown qq{T-BAD-QUERY $db->{slurp}};
 					## Remove it from the returned hash
@@ -2133,11 +2139,17 @@ sub check_txn_idle {
 
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-xact_start)),0)) }.
 		q{FROM pg_stat_activity WHERE current_query = '<IDLE> in transaction' GROUP BY 1};
-	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+] } );
+	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+], emptyok => 1 } );
 
 	for $db (@{$info->{db}}) {
 
 		my $max = -1;
+
+		if ($db->{slurp} =~ /^\s*$/o) {
+			add_ok 'no idle in transaction';
+			next;
+		}
+
 	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\d+)\s*/gsm) {
 			my ($dbname,$current) = ($1,$2);
 			next SLURP if skip_item($dbname);
