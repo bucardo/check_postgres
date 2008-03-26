@@ -2563,7 +2563,7 @@ The current supported actions are:
 =item B<backends> (symlink: C<check_postgres_backends>)
 
 Checks the current number of connections for one or more databases, and optionally comparing it to the maximum 
-allowed, which is determined the the 'max_connections' setting. The warning and option can take one of three forms. 
+allowed, which is determined by the 'max_connections' setting. The warning and option can take one of three forms. 
 First, a simple number can be given, which represents the number of connections at which the alert will be given. 
 This choice does not use the max_connections setting. Second, the percentage of available connections can be given. 
 Third, a negative number can be given which represents the number of connections left until max_connections is 
@@ -2572,9 +2572,6 @@ include and exclude options to filter out specific databases: see the INCLUDES s
 
 Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 140.
   check_postgres_backends --host=quirm --warning=120 --critical=150
-
-Example 2: Give a critical when we reach 75% of our max_connections setting on hosts lancre or lancre2.
-  check_postgres_backends --warning='75%' --critical='75%' --host=lancre,lancre2
 
 Example 2: Give a critical when we reach 75% of our max_connections setting on hosts lancre or lancre2.
   check_postgres_backends --warning='75%' --critical='75%' --host=lancre,lancre2
