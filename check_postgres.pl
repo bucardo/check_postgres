@@ -25,7 +25,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.4.0';
+our $VERSION = '1.4.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2373,7 +2373,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes check_postgres.pl version 1.4.0
+This documents describes check_postgres.pl version 1.4.1
 
 =head1 SYNOPSIS
 
@@ -2965,6 +2965,10 @@ Development happens using the git system. You can clone the latest version by do
 =head1 HISTORY
 
 =over 4
+
+=item B<Version 1.4.1>
+
+Minor documentation fixes.
 
 =item B<Version 1.4.0>
 
