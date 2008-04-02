@@ -1625,6 +1625,7 @@ sub check_last_vacuum_analyze {
 
 	## Check the last time things were vacuumed or analyzed
 	## NOTE: stats_row_level must be set to on in your database
+	## We also count autovacuum entries
 	## By default, reports on the oldest value in the database
 	## Can exclude and include tables
 	## Warning and critical are times, default to seconds
@@ -1643,7 +1644,7 @@ sub check_last_vacuum_analyze {
 	## Do include/exclude earlier for large pg_classes?
 	$SQL = q{SELECT nspname, relname, CASE WHEN v IS NULL THEN -1 ELSE round(extract(epoch FROM now()-v)) END, }
 		   .qq{ CASE WHEN v IS NULL THEN '?' ELSE TO_CHAR(v, '$SHOWTIME') END FROM (}
-		   .qq{SELECT nspname, relname, pg_stat_get_last_${type}_time(c.oid) AS v FROM pg_class c, pg_namespace n }
+		   .qq{SELECT nspname, relname, GREATEST(pg_stat_get_last_${type}_time(c.oid), pg_stat_get_last_auto${type}_time(c.oid)) AS v FROM pg_class c, pg_namespace n }
 		   .q{WHERE relkind = 'r' AND n.oid = c.relnamespace ORDER BY 2) AS foo};
 	if ($opt{perflimit}) {
 		$SQL .= " ORDER BY 3 DESC LIMIT $opt{perflimit}";
@@ -2951,7 +2952,9 @@ Development happens using the git system. You can clone the latest version by do
 
 =item B<Version 1.4.0>
 
-Have check_wal_files use pg_ls_dir (Robert Treat)
+Have check_wal_files use pg_ls_dir (idea by Robert Treat)
+
+For last_vacuum and last_analyze, respect autovacuum effects (idea by Robert Treat)
 
 =item B<Version 1.3.1>
 
