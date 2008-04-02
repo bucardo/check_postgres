@@ -129,6 +129,8 @@ my $action_info = {
  relation_size       => [0, 'Checks the size of tables and indexes.'],
  last_analyze        => [0, 'Check the maximum time in seconds since any one table has been analyzed.'],
  last_vacuum         => [0, 'Check the maximum time in seconds since any one table has been vacuumed.'],
+ last_autoanalyze    => [0, 'Check the maximum time in seconds since any one table has been autoanalyzed.'],
+ last_autovacuum     => [0, 'Check the maximum time in seconds since any one table has been autovacuumed.'],
  listener            => [0, 'Checks for specific listeners.'],
  locks               => [0, 'Checks the number of locks.'],
  logfile             => [1, 'Checks that the logfile is being written to correctly.'],
@@ -355,15 +357,17 @@ my $checksumre = qr{^[a-f0-9]{32}$};
 
 ## If in test mode, verify that we can run each requested action
 my %testaction = (
-				  last_vacuum   => 'ON: stats_row_level VERSION: 8.2',
-				  last_analyze  => 'ON: stats_row_level VERSION: 8.2',
-				  database_size => 'VERSION: 8.1',
-				  relation_size => 'VERSION: 8.1',
-				  table_size    => 'VERSION: 8.1',
-				  index_size    => 'VERSION: 8.1',
-				  txn_idle      => 'VERSION: 8.2',
-				  txn_time      => 'VERSION: 8.3',
-				  wal_files     => 'VERSION: 8.1',
+				  last_vacuum      => 'ON: stats_row_level VERSION: 8.2',
+				  last_analyze     => 'ON: stats_row_level VERSION: 8.2',
+				  last_autovacuum  => 'ON: stats_row_level VERSION: 8.2',
+				  last_autoanalyze => 'ON: stats_row_level VERSION: 8.2',
+				  database_size    => 'VERSION: 8.1',
+				  relation_size    => 'VERSION: 8.1',
+				  table_size       => 'VERSION: 8.1',
+				  index_size       => 'VERSION: 8.1',
+				  txn_idle         => 'VERSION: 8.2',
+				  txn_time         => 'VERSION: 8.3',
+				  wal_files        => 'VERSION: 8.1',
 );
 if ($opt{test}) {
 	print "BEGIN TEST MODE\n";
@@ -439,6 +443,12 @@ check_last_analyze() if $action eq 'last_analyze';
 
 ## Check how long since the last full vacuum
 check_last_vacuum() if $action eq 'last_vacuum';
+
+## Check how long since the last AUTOanalyze
+check_last_analyze('auto') if $action eq 'last_autoanalyze';
+
+## Check how long since the last full AUTOvacuum
+check_last_vacuum('auto') if $action eq 'last_autovacuum';
 
 ## Check that someone is listening for a specific thing
 check_listener() if $action eq 'listener';
@@ -1622,10 +1632,10 @@ sub check_index_size {
 sub check_last_vacuum_analyze {
 
 	my $type = shift || 'vacuum';
+	my $auto = shift || 0;
 
 	## Check the last time things were vacuumed or analyzed
 	## NOTE: stats_row_level must be set to on in your database
-	## We also count autovacuum entries
 	## By default, reports on the oldest value in the database
 	## Can exclude and include tables
 	## Warning and critical are times, default to seconds
@@ -1641,10 +1651,14 @@ sub check_last_vacuum_analyze {
 		  default_critical => '2 days',
 		  });
 
+	my $criteria = $auto ?
+		qq{pg_stat_get_last_auto${type}_time(c.oid)}
+			: qq{GREATEST(pg_stat_get_last_${type}_time(c.oid), pg_stat_get_last_auto${type}_time(c.oid))};
+
 	## Do include/exclude earlier for large pg_classes?
 	$SQL = q{SELECT nspname, relname, CASE WHEN v IS NULL THEN -1 ELSE round(extract(epoch FROM now()-v)) END, }
 		   .qq{ CASE WHEN v IS NULL THEN '?' ELSE TO_CHAR(v, '$SHOWTIME') END FROM (}
-		   .qq{SELECT nspname, relname, GREATEST(pg_stat_get_last_${type}_time(c.oid), pg_stat_get_last_auto${type}_time(c.oid)) AS v FROM pg_class c, pg_namespace n }
+		   .qq{SELECT nspname, relname, $criteria AS v FROM pg_class c, pg_namespace n }
 		   .q{WHERE relkind = 'r' AND n.oid = c.relnamespace ORDER BY 2) AS foo};
 	if ($opt{perflimit}) {
 		$SQL .= " ORDER BY 3 DESC LIMIT $opt{perflimit}";
@@ -1674,10 +1688,10 @@ sub check_last_vacuum_analyze {
 		}
 		else {
 			my $msg = "$maxrel: $maxptime ($maxtime s)";
-			if ($maxtime >= $critical) {
+			if ($critical and $maxtime >= $critical) {
 				add_critical $msg;
 			}
-			elsif ($maxtime >= $warning) {
+			elsif ($warning and $maxtime >= $warning) {
 				add_warning $msg;
 			}
 			else {
@@ -1689,10 +1703,12 @@ sub check_last_vacuum_analyze {
 
 } ## end of check_last_vacuum_analyze
 sub check_last_vacuum {
-	return check_last_vacuum_analyze('vacuum');
+	my $auto = shift || '';
+	return check_last_vacuum_analyze('vacuum', $auto);
 }
 sub check_last_analyze {
-	return check_last_vacuum_analyze('analyze');
+	my $auto = shift || '';
+	return check_last_vacuum_analyze('analyze', $auto);
 }
 
 
@@ -2954,7 +2970,8 @@ Development happens using the git system. You can clone the latest version by do
 
 Have check_wal_files use pg_ls_dir (idea by Robert Treat)
 
-For last_vacuum and last_analyze, respect autovacuum effects (idea by Robert Treat)
+For last_vacuum and last_analyze, respect autovacuum effects, add separate 
+autovacuum checks (ideas by Robert Treat)
 
 =item B<Version 1.3.1>
 
