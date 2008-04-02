@@ -2622,7 +2622,7 @@ the critical. The output returns all databases sorted by size largest first, wit
 returned.
 
 Example 1: Warn if any database on host flagg is over 1 TB in size, and critical if over 1.1 TB.
-  check_postgres_database_size --host=flagg --warning='1 TB' --critical='1 t'
+  check_postgres_database_size --host=flagg --warning='1 TB' --critical='1.1 t'
 
 Example 2: Give a critical if the database template1 on port 5432 is over 10 MB.
   check_postgres_database_size --port=5432 --include=template1 --warning='10MB' --critical='10MB'
@@ -2850,7 +2850,7 @@ Example 1: Check the default values for the localhost database
   check_postgres_txn_wraparound --host=localhost
 
 Example 2: Check port 6000 and give a critical at 1.7 billion transactions left:
-  check_postgres_txn_wraparound --port=600 --critical=1_700_000_000t
+  check_postgres_txn_wraparound --port=6000 --critical=1_700_000_000t
 
 =item B<wal_files> (symlink: C<check_postgres_wal_files>)
 
