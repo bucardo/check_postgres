@@ -9,6 +9,8 @@
 ## BSD licensed, see complete license at bottom of this script
 ## The latest version can be found at:
 ## http://www.bucardo.org/nagios_postgres/
+##
+## See the HISTORY section for other contributors
 
 use v5.6.0;
 use strict;
@@ -23,7 +25,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.3.1';
+our $VERSION = '1.4.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -138,7 +140,7 @@ my $action_info = {
  txn_time            => [1, 'Checks the maximum open transaction time.'],
  txn_wraparound      => [1, 'See how close databases are getting to transaction ID wraparound.'],
  version             => [1, 'Check for proper Postgres version.'],
- wal_files           => [1, 'Check the number of WAL files in the pg_log directory'],
+ wal_files           => [1, 'Check the number of WAL files in the pg_xlog directory'],
 };
 
 my $action_usage = '';
@@ -361,6 +363,7 @@ my %testaction = (
 				  index_size    => 'VERSION: 8.1',
 				  txn_idle      => 'VERSION: 8.2',
 				  txn_time      => 'VERSION: 8.3',
+				  wal_files     => 'VERSION: 8.1',
 );
 if ($opt{test}) {
 	print "BEGIN TEST MODE\n";
@@ -490,7 +493,7 @@ sub build_symlinks {
 		my $file = "check_postgres_$action";
 		if (-l $file) {
 			if (!$force) {
-				my $source = readlink($file);
+				my $source = readlink $file;
 				print qq{Not creating "$file":$space already linked to "$source"\n};
 				next;
 			}
@@ -1516,54 +1519,32 @@ sub check_disk_space {
 sub check_wal_files {
 
 	## Check on the number of WAL files in use
-	## Must run as a superuser in the database (to examine 'data_directory' setting)
+	## Must run as a superuser
 	## Critical and warning are the number of files
 	## Example: --critical=40
-	## NOTE: Needs to run on the same system (for now)
 
 	my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
 
 	## Figure out where the pg_xlog directory is
-	$SQL = q{SELECT setting FROM pg_settings WHERE name = 'data_directory'};
+	$SQL = q{SELECT count(*) FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$'};
 
 	my $info = run_command($SQL);
 
-	my %xlogdir;
 	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /\s*(.+)/) {
+		if ($db->{slurp} !~ /(\d+)/) {
 			add_unknown qq{T-BAD-QUERY $db->{slurp}};
 			next;
 		}
-		my $datadir = $1;
-		if (!exists $xlogdir{$datadir}) {
-			if (! -d $datadir) {
-				add_unknown qq{could not find data directory "$datadir"};
-				next;
-			}
-			## Check if the WAL files are on a separate disk
-			my $xlogdir = "$datadir/pg_xlog";
-			if (! -d $xlogdir) {
-				add_unknown qq{could not find pg_xlog directory "$xlogdir"};
-				next;
-			}
-
-			my $dh;
-			if (! opendir $dh, $xlogdir) {
-				add_unknown qq{could not open pg_xlog directory "$xlogdir"};
-				next;
-			}
-			my $numfiles = grep { /[A-F0-9]+/ } readdir $dh;
-			closedir $dh;
-			my $msg = qq{$numfiles};
-			if (length $critical and $numfiles > $critical) {
-				add_critical $msg;
-			}
-			elsif (length $warning and $numfiles > $warning) {
-				add_warning $msg;
-			}
-			else {
-				add_ok $msg;
-			}
+		my $numfiles = $1;
+		my $msg = qq{$numfiles};
+		if (length $critical and $numfiles > $critical) {
+			add_critical $msg;
+		}
+		elsif (length $warning and $numfiles > $warning) {
+			add_warning $msg;
+		}
+		else {
+			add_ok $msg;
 		}
 	}
 	return;
@@ -1905,7 +1886,7 @@ sub check_logfile {
 
 		## We now have a logfile (or a template)..parse it into pieces.
 		## We need at least hour, day, month, year
-		my @t = localtime($^T);
+		my @t = localtime $^T;
 		my ($H,$d,$m,$Y) = (sprintf ('%02d',$t[2]),sprintf('%02d',$t[3]),sprintf('%02d',$t[4]+1),$t[5]+1900);
 		if ($logfile !~ $logfilere) {
 			ndie qq{Invalid logfile "$logfile"\n};
@@ -2375,7 +2356,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes check_postgres.pl version 1.3.1
+This documents describes check_postgres.pl version 1.4.0
 
 =head1 SYNOPSIS
 
@@ -2858,16 +2839,17 @@ Example 2: Check port 6000 and give a critical at 1.7 billion transactions left:
 
 Checks how many WAL files exist in the pg_xlog file, which is found off of your data directory, sometimes 
 as a symlink to another disk for performance reasons. This must be run as a superuser, in order to 
-read the "data_directory" value from the pg_settings view. The warning and critical are simply the 
-number of files in the pg_xlog directory. What number to set this to will vary, but a general guideline 
-is to put a number slightly higher than what is normally there, to catch problems early.
+access the contents of the pg_xlog directory. The minimum version to use this action is 8.1. The 
+warning and critical are simply the number of files in the pg_xlog directory. What number to set this 
+to will vary, but a general guideline is to put a number slightly higher than what is normally there, 
+to catch problems early.
 
 Normally, WAL files are closed and then re-used, but a long-running open transaction, or a faulty 
 log shipping method, may cause Postgres to create too many files. Ultimately, this will cause the 
 disk they are on to run out of space, at which point Postgres will shut down.
 
-Example 1: Check that the number of WAL files is 20 or less on localhost
-  check_postgres_txn_wraparound --host=localhost --critical=20
+Example 1: Check that the number of WAL files is 20 or less on host "pluto"
+  check_postgres_txn_wraparound --host=pluto --critical=20
 
 =item B<version> (symlink: C<check_version>)
 
@@ -2967,6 +2949,10 @@ Development happens using the git system. You can clone the latest version by do
 
 =over 4
 
+=item B<Version 1.4.0>
+
+Have check_wal_files use pg_ls_dir (Robert Treat)
+
 =item B<Version 1.3.1>
 
 Have txn_idle use query_start, not xact_start
@@ -3057,4 +3043,3 @@ IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
 
 =cut
-
