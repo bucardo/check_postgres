@@ -691,7 +691,7 @@ sub run_command {
 		}
 		push @args => '-p', $db->{port};
 
-		if (defined $db->{pass}) {
+		if (defined $db->{dbpass}) {
 			## Make a custom PGPASSFILE. Far better to simply use your own .pgpass of course
 			($passfh,$passfile) = tempfile('nagios.XXXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
 			$VERBOSE >= 3 and warn "Created temporary pgpass file $passfile\n";
