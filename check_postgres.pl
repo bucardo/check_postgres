@@ -757,7 +757,7 @@ sub run_command {
 			$db->{ok} = 1;
 
 			## Allow an empty query (no matching rows) if requested
-			if ($arg->{emptyok} and $arg->{slurp} =~ /^\s*$/o) {
+			if ($arg->{emptyok} and $db->{slurp} =~ /^\s*$/o) {
 			}
 			## If we were provided with a regex, check and bail if it fails
 			elsif ($arg->{regex}) {
