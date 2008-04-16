@@ -8,7 +8,7 @@
 ## End Point Corporation http://www.endpoint.com/
 ## BSD licensed, see complete license at bottom of this script
 ## The latest version can be found at:
-## http://www.bucardo.org/nagios_postgres/
+## http://www.bucardo.org/check_postgres/
 ##
 ## See the HISTORY section for other contributors
 
@@ -20,12 +20,13 @@ Getopt::Long::Configure('no_ignore_case');
 use File::Basename qw/basename/;
 use File::Temp qw/tempfile tempdir/;
 File::Temp->safe_level( File::Temp::MEDIUM ); ## no critic
+use Cwd;
 use Data::Dumper qw/Dumper/;
 $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.4.2';
+our $VERSION = '1.4.3';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -35,6 +36,9 @@ $PSQL = '';
 
 ## If this is true, $opt{PSQL} is disabled for security reasons
 my $NO_PSQL_OPTION = 1;
+
+## What type of output to use by default
+my $DEFAULT_OUTPUT = 'nagios';
 
 ## Which user to connect as if --dbuser is not given
 $opt{defaultuser} = 'postgres';
@@ -76,6 +80,7 @@ die $USAGE unless
 			   'version|V',
 			   'verbose|v+',
 			   'help|h',
+			   'output=s',
 			   'showperf=i',
 			   'perflimit=i',
 			   'showtime=i',
@@ -102,6 +107,25 @@ die $USAGE unless
 	and ! @ARGV;
 
 my $VERBOSE = $opt{verbose} || 0;
+
+my $OUTPUT = $opt{output} || '';
+
+## If not explicitly given an output, check the current directory,
+## then fall back to the default.
+if (!$OUTPUT) {
+	my $dir = getcwd;
+	if ($dir =~ /(nagios|munin)/io) {
+		$OUTPUT = lc $1;
+	}
+	else {
+		$OUTPUT = $DEFAULT_OUTPUT;
+	}
+}
+
+## Check for a valid output setting
+if ($OUTPUT ne 'nagios' and $OUTPUT ne 'munin') { ## More coming soon...
+	die qq{Invalid output: must be 'nagios' or 'munin'\n};
+}
 
 ## See if we need to invoke something based on our name
 my $action = $opt{action} || '';
@@ -194,7 +218,7 @@ For a complete list of options and full documentation, please view the POD for t
 Two ways to do this is to run:
 pod2text $ME | less
 pod2man $ME | man -l -
-Or simply visit: http://bucardo.org/nagios_postgres/
+Or simply visit: http://bucardo.org/check_postgres/
 
 
 };
@@ -2373,7 +2397,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes check_postgres.pl version 1.4.2
+This documents describes check_postgres.pl version 1.4.3
 
 =head1 SYNOPSIS
 
@@ -2395,7 +2419,7 @@ This documents describes check_postgres.pl version 1.4.2
 
 The latest news and documentation can always be found at:
 
-http://bucardo.org/nagios_postgres/
+http://bucardo.org/check_postgres/
 
 =head1 DESCRIPTION
 
@@ -2474,6 +2498,11 @@ Examples:
 Other common options include:
 
 =over 4
+
+=item B<--output=VAL>
+
+Determines the format of the output, for use in various programs. The default is 'nagios'. No 
+other systems are supported yet.
 
 =item B<PSQL=PATH>
 
@@ -2960,13 +2989,17 @@ Some actions require access to external programs. If psql is not explicitly spec
 =head1 DEVELOPMENT
 
 Development happens using the git system. You can clone the latest version by doing:
- git-clone http://bucardo.org/nagios_postgres.git
+ git-clone http://bucardo.org/check_postgres.git
 
 =head1 HISTORY
 
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 1.4.3>
+
+Add in the 'output' concept for future support of non-Nagios programs.
 
 =item B<Version 1.4.2>
 
