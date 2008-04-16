@@ -1,0 +1,62 @@
+## Perl Critic settings for check_postgres.pl
+
+verbose = 8
+severity = 1
+
+## Severity 5:
+[-Subroutines::ProhibitNestedSubs]
+[-ValuesAndExpressions::ProhibitAccessOfPrivateData]
+[-Variables::RequireLexicalLoopIterators]
+
+## Severity 4:
+[-ErrorHandling::RequireUseOfExceptions]
+[-InputOutput::RequireBriefOpen]
+[-Subroutines::RequireFinalReturn]
+[-ValuesAndExpressions::ProhibitMixedBooleanOperators]
+
+## Severity 3:
+[-Bangs::ProhibitNumberedNames]
+[-Bangs::ProhibitVagueNames]
+[-CodeLayout::RequireUseUTF8]
+[-ControlStructures::ProhibitCascadingIfElse]
+[-ControlStructures::ProhibitDeepNests]
+[-ControlStructures::ProhibitNegativeExpressionsInUnlessAndUntilConditions] 
+[-Documentation::RequirePODUseEncodingUTF8]
+[-ErrorHandling::RequireCarping]
+[-InputOutput::ProhibitBacktickOperators]
+[-Modules::ProhibitExcessMainComplexity]
+[-NamingConventions::ProhibitAmbiguousNames]
+[-RegularExpressions::RequireExtendedFormatting]
+[-RegularExpressions::ProhibitCaptureWithoutTest]
+[-Subroutines::ProhibitExcessComplexity]
+[-Subroutines::ProhibitCallsToUnexportedSubs]
+[-Subroutines::ProhibitCallsToUndeclaredSubs]
+[-Tics::ProhibitLongLines]
+[-ValuesAndExpressions::ProhibitImplicitNewlines]
+[-ValuesAndExpressions::ProhibitVersionStrings]
+[-Variables::RequireInitializationForLocalVars]
+[-Variables::ProhibitPackageVars]
+
+## Severity 2:
+[-Bangs::ProhibitFlagComments]
+[-ControlStructures::ProhibitPostfixControls]
+[-ControlStructures::ProhibitUnlessBlocks]
+[-Documentation::RequirePodSections]
+[-Lax::ProhibitEmptyQuotes::ExceptAsFallback]
+## One of the dumbest rules ever:
+[-Miscellanea::RequireRcsKeywords]
+[-References::ProhibitDoubleSigils]
+[-RegularExpressions::RequireLineBoundaryMatching]
+[-ValuesAndExpressions::ProhibitEmptyQuotes]
+[-ValuesAndExpressions::ProhibitMagicNumbers]
+[-ValuesAndExpressions::ProhibitNoisyQuotes]
+[-ValuesAndExpressions::RestrictLongStrings]
+[-ValuesAndExpressions::RequireNumberSeparators]
+[-Variables::ProhibitPunctuationVars]
+
+## Severity 1:
+[-CodeLayout::ProhibitParensWithBuiltins]
+[-CodeLayout::RequireTidyCode]
+[-InputOutput::RequireCheckedSyscalls]
+[-RegularExpressions::ProhibitUnusualDelimiters]
+[-BuiltinFunctions::ProhibitReverseSortBlock]
