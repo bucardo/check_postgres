@@ -12,6 +12,8 @@
 ##
 ## See the HISTORY section for other contributors
 
+package check_postgres;
+
 use v5.6.0;
 use strict;
 use warnings;
