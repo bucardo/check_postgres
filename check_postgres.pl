@@ -26,7 +26,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.4.3';
+our $VERSION = '1.5.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -92,6 +92,8 @@ die $USAGE unless
 			   'critical=s',
 			   'include=s@',
 			   'exclude=s@',
+			   'includeuser=s@',
+			   'excludeuser=s@',
 
 			   'host|H=s@',
 			   'port=s@',
@@ -199,6 +201,8 @@ Limit options:
   -c value, --critical=value  the critical threshold, range depends on the action
   --include=name(s) items to specifically include (e.g. tables), depends on the action
   --exclude=name(s) items to specifically exclude (e.g. tables), depends on the action
+  --includeuser=include objects owned by certain users
+  --excludeuser=exclude objects owned by certain users
 
 Other options:
   --PSQL=FILE        location of the psql executable; avoid using if possible
@@ -226,6 +230,10 @@ Or simply visit: http://bucardo.org/check_postgres/
 }
 
 $action =~ /\w/ or die $USAGE;
+
+## Be nice and figure out what they meant
+$action =~ s/\-/_/g;
+$action = lc $action;
 
 ## Build symlinked copies of this file
 build_symlinks() if $action =~ /build_symlinks/; ## Does not return, may be 'build_symlinks_force'
@@ -276,12 +284,13 @@ $opt{defaultdb} = $psql_version >= 7.4 ? 'postgres' : 'template1';
 
 my %template =
 	(
-	 'T-EXCLUDE-DB'    => 'No matching databases found due to exclusion/inclusion options',
-	 'T-EXCLUDE-FS'    => 'No matching file systems found due to exclusion/inclusion options',
-	 'T-EXCLUDE-REL'   => 'No matching relations found due to exclusion/inclusion options',
-	 'T-EXCLUDE-SET'   => 'No matching settings found due to exclusion/inclusion options',
-	 'T-EXCLUDE-TABLE' => 'No matching tables found due to exclusion/inclusion options',
-	 'T-BAD-QUERY'     => 'Invalid query returned:',
+	 'T-EXCLUDE-DB'      => 'No matching databases found due to exclusion/inclusion options',
+	 'T-EXCLUDE-FS'      => 'No matching file systems found due to exclusion/inclusion options',
+	 'T-EXCLUDE-REL'     => 'No matching relations found due to exclusion/inclusion options',
+	 'T-EXCLUDE-SET'     => 'No matching settings found due to exclusion/inclusion options',
+	 'T-EXCLUDE-TABLE'   => 'No matching tables found due to exclusion/inclusion options',
+	 'T-EXCLUDE-USEROK'  => 'No matching entries found due to user exclusion/inclusion options',
+	 'T-BAD-QUERY'       => 'Invalid query returned:',
 	 );
 
 sub add_response {
@@ -442,6 +451,54 @@ if ($opt{test}) {
 	exit;
 }
 
+## Expand the list of included/excluded users into a standard format
+my $USERWHERECLAUSE = '';
+if ($opt{includeuser}) {
+	my %userlist;
+	for my $user (@{$opt{includeuser}}) {
+		for my $u2 (split /,/ => $user) {
+			$userlist{$u2}++;
+		}
+	}
+	my $safename;
+	if (1 == keys %userlist) {
+		($safename = each %userlist) =~ s/'/''/g;
+		$USERWHERECLAUSE = " AND usename = '$safename'";
+	}
+	else {
+		$USERWHERECLAUSE = ' AND usename IN (';
+		for my $user (sort keys %userlist) {
+			($safename = $user) =~ s/'/''/g;
+			$USERWHERECLAUSE .= "'$safename',";
+		}
+		chop $USERWHERECLAUSE;
+		$USERWHERECLAUSE .= ')';
+	}
+}
+elsif ($opt{excludeuser}) {
+	my %userlist;
+	for my $user (@{$opt{excludeuser}}) {
+		for my $u2 (split /,/ => $user) {
+			$userlist{$u2}++;
+		}
+	}
+	my $safename;
+	if (1 == keys %userlist) {
+		($safename = each %userlist) =~ s/'/''/g;
+		$USERWHERECLAUSE = " AND usename <> '$safename'";
+	}
+	else {
+		$USERWHERECLAUSE = ' AND usename NOT IN (';
+		for my $user (sort keys %userlist) {
+			($safename = $user) =~ s/'/''/g;
+			$USERWHERECLAUSE .= "'$safename',";
+		}
+		chop $USERWHERECLAUSE;
+		$USERWHERECLAUSE .= ')';
+	}
+}
+
+
 ## Check number of connections, compare to max_connections
 check_backends() if $action eq 'backends';
 
@@ -551,10 +608,6 @@ sub build_symlinks {
 	exit;
 
 } ## end of build_symlinks
-
-
-
-
 
 
 sub pretty_size {
@@ -1357,15 +1410,20 @@ sub check_database_size {
 	## Warning and critical are bytes
 	## Valid units: b, k, m, g, t, e
 	## All above may be written as plural or with a trailing 'b'
+	## Limit to a specific user (db owner) with the includeuser option
+	## Exclude users with the excludeuser option
 
 	my ($warning, $critical) = validate_range({type => 'size'});
 
-	$SQL = q{SELECT pg_database_size(oid), pg_size_pretty(pg_database_size(oid)), datname FROM pg_database};
+	$USERWHERECLAUSE =~ s/AND/WHERE/;
+
+	$SQL = q{SELECT pg_database_size(d.oid), pg_size_pretty(pg_database_size(d.oid)), datname, usename }.
+		qq{FROM pg_database d JOIN pg_user u ON (u.usesysid=d.datdba)$USERWHERECLAUSE};
 	if ($opt{perflimit}) {
 		$SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
 	}
 
-	my $info = run_command($SQL, {regex => qr[\d+ \|] } );
+	my $info = run_command($SQL, {regex => qr{\d+ \|}, emptyok => 1 } );
 
 	for $db (@{$info->{db}}) {
 		my $max = -1;
@@ -1377,7 +1435,12 @@ sub check_database_size {
 			$s{$name} = [$size,$psize];
 		}
 		if ($max < 0) {
-			add_unknown 'T-EXCLUDE-DB';
+			if ($USERWHERECLAUSE) {
+				add_ok 'T-EXCLUDE-USEROK';
+			}
+			else {
+				add_unknown 'T-EXCLUDE-DB';
+			}
 			next;
 		}
 
@@ -1597,22 +1660,34 @@ sub check_relation_size {
 	## Warning and critical are bytes
 	## Valid units: b, k, m, g, t, e
 	## All above may be written as plural or with a trailing 'g'
+	## Limit to a specific user (relation owner) with the includeuser option
+	## Exclude users with the excludeuser option
 
 	my ($warning, $critical) = validate_range({type => 'size'});
 
 	$VERBOSE >= 3 and warn "Warning and critical are now $warning and $critical\n";
 
 	$SQL = q{SELECT pg_relation_size(c.oid), pg_size_pretty(pg_relation_size(c.oid)), relkind, relname, nspname };
-	$SQL .= sprintf 'FROM pg_class c, pg_namespace n WHERE relkind = %s AND n.oid = c.relnamespace',
+	$SQL .= sprintf 'FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace',
 		$relkind eq 'table' ? q{'r'} : $relkind eq 'index' ? q{'i'} : q{'r' OR relkind = 'i'};
 
 	if ($opt{perflimit}) {
 		$SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
 	}
 
-	my $info = run_command($SQL);
+	if ($USERWHERECLAUSE) {
+		$SQL =~ s/ WHERE/, pg_user u WHERE u.usesysid=c.relowner$USERWHERECLAUSE AND/;
+	}
+
+	my $info = run_command($SQL, {emptyok => 1});
 
 	for $db (@{$info->{db}}) {
+
+		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
+			add_ok 'T-EXCLUDE-USEROK';
+			next;
+		}
+
 		if ($db->{slurp} !~ /\d+\s+\|\s+\d+/) {
 			add_unknown "T-BAD-QUERY $db->{slurp}";
 			next;
@@ -1665,6 +1740,8 @@ sub check_last_vacuum_analyze {
 	## Warning and critical are times, default to seconds
 	## Valid units: s[econd], m[inute], h[our], d[ay]
 	## All above may be written as plural as well (e.g. "2 hours")
+	## Limit to a specific user (relation owner) with the includeuser option
+	## Exclude users with the excludeuser option
 	## Example:
 	## --exclude=~pg_ --include=pg_class,pg_attribute
 
@@ -1687,9 +1764,20 @@ sub check_last_vacuum_analyze {
 	if ($opt{perflimit}) {
 		$SQL .= " ORDER BY 3 DESC LIMIT $opt{perflimit}";
 	}
-	my $info = run_command($SQL, { regex => qr[\S+\s+\| \S+\s+\|] } );
+
+	if ($USERWHERECLAUSE) {
+		$SQL =~ s/ WHERE/, pg_user u WHERE u.usesysid=c.relowner$USERWHERECLAUSE AND/;
+	}
+
+	my $info = run_command($SQL, { regex => qr{\S+\s+\| \S+\s+\|}, emptyok => 1 } );
 
 	for $db (@{$info->{db}}) {
+
+		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
+			add_ok 'T-EXCLUDE-USEROK';
+			next;
+		}
+
 		my $maxtime = -2;
 		my $maxptime = '?';
 		my $maxrel = '?';
@@ -1804,7 +1892,7 @@ sub check_locks {
 			next SLURP if skip_item($dbname);
 			$gotone = 1;
 			$lock{total}++;
-			$mode =~ s/lock$//;
+			$mode =~ s{lock$}{};
 			$lock{$mode}++;
 			$lock{waiting}++ if $granted ne 't';
 			$lock{$dbname}++; ## We assume nobody names their db 'rowexclusivelock'
@@ -2055,6 +2143,8 @@ sub check_query_time {
 	## Valid units: s[econd], m[inute], h[our], d[ay]
 	## All above may be written as plural as well (e.g. "2 hours")
 	## Can also ignore databases with exclude and limit with include
+	## Limit to a specific user with the includeuser option
+	## Exclude users with the excludeuser option
 
 	my ($warning, $critical) = validate_range
 		({
@@ -2064,10 +2154,16 @@ sub check_query_time {
 		  });
 
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) }.
-		q{FROM pg_stat_activity WHERE current_query <> '<IDLE>' GROUP BY 1};
-	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+] } );
+		qq{FROM pg_stat_activity WHERE current_query <> '<IDLE>'$USERWHERECLAUSE GROUP BY 1};
+
+	my $info = run_command($SQL, { regex => qr{\s*.+?\s+\|\s+\d+}, emptyok => 1 } );
 
 	for $db (@{$info->{db}}) {
+
+		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
+			add_ok 'T-EXCLUDE-USEROK';
+			next;
+		}
 
 		my $max = -1;
 	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\d+)\s*/gsm) {
@@ -2105,6 +2201,8 @@ sub check_txn_time {
 	## Valid units: s[econd], m[inute], h[our], d[ay]
 	## All above may be written as plural as well (e.g. "2 hours")
 	## Can also ignore databases with exclude and limit with include
+	## Limit to a specific user with the includeuser option
+	## Exclude users with the excludeuser option
 
 	my ($warning, $critical) = validate_range
 		({
@@ -2112,10 +2210,16 @@ sub check_txn_time {
 		  });
 
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-xact_start)),0)) }.
-		q{FROM pg_stat_activity WHERE xact_start IS NOT NULL GROUP BY 1};
-	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+] } );
+		qq{FROM pg_stat_activity WHERE xact_start IS NOT NULL$USERWHERECLAUSE GROUP BY 1};
+
+	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+], emptyok => 1 } );
 
 	for $db (@{$info->{db}}) {
+
+		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
+			add_ok 'T-EXCLUDE-USEROK';
+			next;
+		}
 
 		my $max = -1;
 	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\d+)\s*/gsm) {
@@ -2153,6 +2257,8 @@ sub check_txn_idle {
 	## Valid units: s[econd], m[inute], h[our], d[ay]
 	## All above may be written as plural as well (e.g. "2 hours")
 	## Can also ignore databases with exclude and limit with include
+	## Limit to a specific user with the includeuser option
+	## Exclude users with the excludeuser option
 
 	my ($warning, $critical) = validate_range
 		({
@@ -2160,12 +2266,18 @@ sub check_txn_idle {
 		  });
 
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) }.
-		q{FROM pg_stat_activity WHERE current_query = '<IDLE> in transaction' GROUP BY 1};
+		qq{FROM pg_stat_activity WHERE current_query = '<IDLE> in transaction'$USERWHERECLAUSE GROUP BY 1};
+
 	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+], emptyok => 1 } );
 
 	for $db (@{$info->{db}}) {
 
 		my $max = -1;
+
+		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
+			add_ok 'T-EXCLUDE-USEROK';
+			next;
+		}
 
 		if ($db->{slurp} =~ /^\s*$/o) {
 			add_ok 'no idle in transaction';
@@ -2397,7 +2509,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes check_postgres.pl version 1.4.3
+This documents describes check_postgres.pl version 1.5.0
 
 =head1 SYNOPSIS
 
@@ -2506,17 +2618,18 @@ other systems are supported yet.
 
 =item B<PSQL=PATH>
 
-Tells the script where to find the psql program. Useful if you have more than one version of the psql executable 
-around, or if it is not in your path. Note that this option is in all uppercase. By default, this option is 
-I<not allowed>. To enable it, you must change the C<$NO_PSQL_OPTION> near the top of the script to 0. Avoid using 
-this option if you can, and instead hard-code your psql location into the C<$PSQL> variable, also near the top 
-of the script.
+Tells the script where to find the psql program. Useful if you have more than 
+one version of the psql executable on your system, or if there is no psql program 
+in your path. Note that this option is in all uppercase. By default, this option 
+is I<not allowed>. To enable it, you must change the C<$NO_PSQL_OPTION> near the 
+top of the script to 0. Avoid using this option if you can, and instead hard-code 
+your psql location into the C<$PSQL> variable, also near the top of the script.
 
 =item B<-t VAL> or B<--timeout=VAL>
 
-Sets the timeout in seconds after which the script will abort whatever it is doing and return an UNKNOWN 
-status. The timeout is per Postgres cluster, not for the entire script. The default value is 10; the units 
-are always in seconds.
+Sets the timeout in seconds after which the script will abort whatever it is doing 
+and return an UNKNOWN status. The timeout is per Postgres cluster, not for the entire 
+script. The default value is 10; the units are always in seconds.
 
 =item B<-h> or B<--help>
 
@@ -2528,8 +2641,9 @@ Shows the current version.
 
 =item B<-v> or B<--verbose>
 
-Set the verbosity level. Can call more than once to boost the level. Setting it to three or higher (in other words, 
-issuing C<-v -v -v>) turns on debugging information for this program which is sent to stderr.
+Set the verbosity level. Can call more than once to boost the level. Setting it to three 
+or higher (in other words, issuing C<-v -v -v>) turns on debugging information for this 
+program which is sent to stderr.
 
 =item B<--test>
 
@@ -2595,7 +2709,7 @@ First, a simple number can be given, which represents the number of connections 
 This choice does not use the max_connections setting. Second, the percentage of available connections can be given. 
 Third, a negative number can be given which represents the number of connections left until max_connections is 
 reached. The default values for warning and critical are '90%' and '95%'. This action also supports the use of the 
-include and exclude options to filter out specific databases: see the INCLUDES section below for more detail.
+include and exclude options to filter out specific databases: see the BASIC FILTERING section below for more detail.
 
 Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 140.
   check_postgres_backends --host=quirm --warning=120 --critical=150
@@ -2615,7 +2729,7 @@ Example 4: Check all databases except those with "test" in their name, but allow
 
 Checks the amount of bloat in tables and indexes. This action requires that stats collection be enabled on the 
 target databases, and that ANALYZE is run frequently as well. The --include and --exclude options can be used to 
-filter out which tables to look at: see the INCLUDE section below for more details. The --warning and --critical 
+filter out which tables to look at: see the BASIC FILTERING section below for more details. The --warning and --critical 
 option must be specified in sizes. Valid units are bytes, kilobytes, megabytes, gigabytes, terabytes, and exabytes. 
 You can abbreviate all of those with the first letter. Items without units are assumed to be 'bytes'. The default values 
 are '1 GB' and '5 GB'. The number represents the number of "wasted bytes", or the difference between what is actually 
@@ -2642,19 +2756,29 @@ Takes no --warning or --critical options.
 
 =item B<database_size> (symlink: C<check_postgres_database_size>)
 
-Checks the size of all databases and complains when they are too big. Makes no sense to run this more than once 
-per cluster. Databases can be filtered with the --include and --exclude options: See the INCLUDE section below for more 
-detail. The warning and critical can be specified as bytes, kilobytes, megabytes, gigabytes, terabytes, or exabytes. 
-Each may be abbreviated to the first letter as well. If no unit is given, the unit is assumed to be bytes.
-There are not defaults for this action: the warning and critical must be specified. The warning cannot be greater than 
-the critical. The output returns all databases sorted by size largest first, with both bytes and a "pretty" form 
-returned.
+Checks the size of all databases and complains when they are too big. Makes no 
+sense to run this more than once per cluster. Databases can be filtered with 
+the B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
+for more details. 
+They can also be filtered by the owner of the database with the 
+B<--includeuser> and B<--excludeuser> options.
+See the L</"USER NAME FILTERING"> section for more details.
+
+The warning and critical options can be specified as bytes, kilobytes, megabytes, 
+gigabytes, terabytes, or exabytes. Each may be abbreviated to the first letter as well. 
+If no unit is given, the units are assumed to be bytes. There are not defaults for this 
+action: the warning and critical must be specified. The warning value cannot be greater 
+than the critical value. The output returns all databases sorted by size largest first, 
+showing both raw bytes and a "pretty" version of the size.
 
 Example 1: Warn if any database on host flagg is over 1 TB in size, and critical if over 1.1 TB.
   check_postgres_database_size --host=flagg --warning='1 TB' --critical='1.1 t'
 
 Example 2: Give a critical if the database template1 on port 5432 is over 10 MB.
   check_postgres_database_size --port=5432 --include=template1 --warning='10MB' --critical='10MB'
+
+Example 3: Give a warning if any database on host 'tardis' owned by the user 'tom' is over 5 GB
+  check_postgres_database_size --host=tardis --includeuser=tom --warning='5 GB' --critical='10 GB'
 
 =item B<disk_space> (symlink: C<check_postgres_disk_space>)
 
@@ -2686,9 +2810,10 @@ Each tablespace that is on a separate disk
 
 =back
 
-The output shows the total size used and available on each disk, as well as the percentage, ordered by highest to lowest 
-percentage used. Each item above maps to a file system: these can be included or excluded: see the INCLUDE section below 
-for more information on the --include and --exclude options.
+The output shows the total size used and available on each disk, as well as 
+the percentage, ordered by highest to lowest percentage used. Each item above 
+maps to a file system: these can be included or excluded. See the 
+L</"BASIC FILTERING" section for more details.
 
 Example 1: Make sure that no file system is over 90% for the database on port 5432.
   check_postgres_disk_space --port=5432 --warning='90%' --critical="90%'
@@ -2702,15 +2827,24 @@ Example 2: Check that all file systems starting with /dev/sda are smaller than 1
 
 =item B<relation_size> (symlink: C<check_postgres_relation_size>)
 
-The actions table_size and index_size are simply variations of the relation_size index, which checks for a relation 
-that has grown too big. Relations (in other words, tables and indexes) can be filtered with the --include and 
---exclude options: See the INCLUDE section below for more detail. The warning and critical are given in file sizes, and 
-can have units of bytes, kilobytes, megabytes, gigabytes, terabytes, or exabytes. Each can be abbreviated to the 
-first letter, only. If no units are given, bytes is assumed. There are no default values: both warning and critical 
+The actions B<table_size> and B<index_size> are simply variations of the 
+B<relation_size> action, which checks for a relation that has grown too big. 
+Relations (in other words, tables and indexes) can be filtered with the 
+B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
+for more details. Relations can also be filtered by the user that owns them, 
+by using the B<--includeuser> and B<--excludeuser> options. 
+See the L</"USER NAME FILTERING"> section for more details.
+
+The values for the B<--warning> and B<--critical> options are file sizes, and 
+may have units of bytes, kilobytes, megabytes, gigabytes, terabytes, or exabytes. 
+Each can be abbreviated to the first letter. If no units are given, bytes are 
+assumed. There are no default values: both the warning and the critical option 
 must be given. The return text shows the size of the largest relation found.
 
-If the B<showperf> option is enabled, I<all> of the relations with their sizes will be given. To prevent this, is 
-is recommended that you set the B<perflimit>, which will cause the query to do a C<ORDER BY size DESC LIMIT (perflimit)>.
+If the B<--showperf> option is enabled, I<all> of the relations with their sizes 
+will be given. To prevent this, it is recommended that you set the 
+B<--perflimit> option, which will cause the query to do a 
+C<ORDER BY size DESC LIMIT (perflimit)>.
 
 Example 1: Give a critical if any table is larger than 600MB on host burrick.
   check_postgres_table_size --critical='600 MB' --warning='600 MB' --host=burrick
@@ -2718,20 +2852,37 @@ Example 1: Give a critical if any table is larger than 600MB on host burrick.
 Example 2: Warn if the table products is over 4 GB in size, and give a critical at 4.5 GB.
   check_postgres_table_size --host=burrick --warning='4 GB' --critical='4.5 GB' --include=products
 
+Example 3: Warn if any index not owned by postgres goes over 500 MB.
+  check_postgres_index_size --port=5432 --excludeuser=postgres -w 500MB -c 600MB
+
 =item B<last_analyze> (symlink: C<check_postgres_last_analyze>)
 
 =item B<last_vacuum> (symlink: C<check_postgres_last_vacuum>)
 
-Checks how long it has been since vacuum (or analyze) was last run on each table in one or more databases. This requires 
-that stats_rows_level is enabled, and the target database must be version 8.2 or higher. Tables can be excluded and 
-included: see the INCLUDE section below for details. The units for --warning and --critical are times. Valid units are 
-seconds, minutes, hours, and days; all can be abbreviated to the first letter. If no units are given, 'seconds' is assumed. 
-The default values are '1 day' and '2 days'. Please note that there are cases in which this field does not get 
-automatically populated. If certain tables are giving you problems, make sure that they have dead rows to vacuum, 
+Checks how long it has been since vacuum (or analyze) was last run on each 
+table in one or more databases. Use of these actions requires that the Postgres 
+configuration variable B<stats_rows_level> is enabled, and that the target 
+database is version 8.2 or higher. Tables can be filtered with the 
+B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
+for more details.
+Tables can also be filtered by their owner by use of the 
+B<--includeuser> and B<--excludeuser> options.
+See the L</"USER NAME FILTERING"> section for more details.
+
+The units for B<--warning> and B<--critical> are specified as times. 
+Valid units are seconds, minutes, hours, and days; all can be abbreviated 
+to the first letter. If no units are given, 'seconds' are assumed. The 
+default values are '1 day' and '2 days'. Please note that there are cases 
+in which this field does not get automatically populated. If certain tables 
+are giving you problems, make sure that they have dead rows to vacuum, 
 or just exclude them from the test.
 
-Example 1: Warn if any table has not been vacuumed in 3 days, and give a critical at a week, for host wormwood
+Example 1: Warn if any table has not been vacuumed in 3 days, and give a 
+critical at a week, for host wormwood
   check_last_vacuum --host=wormwood --warning='3d' --critical='7d'
+
+Example 2: Same as above, but skip tables belonging to the users 'eve' or 'mallory'
+  check_last_vacuum --host=wormwood --warning='3d' --critical='7d' --excludeusers=eve,mallory
 
 =item B<listener> (symlink: C<check_postgres_listener>)
 
@@ -2782,7 +2933,7 @@ Example 2: Same as above, but raise a warning, not a critical
 
 Checks how long a specific query takes to run, by executing a "EXPLAIN ANALYZE" against it. The --warning and --critical 
 options are the maximum amount of time the query should take. Valid units are seconds, minutes, and hours; any can be 
-abbreviated to the first letter. If no units are given, 'seconds' is assumed. Both warning and critical must be given. 
+abbreviated to the first letter. If no units are given, 'seconds' are assumed. Both warning and critical must be given. 
 The name of the view or function to be run must be passed in to the --queryname 
 option. It must consist of a single word (or schema.word format), with optional parens at the end.
 
@@ -2791,12 +2942,19 @@ Example 1: Give a critical if the function named "speedtest" fails to run in 10 
 
 =item B<query_time> (symlink: C<check_postgres_query_time>)
 
-Checks the length of running queries on one or more databases. It makes no sense to run this more than once 
-on the same cluster (all databases are returned no matter where you connect from). Databases can be included or 
-excluded with the --include and --exclude option: see the INCLUDE section below for more details. The warning and 
-critical options are an amount of time, and default to '2 minutes' and '5 minutes'. Valid units are 'seconds', 'minutes', 
-'hours', or 'days'. Each may be written singular or abbreviated to just the first letter. If no units are given, 
-the unit is assumed to be seconds.
+Checks the length of running queries on one or more databases. It makes 
+no sense to run this more than once on the same cluster (all databases 
+are returned no matter where you connect from). Databases can be filtered 
+by using the B<--include> and B<--exclude> options. See the L</"BASIC FILTERING">
+section for more details. You can also filter on the user running the 
+query with the B<--includeuser> and B<--excludeuser> options.
+See the L</"USER NAME FILTERING"> section for more details.
+
+The values for the B<--warning> and B<--critical> options are amounts of 
+time, and default to '2 minutes' and '5 minutes' respectively. Valid units 
+are 'seconds', 'minutes', 'hours', or 'days'. Each may be written singular or 
+abbreviated to just the first letter. If no units are given, the unit is 
+assumed to be seconds.
 
 Example 1: Give a warning if any query has been running longer than 3 minutes, and a critical if longer than 5 minutes.
   check_postgres_query_time --port=5432 --warning='3 minutes' --critical='5 minutes'
@@ -2804,17 +2962,31 @@ Example 1: Give a warning if any query has been running longer than 3 minutes, a
 Example 2: Using default values (2 and 5 minutes), check all databases except those starting with 'template'.
   check_postgres_query_time --port=5432 --exclude=~^template
 
+Example 3: Warn if user 'don' has a query running over 20 seconds
+  check_postgres_query_time --port=5432 --inclucdeuser=don --warning=20s
+
 =item B<txn_time> (symlink: C<check_postgres_txn_time>)
 
-Checks the length of open transactions on one or more databases. It makes no sense to run this more than once 
-on the same cluster (all databases are returned no matter where you connect from). Databases can be included or 
-excluded with the --include and --exclude option: see the INCLUDE section below for more details. The warning and 
-critical options are an amount of time, and must be provided (no default). Valid units are 'seconds', 'minutes', 
-'hours', or 'days'. Each may be written singular or abbreviated to just the first letter. If no units are given, 
-the unit is assumed to be seconds. Requires Postgres 8.3 or better.
+Checks the length of open transactions on one or more databases. It makes no 
+sense to run this more than once on the same cluster (all databases are returned 
+no matter where you connect from). Databases can be filtered by use of the 
+B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
+for more details. The owner of the transaction can also be filtered, by use of 
+the B<--includeuser> and B<--excludeuser> options.
+See the L</"USER NAME FILTERING"> section for more details.
+
+The values or the B<--warning> and B<--critical> options are units of time, and 
+must be provided (no default). Valid units are 'seconds', 'minutes', 'hours', 
+or 'days'. Each may be written singular or abbreviated to just the first letter. 
+If no units are given, the units are assumed to be seconds.
+
+This action requires Postgres 8.3 or better.
 
 Example 1: Give a critical if any transaction has been open for more than 10 minutes:
   check_postgres_txn_time --port=5432 --critical='10 minutes'
+
+Example 1: Warn if user 'warehouse' has a transaction open over 30 seconds
+  check_postgres_txn_time --port-5432 --warning=30s --includeuser=warehouse
 
 =item B<txn_idle> (symlink: C<check_postgres_txn_idle>)
 
@@ -2823,7 +2995,9 @@ on the same cluster (all databases are returned no matter where you connect from
 excluded with the --include and --exclude option: see the INCLUDE section below for more details. The warning and 
 critical options are an amount of time, and must be provided (no default). Valid units are 'seconds', 'minutes', 
 'hours', or 'days'. Each may be written singular or abbreviated to just the first letter. If no units are given, 
-the unit is assumed to be seconds. Requires Postgres 8.3 or better.
+the unit are assumed to be seconds.
+
+This action requires Postgres 8.3 or better.
 
 Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:
   check_postgres_txn_idle --port=5432 --warning='15 seconds'
@@ -2911,7 +3085,7 @@ Example 2: Give a warning if any databases on hosts valley,grain, or sunshine is
 
 =back
 
-=head1 INCLUSION AND EXCLUSION
+=head1 BASIC FILTERING
 
 The options --include and --exclude can be combined to limit which things are checked, depending on the action. 
 The name of the database can be filtered when using the following actions: 
@@ -2951,6 +3125,43 @@ Examples:
  Exclude all items which start with the letters 'pg_', which contain the letters 'slon', or which are named 
  'sql_settings' or 'green'. Specifically check items with the letters 'prod' in their names, and always 
  check the item named 'pg_relname'.
+
+=head1 USER NAME FILTERING
+
+The options --includeuser and --excludeuser can be used on some actions to only examine database 
+objects owned by (or not owned by) one or more users. An --includeuser option always trumps 
+an --excludeuser option. You can give each option more than once for multiple users, or you can 
+give a comma-separated list. The actions that currently use these options are:
+
+=over 4
+
+=item database_size
+
+=item last_analyze
+
+=item last_vacuum
+
+=item query_time
+
+=item relation_size
+
+=item txn_time
+
+=back
+
+Examples:
+
+ --includeuser=greg
+ Only check items owned by the user named greg
+
+ --includeuser=watson,crick
+ Only check items owned by either watson or crick
+
+ --includeuser=watson --includeuser=franklin --includeuser=crick,wilkins
+ Only check items owned by crick,franklin, watson, or wilkins
+
+ --excludeuser=scott
+ Check all items except for those belonging to the user scott
 
 =head1 TEST MODE
 
@@ -2997,13 +3208,17 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
+=item B<Version 1.5.0>
+
+Add the --includeuser and --excludeuser options.
+
 =item B<Version 1.4.3>
 
 Add in the 'output' concept for future support of non-Nagios programs.
 
 =item B<Version 1.4.2>
 
-Fix bug preventing --dbpass argument from working (Robert Treat)
+Fix bug preventing --dbpass argument from working (Robert Treat).
 
 =item B<Version 1.4.1>
 
@@ -3011,14 +3226,14 @@ Minor documentation fixes.
 
 =item B<Version 1.4.0>
 
-Have check_wal_files use pg_ls_dir (idea by Robert Treat)
+Have check_wal_files use pg_ls_dir (idea by Robert Treat).
 
 For last_vacuum and last_analyze, respect autovacuum effects, add separate 
-autovacuum checks (ideas by Robert Treat)
+autovacuum checks (ideas by Robert Treat).
 
 =item B<Version 1.3.1>
 
-Have txn_idle use query_start, not xact_start
+Have txn_idle use query_start, not xact_start.
 
 =item B<Version 1.3.0>
 
@@ -3033,7 +3248,7 @@ Fix some typos in the docs.
 
 Explicitly allow -v as an argument.
 
-Allow for a null syslog_facility in check_logfile
+Allow for a null syslog_facility in check_logfile.
 
 =item B<Version 1.1.2>
 
