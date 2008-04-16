@@ -2647,29 +2647,32 @@ program which is sent to stderr.
 
 =item B<--test>
 
-Enables test mode. See the L</TEST MODE> section below.
+Enables test mode. See the L</"TEST MODE"> section below.
 
 =item B<--showperf=VAL>
 
-Determines if we output performance data in standard Nagios format (at end of string, after a pipe symbol, using 
-name=value). VAL should be 0 or 1. The default is 1.
+Determines if we output performance data in standard Nagios format 
+(at end of string, after a pipe symbol, using name=value). 
+VAL should be 0 or 1. The default is 1.
 
 =item B<--perflimit=i>
 
-Sets a limit s to how many items of interest are reported back when using the B<showperf> option. This only has 
-an effect for actions that return a large number of items, such as B<table_size>. The default is 0, or no limit.
-Be careful when using this with --include or --exclude, as those restrictions are done after the query has 
-been run, and thus your limit may not include the items you want.
+Sets a limit s to how many items of interest are reported back when using the 
+B<showperf> option. This only has an effect for actions that return a large 
+number of items, such as B<table_size>. The default is 0, or no limit. Be 
+careful when using this with the B<--include> or B<--exclude> options, as 
+those restrictions are done I<after> the query has been run, and thus your 
+limit may not include the items you want.
 
 =item B<--showtime=VAL>
 
-Determines if the time taken to run each query is shown in the output. VAL should be 0 or 1. The default is 1.
-No effect unless showperf is on.
+Determines if the time taken to run each query is shown in the output. VAL 
+should be 0 or 1. The default is 1. No effect unless B<showperf> is on.
 
 =item B<--action=NAME>
 
-States what action we are running as. Required unless using a symlinked file, in which case the name of the file 
-is used to figure out the action.
+States what action we are running. Required unless using a symlinked file, 
+in which case the name of the file is used to figure out the action.
 
 =back
 
@@ -2686,15 +2689,17 @@ or use a program named:
 
   check_postgres_timesync
 
-All the symlinks are created for you if use the action "build_symlinks":
+All the symlinks are created for you in the current directory 
+if use the action "build_symlinks":
 
   perl check_postgres.pl --action="build_symlinks"
 
 If the file name already exists, it will not be overwritten. If the file exists 
 and is a symlink, you can force it to overwrite by using "build_symlinks_force"
 
-Most actions take a --warning and an -critical option, indicating at what point we change from OK to WARNING 
-and then to CRITICAL. Note that because criticals are always checked first, setting the warning equal to the 
+Most actions take a B<--warning> and an B<--critical> option, indicating at what 
+point we change from OK to WARNING, and what point we go to CRITICAL. Note that 
+because criticals are always checked first, setting the warning equal to the 
 critical is an effective way to turn warnings off and always give a critical.
 
 The current supported actions are:
@@ -2703,13 +2708,18 @@ The current supported actions are:
 
 =item B<backends> (symlink: C<check_postgres_backends>)
 
-Checks the current number of connections for one or more databases, and optionally comparing it to the maximum 
-allowed, which is determined by the 'max_connections' setting. The warning and option can take one of three forms. 
-First, a simple number can be given, which represents the number of connections at which the alert will be given. 
-This choice does not use the max_connections setting. Second, the percentage of available connections can be given. 
-Third, a negative number can be given which represents the number of connections left until max_connections is 
-reached. The default values for warning and critical are '90%' and '95%'. This action also supports the use of the 
-include and exclude options to filter out specific databases: see the BASIC FILTERING section below for more detail.
+Checks the current number of connections for one or more databases, and optionally 
+compares it to the maximum allowed, which is determined by the 
+Postgres configuration variable B<max_connections>. The B<--warning> and 
+B<--critical> options can take one of three forms. First, a simple number can be 
+given, which represents the number of connections at which the alert will be 
+given. This choice does not use the B<max_connections> setting. Second, the 
+percentage of available connections can be given. Third, a negative number can 
+be given which represents the number of connections left until B<max_connections> 
+is reached. The default values for B<--warning> and B<--critical> are '90%' and '95%'.
+You can also filter the databases by use of the 
+B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
+for more details.
 
 Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 140.
   check_postgres_backends --host=quirm --warning=120 --critical=150
@@ -2722,26 +2732,35 @@ when we have only 5 left.
   check_postgres_backends --warning=-10 --critical=-5 --host=plasmid
 
 Example 4: Check all databases except those with "test" in their name, but allow ones that are named "pg_greatest". Connect as port 5432 on the first two hosts, and as port 5433 on the third one. We want to always throw a critical when we reach 30 or more connections.
-
  check_postgres_backends --dbhost=hong,kong --dbhost=fooey --dbport=5432 --dbport=5433 --warning=30 --critical=30 --exclude="~test" --include="pg_greatest,~prod"
 
 =item B<bloat> (symlink: C<check_postgres_bloat>)
 
-Checks the amount of bloat in tables and indexes. This action requires that stats collection be enabled on the 
-target databases, and that ANALYZE is run frequently as well. The --include and --exclude options can be used to 
-filter out which tables to look at: see the BASIC FILTERING section below for more details. The --warning and --critical 
-option must be specified in sizes. Valid units are bytes, kilobytes, megabytes, gigabytes, terabytes, and exabytes. 
-You can abbreviate all of those with the first letter. Items without units are assumed to be 'bytes'. The default values 
-are '1 GB' and '5 GB'. The number represents the number of "wasted bytes", or the difference between what is actually 
-used by the table and index, and what we compute it should be.
+Checks the amount of bloat in tables and indexes. (Bloat is generally the amount 
+of dead unused space taken up in a table or index. This space is usually reclaimed 
+by use of the VACUUM command.) This action requires that stats collection be 
+enabled on the target databases, and requires that ANALYZE is run frequently. 
+The B<--include> and B<--exclude> options can be used to filter out which tables 
+to look at. See the L</"BASIC FILTERING"> section for more details.
 
-Note that this action has two hard-coded values to avoid false alarms on smaller relations. Tables must have at 
-least 10 pages, and indexes at least 15, before they can be considered by this test. If you really want to adjust 
-these values, you can look for the variables $MINPAGES and $MINIPAGES at the top of the check_bloat subroutine.
+The B<--warning> and B<--critical> options must be specified as sizes. 
+Valid units are bytes, kilobytes, megabytes, gigabytes, terabytes, and exabytes. 
+You can abbreviate all of those with the first letter. Items without units are 
+assumed to be 'bytes'. The default values are '1 GB' and '5 GB'. The value 
+represents the number of "wasted bytes", or the difference between what is actually 
+used by the table and index, and what we compute that it should be.
 
-Please note that the values computed by this action are not precise, and should be used as a guideline only. Great 
-effort was made to estimate the correct size of a table, but in the end it is only an estimate. The correct index size is 
-much more of a guess than the correct table size, but both should give a rough idea of how bloated they are.
+Note that this action has two hard-coded values to avoid false alarms on 
+smaller relations. Tables must have at least 10 pages, and indexes at least 15, 
+before they can be considered by this test. If you really want to adjust these 
+values, you can look for the variables B<$MINPAGES> and B<$MINIPAGES> at the top of the 
+C<check_bloat> subroutine.
+
+Please note that the values computed by this action are not precise, and 
+should be used as a guideline only. Great effort was made to estimate the 
+correct size of a table, but in the end it is only an estimate. The correct 
+index size is even more of a guess than the correct table size, but both 
+should give a rough idea of how bloated things are.
 
 Example 1: Warn if any table on port 5432 is over 100 MB bloated, and critical if over 200 MB
   check_postgres_bloat --port=5432 --warning='100 M', --critical='200 M'
@@ -2752,12 +2771,13 @@ Example 2: Give a critical if table 'orders' on host 'sami' has more than 10 meg
 =item B<connection> (symlink: check_postgres_connection)
 
 Simply connects, issues a 'SELECT version()', and leaves.
-Takes no --warning or --critical options.
+Takes no B<--warning> or B<--critical> options.
 
 =item B<database_size> (symlink: C<check_postgres_database_size>)
 
-Checks the size of all databases and complains when they are too big. Makes no 
-sense to run this more than once per cluster. Databases can be filtered with 
+Checks the size of all databases and complains when they are too big. 
+There is no need to run this command more than once per database cluster. 
+Databases can be filtered with 
 the B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details. 
 They can also be filtered by the owner of the database with the 
@@ -2782,13 +2802,17 @@ Example 3: Give a warning if any database on host 'tardis' owned by the user 'to
 
 =item B<disk_space> (symlink: C<check_postgres_disk_space>)
 
-Checks on the available physical disk space used by Postgres. This action requires that you have the executable "/bin/df" 
-available to report on disk sizes, and it requires that it be run as a superuser, so it can examine the 'data_directory' 
-setting inside of Postgres. The --warning and --critical options are given in either sizes or percentages. If using sizes, 
-the standard unit types are allowed: bytes, kilobytes, gigabytes, megabytes, gigabytes, terabytes, or exabytes. Each 
-may be abbreviated to the first letter only; no units at all indicates 'bytes'. The default values are '90%' and '95%'.
+Checks on the available physical disk space used by Postgres. This action requires 
+that you have the executable "/bin/df" available to report on disk sizes, and it 
+also needs to be run as a superuser, so it can examine the B<data_directory> 
+setting inside of Postgres. The B<--warning> and B<--critical> options are 
+given in either sizes or percentages. If using sizes, the standard unit types 
+are allowed: bytes, kilobytes, gigabytes, megabytes, gigabytes, terabytes, or 
+exabytes. Each may be abbreviated to the first letter only; no units at all 
+indicates 'bytes'. The default values are '90%' and '95%'.
 
-This command checks the following things to determine all of the different physical disks being used by Postgres.
+This command checks the following things to determine all of the different 
+physical disks being used by Postgres.
 
 =over 4
 
@@ -2819,7 +2843,7 @@ Example 1: Make sure that no file system is over 90% for the database on port 54
   check_postgres_disk_space --port=5432 --warning='90%' --critical="90%'
 
 Example 2: Check that all file systems starting with /dev/sda are smaller than 10 GB and 11 GB (warning and critical)
-  check_postgres_disk_space --port=5432 --warning='10 GB' --critical='11 GB' --include=~^/dev/sda
+  check_postgres_disk_space --port=5432 --warning='10 GB' --critical='11 GB' --include="~^/dev/sda"
 
 =item B<index_size> (symlink: C<check_postgres_index_size>)
 
@@ -2898,12 +2922,17 @@ Example 2: Give a critical if there are no active LISTEN requests matching 'grim
 
 =item B<locks> (symlink: C<check_postgres_locks>)
 
-Check the total number of locks on one or more databases. Makes no sense to run this more than once per cluster. 
-Databases can be filtered with the --include and --exclude options: See the INCLUDE section below for more detail. 
-The warning and critical can be specified as simple numbers, which represent the total number of locks, or they can 
-be broken down by type of lock. Valid lock names are "total", "waiting", or a type of lock used by Postgres. 
-These names are case-insensitive and do not need the "lock" part on the end, so 'exclusive' will match 
-'ExclusiveLock'. The format is name=number, with different items separated by semicolons.
+Check the total number of locks on one or more databases. There is no 
+need to run this more than once per database cluster. Databases can be filtered 
+with the B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
+for more details. 
+
+The B<--warning> and B<--critical> options can be specified as simple numbers, 
+which represent the total number of locks, or they can be broken down by type of lock. 
+Valid lock names are C<'total'>, C<'waiting'>, or the name of a lock type used by Postgres. 
+These names are case-insensitive and do not need the "lock" part on the end, 
+so B<exclusive> will match 'ExclusiveLock'. The format is name=number, with different 
+items separated by semicolons.
 
 Example 1: Warn if the number of locks is 100 or more, and critical if 200 or more, on host garrett
   check_postgres_locks --host=garrett --warning=100 --critical=200
@@ -2914,14 +2943,19 @@ or if over 20 exclusive locks exist, or if over 5 connections are waiting for a 
 
 =item B<logfile> (symlink: C<check_postgres_logfile>)
 
-Ensures that the logfile is in the expected location and is being logged to. This action issues a command that throws 
-an error on each database it is checking, and ensures that the message shows up in the logs. It scans the various 
-log_* settings inside of Postgres to figure out where the logs should be. If you are using syslog, it does a rough 
-but not foolproof scan of /etc/syslog,conf. Alternatively, you can provide the name of the logfile with the --logfile 
-option. This is especially useful if the logs have a custom rotation scheme driven be an external program. The 
---logfile option supports the following escape characters: %Y %m %d %H, which represent the current year, month, date, 
-and hour respectively. An error is always reported as critical unless the warning option has been passed in as a 
-non-zero value. Other than that specific usage, the --warning and --critical options should not be used.
+Ensures that the logfile is in the expected location and is being logged to. 
+This action issues a command that throws an error on each database it is 
+checking, and ensures that the message shows up in the logs. It scans the 
+various log_* settings inside of Postgres to figure out where the logs should be. 
+If you are using syslog, it does a rough (but not foolproof) scan of 
+F</etc/syslog.conf>. Alternatively, you can provide the name of the logfile 
+with the B<--logfile> option. This is especially useful if the logs have a 
+custom rotation scheme driven be an external program. The B<--logfile> option 
+supports the following escape characters: C<%Y %m %d %H>, which represent 
+the current year, month, date, and hour respectively. An error is always 
+reported as critical unless the warning option has been passed in as a non-zero 
+value. Other than that specific usage, the C<--warning> and C<--critical> 
+options should I<not> be used.
 
 Example 1: On port 5432, ensure the logfile is being written to the file /home/greg/pg8.2.log
   check_postgres_logfile --port=5432 --logfile=/home/greg/pg8.2.log
@@ -2931,20 +2965,22 @@ Example 2: Same as above, but raise a warning, not a critical
 
 =item B<query_runtime> (symlink: C<check_postgres_query_runtime>)
 
-Checks how long a specific query takes to run, by executing a "EXPLAIN ANALYZE" against it. The --warning and --critical 
-options are the maximum amount of time the query should take. Valid units are seconds, minutes, and hours; any can be 
-abbreviated to the first letter. If no units are given, 'seconds' are assumed. Both warning and critical must be given. 
-The name of the view or function to be run must be passed in to the --queryname 
-option. It must consist of a single word (or schema.word format), with optional parens at the end.
+Checks how long a specific query takes to run, by executing a "EXPLAIN ANALYZE" 
+against it. The B<--warning> and B<--critical> options are the maximum amount of 
+time the query should take. Valid units are seconds, minutes, and hours; any can be 
+abbreviated to the first letter. If no units are given, 'seconds' are assumed. 
+Both the warning and the critical option must be given. The name of the view or 
+function to be run must be passed in to the B<--queryname> option. It must consist 
+of a single word (or schema.word), with optional parens at the end.
 
 Example 1: Give a critical if the function named "speedtest" fails to run in 10 seconds or less.
   check_postgres_query_runtime --queryname='speedtest()' --critical=10 --warning=10
 
 =item B<query_time> (symlink: C<check_postgres_query_time>)
 
-Checks the length of running queries on one or more databases. It makes 
-no sense to run this more than once on the same cluster (all databases 
-are returned no matter where you connect from). Databases can be filtered 
+Checks the length of running queries on one or more databases. There is 
+no need to run this more than once on the same database cluster.
+Databases can be filtered 
 by using the B<--include> and B<--exclude> options. See the L</"BASIC FILTERING">
 section for more details. You can also filter on the user running the 
 query with the B<--includeuser> and B<--excludeuser> options.
@@ -2967,9 +3003,9 @@ Example 3: Warn if user 'don' has a query running over 20 seconds
 
 =item B<txn_time> (symlink: C<check_postgres_txn_time>)
 
-Checks the length of open transactions on one or more databases. It makes no 
-sense to run this more than once on the same cluster (all databases are returned 
-no matter where you connect from). Databases can be filtered by use of the 
+Checks the length of open transactions on one or more databases. 
+There is no need to run this command more than once per database cluster. 
+Databases can be filtered by use of the 
 B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details. The owner of the transaction can also be filtered, by use of 
 the B<--includeuser> and B<--excludeuser> options.
@@ -2990,12 +3026,15 @@ Example 1: Warn if user 'warehouse' has a transaction open over 30 seconds
 
 =item B<txn_idle> (symlink: C<check_postgres_txn_idle>)
 
-Checks the length of "idle in transaction" queries on one or more databases. It makes no sense to run this more than once 
-on the same cluster (all databases are returned no matter where you connect from). Databases can be included or 
-excluded with the --include and --exclude option: see the INCLUDE section below for more details. The warning and 
-critical options are an amount of time, and must be provided (no default). Valid units are 'seconds', 'minutes', 
-'hours', or 'days'. Each may be written singular or abbreviated to just the first letter. If no units are given, 
-the unit are assumed to be seconds.
+Checks the length of "idle in transaction" queries on one or more databases. There is 
+no need to run this more than once on the same database cluster. Databases can be filtered 
+by using the B<--include> and B<--exclude> options. See the L<"BASIC FILTERING"> 
+section below for more details.
+
+The B<--warning> and B<--critical> options are given as units of time, and both must 
+be provided (there are no defaults). Valid units are 'seconds', 'minutes', 'hours', 
+or 'days'. Each may be written singular or abbreviated to just the first letter. 
+If no units are given, the unit are assumed to be seconds.
 
 This action requires Postgres 8.3 or better.
 
@@ -3006,18 +3045,22 @@ Example 1: Give a warning if any connection has been idle in transaction for mor
 
 =item B<rebuild_symlinks_force>
 
-This action requires no other arguments, and does not create to any databases, but simply creates symlinks for 
-each action, in the form "check_postgres_<action_name>". If the file already exists, it will not be overwritten. 
-If the action is rebuild_symlinks_force, then symlinks will be overwritten.
+This action requires no other arguments, and does not connect to any databases, 
+but simply creates symlinks in the current directory for each action, in the form 
+B<check_postgres_E<lt>action_nameE<gt>>.
+ If the file already exists, it will not be overwritten. If the action is rebuild_symlinks_force, 
+then symlinks will be overwritten.
 
 =item B<settings_checksum> (symlink: C<check_postgres_settings_checksum>)
 
-Check that all the Postgres settings are the same as last time you checked. This is done by generating a checksum 
-of a sorted list of setting names and their values. Note that different users in the same database may have 
-different checksums, due to ALTER USER usage, and due to the fact that superusers see more settings than 
-ordinary users. Either the --warning or the --critical should be given. but not both. The value of each one is 
-the checksum, a 32-character hexadecimal value. You can run with the special --critical=0 option to find out 
-an existing checksum.
+Check that all the Postgres settings are the same as last time you checked. 
+This is done by generating a checksum of a sorted list of setting names and 
+their values. Note that different users in the same database may have different 
+checksums, due to ALTER USER usage, and due to the fact that superusers see more 
+settings than ordinary users. Either the B<--warning> or the B<--critical> option 
+should be given, but not both. The value of each one is the checksum, a 
+32-character hexadecimal value. You can run with the special C<--critical=0> option 
+to find out an existing checksum.
 
 This action requires the Digest::MD5 module.
 
@@ -3029,10 +3072,11 @@ Example 2: Make sure no settings have changed and warn if so, using the checksum
 
 =item B<timesync> (symlink: C<check_postgres_timesync>)
 
-Compares the local system time with the time reported by one or more databases. The warning and critical options represent 
-the number of seconds at which the warning or critical should be given. If neither is specified, the default values 
-are used, which are '2' and '5'. The warning cannot be greater than the critical. Due to the non-exact nature of this 
-test, a value of '0' or '1' is not recommended.
+Compares the local system time with the time reported by one or more databases. 
+The B<--warning> and B<--critical> options represent the number of seconds between 
+the two systems before an alert is given. If neither is specified, the default values 
+are used, which are '2' and '5'. The warning value cannot be greater than the critical
+value. Due to the non-exact nature of this test, values of '0' or '1' are not recommended.
 
 The string returned shows the time difference as well as the time on each side written out.
 
@@ -3041,11 +3085,13 @@ Example 1: Check that databases on hosts ankh, morpork, and klatch are no more t
 
 =item B<txn_wraparound> (symlink: C<check_postgres_txn_wraparound>)
 
-Checks how close to transaction wraparound one or more databases are getting. The warning and critical indicate 
-the number of transactions left and must be a positive integer. If either is not given, the default values of 
-1.3 and 1.4 billion are used. It makes no sense to run this check more than once on a single cluster. For a more 
-detailed discussion of what this number represents and what to do about it, please visit the page 
-http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND
+Checks how close to transaction wraparound one or more databases are getting. 
+The B<--warning> and B<--critical> options indicate the number of transactions 
+left, and must be a positive integer. If either option is not given, the default 
+values of 1.3 and 1.4 billion are used. There is no need to run this command 
+more than once per database cluster. For a more detailed discussion of what this 
+number represents and what to do about it, please visit the page 
+L<http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND>
 
 The warning and value can have underscores in the number for legibility, as Perl does.
 
@@ -3057,25 +3103,29 @@ Example 2: Check port 6000 and give a critical at 1.7 billion transactions left:
 
 =item B<wal_files> (symlink: C<check_postgres_wal_files>)
 
-Checks how many WAL files exist in the pg_xlog file, which is found off of your data directory, sometimes 
-as a symlink to another disk for performance reasons. This must be run as a superuser, in order to 
-access the contents of the pg_xlog directory. The minimum version to use this action is 8.1. The 
-warning and critical are simply the number of files in the pg_xlog directory. What number to set this 
-to will vary, but a general guideline is to put a number slightly higher than what is normally there, 
-to catch problems early.
+Checks how many WAL files exist in the F<pg_xlog> directory, which is found 
+off of your B<data_directory>, sometimes as a symlink to another physical disk for 
+performance reasons. This action must be run as a superuser, in order to access the 
+contents of the F<pg_xlog> directory. The minimum version to use this action is 
+Postgres 8.1. The B<--warning> and B<--critical> options are simply the number of 
+files in the F<pg_xlog> directory. What number to set this to will vary, but a general 
+guideline is to put a number slightly higher than what is normally there, to catch 
+problems early.
 
-Normally, WAL files are closed and then re-used, but a long-running open transaction, or a faulty 
-log shipping method, may cause Postgres to create too many files. Ultimately, this will cause the 
-disk they are on to run out of space, at which point Postgres will shut down.
+Normally, WAL files are closed and then re-used, but a long-running open 
+transaction, or a faulty B<archive_command> script, may cause Postgres to 
+create too many files. Ultimately, this will cause the disk they are on to run 
+out of space, at which point Postgres will shut down.
 
 Example 1: Check that the number of WAL files is 20 or less on host "pluto"
   check_postgres_txn_wraparound --host=pluto --critical=20
 
 =item B<version> (symlink: C<check_version>)
 
-Checks that the required version of Postgres is running. The --warning and --critical arguments (only one is required) 
-must be of the format X.Y or X.Y.Z where X is the major version number, Y is the minor version number, and Z is the 
-revision.
+Checks that the required version of Postgres is running. The 
+B<--warning> and B<--critical> options (only one is required) must be of 
+the format B<X.Y> or B<X.Y.Z> where X is the major version number, 
+Y is the minor version number, and Z is the revision.
 
 Example 1: Give a warning if the database on port 5678 is not version 8.4.10:
   check_postgres_version --port=5678 -w=8.4.10
@@ -3087,8 +3137,9 @@ Example 2: Give a warning if any databases on hosts valley,grain, or sunshine is
 
 =head1 BASIC FILTERING
 
-The options --include and --exclude can be combined to limit which things are checked, depending on the action. 
-The name of the database can be filtered when using the following actions: 
+The options B<--include> and B<--exclude> can be combined to limit which 
+things are checked, depending on the action. The name of the database can 
+be filtered when using the following actions: 
 backends, database_size, last_vacuum, last_analyze, locks, and query_time.
 The name of a relation can be filtered when using the following actions: 
 bloat, index_size, table_size, and relation_size.
@@ -3096,10 +3147,12 @@ The name of a setting can be filtered when using the settings_checksum action.
 The name of a file system can be filtered when using the disk_space action.
 The name of a setting can be filtered when using the settings_checksum action.
 
-If only an include option is given, then ONLY those entries that match will be checked. However, if given 
-both exclude and include, the exclusion is done first, and the inclusion second to reinstate things that 
-may have been excluded. Both --include and --exclude can be given multiple times, or as comma-separated lists. 
-A leading tilde will match the following word as a regular expression.
+If only an include option is given, then ONLY those entries that match will be 
+checked. However, if given both exclude and include, the exclusion is done first, 
+and the inclusion after, to reinstate things that may have been excluded. Both 
+B<--include> and B<--exclude> can be given multiple times, 
+and/or as comma-separated lists. A leading tilde will match the following word 
+as a regular expression.
 
 Examples:
 
@@ -3128,10 +3181,11 @@ Examples:
 
 =head1 USER NAME FILTERING
 
-The options --includeuser and --excludeuser can be used on some actions to only examine database 
-objects owned by (or not owned by) one or more users. An --includeuser option always trumps 
-an --excludeuser option. You can give each option more than once for multiple users, or you can 
-give a comma-separated list. The actions that currently use these options are:
+The options B<--includeuser> and B<--excludeuser> can be used on some actions 
+to only examine database objects owned by (or not owned by) one or more users. 
+An B<--includeuser> option always trumps an B<--excludeuser> option. You can 
+give each option more than once for multiple users, or you can give a 
+comma-separated list. The actions that currently use these options are:
 
 =over 4
 
@@ -3165,10 +3219,12 @@ Examples:
 
 =head1 TEST MODE
 
-To help in setting things up, this program can be run in a "test mode" by specifying the --test option. This will 
-perform some basic tests to make sure that the databases can be contacted, and that certain per-action prerequisites 
-are met. Currently, we check that the user is a superuser if required by that action, and that the version of Postgres 
-is new enough for those actions that depend on a specific version.
+To help in setting things up, this program can be run in a "test mode" by 
+specifying the B<--test> option. This will perform some basic tests to 
+make sure that the databases can be contacted, and that certain per-action 
+prerequisites are met. Currently, we check that the user is a superuser 
+if required by that action, and that the version of Postgres is new enough 
+for those actions that depend on a specific version.
 
 =head1 DEPENDENCIES
 
@@ -3180,22 +3236,26 @@ is new enough for those actions that depend on a specific version.
 
 =over 4
 
-=item Getopt::Long
+=item L<Cwd>
 
-=item File::Basename
+=item L<Getopt::Long>
 
-=item File::Temp
+=item L<File::Basename>
 
-=item Time::HiRes (if opt{showtime} is set to true, which is the default)
+=item L<File::Temp>
+
+=item L<Time::HiRes> (if C<$opt{showtime}> is set to true, which is the default)
 
 =back
 
 =back
 
-The 'settings_checksum' action requires the Digest::MD5 module.
+The B<settings_checksum> action requires the L<Digest::MD5> module.
 
-Some actions require access to external programs. If psql is not explicitly specified, the command 
-'which' is used to find it. The program "/bin/df" is needed by the 'check_disk_space' action.
+Some actions require access to external programs. If psql is not explicitly 
+specified, the command B<which> is used to find it. The program B</bin/df> 
+is needed by the B<check_disk_space> action.
+
 
 =head1 DEVELOPMENT
 
@@ -3210,7 +3270,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 1.5.0>
 
-Add the --includeuser and --excludeuser options.
+Add the --includeuser and --excludeuser options. Documentation cleanup.
 
 =item B<Version 1.4.3>
 
