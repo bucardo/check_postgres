@@ -2509,7 +2509,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes check_postgres.pl version 1.5.0
+This documents describes B<check_postgres.pl> version 1.5.0
 
 =head1 SYNOPSIS
 
@@ -2722,16 +2722,20 @@ B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section
 for more details.
 
 Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 140.
+
   check_postgres_backends --host=quirm --warning=120 --critical=150
 
 Example 2: Give a critical when we reach 75% of our max_connections setting on hosts lancre or lancre2.
+
   check_postgres_backends --warning='75%' --critical='75%' --host=lancre,lancre2
 
 Example 3: Give a warning when there are only 10 more connection slots left on host plasmid, and a critical 
 when we have only 5 left.
+
   check_postgres_backends --warning=-10 --critical=-5 --host=plasmid
 
 Example 4: Check all databases except those with "test" in their name, but allow ones that are named "pg_greatest". Connect as port 5432 on the first two hosts, and as port 5433 on the third one. We want to always throw a critical when we reach 30 or more connections.
+
  check_postgres_backends --dbhost=hong,kong --dbhost=fooey --dbport=5432 --dbport=5433 --warning=30 --critical=30 --exclude="~test" --include="pg_greatest,~prod"
 
 =item B<bloat> (symlink: C<check_postgres_bloat>)
@@ -2763,9 +2767,11 @@ index size is even more of a guess than the correct table size, but both
 should give a rough idea of how bloated things are.
 
 Example 1: Warn if any table on port 5432 is over 100 MB bloated, and critical if over 200 MB
+
   check_postgres_bloat --port=5432 --warning='100 M', --critical='200 M'
 
 Example 2: Give a critical if table 'orders' on host 'sami' has more than 10 megs of bloat
+
   check_postgres_bloat --host=sami --include=orders --critical='10 MB'
 
 =item B<connection> (symlink: check_postgres_connection)
@@ -2792,12 +2798,15 @@ than the critical value. The output returns all databases sorted by size largest
 showing both raw bytes and a "pretty" version of the size.
 
 Example 1: Warn if any database on host flagg is over 1 TB in size, and critical if over 1.1 TB.
+
   check_postgres_database_size --host=flagg --warning='1 TB' --critical='1.1 t'
 
 Example 2: Give a critical if the database template1 on port 5432 is over 10 MB.
+
   check_postgres_database_size --port=5432 --include=template1 --warning='10MB' --critical='10MB'
 
 Example 3: Give a warning if any database on host 'tardis' owned by the user 'tom' is over 5 GB
+
   check_postgres_database_size --host=tardis --includeuser=tom --warning='5 GB' --critical='10 GB'
 
 =item B<disk_space> (symlink: C<check_postgres_disk_space>)
@@ -2814,35 +2823,25 @@ indicates 'bytes'. The default values are '90%' and '95%'.
 This command checks the following things to determine all of the different 
 physical disks being used by Postgres.
 
-=over 4
+B<data_directory> - The disk that the main data directory is on.
 
-=item B<data_directory>
+B<log directory> - The disk that the log files are on.
 
-The disk that the main data directory is on.
+B<WAL file directory> - The disk that the write-ahead logs are on (e.g. symlinked pg_xlog)
 
-=item B<log directory>
-
-The disk that the log files are on.
-
-=item B<WAL file directory>
-
-The disk that the write-ahead logs are on (e.g. symlinked pg_xlog)
-
-=item B<tablespaces>
-
-Each tablespace that is on a separate disk
-
-=back
+B<tablespaces> - Each tablespace that is on a separate disk.
 
 The output shows the total size used and available on each disk, as well as 
 the percentage, ordered by highest to lowest percentage used. Each item above 
 maps to a file system: these can be included or excluded. See the 
-L</"BASIC FILTERING" section for more details.
+L</"BASIC FILTERING"> section for more details.
 
 Example 1: Make sure that no file system is over 90% for the database on port 5432.
+
   check_postgres_disk_space --port=5432 --warning='90%' --critical="90%'
 
 Example 2: Check that all file systems starting with /dev/sda are smaller than 10 GB and 11 GB (warning and critical)
+
   check_postgres_disk_space --port=5432 --warning='10 GB' --critical='11 GB' --include="~^/dev/sda"
 
 =item B<index_size> (symlink: C<check_postgres_index_size>)
@@ -2871,12 +2870,15 @@ B<--perflimit> option, which will cause the query to do a
 C<ORDER BY size DESC LIMIT (perflimit)>.
 
 Example 1: Give a critical if any table is larger than 600MB on host burrick.
+
   check_postgres_table_size --critical='600 MB' --warning='600 MB' --host=burrick
 
 Example 2: Warn if the table products is over 4 GB in size, and give a critical at 4.5 GB.
+
   check_postgres_table_size --host=burrick --warning='4 GB' --critical='4.5 GB' --include=products
 
 Example 3: Warn if any index not owned by postgres goes over 500 MB.
+
   check_postgres_index_size --port=5432 --excludeuser=postgres -w 500MB -c 600MB
 
 =item B<last_analyze> (symlink: C<check_postgres_last_analyze>)
@@ -2903,9 +2905,11 @@ or just exclude them from the test.
 
 Example 1: Warn if any table has not been vacuumed in 3 days, and give a 
 critical at a week, for host wormwood
+
   check_last_vacuum --host=wormwood --warning='3d' --critical='7d'
 
 Example 2: Same as above, but skip tables belonging to the users 'eve' or 'mallory'
+
   check_last_vacuum --host=wormwood --warning='3d' --critical='7d' --excludeusers=eve,mallory
 
 =item B<listener> (symlink: C<check_postgres_listener>)
@@ -2915,9 +2919,11 @@ is a simple string representing the LISTEN target, or a tilde character followed
 check.
 
 Example 1: Give a warning if nobody is listening for the string bucardo_mcp_ping on ports 5555 and 5556
+
   check_postgres_listener --port=5555,5556 --warning=bucardo_mcp_ping
 
 Example 2: Give a critical if there are no active LISTEN requests matching 'grimm' on database oskar
+
   check_postgres_listener --db oskar --critical=~grimm
 
 =item B<locks> (symlink: C<check_postgres_locks>)
@@ -2935,10 +2941,11 @@ so B<exclusive> will match 'ExclusiveLock'. The format is name=number, with diff
 items separated by semicolons.
 
 Example 1: Warn if the number of locks is 100 or more, and critical if 200 or more, on host garrett
+
   check_postgres_locks --host=garrett --warning=100 --critical=200
 
-Example 2: On the host artemus, warn if 200 or more locks exist, and give a critical if over 250 total locks exist, 
-or if over 20 exclusive locks exist, or if over 5 connections are waiting for a lock.
+Example 2: On the host artemus, warn if 200 or more locks exist, and give a critical if over 250 total locks exist, or if over 20 exclusive locks exist, or if over 5 connections are waiting for a lock.
+
   check_postgres_locks --host=artemus --warning=200 --critical="total=250;waiting=5;exclusive=20"
 
 =item B<logfile> (symlink: C<check_postgres_logfile>)
@@ -2958,9 +2965,11 @@ value. Other than that specific usage, the C<--warning> and C<--critical>
 options should I<not> be used.
 
 Example 1: On port 5432, ensure the logfile is being written to the file /home/greg/pg8.2.log
+
   check_postgres_logfile --port=5432 --logfile=/home/greg/pg8.2.log
 
 Example 2: Same as above, but raise a warning, not a critical
+
   check_postgres_logfile --port=5432 --logfile=/home/greg/pg8.2.log -w 1
 
 =item B<query_runtime> (symlink: C<check_postgres_query_runtime>)
@@ -2974,6 +2983,7 @@ function to be run must be passed in to the B<--queryname> option. It must consi
 of a single word (or schema.word), with optional parens at the end.
 
 Example 1: Give a critical if the function named "speedtest" fails to run in 10 seconds or less.
+
   check_postgres_query_runtime --queryname='speedtest()' --critical=10 --warning=10
 
 =item B<query_time> (symlink: C<check_postgres_query_time>)
@@ -2993,12 +3003,15 @@ abbreviated to just the first letter. If no units are given, the unit is
 assumed to be seconds.
 
 Example 1: Give a warning if any query has been running longer than 3 minutes, and a critical if longer than 5 minutes.
+
   check_postgres_query_time --port=5432 --warning='3 minutes' --critical='5 minutes'
 
 Example 2: Using default values (2 and 5 minutes), check all databases except those starting with 'template'.
+
   check_postgres_query_time --port=5432 --exclude=~^template
 
 Example 3: Warn if user 'don' has a query running over 20 seconds
+
   check_postgres_query_time --port=5432 --inclucdeuser=don --warning=20s
 
 =item B<txn_time> (symlink: C<check_postgres_txn_time>)
@@ -3019,9 +3032,11 @@ If no units are given, the units are assumed to be seconds.
 This action requires Postgres 8.3 or better.
 
 Example 1: Give a critical if any transaction has been open for more than 10 minutes:
+
   check_postgres_txn_time --port=5432 --critical='10 minutes'
 
 Example 1: Warn if user 'warehouse' has a transaction open over 30 seconds
+
   check_postgres_txn_time --port-5432 --warning=30s --includeuser=warehouse
 
 =item B<txn_idle> (symlink: C<check_postgres_txn_idle>)
@@ -3039,6 +3054,7 @@ If no units are given, the unit are assumed to be seconds.
 This action requires Postgres 8.3 or better.
 
 Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:
+
   check_postgres_txn_idle --port=5432 --warning='15 seconds'
 
 =item B<rebuild_symlinks>
@@ -3065,9 +3081,11 @@ to find out an existing checksum.
 This action requires the Digest::MD5 module.
 
 Example 1: Find the initial checksum for the database on port 5555 using the default user (usually postgres)
+
   check_postgres_settings_checksum --port=5555 --critical=0
 
 Example 2: Make sure no settings have changed and warn if so, using the checksum from above.
+
   check_postgres_settings_checksum --port=5555 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231
 
 =item B<timesync> (symlink: C<check_postgres_timesync>)
@@ -3081,6 +3099,7 @@ value. Due to the non-exact nature of this test, values of '0' or '1' are not re
 The string returned shows the time difference as well as the time on each side written out.
 
 Example 1: Check that databases on hosts ankh, morpork, and klatch are no more than 3 seconds off from the local time:
+
   check_postgres_timesync --host=ankh,morpork.klatch --critical=3
 
 =item B<txn_wraparound> (symlink: C<check_postgres_txn_wraparound>)
@@ -3096,9 +3115,11 @@ L<http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FO
 The warning and value can have underscores in the number for legibility, as Perl does.
 
 Example 1: Check the default values for the localhost database
+
   check_postgres_txn_wraparound --host=localhost
 
 Example 2: Check port 6000 and give a critical at 1.7 billion transactions left:
+
   check_postgres_txn_wraparound --port=6000 --critical=1_700_000_000t
 
 =item B<wal_files> (symlink: C<check_postgres_wal_files>)
@@ -3118,19 +3139,22 @@ create too many files. Ultimately, this will cause the disk they are on to run
 out of space, at which point Postgres will shut down.
 
 Example 1: Check that the number of WAL files is 20 or less on host "pluto"
+
   check_postgres_txn_wraparound --host=pluto --critical=20
 
 =item B<version> (symlink: C<check_version>)
 
 Checks that the required version of Postgres is running. The 
 B<--warning> and B<--critical> options (only one is required) must be of 
-the format B<X.Y> or B<X.Y.Z> where X is the major version number, 
-Y is the minor version number, and Z is the revision.
+the format B<X.Y> or B<X.Y.Z> where B<X> is the major version number, 
+B<Y> is the minor version number, and B<Z> is the revision.
 
 Example 1: Give a warning if the database on port 5678 is not version 8.4.10:
+
   check_postgres_version --port=5678 -w=8.4.10
 
 Example 2: Give a warning if any databases on hosts valley,grain, or sunshine is not 8.3:
+
   check_postgres_version -H valley,grain,sunshine --critical=8.3
 
 =back
@@ -3156,28 +3180,34 @@ as a regular expression.
 
 Examples:
 
+Only checks items named pg_class:
+
  --include=pg_class
- Only checks items named pg_class
+
+Only checks items containing the letters 'pg_':
 
  --include=~pg_
- Only checks items containing the letters 'pg_'
+
+Only check items beginning with 'pg_':
 
  --include=~^pg_
- Only check items beginning with 'pg_'
+
+Exclude the item named 'test':
 
  --exclude=test
- Exclude the item named 'test'
+
+Exclude all items containing the letters 'test:
 
  --exclude=~test
- Exclude all items containing the letters 'test
+
+Exclude all items containing the letters 'ace', but allow the item 'faceoff':
 
  --exclude=~ace --include=faceoff
- Exclude all items containing the letters 'ace', but allow the item 'faceoff'
+
+Exclude all items which start with the letters 'pg_', which contain the letters 'slon', 
+or which are named 'sql_settings' or 'green'. Specifically check items with the letters 'prod' in their names, and always check the item named 'pg_relname':
 
  --exclude=~^pg_,~slon,sql_settings --exclude=green --include=~prod,pg_relname
- Exclude all items which start with the letters 'pg_', which contain the letters 'slon', or which are named 
- 'sql_settings' or 'green'. Specifically check items with the letters 'prod' in their names, and always 
- check the item named 'pg_relname'.
 
 =head1 USER NAME FILTERING
 
@@ -3205,17 +3235,21 @@ comma-separated list. The actions that currently use these options are:
 
 Examples:
 
+Only check items owned by the user named greg:
+
  --includeuser=greg
- Only check items owned by the user named greg
+
+Only check items owned by either watson or crick:
 
  --includeuser=watson,crick
- Only check items owned by either watson or crick
+
+Only check items owned by crick,franklin, watson, or wilkins:
 
  --includeuser=watson --includeuser=franklin --includeuser=crick,wilkins
- Only check items owned by crick,franklin, watson, or wilkins
+
+Check all items except for those belonging to the user scott:
 
  --excludeuser=scott
- Check all items except for those belonging to the user scott
 
 =head1 TEST MODE
 
@@ -3228,29 +3262,23 @@ for those actions that depend on a specific version.
 
 =head1 DEPENDENCIES
 
-=over 4
-
-=item Access to a working version of psql
-
-=item Some very standard Perl modules:
+Access to a working version of psql, and the following very standard Perl modules:
 
 =over 4
 
-=item L<Cwd>
+=item B<Cwd>
 
-=item L<Getopt::Long>
+=item B<Getopt::Long>
 
-=item L<File::Basename>
+=item B<File::Basename>
 
-=item L<File::Temp>
+=item B<File::Temp>
 
-=item L<Time::HiRes> (if C<$opt{showtime}> is set to true, which is the default)
-
-=back
+=item B<Time::HiRes> (if C<$opt{showtime}> is set to true, which is the default)
 
 =back
 
-The B<settings_checksum> action requires the L<Digest::MD5> module.
+The B<settings_checksum> action requires the B<Digest::MD5> module.
 
 Some actions require access to external programs. If psql is not explicitly 
 specified, the command B<which> is used to find it. The program B</bin/df> 
@@ -3260,6 +3288,7 @@ is needed by the B<check_disk_space> action.
 =head1 DEVELOPMENT
 
 Development happens using the git system. You can clone the latest version by doing:
+
  git-clone http://bucardo.org/check_postgres.git
 
 =head1 HISTORY
@@ -3268,7 +3297,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 1.5.0>
+=item B<Version 1.5.0> (April 16, 2008)
 
 Add the --includeuser and --excludeuser options. Documentation cleanup.
 
@@ -3284,7 +3313,7 @@ Fix bug preventing --dbpass argument from working (Robert Treat).
 
 Minor documentation fixes.
 
-=item B<Version 1.4.0>
+=item B<Version 1.4.0> (April 2, 2008)
 
 Have check_wal_files use pg_ls_dir (idea by Robert Treat).
 
@@ -3295,11 +3324,11 @@ autovacuum checks (ideas by Robert Treat).
 
 Have txn_idle use query_start, not xact_start.
 
-=item B<Version 1.3.0>
+=item B<Version 1.3.0> (March 23, 2008)
 
 Add in txn_idle and txn_time actions.
 
-=item B<Version 1.2.0>
+=item B<Version 1.2.0> (February 21, 2008)
 
 Add the check_wal_files method, which counts the number of WAL files
 in your pg_xlog directory.
@@ -3318,9 +3347,9 @@ Fix error preventing --action=rebuild_symlinks from working.
 
 Switch vacuum and analyze date output to use 'DD', not 'D'. (Glyn Astill)
 
-=item B<Version 1.1.0>
+=item B<Version 1.1.0> (December 16, 2008)
 
-Fixes, enhancements, and performance tracking, December 2007
+Fixes, enhancements, and performance tracking.
 
 Add performance data tracking via --showperf and --perflimit
 
