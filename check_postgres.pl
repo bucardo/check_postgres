@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.5.0';
+our $VERSION = '1.5.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2511,7 +2511,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.5.0
+This documents describes B<check_postgres.pl> version 1.5.1
 
 =head1 SYNOPSIS
 
