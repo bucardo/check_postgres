@@ -3286,7 +3286,6 @@ Some actions require access to external programs. If psql is not explicitly
 specified, the command B<which> is used to find it. The program B</bin/df> 
 is needed by the B<check_disk_space> action.
 
-
 =head1 DEVELOPMENT
 
 Development happens using the git system. You can clone the latest version by doing:
@@ -3298,6 +3297,10 @@ Development happens using the git system. You can clone the latest version by do
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 1.5.1>
+
+Add example Nagios configuration settings (Brian A. Seklecki)
 
 =item B<Version 1.5.0> (April 16, 2008)
 
@@ -3386,6 +3389,37 @@ Please report any problems to greg@endpoint.com.
 =head1 AUTHOR
 
 Greg Sabino Mullane <greg@endpoint.com>
+
+
+=head1 NAGIOS EXAMPLES
+
+Some example Nagios configuration settings using this script:
+
+ define command {
+     command_name    check_postgres_size
+     command_line    $USER2$/check_postgres.pl -H $HOSTADDRESS$ -u pgsql -db postgres --action database_size -w $ARG1$ -c $ARG2$
+ }
+
+ define command {
+     command_name    check_postgres_locks
+     command_line    $USER2$/check_postgres.pl -H $HOSTADDRESS$ -u pgsql -db postgres --action locks -w $ARG1$ -c $ARG2$
+ }
+
+
+ define service {
+     use                    generic-other
+     host_name              dbhost.gtld
+     service_description    dbhost PostgreSQL Service Database Usage Size
+     check_command          check_postgres_size!256000000!512000000
+ }
+
+ define service {
+     use                    generic-other
+     host_name              dbhost.gtld
+     service_description    dbhost PostgreSQL Service Database Locks
+     check_command          check_postgres_locks!2!3
+ }
+
 
 =head1 LICENSE AND COPYRIGHT
 

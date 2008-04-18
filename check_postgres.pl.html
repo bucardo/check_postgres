@@ -31,6 +31,7 @@
 	<li><a href="#history">HISTORY</a></li>
 	<li><a href="#bugs_and_limitations">BUGS AND LIMITATIONS</a></li>
 	<li><a href="#author">AUTHOR</a></li>
+	<li><a href="#nagios_examples">NAGIOS EXAMPLES</a></li>
 	<li><a href="#license_and_copyright">LICENSE AND COPYRIGHT</a></li>
 </ul>
 
@@ -1014,6 +1015,12 @@ is needed by the <strong>check_disk_space</strong> action.</p>
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="version_1_5_1" class="item"><strong>Version 1.5.1</strong></a></strong>
+
+<dd>
+<p>Add example Nagios configuration settings (Brian A. Seklecki)</p>
+</dd>
+</li>
 <dt><strong><a name="0" class="item"><strong>Version 1.5.0</strong> (April 16, 2008)</a></strong>
 
 <dd>
@@ -1137,6 +1144,35 @@ in your pg_xlog directory.</p>
 <hr />
 <h1><a name="author">AUTHOR</a></h1>
 <p>Greg Sabino Mullane &lt;<a href="mailto:greg@endpoint.com">greg@endpoint.com</a>&gt;</p>
+<p>
+</p>
+<hr />
+<h1><a name="nagios_examples">NAGIOS EXAMPLES</a></h1>
+<p>Some example Nagios configuration settings using this script:</p>
+<pre>
+ define command {
+     command_name    check_postgres_size
+     command_line    $USER2$/check_postgres.pl -H $HOSTADDRESS$ -u pgsql -db postgres --action database_size -w $ARG1$ -c $ARG2$
+ }</pre>
+<pre>
+ define command {
+     command_name    check_postgres_locks
+     command_line    $USER2$/check_postgres.pl -H $HOSTADDRESS$ -u pgsql -db postgres --action locks -w $ARG1$ -c $ARG2$
+ }</pre>
+<pre>
+ define service {
+     use                    generic-other
+     host_name              dbhost.gtld
+     service_description    dbhost PostgreSQL Service Database Usage Size
+     check_command          check_postgres_size!256000000!512000000
+ }</pre>
+<pre>
+ define service {
+     use                    generic-other
+     host_name              dbhost.gtld
+     service_description    dbhost PostgreSQL Service Database Locks
+     check_command          check_postgres_locks!2!3
+ }</pre>
 <p>
 </p>
 <hr />
