@@ -278,7 +278,9 @@ if (! defined $PSQL or ! length $PSQL) {
 -x $PSQL or ndie qq{The file "$PSQL" does not appear to be executable\n};
 $res = qx{$PSQL --version};
 $res =~ /^psql \(PostgreSQL\) (\d+\.\d+)/ or ndie qq{Could not determine psql version\n};
-my $psql_version = int $1;
+my $psql_version = $1;
+
+$VERBOSE >= 1 and warn qq{psql=$PSQL version=$psql_version\n};
 
 $opt{defaultdb} = $psql_version >= 7.4 ? 'postgres' : 'template1';
 
@@ -770,7 +772,7 @@ sub run_command {
 		}
 		push @args => '-p', $db->{port};
 
-		if (defined $db->{dbpass}) {
+		if (defined $db->{dbpass} and length $db->{dbpass}) {
 			## Make a custom PGPASSFILE. Far better to simply use your own .pgpass of course
 			($passfh,$passfile) = tempfile('nagios.XXXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
 			$VERBOSE >= 3 and warn "Created temporary pgpass file $passfile\n";
