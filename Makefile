@@ -13,3 +13,9 @@ critic:
 test:
 
 	@ prove t/*.t
+
+signature:
+
+	@ gpg --yes -ba check_postgres.pl
+	@ gpg --verify check_postgres.pl.asc
+
