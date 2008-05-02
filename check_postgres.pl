@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.5.1';
+our $VERSION = '1.5.2';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2513,7 +2513,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.5.1
+This documents describes B<check_postgres.pl> version 1.5.2
 
 =head1 SYNOPSIS
 
@@ -3300,7 +3300,11 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 1.5.1>
+=item B<Version 1.5.2> (May 2, 2008)
+
+Fix problem with too eager creation of custom pgpass file.
+
+=item B<Version 1.5.1> (April 17, 2008)
 
 Add example Nagios configuration settings (Brian A. Seklecki)
 
@@ -3308,15 +3312,15 @@ Add example Nagios configuration settings (Brian A. Seklecki)
 
 Add the --includeuser and --excludeuser options. Documentation cleanup.
 
-=item B<Version 1.4.3>
+=item B<Version 1.4.3> (April 16, 2008)
 
 Add in the 'output' concept for future support of non-Nagios programs.
 
-=item B<Version 1.4.2>
+=item B<Version 1.4.2> (April 8, 2008)
 
 Fix bug preventing --dbpass argument from working (Robert Treat).
 
-=item B<Version 1.4.1>
+=item B<Version 1.4.1> (April 4, 2008)
 
 Minor documentation fixes.
 
@@ -3327,7 +3331,7 @@ Have check_wal_files use pg_ls_dir (idea by Robert Treat).
 For last_vacuum and last_analyze, respect autovacuum effects, add separate 
 autovacuum checks (ideas by Robert Treat).
 
-=item B<Version 1.3.1>
+=item B<Version 1.3.1> (April 2, 2008)
 
 Have txn_idle use query_start, not xact_start.
 
@@ -3346,11 +3350,11 @@ Explicitly allow -v as an argument.
 
 Allow for a null syslog_facility in check_logfile.
 
-=item B<Version 1.1.2>
+=item B<Version 1.1.2> (February 5, 2008)
 
 Fix error preventing --action=rebuild_symlinks from working.
 
-=item B<Version 1.1.1>
+=item B<Version 1.1.1> (February 3, 2008)
 
 Switch vacuum and analyze date output to use 'DD', not 'D'. (Glyn Astill)
 
@@ -3374,7 +3378,7 @@ Remove 'redirect_stderr' requirement from 'logfile' due to 8.3 changes.
 
 Actions 'last_vacuum' and 'last_analyze' are 8.2 only (Robert Treat)
 
-=item B<Version 1.0.16>
+=item B<Version 1.0.16> (December 7, 2007)
 
 First public release, December 2007
 
