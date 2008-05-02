@@ -1627,7 +1627,7 @@ sub check_wal_files {
 	my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
 
 	## Figure out where the pg_xlog directory is
-	$SQL = q{SELECT count(*) FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$'};
+	$SQL = q{SELECT count(*) FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$'}; ## no critic
 
 	my $info = run_command($SQL);
 
