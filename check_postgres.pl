@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.5.2';
+our $VERSION = '1.6.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -104,8 +104,10 @@ die $USAGE unless
 			   'dbpass=s@',
 			   'PSQL=s',
 
-			   'logfile=s',  ## used by check_logfile only
+			   'logfile=s',   ## used by check_logfile only
 			   'queryname=s', ## used by query_runtime only
+			   'query=s',     ## used by custom_query only
+			   'checktype=s', ## used by custom_query only
 			   )
 	and keys %opt
 	and ! @ARGV;
@@ -150,6 +152,7 @@ my $action_info = {
  backends            => [1, 'Number of connections, compared to max_connections.'],
  bloat               => [0, 'Check for table and index bloat.'],
  connection          => [0, 'Simple connection check.'],
+ custom_query        => [0, 'Run a custom query.'],
  database_size       => [0, 'Report if a database is too big.'],
  disk_space          => [1, 'Checks space of local disks Postgres is using.'],
  index_size          => [0, 'Checks the size of indexes only.'],
@@ -502,7 +505,6 @@ elsif ($opt{excludeuser}) {
 	}
 }
 
-
 ## Check number of connections, compare to max_connections
 check_backends() if $action eq 'backends';
 
@@ -570,6 +572,9 @@ check_txn_time() if $action eq 'txn_time';
 
 ## Check the maximum age of idle in transaction connections
 check_txn_idle() if $action eq 'txn_idle';
+
+## Run a custom query
+check_custom_query() if $action eq 'custom_query';
 
 finishup();
 
@@ -646,7 +651,7 @@ sub run_command {
 	## "regex" - the query must match this or we throw an error
 	## "emptyok" - it's okay to not match any rows at all
 
-	my $string = shift;
+	my $string = shift || '';
 	my $arg = shift || {};
 	my $info = { command => $string, db => [], hosts => 0 };
 
@@ -960,7 +965,10 @@ sub validate_range {
 	my $critical = exists $opt{critical} ? $opt{critical} :
 		exists $opt{warning} ? '' : $arg->{default_critical} || '';
 
-	if ('seconds' eq $type) {
+	if ('string' eq $type) {
+		## Don't use this unless you have to
+	}
+	elsif ('seconds' eq $type) {
 		if (length $warning) {
 			if ($warning !~ $timesecre) {
 				ndie qq{Invalid argument to 'warning' option: must be number of seconds\n};
@@ -2502,6 +2510,63 @@ sub check_version {
 } ## end of check_version
 
 
+sub check_custom_query {
+
+    ## Run a user-supplied query, then parse the results
+	## If you end up using this to make a useful query, consider making it 
+	## into a specific action and sending in a patch!
+	## Checktype must be one of: string, time, size, integer
+
+	my $valtype = $opt{checktype} || 'integer';
+
+	my ($warning, $critical) = validate_range({type => $valtype, leastone => 1});
+
+	my $query = $opt{query} or ndie q{Must provide a query string};
+
+	my $info = run_command($query);
+
+	for $db (@{$info->{db}}) {
+
+		chomp $db->{slurp};
+		if (! length $db->{slurp}) {
+			add_unknown "No rows returned";
+			next;
+		}
+
+		while ($db->{slurp} =~ /(\S+)\s+\|\s+(.+)$/gm) {
+			my ($data, $msg) = ($1,$2);
+			$db->{perf} .= " $msg";
+			my $gotmatch = 0;
+			if (length $critical) {
+				if (($valtype eq 'string' and $data eq $critical)
+					or
+					($data >= $critical)) { ## covers integer, time, size
+					add_critical "$data";
+					$gotmatch = 1;
+				}
+			}
+
+			if (length $warning and ! $gotmatch) {
+				if (($valtype eq 'string' and $data eq $warning)
+					or
+					($data >= $warning)) {
+					add_warning "$data";
+					$gotmatch = 1;
+				}
+			}
+
+			if (! $gotmatch) {
+				add_ok "$data";
+			}
+
+		} ## end each row returned
+	}
+
+	return;
+
+} ## end of check_custom_query
+
+
 __END__
 
 
@@ -2513,7 +2578,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.5.2
+This documents describes B<check_postgres.pl> version 1.6.0
 
 =head1 SYNOPSIS
 
@@ -2782,6 +2847,46 @@ Example 2: Give a critical if table 'orders' on host 'sami' has more than 10 meg
 
 Simply connects, issues a 'SELECT version()', and leaves.
 Takes no B<--warning> or B<--critical> options.
+
+=item B<custom_query> (symlink: check_postgres_custom_query)
+
+Runs a custom query of your choosing, and parses the results. The query itself is passed in through 
+the C<custom_query> argument, and should be kept as simple as possible. If at all possible, wrap it in 
+a view of function to keep things easier to manage. The query should return exactly two columns: the first 
+is the result that will be checked, and the second is any performance data you want sent. At least one 
+of warning or critical must be set. What they are set to depends on the type of query you are running. 
+There are four types of custom_queries that can be run, specified by the C<checktype> argument. If none 
+is specified, this action defaults to 'integer'. The four types are:
+
+B<integer>:
+Does a simple integer comparison. The first column should be a simple integer, and the warning and 
+critical values should be the same.
+
+B<string>:
+The warning and critical are strings, and are triggered only if the value in the first column matches 
+it exactly. This is case-sensitive.
+
+B<time>:
+The warning and the critical are times, and can have units of seconds, minutes, hours, or days.
+Each may be written singular or abbreviated to just the first letter. If no units are given, 
+seconds are assumed. The first column should be an integer representing the number of seconds
+to check.
+
+B<size>:
+The warning and the critical are sizes, and can have units of bytes, kilobytes, megabytes, gigabytes, 
+terabytes, or exabytes. Each may be abbreviated to the first letter. If no units are given, 
+bytes are assumed. The first column should be an integer representing the number of bytes to check.
+
+Example 1: Warn if any relation over 100 pages is named "rad":
+
+  check_postgres_custom_query --checktype=string -w "rad" --query="SELECT relname FROM pg_class WHERE relpages > 100" --port=5432
+
+Example 2: Give a critical if the "foobar" function returns over 5GB of bytes:
+
+  check_postgres_custom_query --port=5432 --critical='5MB'--checktype=size --query="SELECT foobar()"
+
+If you come up with a useful custom_query, consider sending in a patch to this program 
+to make it into a standard action that other people can use.
 
 =item B<database_size> (symlink: C<check_postgres_database_size>)
 
@@ -3299,6 +3404,10 @@ Development happens using the git system. You can clone the latest version by do
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 1.6.0> (May 11, 2008)
+
+Add the custom_query action.
 
 =item B<Version 1.5.2> (May 2, 2008)
 

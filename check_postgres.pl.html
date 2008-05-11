@@ -49,7 +49,7 @@
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This documents describes <strong>check_postgres.pl</strong> version 1.5.2</p>
+<p>This documents describes <strong>check_postgres.pl</strong> version 1.6.0</p>
 <p>
 </p>
 <hr />
@@ -366,6 +366,59 @@ should give a rough idea of how bloated things are.</p>
 <dd>
 <p>Simply connects, issues a 'SELECT version()', and leaves.
 Takes no <strong>--warning</strong> or <strong>--critical</strong> options.</p>
+</dd>
+</li>
+<dt><strong><a name="custom_query" class="item"><strong>custom_query</strong> (symlink: check_postgres_custom_query)</a></strong>
+
+<dd>
+<p>Runs a custom query of your choosing, and parses the results. The query itself is passed in through 
+the <a href="#custom_query"><code>custom_query</code></a> argument, and should be kept as simple as possible. If at all possible, wrap it in 
+a view of function to keep things easier to manage. The query should return exactly two columns: the first 
+is the result that will be checked, and the second is any performance data you want sent. At least one 
+of warning or critical must be set. What they are set to depends on the type of query you are running. 
+There are four types of custom_queries that can be run, specified by the <code>checktype</code> argument. If none 
+is specified, this action defaults to 'integer'. The four types are:</p>
+</dd>
+<dd>
+<p><strong>integer</strong>:
+Does a simple integer comparison. The first column should be a simple integer, and the warning and 
+critical values should be the same.</p>
+</dd>
+<dd>
+<p><strong>string</strong>:
+The warning and critical are strings, and are triggered only if the value in the first column matches 
+it exactly. This is case-sensitive.</p>
+</dd>
+<dd>
+<p><strong>time</strong>:
+The warning and the critical are times, and can have units of seconds, minutes, hours, or days.
+Each may be written singular or abbreviated to just the first letter. If no units are given, 
+seconds are assumed. The first column should be an integer representing the number of seconds
+to check.</p>
+</dd>
+<dd>
+<p><strong>size</strong>:
+The warning and the critical are sizes, and can have units of bytes, kilobytes, megabytes, gigabytes, 
+terabytes, or exabytes. Each may be abbreviated to the first letter. If no units are given, 
+bytes are assumed. The first column should be an integer representing the number of bytes to check.</p>
+</dd>
+<dd>
+<p>Example 1: Warn if any relation over 100 pages is named &quot;rad&quot;:</p>
+</dd>
+<dd>
+<pre>
+  check_postgres_custom_query --checktype=string -w &quot;rad&quot; --query=&quot;SELECT relname FROM pg_class WHERE relpages &gt; 100&quot; --port=5432</pre>
+</dd>
+<dd>
+<p>Example 2: Give a critical if the &quot;foobar&quot; function returns over 5GB of bytes:</p>
+</dd>
+<dd>
+<pre>
+  check_postgres_custom_query --port=5432 --critical='5MB'--checktype=size --query=&quot;SELECT foobar()&quot;</pre>
+</dd>
+<dd>
+<p>If you come up with a useful custom_query, consider sending in a patch to this program 
+to make it into a standard action that other people can use.</p>
 </dd>
 </li>
 <dt><strong><a name="database_size" class="item"><strong>database_size</strong> (symlink: <code>check_postgres_database_size</code>)</a></strong>
@@ -1016,6 +1069,12 @@ is needed by the <strong>check_disk_space</strong> action.</p>
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="0" class="item"><strong>Version 1.6.0</strong> (May 11, 2008)</a></strong>
+
+<dd>
+<p>Add the custom_query action.</p>
+</dd>
+</li>
 <dt><strong><a name="2" class="item"><strong>Version 1.5.2</strong> (May 2, 2008)</a></strong>
 
 <dd>
@@ -1028,7 +1087,7 @@ is needed by the <strong>check_disk_space</strong> action.</p>
 <p>Add example Nagios configuration settings (Brian A. Seklecki)</p>
 </dd>
 </li>
-<dt><strong><a name="0" class="item"><strong>Version 1.5.0</strong> (April 16, 2008)</a></strong>
+<dt><strong><strong>Version 1.5.0</strong> (April 16, 2008)</strong>
 
 <dd>
 <p>Add the --includeuser and --excludeuser options. Documentation cleanup.</p>
