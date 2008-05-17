@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.6.0';
+our $VERSION = '1.6.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -88,6 +88,7 @@ die $USAGE unless
 			   'showtime=i',
 			   'timeout|t=i',
 			   'test',
+			   'symlinks',
 
 			   'action=s',
 			   'warning=s',
@@ -214,14 +215,11 @@ Other options:
   -v, --verbose      verbosity level; can be used more than once to increase the level
   -h, --help         display this help information
   -t X, --timeout=X  how long in seconds before we timeout. Defaults to 10 seconds.
+  --symlinks         create named symlinks to the main program for each action
 
 Actions:
 Which test is determined by the --action option, or by the name of the program
 $action_usage
-
-Special actions:
- rebuild_symlinks       - Make named symlinks to the main program for each action
- rebuild_symlinks_force - Same as above, but removes existing symlinks first.
 
 For a complete list of options and full documentation, please view the POD for this file.
 Two ways to do this is to run:
@@ -233,6 +231,8 @@ Or simply visit: http://bucardo.org/check_postgres/
 };
 	exit;
 }
+
+build_symlinks() if $opt{symlinks};
 
 $action =~ /\w/ or die $USAGE;
 
@@ -2578,12 +2578,12 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.6.0
+This documents describes B<check_postgres.pl> version 1.6.1
 
 =head1 SYNOPSIS
 
   ## Create all symlinks
-  check_postgres.pl --action=build_symlinks
+  check_postgres.pl --symlinks
 
   ## Check connection to Postgres database 'pluto':
   check_postgres.pl --action=connection --db=pluto
@@ -2759,12 +2759,12 @@ or use a program named:
   check_postgres_timesync
 
 All the symlinks are created for you in the current directory 
-if use the action "build_symlinks":
+if use the option --symlinks
 
-  perl check_postgres.pl --action="build_symlinks"
+  perl check_postgres.pl --symlinks
 
 If the file name already exists, it will not be overwritten. If the file exists 
-and is a symlink, you can force it to overwrite by using "build_symlinks_force"
+and is a symlink, you can force it to overwrite by using "--action=build_symlinks_force"
 
 Most actions take a B<--warning> and an B<--critical> option, indicating at what 
 point we change from OK to WARNING, and what point we go to CRITICAL. Note that 
@@ -3174,7 +3174,8 @@ This action requires no other arguments, and does not connect to any databases,
 but simply creates symlinks in the current directory for each action, in the form 
 B<check_postgres_E<lt>action_nameE<gt>>.
  If the file already exists, it will not be overwritten. If the action is rebuild_symlinks_force, 
-then symlinks will be overwritten.
+then symlinks will be overwritten. The option --symlinks is a shorter way of saying 
+--action=rebuild_symlinks
 
 =item B<settings_checksum> (symlink: C<check_postgres_settings_checksum>)
 
@@ -3404,6 +3405,10 @@ Development happens using the git system. You can clone the latest version by do
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 1.6.0> (May 11, 2008)
+
+Add --symlinks arg as a shortcut to --action=rebuild_symlinks
 
 =item B<Version 1.6.0> (May 11, 2008)
 
