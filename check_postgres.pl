@@ -2533,8 +2533,10 @@ sub check_custom_query {
 			next;
 		}
 
-		while ($db->{slurp} =~ /(\S+)\s+\|\s+(.+)$/gm) {
-			my ($data, $msg) = ($1,$2);
+		my $goodrow = 0;
+		while ($db->{slurp} =~ /(\S+)(?:\s+\|\s+(.+))?$/gm) {
+			my ($data, $msg) = ($1,$2||'');
+			$goodrow++;
 			$db->{perf} .= " $msg";
 			my $gotmatch = 0;
 			if (length $critical) {
@@ -2560,6 +2562,10 @@ sub check_custom_query {
 			}
 
 		} ## end each row returned
+
+		if (!$goodrow) {
+			add_unknown 'Invalid format returned by custom query';
+		}
 	}
 
 	return;
@@ -2852,11 +2858,12 @@ Takes no B<--warning> or B<--critical> options.
 
 Runs a custom query of your choosing, and parses the results. The query itself is passed in through 
 the C<custom_query> argument, and should be kept as simple as possible. If at all possible, wrap it in 
-a view of function to keep things easier to manage. The query should return exactly two columns: the first 
-is the result that will be checked, and the second is any performance data you want sent. At least one 
-of warning or critical must be set. What they are set to depends on the type of query you are running. 
-There are four types of custom_queries that can be run, specified by the C<checktype> argument. If none 
-is specified, this action defaults to 'integer'. The four types are:
+a view or a function to keep things easier to manage. The query should return one or two columns: the first 
+is the result that will be checked, and the second is any performance data you want sent.
+
+At least one warning or critical argument must be specified. What these are set to depends on the type of 
+query you are running. There are four types of custom_queries that can be run, specified by the C<checktype> 
+argument. If none is specified, this action defaults to 'integer'. The four types are:
 
 B<integer>:
 Does a simple integer comparison. The first column should be a simple integer, and the warning and 
