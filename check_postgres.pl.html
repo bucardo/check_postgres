@@ -49,14 +49,14 @@
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This documents describes <strong>check_postgres.pl</strong> version 1.6.0</p>
+<p>This documents describes <strong>check_postgres.pl</strong> version 1.6.1</p>
 <p>
 </p>
 <hr />
 <h1><a name="synopsis">SYNOPSIS</a></h1>
 <pre>
   ## Create all symlinks
-  check_postgres.pl --action=build_symlinks</pre>
+  check_postgres.pl --symlinks</pre>
 <pre>
   ## Check connection to Postgres database 'pluto':
   check_postgres.pl --action=connection --db=pluto</pre>
@@ -257,11 +257,11 @@ inside of it. For example, to run the action &quot;timesync&quot;, you may eithe
 <pre>
   check_postgres_timesync</pre>
 <p>All the symlinks are created for you in the current directory 
-if use the action &quot;build_symlinks&quot;:</p>
+if use the option --symlinks</p>
 <pre>
-  perl check_postgres.pl --action=&quot;build_symlinks&quot;</pre>
+  perl check_postgres.pl --symlinks</pre>
 <p>If the file name already exists, it will not be overwritten. If the file exists 
-and is a symlink, you can force it to overwrite by using &quot;build_symlinks_force&quot;</p>
+and is a symlink, you can force it to overwrite by using &quot;--action=build_symlinks_force&quot;</p>
 <p>Most actions take a <strong>--warning</strong> and an <strong>--critical</strong> option, indicating at what 
 point we change from OK to WARNING, and what point we go to CRITICAL. Note that 
 because criticals are always checked first, setting the warning equal to the 
@@ -373,11 +373,13 @@ Takes no <strong>--warning</strong> or <strong>--critical</strong> options.</p>
 <dd>
 <p>Runs a custom query of your choosing, and parses the results. The query itself is passed in through 
 the <a href="#custom_query"><code>custom_query</code></a> argument, and should be kept as simple as possible. If at all possible, wrap it in 
-a view of function to keep things easier to manage. The query should return exactly two columns: the first 
-is the result that will be checked, and the second is any performance data you want sent. At least one 
-of warning or critical must be set. What they are set to depends on the type of query you are running. 
-There are four types of custom_queries that can be run, specified by the <code>checktype</code> argument. If none 
-is specified, this action defaults to 'integer'. The four types are:</p>
+a view or a function to keep things easier to manage. The query should return one or two columns: the first 
+is the result that will be checked, and the second is any performance data you want sent.</p>
+</dd>
+<dd>
+<p>At least one warning or critical argument must be specified. What these are set to depends on the type of 
+query you are running. There are four types of custom_queries that can be run, specified by the <code>checktype</code> 
+argument. If none is specified, this action defaults to 'integer'. The four types are:</p>
 </dd>
 <dd>
 <p><strong>integer</strong>:
@@ -815,7 +817,8 @@ If no units are given, the unit are assumed to be seconds.</p>
 but simply creates symlinks in the current directory for each action, in the form 
 <strong>check_postgres_&lt;action_name&gt;</strong>.
  If the file already exists, it will not be overwritten. If the action is rebuild_symlinks_force, 
-then symlinks will be overwritten.</p>
+then symlinks will be overwritten. The option --symlinks is a shorter way of saying 
+--action=rebuild_symlinks</p>
 </dd>
 </li>
 <dt><strong><a name="settings_checksum" class="item"><strong>settings_checksum</strong> (symlink: <code>check_postgres_settings_checksum</code>)</a></strong>
@@ -1070,6 +1073,12 @@ is needed by the <strong>check_disk_space</strong> action.</p>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
 <dt><strong><a name="0" class="item"><strong>Version 1.6.0</strong> (May 11, 2008)</a></strong>
+
+<dd>
+<p>Add --symlinks option as a shortcut to --action=rebuild_symlinks</p>
+</dd>
+</li>
+<dt><strong><strong>Version 1.6.0</strong> (May 11, 2008)</strong>
 
 <dd>
 <p>Add the custom_query action.</p>
