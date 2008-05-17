@@ -2529,7 +2529,7 @@ sub check_custom_query {
 
 		chomp $db->{slurp};
 		if (! length $db->{slurp}) {
-			add_unknown "No rows returned";
+			add_unknown 'No rows returned';
 			next;
 		}
 
@@ -3415,7 +3415,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 1.6.0> (May 11, 2008)
 
-Add --symlinks arg as a shortcut to --action=rebuild_symlinks
+Add --symlinks option as a shortcut to --action=rebuild_symlinks
 
 =item B<Version 1.6.0> (May 11, 2008)
 
