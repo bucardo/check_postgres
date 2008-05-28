@@ -49,7 +49,7 @@
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This documents describes <strong>check_postgres.pl</strong> version 1.6.1</p>
+<p>This documents describes <strong>check_postgres.pl</strong> version 1.7.0</p>
 <p>
 </p>
 <hr />
@@ -748,6 +748,53 @@ assumed to be seconds.</p>
   check_postgres_query_time --port=5432 --inclucdeuser=don --warning=20s</pre>
 </dd>
 </li>
+<dt><strong><a name="replicate_row" class="item"><strong>replicate_row</strong> (symlink: <code>check_postgres_replicate_row</code>)</a></strong>
+
+<dd>
+<p>Checks that master-slave replication is working to one or more slaves.
+The slaves are specified the same as the normal databases, except with 
+the number 2 at the end of them, so &quot;--port2&quot; instead of &quot;--port&quot;, etc.
+The values or the <strong>--warning</strong> and <strong>--critical</strong> options are units of time, and 
+at least one must be provided (no defaults). Valid units are 'seconds', 'minutes', 'hours', 
+or 'days'. Each may be written singular or abbreviated to just the first letter. 
+If no units are given, the units are assumed to be seconds.</p>
+</dd>
+<dd>
+<p>This check updates a single row on the master, and then measures how long it 
+takes to be applied to the slaves. To do this, you need to pick a table that 
+is being replicated, then find a row that can be changed, and is not going 
+to be changed by any other process. A specific column of this row will be changed 
+from one value to another. All of this is fed to the <code>repinfo</code> option, and should 
+contain the following options, separated by commas: table name, primary key, key id, 
+column, first value, second value.</p>
+</dd>
+<dd>
+<p>Example 1: Slony is replicating a table named 'orders' from host 'alpha' to 
+host 'beta', in the database 'sales'. The primary key of the table is named 
+id, and we are going to test the row with an id of 3 (which is historical and 
+never changed). There is a column named 'salesrep' that we are going to toggle 
+from a value of 'slon' to 'nols' to check on the replication. We want to throw 
+a warning if the replication does not happen within 10 seconds.</p>
+</dd>
+<dd>
+<pre>
+  check_postgres_replicate_row --host=alpha --dbname=sales --host2=beta 
+  --dbname2=sales --warning=10 --repinfo=orders,id,3,salesrep,slon,nols</pre>
+</dd>
+<dd>
+<p>Example 2: Bucardo is replicating a table named 'receipt' from host 'green' 
+to hosts 'red', 'blue', and 'yellow'. The database for both sides is 'public'. 
+The slave databases are running on port 5455. The primary key is named 'receipt_id', 
+the row we want to use has a value of 9, and the column we want to change for the 
+test is called 'zone'. We'll toggle between 'north' and 'south' for the value of 
+this column, and throw a critical if the change is not on all three slaves within 5 seconds.</p>
+</dd>
+<dd>
+<pre>
+ check_postgres_replicate_row --host=green --port2=5455 --host2=red,blue,yellow
+  --critical=5 --repinfo=receipt,receipt_id,9,zone,north,south</pre>
+</dd>
+</li>
 <dt><strong><a name="txn_time" class="item"><strong>txn_time</strong> (symlink: <code>check_postgres_txn_time</code>)</a></strong>
 
 <dd>
@@ -1072,7 +1119,13 @@ is needed by the <strong>check_disk_space</strong> action.</p>
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
-<dt><strong><a name="0" class="item"><strong>Version 1.6.0</strong> (May 11, 2008)</a></strong>
+<dt><strong><a name="0" class="item"><strong>Version 1.7.0</strong> (May 11, 2008)</a></strong>
+
+<dd>
+<p>Add --replicate_row action</p>
+</dd>
+</li>
+<dt><strong><a name="1" class="item"><strong>Version 1.6.1</strong> (May 11, 2008)</a></strong>
 
 <dd>
 <p>Add --symlinks option as a shortcut to --action=rebuild_symlinks</p>
@@ -1090,7 +1143,7 @@ is needed by the <strong>check_disk_space</strong> action.</p>
 <p>Fix problem with too eager creation of custom pgpass file.</p>
 </dd>
 </li>
-<dt><strong><a name="1" class="item"><strong>Version 1.5.1</strong> (April 17, 2008)</a></strong>
+<dt><strong><strong>Version 1.5.1</strong> (April 17, 2008)</strong>
 
 <dd>
 <p>Add example Nagios configuration settings (Brian A. Seklecki)</p>
@@ -1211,7 +1264,7 @@ in your pg_xlog directory.</p>
 </p>
 <hr />
 <h1><a name="bugs_and_limitations">BUGS AND LIMITATIONS</a></h1>
-<p>The index bloat size optimization is still very rough.</p>
+<p>The index bloat size optimization is rough.</p>
 <p>Some actions may not work on older versions of Postgres (before 8.0).</p>
 <p>Please report any problems to <a href="mailto:greg@endpoint.com.">greg@endpoint.com.</a></p>
 <p>
