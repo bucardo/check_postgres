@@ -18,7 +18,7 @@ use v5.6.0;
 use strict;
 use warnings;
 use Getopt::Long qw/GetOptions/;
-Getopt::Long::Configure('no_ignore_case');
+Getopt::Long::Configure(qw/no_ignore_case/);
 use File::Basename qw/basename/;
 use File::Temp qw/tempfile tempdir/;
 File::Temp->safe_level( File::Temp::MEDIUM ); ## no critic
@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.6.1';
+our $VERSION = '1.7.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -42,14 +42,14 @@ my $NO_PSQL_OPTION = 1;
 ## What type of output to use by default
 my $DEFAULT_OUTPUT = 'nagios';
 
+## If true, we show how long each query took by default. Requires Time::HiRes to be installed.
+$opt{showtime} = 1;
+
 ## Which user to connect as if --dbuser is not given
 $opt{defaultuser} = 'postgres';
 
 ## If true, we show "after the pipe" statistics
 $opt{showperf} = 1;
-
-## If true, we show how long each query took by default. Requires Time::HiRes to be installed.
-$opt{showtime} = 1;
 
 ## Default time display format, used for last_vacuum and last_analyze
 my $SHOWTIME = 'HH24:MI FMMonth DD, YYYY';
@@ -103,12 +103,20 @@ die $USAGE unless
 			   'dbname|db=s@',
 			   'dbuser|u=s@',
 			   'dbpass=s@',
+
+			   'host2|H2=s@',
+			   'port2=s@',
+			   'dbname2|db2=s@',
+			   'dbuser2|u2=s@',
+			   'dbpass2=s@',
+
 			   'PSQL=s',
 
 			   'logfile=s',   ## used by check_logfile only
 			   'queryname=s', ## used by query_runtime only
 			   'query=s',     ## used by custom_query only
 			   'checktype=s', ## used by custom_query only
+			   'repinfo=s',   ## used by replicate_row only
 			   )
 	and keys %opt
 	and ! @ARGV;
@@ -168,6 +176,7 @@ my $action_info = {
  logfile             => [1, 'Checks that the logfile is being written to correctly.'],
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
+ replicate_row       => [0, 'Verify a simple update gets replicated to another server.'],
  settings_checksum   => [0, 'Check that no settings have changed since the last check.'],
  timesync            => [0, 'Compare database time to local system time.'],
  txn_idle            => [1, 'Checks the maximum "idle in transaction" time.'],
@@ -576,6 +585,9 @@ check_txn_idle() if $action eq 'txn_idle';
 ## Run a custom query
 check_custom_query() if $action eq 'custom_query';
 
+## Test of replication
+check_replicate_row() if $action eq 'replicate_row';
+
 finishup();
 
 exit;
@@ -706,15 +718,19 @@ sub run_command {
 		my %group;
 		my $foundgroup = 0;
 		for my $v (keys %$conn) {
+			my $vname = $v;
 			## Something new?
+			if ($arg->{dbnumber}) {
+				$v .= "$arg->{dbnumber}";
+			}
 			if (defined $opt{$v}->[$gbin]) {
 				my $new = $opt{$v}->[$gbin];
 				$new =~ s/\s+//g;
 				## Set this as the new default
-				$conn->{$v} = [split /,/ => $new];
+				$conn->{$vname} = [split /,/ => $new];
 				$foundgroup = 1;
 			}
-			$group{$v} = $conn->{$v};
+			$group{$vname} = $conn->{$vname};
 		}
 
 		if (!$foundgroup) { ## Nothing new, so we bail
@@ -2573,6 +2589,112 @@ sub check_custom_query {
 } ## end of check_custom_query
 
 
+sub check_replicate_row {
+
+    ## Make an update on one server, make sure it propogates to others
+	## Warning and critical are time to replicate to all slaves
+
+	my ($warning, $critical) = validate_range({type => 'time', leastone => 1});
+
+	if (!$opt{repinfo}) {
+		die "Need a repinfo argument\n";
+	}
+	if ($opt{repinfo} !~ m{(\w+),(\w+),(\w+),(\w+),(.*),(.+)}) {
+		die "Invalid value for repinfo argument\n";
+	}
+	my ($table,$pk,$id,$col,$val1,$val2) = ($1,$2,$3,$4,$5,$6);
+
+	if ($val1 eq $val2) {
+	  ndie 'Makes no sense to test replication with same values';
+	}
+
+	$SQL = qq{UPDATE $table SET $col = 'X' WHERE $pk = '$id'};
+	(my $update1 = $SQL) =~ s/X/$val1/;
+	(my $update2 = $SQL) =~ s/X/$val2/;
+	my $select = qq{SELECT $col FROM $table WHERE $pk = '$id'};
+
+	## Are they the same on both sides? Must be yes, or we error out
+
+	## We assume this is a single server
+	my $info1 = run_command($select);
+	## Squirrel away the $db setting for later
+	my $sourcedb = $info1->{db}[0];
+	if (!defined $sourcedb) {
+		ndie 'Replication source row not found';
+	}
+	(my $value1 = $info1->{db}[0]{slurp}) =~ s/^\s*(\S+)\s*$/$1/;
+
+	my $info2 = run_command($select, { dbnumber => 2 });
+	my $slave = 0;
+	for my $d (@{$info2->{db}}) {
+		$slave++;
+		(my $value2 = $d->{slurp}) =~ s/^\s*(\S+)\s*$/$1/;
+		if ($value1 ne $value2) {
+			ndie 'Cannot test replication: values are not the same';
+		}
+	}
+	my $numslaves = $slave;
+
+	my ($update,$newval);
+	if ($value1 eq $val1) {
+		$update = $update2;
+		$newval = $val2;
+	}
+	elsif ($value1 eq $val2) {
+		$update = $update1;
+		$newval = $val1;
+	}
+	else {
+		ndie "Cannot test replication: values are not the right ones ($value1 not $val1 nor $val2)";
+	}
+
+	$info1 = run_command($update);
+
+	## Start the clock
+	my $starttime = time();
+
+	## Loop until we get a match, check each in turn
+	my %slave;
+  LOOP: {
+		$info2 = run_command($select, { dbnumber => 2 } );
+		## Reset for final output
+		$db = $sourcedb;
+
+		my $slave = 0;
+		for my $d (@{$info2->{db}}) {
+			$slave++;
+			next if exists $slave{$slave};
+			(my $value2 = $d->{slurp}) =~ s/^\s*(\S+)\s*$/$1/;
+			my $time = $db->{totaltime} = time - $starttime;
+			if ($value2 eq $newval) {
+				$slave{$slave} = $time;
+				next;
+			}
+			if ($warning and $time > $warning) {
+				add_warning "Row not replicated to slave $slave";
+				return;
+			}
+			elsif ($critical and $time > $critical) {
+				add_critical "Row not replicated to slave $slave";
+				return;
+			}
+		}
+		## Did they all match?
+		my $k = keys %slave;
+		if (keys %slave >= $numslaves) {
+			add_ok 'Row was replicated';
+			return;
+		}
+		sleep 1;
+		redo;
+	}
+
+	add_unknown 'Replication check failed';
+	return;
+
+} ## end of check_replicate_row
+
+
 __END__
 
 
@@ -2584,7 +2706,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.6.1
+This documents describes B<check_postgres.pl> version 1.7.0
 
 =head1 SYNOPSIS
 
@@ -3130,6 +3252,44 @@ Example 3: Warn if user 'don' has a query running over 20 seconds
 
   check_postgres_query_time --port=5432 --inclucdeuser=don --warning=20s
 
+=item B<replicate_row> (symlink: C<check_postgres_replicate_row>)
+
+Checks that master-slave replication is working to one or more slaves.
+The slaves are specified the same as the normal databases, except with 
+the number 2 at the end of them, so "--port2" instead of "--port", etc.
+The values or the B<--warning> and B<--critical> options are units of time, and 
+at least one must be provided (no defaults). Valid units are 'seconds', 'minutes', 'hours', 
+or 'days'. Each may be written singular or abbreviated to just the first letter. 
+If no units are given, the units are assumed to be seconds.
+
+This check updates a single row on the master, and then measures how long it 
+takes to be applied to the slaves. To do this, you need to pick a table that 
+is being replicated, then find a row that can be changed, and is not going 
+to be changed by any other process. A specific column of this row will be changed 
+from one value to another. All of this is fed to the C<repinfo> option, and should 
+contain the following options, separated by commas: table name, primary key, key id, 
+column, first value, second value.
+
+Example 1: Slony is replicating a table named 'orders' from host 'alpha' to 
+host 'beta', in the database 'sales'. The primary key of the table is named 
+id, and we are going to test the row with an id of 3 (which is historical and 
+never changed). There is a column named 'salesrep' that we are going to toggle 
+from a value of 'slon' to 'nols' to check on the replication. We want to throw 
+a warning if the replication does not happen within 10 seconds.
+
+  check_postgres_replicate_row --host=alpha --dbname=sales --host2=beta 
+  --dbname2=sales --warning=10 --repinfo=orders,id,3,slaesrep,slon,nols
+
+Example 2: Bucardo is replicating a table named 'receipt' from host 'green' 
+to hosts 'red', 'blue', and 'yellow'. The database for both sides is 'public'. 
+The slave databases are running on port 5455. The primary key is named 'receipt_id', 
+the row we want to use has a value of 9, and the column we want to change for the 
+test is called 'zone'. We'll toggle between 'north' and 'south' for the value of 
+this column, and throw a critical if the change is not there in 5 seconds.
+
+ check_postgres_replicate_row --host=green --port2=5455 --host2=red,blue,yellow
+  --critical=5 --repinfo=receipt,receipt_id,9,zone,north,south
+
 =item B<txn_time> (symlink: C<check_postgres_txn_time>)
 
 Checks the length of open transactions on one or more databases. 
@@ -3413,7 +3573,11 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 1.6.0> (May 11, 2008)
+=item B<Version 1.7.0> (May 11, 2008)
+
+Add --replicate_row action
+
+=item B<Version 1.6.1> (May 11, 2008)
 
 Add --symlinks option as a shortcut to --action=rebuild_symlinks
 
@@ -3507,7 +3671,7 @@ First public release, December 2007
 
 =head1 BUGS AND LIMITATIONS
 
-The index bloat size optimization is still very rough.
+The index bloat size optimization is rough.
 
 Some actions may not work on older versions of Postgres (before 8.0).
 

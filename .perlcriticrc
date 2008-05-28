@@ -4,7 +4,7 @@ verbose = 8
 severity = 1
 
 [Documentation::PodSpelling]
-stop_words = Mullane Nagios psql dbname postgres USERNAME usernames dbuser pgpass nagios stderr showperf symlinked timesync criticals quirm lancre exabytes sami includeuser excludeuser flagg tardis WAL tablespaces tablespace perflimit burrick mallory grimm oskar ExclusiveLock garrett artemus queryname speedtest checksum checksums morpork klatch pluto faceoff slon greg watson franklin wilkins scott Sabino Seklecki dbpass autovacuum Astill refactoring NAGIOS
+stop_words = Mullane Nagios Slony nols salesrep psql dbname postgres USERNAME usernames dbuser pgpass nagios stderr showperf symlinked timesync criticals quirm lancre exabytes sami includeuser excludeuser flagg tardis WAL tablespaces tablespace perflimit burrick mallory grimm oskar ExclusiveLock garrett artemus queryname speedtest checksum checksums morpork klatch pluto faceoff slon greg watson franklin wilkins scott Sabino Seklecki dbpass autovacuum Astill refactoring NAGIOS
 
 ## Severity 5:
 [-Subroutines::ProhibitNestedSubs]
