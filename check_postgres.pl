@@ -3285,7 +3285,7 @@ to hosts 'red', 'blue', and 'yellow'. The database for both sides is 'public'.
 The slave databases are running on port 5455. The primary key is named 'receipt_id', 
 the row we want to use has a value of 9, and the column we want to change for the 
 test is called 'zone'. We'll toggle between 'north' and 'south' for the value of 
-this column, and throw a critical if the change is not there in 5 seconds.
+this column, and throw a critical if the change is not on all three slaves within 5 seconds.
 
  check_postgres_replicate_row --host=green --port2=5455 --host2=red,blue,yellow
   --critical=5 --repinfo=receipt,receipt_id,9,zone,north,south
