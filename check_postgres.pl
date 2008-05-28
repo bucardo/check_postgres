@@ -3278,7 +3278,7 @@ from a value of 'slon' to 'nols' to check on the replication. We want to throw
 a warning if the replication does not happen within 10 seconds.
 
   check_postgres_replicate_row --host=alpha --dbname=sales --host2=beta 
-  --dbname2=sales --warning=10 --repinfo=orders,id,3,slaesrep,slon,nols
+  --dbname2=sales --warning=10 --repinfo=orders,id,3,salesrep,slon,nols
 
 Example 2: Bucardo is replicating a table named 'receipt' from host 'green' 
 to hosts 'red', 'blue', and 'yellow'. The database for both sides is 'public'. 
