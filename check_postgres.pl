@@ -2193,17 +2193,13 @@ sub check_query_time {
 			next;
 		}
 
-		my $max = -1;
+		my $max = 0;
 	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\d+)\s*/gsm) {
 			my ($dbname,$current) = ($1,$2);
 			next SLURP if skip_item($dbname);
 			$max = $current if $current > $max;
 		}
 		$db->{perf} .= " maxtime:$max";
-		if ($max < 0) {
-			add_unknown 'T-EXCLUDE-DB';
-			next;
-		}
 
 		my $msg = qq{longest query: ${max}s};
 		if (length $critical and $max >= $critical) {
