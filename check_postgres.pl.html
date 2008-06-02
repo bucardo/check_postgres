@@ -49,7 +49,7 @@
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This documents describes <strong>check_postgres.pl</strong> version 1.7.0</p>
+<p>This documents describes <strong>check_postgres.pl</strong> version 1.7.1</p>
 <p>
 </p>
 <hr />
@@ -1119,13 +1119,20 @@ is needed by the <strong>check_disk_space</strong> action.</p>
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="1" class="item"><strong>Version 1.7.1</strong> (June 2, 2008)</a></strong>
+
+<dd>
+<p>Fix query_time action: account for race condition in which zero rows appear in pg_stat_activity.
+Thanks to Dustin Black for the bug report.</p>
+</dd>
+</li>
 <dt><strong><a name="0" class="item"><strong>Version 1.7.0</strong> (May 11, 2008)</a></strong>
 
 <dd>
 <p>Add --replicate_row action</p>
 </dd>
 </li>
-<dt><strong><a name="1" class="item"><strong>Version 1.6.1</strong> (May 11, 2008)</a></strong>
+<dt><strong><strong>Version 1.6.1</strong> (May 11, 2008)</strong>
 
 <dd>
 <p>Add --symlinks option as a shortcut to --action=rebuild_symlinks</p>

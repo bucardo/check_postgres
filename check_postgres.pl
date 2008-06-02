@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.7.0';
+our $VERSION = '1.7.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2702,7 +2702,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.7.0
+This documents describes B<check_postgres.pl> version 1.7.1
 
 =head1 SYNOPSIS
 
@@ -3568,6 +3568,11 @@ Development happens using the git system. You can clone the latest version by do
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 1.7.1> (June 2, 2008)
+
+Fix query_time action: account for race condition in which zero rows appear in pg_stat_activity.
+Thanks to Dustin Black for the bug report.
 
 =item B<Version 1.7.0> (May 11, 2008)
 
