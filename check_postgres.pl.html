@@ -49,7 +49,7 @@
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This documents describes <strong>check_postgres.pl</strong> version 1.7.1</p>
+<p>This documents describes <strong>check_postgres.pl</strong> version 1.8.0</p>
 <p>
 </p>
 <hr />
@@ -96,7 +96,7 @@ as a short description of the results. The exit codes are:</p>
 </p>
 <hr />
 <h1><a name="database_connection_options">DATABASE CONNECTION OPTIONS</a></h1>
-<p>Almost all actions accept a common set of options, most dealing with connecting to the databases.</p>
+<p>All actions accept a common set of database options. At least one is required.</p>
 <dl>
 <dt><strong><a name="h_name_or_host_name" class="item"><strong>-H NAME</strong> or <strong>--host=NAME</strong></a></strong>
 
@@ -109,22 +109,22 @@ are allowed. If no host is given, defaults to a local Unix socket.</p>
 
 <dd>
 <p>Connects using the specified PORT number. Can be a comma-separated list of port numbers, and multiple 
-port arguments are allowed. If no port number is given, we default to port 5432.</p>
+port arguments are allowed. If no port number is given, the default is 5432.</p>
 </dd>
 </li>
 <dt><strong><a name="db_name_or_dbname_name" class="item"><strong>-db NAME</strong> or <strong>--dbname=NAME</strong></a></strong>
 
 <dd>
 <p>Specifies which database to connect to. Can be a comma-separated list of names, and multiple dbname 
-arguments are allowed. If no dbname option is provided, defaults to 'postgres' if the psql 
-version is version 8 or greater, and 'template1' otherwise.</p>
+arguments are allowed. If no dbname option is provided, defaults to 'postgres' if psql 
+is version 8 or greater, and 'template1' otherwise.</p>
 </dd>
 </li>
 <dt><strong><a name="u_username_or_dbuser_username" class="item"><strong>-u USERNAME</strong> or <strong>--dbuser=USERNAME</strong></a></strong>
 
 <dd>
 <p>The name of the database user to connect as. Can be a comma-separated list of usernames, and multiple 
-dbuser arguments are allowed. If this is not provided, defaults to 'postgres'.</p>
+dbuser arguments are allowed. If this is not provided, the default is 'postgres'.</p>
 </dd>
 </li>
 <dt><strong><a name="dbpass_password" class="item"><strong>--dbpass=PASSWORD</strong></a></strong>
@@ -135,14 +135,13 @@ Instead, one should use a .pgpass file.</p>
 </dd>
 </li>
 </dl>
-<p>Connection options can be grouped: --host=a,b --host=c --port=1234 --port=3344
+<p>The database connection options can be grouped: --host=a,b --host=c --port=1234 --port=3344
 would connect to a-1234, b-1234, and c-3344. Note that once set, an option 
 carries over until it is changed again.</p>
 <p>Examples:</p>
 <pre>
   --host=a,b --port=5433 --db=c
-  Connects twice to port 5433, using database c, to hosts a and b
-  a-5433-c b-5433-c</pre>
+  Connects twice to port 5433, using database c, to hosts a and b: a-5433-c b-5433-c</pre>
 <pre>
   --host=a,b --port=5433 --db=c,d
   Connects four times: a-5433-c a-5433-d b-5433-c b-5433-d</pre>
@@ -156,24 +155,27 @@ carries over until it is changed again.</p>
 </p>
 <hr />
 <h1><a name="other_options">OTHER OPTIONS</a></h1>
-<p>Other common options include:</p>
+<p>Other options include:</p>
 <dl>
-<dt><strong><a name="output_val" class="item"><strong>--output=VAL</strong></a></strong>
+<dt><strong><a name="action_name" class="item"><strong>--action=NAME</strong></a></strong>
 
 <dd>
-<p>Determines the format of the output, for use in various programs. The default is 'nagios'. No 
-other systems are supported yet.</p>
+<p>States what action we are running. Required unless using a symlinked file, 
+in which case the name of the file is used to figure out the action.</p>
 </dd>
 </li>
-<dt><strong><a name="psql_path" class="item"><strong>PSQL=PATH</strong></a></strong>
+<dt><strong><a name="warning_val_or_w_val" class="item"><strong>--warning=VAL or -w VAL</strong></a></strong>
 
 <dd>
-<p>Tells the script where to find the psql program. Useful if you have more than 
-one version of the psql executable on your system, or if there is no psql program 
-in your path. Note that this option is in all uppercase. By default, this option 
-is <em>not allowed</em>. To enable it, you must change the <code>$NO_PSQL_OPTION</code> near the 
-top of the script to 0. Avoid using this option if you can, and instead hard-code 
-your psql location into the <code>$PSQL</code> variable, also near the top of the script.</p>
+<p>Sets the threshold at which a warning alert is fired. The valid options for this 
+option depends on the action used.</p>
+</dd>
+</li>
+<dt><strong><a name="critical_val_or_c_val" class="item"><strong>--critical=VAL or -c VAL</strong></a></strong>
+
+<dd>
+<p>Sets the threshold at which a critical alert is fired. The valid options for this 
+option depends on the action used.</p>
 </dd>
 </li>
 <dt><strong><a name="t_val_or_timeout_val" class="item"><strong>-t VAL</strong> or <strong>--timeout=VAL</strong></a></strong>
@@ -204,16 +206,10 @@ or higher (in other words, issuing <code>-v -v -v</code>) turns on debugging inf
 program which is sent to stderr.</p>
 </dd>
 </li>
-<dt><strong><a name="test" class="item"><strong>--test</strong></a></strong>
-
-<dd>
-<p>Enables test mode. See the <a href="#test_mode">TEST MODE</a> section below.</p>
-</dd>
-</li>
 <dt><strong><a name="showperf_val" class="item"><strong>--showperf=VAL</strong></a></strong>
 
 <dd>
-<p>Determines if we output performance data in standard Nagios format 
+<p>Determines if we output additional performance data in standard Nagios format 
 (at end of string, after a pipe symbol, using name=value). 
 VAL should be 0 or 1. The default is 1.</p>
 </dd>
@@ -221,7 +217,7 @@ VAL should be 0 or 1. The default is 1.</p>
 <dt><strong><a name="perflimit_i" class="item"><strong>--perflimit=i</strong></a></strong>
 
 <dd>
-<p>Sets a limit s to how many items of interest are reported back when using the 
+<p>Sets a limit as to how many items of interest are reported back when using the 
 <strong>showperf</strong> option. This only has an effect for actions that return a large 
 number of items, such as <strong>table_size</strong>. The default is 0, or no limit. Be 
 careful when using this with the <strong>--include</strong> or <strong>--exclude</strong> options, as 
@@ -236,11 +232,34 @@ limit may not include the items you want.</p>
 should be 0 or 1. The default is 1. No effect unless <strong>showperf</strong> is on.</p>
 </dd>
 </li>
-<dt><strong><a name="action_name" class="item"><strong>--action=NAME</strong></a></strong>
+<dt><strong><a name="test" class="item"><strong>--test</strong></a></strong>
 
 <dd>
-<p>States what action we are running. Required unless using a symlinked file, 
-in which case the name of the file is used to figure out the action.</p>
+<p>Enables test mode. See the <a href="#test_mode">TEST MODE</a> section below.</p>
+</dd>
+</li>
+<dt><strong><a name="psql_path" class="item"><strong>--PSQL=PATH</strong></a></strong>
+
+<dd>
+<p>Tells the script where to find the psql program. Useful if you have more than 
+one version of the psql executable on your system, or if there is no psql program 
+in your path. Note that this option is in all uppercase. By default, this option 
+is <em>not allowed</em>. To enable it, you must change the <code>$NO_PSQL_OPTION</code> near the 
+top of the script to 0. Avoid using this option if you can, and instead hard-code 
+your psql location into the <code>$PSQL</code> variable, also near the top of the script.</p>
+</dd>
+</li>
+<dt><strong><a name="symlinks" class="item"><strong>--symlinks</strong></a></strong>
+
+<dd>
+<p>Creates symlinks to the main program for each action.</p>
+</dd>
+</li>
+<dt><strong><a name="output_val" class="item"><strong>--output=VAL</strong></a></strong>
+
+<dd>
+<p>Determines the format of the output, for use in various programs. The default is 'nagios'. No 
+other systems are supported yet.</p>
 </dd>
 </li>
 </dl>
@@ -405,6 +424,11 @@ terabytes, or exabytes. Each may be abbreviated to the first letter. If no units
 bytes are assumed. The first column should be an integer representing the number of bytes to check.</p>
 </dd>
 <dd>
+<p>Normally, an alert is triggered if the values returned are <strong>greater than</strong> or equal to the critical or warning 
+value. However, an option of <strong>--reverse</strong> will trigger the alert if the returned value is 
+<strong>lower than</strong> or equal to the critical or warning value.</p>
+</dd>
+<dd>
 <p>Example 1: Warn if any relation over 100 pages is named &quot;rad&quot;:</p>
 </dd>
 <dd>
@@ -417,6 +441,13 @@ bytes are assumed. The first column should be an integer representing the number
 <dd>
 <pre>
   check_postgres_custom_query --port=5432 --critical='5MB'--checktype=size --query=&quot;SELECT foobar()&quot;</pre>
+</dd>
+<dd>
+<p>Example 2: Warn if the function &quot;snazzo&quot; returns less than 42:</p>
+</dd>
+<dd>
+<pre>
+  check_postgres_custom_query --port=5432 --critical=42 --query=&quot;SELECT snazzo()&quot; --reverse</pre>
 </dd>
 <dd>
 <p>If you come up with a useful custom_query, consider sending in a patch to this program 
@@ -863,7 +894,7 @@ If no units are given, the unit are assumed to be seconds.</p>
 <p>This action requires no other arguments, and does not connect to any databases, 
 but simply creates symlinks in the current directory for each action, in the form 
 <strong>check_postgres_&lt;action_name&gt;</strong>.
- If the file already exists, it will not be overwritten. If the action is rebuild_symlinks_force, 
+If the file already exists, it will not be overwritten. If the action is rebuild_symlinks_force, 
 then symlinks will be overwritten. The option --symlinks is a shorter way of saying 
 --action=rebuild_symlinks</p>
 </dd>
@@ -1082,9 +1113,8 @@ comma-separated list. The actions that currently use these options are:</p>
 <p>To help in setting things up, this program can be run in a &quot;test mode&quot; by 
 specifying the <strong>--test</strong> option. This will perform some basic tests to 
 make sure that the databases can be contacted, and that certain per-action 
-prerequisites are met. Currently, we check that the user is a superuser 
-if required by that action, and that the version of Postgres is new enough 
-for those actions that depend on a specific version.</p>
+prerequisites are met, such as whether the user is a superuser, if the version 
+of Postgres is new enough, and if stats_row_level is on.</p>
 <p>
 </p>
 <hr />
@@ -1119,6 +1149,12 @@ is needed by the <strong>check_disk_space</strong> action.</p>
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="0" class="item"><strong>Version 1.8.0</strong> (June 3, 2008)</a></strong>
+
+<dd>
+<p>Add the --reverse option to the custom_query action.</p>
+</dd>
+</li>
 <dt><strong><a name="1" class="item"><strong>Version 1.7.1</strong> (June 2, 2008)</a></strong>
 
 <dd>
@@ -1126,7 +1162,7 @@ is needed by the <strong>check_disk_space</strong> action.</p>
 Thanks to Dustin Black for the bug report.</p>
 </dd>
 </li>
-<dt><strong><a name="0" class="item"><strong>Version 1.7.0</strong> (May 11, 2008)</a></strong>
+<dt><strong><strong>Version 1.7.0</strong> (May 11, 2008)</strong>
 
 <dd>
 <p>Add --replicate_row action</p>

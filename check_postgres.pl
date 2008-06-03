@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.7.1';
+our $VERSION = '1.8.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -116,6 +116,7 @@ die $USAGE unless
 			   'queryname=s', ## used by query_runtime only
 			   'query=s',     ## used by custom_query only
 			   'checktype=s', ## used by custom_query only
+			   'reverse',     ## used by custom_query only
 			   'repinfo=s',   ## used by replicate_row only
 			   )
 	and keys %opt
@@ -2535,6 +2536,8 @@ sub check_custom_query {
 
 	my $query = $opt{query} or ndie q{Must provide a query string};
 
+	my $reverse = $opt{reverse} || 0;
+
 	my $info = run_command($query);
 
 	for $db (@{$info->{db}}) {
@@ -2554,7 +2557,7 @@ sub check_custom_query {
 			if (length $critical) {
 				if (($valtype eq 'string' and $data eq $critical)
 					or
-					($data >= $critical)) { ## covers integer, time, size
+					($reverse ? $data <= $critical : $data >= $critical)) { ## covers integer, time, size
 					add_critical "$data";
 					$gotmatch = 1;
 				}
@@ -2563,7 +2566,7 @@ sub check_custom_query {
 			if (length $warning and ! $gotmatch) {
 				if (($valtype eq 'string' and $data eq $warning)
 					or
-					($data >= $warning)) {
+					($reverse ? $data <= $warning : $data >= $warning)) {
 					add_warning "$data";
 					$gotmatch = 1;
 				}
@@ -2702,7 +2705,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.7.1
+This documents describes B<check_postgres.pl> version 1.8.0
 
 =head1 SYNOPSIS
 
@@ -2747,7 +2750,7 @@ as a short description of the results. The exit codes are:
 
 =head1 DATABASE CONNECTION OPTIONS
 
-Almost all actions accept a common set of options, most dealing with connecting to the databases.
+All actions accept a common set of database options. At least one is required.
 
 =over 4
 
@@ -2759,18 +2762,18 @@ are allowed. If no host is given, defaults to a local Unix socket.
 =item B<-p PORT> or B<--port=PORT>
 
 Connects using the specified PORT number. Can be a comma-separated list of port numbers, and multiple 
-port arguments are allowed. If no port number is given, we default to port 5432.
+port arguments are allowed. If no port number is given, the default is 5432.
 
 =item B<-db NAME> or B<--dbname=NAME>
 
 Specifies which database to connect to. Can be a comma-separated list of names, and multiple dbname 
-arguments are allowed. If no dbname option is provided, defaults to 'postgres' if the psql 
-version is version 8 or greater, and 'template1' otherwise.
+arguments are allowed. If no dbname option is provided, defaults to 'postgres' if psql 
+is version 8 or greater, and 'template1' otherwise.
 
 =item B<-u USERNAME> or B<--dbuser=USERNAME>
 
 The name of the database user to connect as. Can be a comma-separated list of usernames, and multiple 
-dbuser arguments are allowed. If this is not provided, defaults to 'postgres'.
+dbuser arguments are allowed. If this is not provided, the default is 'postgres'.
 
 =item B<--dbpass=PASSWORD>
 
@@ -2779,15 +2782,14 @@ Instead, one should use a .pgpass file.
 
 =back
 
-Connection options can be grouped: --host=a,b --host=c --port=1234 --port=3344
+The database connection options can be grouped: --host=a,b --host=c --port=1234 --port=3344
 would connect to a-1234, b-1234, and c-3344. Note that once set, an option 
 carries over until it is changed again.
 
 Examples:
 
   --host=a,b --port=5433 --db=c
-  Connects twice to port 5433, using database c, to hosts a and b
-  a-5433-c b-5433-c
+  Connects twice to port 5433, using database c, to hosts a and b: a-5433-c b-5433-c
 
   --host=a,b --port=5433 --db=c,d
   Connects four times: a-5433-c a-5433-d b-5433-c b-5433-d
@@ -2800,23 +2802,24 @@ Examples:
 
 =head1 OTHER OPTIONS
 
-Other common options include:
+Other options include:
 
 =over 4
 
-=item B<--output=VAL>
+=item B<--action=NAME>
 
-Determines the format of the output, for use in various programs. The default is 'nagios'. No 
-other systems are supported yet.
+States what action we are running. Required unless using a symlinked file, 
+in which case the name of the file is used to figure out the action.
 
-=item B<PSQL=PATH>
+=item B<--warning=VAL or -w VAL>
 
-Tells the script where to find the psql program. Useful if you have more than 
-one version of the psql executable on your system, or if there is no psql program 
-in your path. Note that this option is in all uppercase. By default, this option 
-is I<not allowed>. To enable it, you must change the C<$NO_PSQL_OPTION> near the 
-top of the script to 0. Avoid using this option if you can, and instead hard-code 
-your psql location into the C<$PSQL> variable, also near the top of the script.
+Sets the threshold at which a warning alert is fired. The valid options for this 
+option depends on the action used.
+
+=item B<--critical=VAL or -c VAL>
+
+Sets the threshold at which a critical alert is fired. The valid options for this 
+option depends on the action used.
 
 =item B<-t VAL> or B<--timeout=VAL>
 
@@ -2838,19 +2841,15 @@ Set the verbosity level. Can call more than once to boost the level. Setting it 
 or higher (in other words, issuing C<-v -v -v>) turns on debugging information for this 
 program which is sent to stderr.
 
-=item B<--test>
-
-Enables test mode. See the L</"TEST MODE"> section below.
-
 =item B<--showperf=VAL>
 
-Determines if we output performance data in standard Nagios format 
+Determines if we output additional performance data in standard Nagios format 
 (at end of string, after a pipe symbol, using name=value). 
 VAL should be 0 or 1. The default is 1.
 
 =item B<--perflimit=i>
 
-Sets a limit s to how many items of interest are reported back when using the 
+Sets a limit as to how many items of interest are reported back when using the 
 B<showperf> option. This only has an effect for actions that return a large 
 number of items, such as B<table_size>. The default is 0, or no limit. Be 
 careful when using this with the B<--include> or B<--exclude> options, as 
@@ -2862,10 +2861,27 @@ limit may not include the items you want.
 Determines if the time taken to run each query is shown in the output. VAL 
 should be 0 or 1. The default is 1. No effect unless B<showperf> is on.
 
-=item B<--action=NAME>
+=item B<--test>
 
-States what action we are running. Required unless using a symlinked file, 
-in which case the name of the file is used to figure out the action.
+Enables test mode. See the L</"TEST MODE"> section below.
+
+=item B<--PSQL=PATH>
+
+Tells the script where to find the psql program. Useful if you have more than 
+one version of the psql executable on your system, or if there is no psql program 
+in your path. Note that this option is in all uppercase. By default, this option 
+is I<not allowed>. To enable it, you must change the C<$NO_PSQL_OPTION> near the 
+top of the script to 0. Avoid using this option if you can, and instead hard-code 
+your psql location into the C<$PSQL> variable, also near the top of the script.
+
+=item B<--symlinks>
+
+Creates symlinks to the main program for each action.
+
+=item B<--output=VAL>
+
+Determines the format of the output, for use in various programs. The default is 'nagios'. No 
+other systems are supported yet.
 
 =back
 
@@ -3002,6 +3018,10 @@ The warning and the critical are sizes, and can have units of bytes, kilobytes, 
 terabytes, or exabytes. Each may be abbreviated to the first letter. If no units are given, 
 bytes are assumed. The first column should be an integer representing the number of bytes to check.
 
+Normally, an alert is triggered if the values returned are B<greater than> or equal to the critical or warning 
+value. However, an option of B<--reverse> will trigger the alert if the returned value is 
+B<lower than> or equal to the critical or warning value.
+
 Example 1: Warn if any relation over 100 pages is named "rad":
 
   check_postgres_custom_query --checktype=string -w "rad" --query="SELECT relname FROM pg_class WHERE relpages > 100" --port=5432
@@ -3009,6 +3029,10 @@ Example 1: Warn if any relation over 100 pages is named "rad":
 Example 2: Give a critical if the "foobar" function returns over 5GB of bytes:
 
   check_postgres_custom_query --port=5432 --critical='5MB'--checktype=size --query="SELECT foobar()"
+
+Example 2: Warn if the function "snazzo" returns less than 42:
+
+  check_postgres_custom_query --port=5432 --critical=42 --query="SELECT snazzo()" --reverse
 
 If you come up with a useful custom_query, consider sending in a patch to this program 
 to make it into a standard action that other people can use.
@@ -3336,7 +3360,7 @@ Example 1: Give a warning if any connection has been idle in transaction for mor
 This action requires no other arguments, and does not connect to any databases, 
 but simply creates symlinks in the current directory for each action, in the form 
 B<check_postgres_E<lt>action_nameE<gt>>.
- If the file already exists, it will not be overwritten. If the action is rebuild_symlinks_force, 
+If the file already exists, it will not be overwritten. If the action is rebuild_symlinks_force, 
 then symlinks will be overwritten. The option --symlinks is a shorter way of saying 
 --action=rebuild_symlinks
 
@@ -3529,9 +3553,8 @@ Check all items except for those belonging to the user scott:
 To help in setting things up, this program can be run in a "test mode" by 
 specifying the B<--test> option. This will perform some basic tests to 
 make sure that the databases can be contacted, and that certain per-action 
-prerequisites are met. Currently, we check that the user is a superuser 
-if required by that action, and that the version of Postgres is new enough 
-for those actions that depend on a specific version.
+prerequisites are met, such as whether the user is a superuser, if the version 
+of Postgres is new enough, and if stats_row_level is on.
 
 =head1 DEPENDENCIES
 
@@ -3568,6 +3591,10 @@ Development happens using the git system. You can clone the latest version by do
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 1.8.0> (June 3, 2008)
+
+Add the --reverse option to the custom_query action.
 
 =item B<Version 1.7.1> (June 2, 2008)
 
