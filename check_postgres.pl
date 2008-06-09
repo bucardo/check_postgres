@@ -415,7 +415,7 @@ my %testaction = (
 				  relation_size    => 'VERSION: 8.1',
 				  table_size       => 'VERSION: 8.1',
 				  index_size       => 'VERSION: 8.1',
-				  txn_idle         => 'VERSION: 8.2',
+				  txn_idle         => 'ON: stats_command_string(<8.3) VERSION: 8.0',
 				  txn_time         => 'VERSION: 8.3',
 				  wal_files        => 'VERSION: 8.1',
 );
@@ -439,16 +439,7 @@ if ($opt{test}) {
 	for my $ac (split /\s+/ => $action) {
 		my $limit = $testaction{lc $ac};
 		next if ! defined $limit;
-		while ($limit =~ /\bON: (\w+)/g) {
-			my $setting = $1;
-			for my $db (@{$info->{db}}) {
-				next unless exists $db->{ok};
-				my $val = $set{$db->{pname}}{$setting};
-				if ($val ne 'on') {
-					print qq{Cannot run "$ac" on $db->{pname}: $setting is not set to on\n};
-				}
-			}
-		}
+
 		if ($limit =~ /VERSION: ((\d+)\.(\d+))/) {
 			my ($rver,$rmaj,$rmin) = ($1,$2,$3);
 			for my $db (@{$info->{db}}) {
@@ -460,6 +451,23 @@ if ($opt{test}) {
 				my ($sver,$smaj,$smin) = ($1,$2,$3);
 				if ($smaj < $rmaj or ($smaj==$rmaj and $smin < $rmin)) {
 					print qq{Cannot run "$ac" on $db->{pname}: version must be >= $rver, but is $sver\n};
+				}
+				$db->{version} = $sver;
+			}
+		}
+
+		while ($limit =~ /\bON: (\w+)(?:\(([<>=])(\d+\.\d+)\))?/g) {
+			my ($setting,$op,$ver) = ($1,$2||'',$3||0);
+			for my $db (@{$info->{db}}) {
+				next unless exists $db->{ok};
+				if ($ver) {
+					next if $op eq '<' and $db->{version} >= $ver;
+					next if $op eq '>' and $db->{version} <= $ver;
+					next if $op eq '=' and $db->{version} != $ver;
+				}
+				my $val = $set{$db->{pname}}{$setting};
+				if ($val ne 'on') {
+					print qq{Cannot run "$ac" on $db->{pname}: $setting is not set to on\n};
 				}
 			}
 		}
@@ -1315,7 +1323,7 @@ FROM (
         SELECT
           (SELECT current_setting('block_size')::numeric) AS bs,
           CASE WHEN substring(v,12,3) IN ('8.0','8.1','8.2') THEN 27 ELSE 23 END AS hdr,
-          CASE WHEN v ~ 'mingw32' THEN 8 ELSE 4 END AS ma  
+          CASE WHEN v ~ 'mingw32' THEN 8 ELSE 4 END AS ma
         FROM (SELECT version() AS v) AS foo
       ) AS constants
       GROUP BY 1,2,3,4,5
@@ -1656,11 +1664,13 @@ sub check_wal_files {
 
 	my $info = run_command($SQL);
 
+	my $found = 0;
 	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /(\d+)/) {
 			add_unknown qq{T-BAD-QUERY $db->{slurp}};
 			next;
 		}
+		$found = 1;
 		my $numfiles = $1;
 		my $msg = qq{$numfiles};
 		if (length $critical and $numfiles > $critical) {
@@ -1673,6 +1683,15 @@ sub check_wal_files {
 			add_ok $msg;
 		}
 	}
+
+	## If no results, probably a version problem
+	if (!$found and keys %unknown) {
+		(my $first) = values %unknown;
+		if ($first->[0][0] =~ /pg_ls_dir/) {
+			ndie 'Target database must be version 8.1 or higher to run the check_wal_files action';
+		}
+	}
+
 	return;
 
 } ## end of check_wal_files
@@ -2239,13 +2258,14 @@ sub check_txn_time {
 
 	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+], emptyok => 1 } );
 
+	my $found = 0;
 	for $db (@{$info->{db}}) {
 
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
 			add_ok 'T-EXCLUDE-USEROK';
 			next;
 		}
-
+		$found = 1;
 		my $max = -1;
 	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\d+)\s*/gsm) {
 			my ($dbname,$current) = ($1,$2);
@@ -2269,6 +2289,15 @@ sub check_txn_time {
 			add_ok $msg;
 		}
 	}
+
+	## If no results, probably a version problem
+	if (!$found and keys %unknown) {
+		(my $first) = values %unknown;
+		if ($first->[0][0] =~ /xact_start/) {
+			ndie 'Target database must be version 8.3 or higher to run the txn_time action';
+		}
+	}
+
 	return;
 
 } ## end of check_txn_time
@@ -2290,11 +2319,13 @@ sub check_txn_idle {
 		  type             => 'time',
 		  });
 
+
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) }.
 		qq{FROM pg_stat_activity WHERE current_query = '<IDLE> in transaction'$USERWHERECLAUSE GROUP BY 1};
 
 	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+], emptyok => 1 } );
 
+	my $found = 0;
 	for $db (@{$info->{db}}) {
 
 		my $max = -1;
@@ -2309,6 +2340,7 @@ sub check_txn_idle {
 			next;
 		}
 
+		$found = 1;
 	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\d+)\s*/gsm) {
 			my ($dbname,$current) = ($1,$2);
 			next SLURP if skip_item($dbname);
@@ -2331,6 +2363,19 @@ sub check_txn_idle {
 			add_ok $msg;
 		}
 	}
+
+	## If no results, let's be paranoid and check their settings
+	if (!$found) {
+		$SQL = q{SELECT setting FROM pg_settings WHERE name = 'stats_command_string'};
+		$info = run_command($SQL);
+		my $nosuch = 0;
+		for my $db (@{$info->{db}}) {
+			if ($db->{slurp} =~ /off/) {
+				ndie q{Cannot run the txn_idle action unless stats_command_string is set to 'on'!};
+			}
+		}
+	}
+
 	return;
 
 } ## end of check_txn_idle
