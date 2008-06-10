@@ -1,9 +1,15 @@
 
+all: check_postgres.pl.html index.html
+
 check_postgres.pl.html: check_postgres.pl
 
 	pod2html check_postgres.pl > check_postgres.pl.html
 	@ perl -pi -e "s/<link.*?>//" check_postgres.pl.html
 	@ rm -f pod2htmd.tmp pod2htmi.tmp
+
+index.html: check_postgres.pl
+
+	perl -pi -e "s/\d+\.\d+\.\d+/`grep describes check_postgres.pl | cut -d' ' -f6`/" index.html
 
 critic:
 
