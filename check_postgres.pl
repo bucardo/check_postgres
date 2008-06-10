@@ -645,6 +645,7 @@ sub pretty_size {
 	## Transform number of bytes to a SI display similar to Postgres' format
 
 	my $bytes = shift;
+	my $rounded = shift || 0;
 
 	return "$bytes bytes" if $bytes < 10240;
 
@@ -653,7 +654,9 @@ sub pretty_size {
 	for my $p (1..@unit) {
 		if ($bytes <= 1024**$p) {
 			$bytes /= (1024**($p-1));
-			return sprintf '%.2f %s', $bytes, $unit[$p-2];
+			return $rounded ? 
+				sprintf ('%d %s', $bytes, $unit[$p-2]) : 
+					sprintf ('%.2f %s', $bytes, $unit[$p-2]);
 		}
 	}
 
@@ -671,6 +674,7 @@ sub run_command {
 	## "timeout" - change the timeout from the default of $opt{timeout}
 	## "regex" - the query must match this or we throw an error
 	## "emptyok" - it's okay to not match any rows at all
+	## "version" - alternate versions for different versions
 
 	my $string = shift || '';
 	my $arg = shift || {};
@@ -813,6 +817,14 @@ sub run_command {
 		}
 
 		push @args, '-o', $tempfile;
+
+		## If we've got different SQL, use this first run to simply grab the version
+		## Then we'll use that info to pick the real query
+		if ($arg->{version}) {
+			$arg->{oldstring} = $string;
+			$string = 'SELECT version()';
+		}
+
 		push @args, '-c', $string;
 
 		$VERBOSE >= 3 and warn Dumper \@args;
@@ -880,6 +892,20 @@ sub run_command {
 			}
 
 		}
+
+		## If we are running different queries based on the version, 
+		## find the version we are using, replace the string as needed, 
+		## then re-run the command to this connection.
+		if ($arg->{version}) {
+			if ($db->{slurp} !~ /PostgreSQL (\d+\.\d+)/) {
+				ndie qq{Could not determine version of Postgres!\n};
+			}
+			$db->{version} = $1;
+			$string = $arg->{version}{$db->{version}} || $arg->{oldstring};
+			delete $arg->{version};
+			redo;
+		}
+
 
 	} ## end each database
 
@@ -1286,12 +1312,12 @@ sub check_bloat {
 
 	## This was fun to write
 	$SQL = qq{
-SELECT 
+SELECT
   schemaname, tablename, reltuples::bigint, relpages::bigint, otta,
   ROUND(CASE WHEN otta=0 THEN 0.0 ELSE sml.relpages/otta::numeric END,1) AS tbloat,
-  relpages::bigint - otta AS wastedpages,
-  bs*(sml.relpages-otta)::bigint AS wastedbytes,
-  pg_size_pretty((bs*(relpages-otta))::bigint) AS wastedsize,
+  CASE WHEN relpages < otta THEN 0 ELSE relpages::bigint - otta END AS wastedpages,
+  CASE WHEN relpages < otta THEN 0 ELSE bs*(sml.relpages-otta)::bigint END AS wastedbytes,
+  CASE WHEN relpages < otta THEN pg_size_pretty(0) ELSE pg_size_pretty((bs*(relpages-otta))::bigint) END AS wastedsize,
   iname, ituples::bigint, ipages::bigint, iotta,
   ROUND(CASE WHEN iotta=0 OR ipages=0 THEN 0.0 ELSE ipages/iotta::numeric END,1) AS ibloat,
   CASE WHEN ipages < iotta THEN 0 ELSE ipages::bigint - iotta END AS wastedipages,
@@ -1338,7 +1364,9 @@ WHERE sml.relpages - otta > $MINPAGES OR ipages - iotta > $MINIPAGES
 ORDER BY wastedbytes DESC LIMIT $LIMIT
 };
 
-	my $info = run_command($SQL);
+	(my $SQL2 = $SQL) =~ s/pg_size_pretty\((.+?)\) /$1 || ' bytes' /g;
+
+	my $info = run_command($SQL, { version => {'8.0' => $SQL2}});
 
 	## schema, table, rows, pages, otta, bloat, wastedpages, wastedbytes, wastedsize
 	##         index, ""     "" ...
@@ -1360,8 +1388,12 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 			next;
 		}
 
+		## 8.0 does not have pg_size_pretty, so we'll do it ourselves
+		if ($db->{version} eq '8.0') {
+			$db->{slurp} =~ s/\| (\d+) bytes/'| ' . pretty_size($1,1)/ge;
+		}
 		my $max = -1;
-		my $maxmsg;
+		my $maxmsg = '?';
 	  SLURP: while ($db->{slurp} =~ /$L/gsm) {
 			my ($schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws,
 				$index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws)
@@ -1376,10 +1408,10 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 				my $msg = qq{table $schema.$table rows:$tups pages:$pages shouldbe:$otta (${bloat}X)};
 				$msg .= qq{ wasted size:$wb ($ws)};
 				## The key here is the wastedbytes
-				if ($wb >= $critical) {
+				if ($critical and $wb >= $critical) {
 					add_critical $msg;
 				}
-				elsif ($wb >= $warning) {
+				elsif ($warning and $wb >= $warning) {
 					add_warning $msg;
 				}
 				else {
@@ -1391,10 +1423,10 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 				$db->{perf} .= " $index=$iwb" if $iwb;
 				my $msg = qq{index '$index' rows:$irows pages:$ipages shouldbe:$iotta (${ibloat}X)};
 				$msg .= qq{ wasted bytes:$iwb ($iws)};
-				if ($iwb >= $critical) {
+				if ($critical and $iwb >= $critical) {
 					add_critical $msg;
 				}
-				elsif ($iwb >= $warning) {
+				elsif ($warning and $iwb >= $warning) {
 					add_warning $msg;
 				}
 				else {
@@ -1460,10 +1492,12 @@ sub check_database_size {
 		$SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
 	}
 
-	my $info = run_command($SQL, {regex => qr{\d+ \|}, emptyok => 1 } );
+	my $info = run_command($SQL, { regex => qr{\d+ \|}, emptyok => 1, } );
 
+	my $found = 0;
 	for $db (@{$info->{db}}) {
 		my $max = -1;
+		$found = 1;
 		my %s;
 	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\S+)/gsm) {
 			my ($size,$psize,$name) = ($1,$2,$3);
@@ -1496,6 +1530,16 @@ sub check_database_size {
 			add_ok $msg;
 		}
 	}
+
+
+	## If no results, probably a version problem
+	if (!$found and keys %unknown) {
+		(my $first) = values %unknown;
+		if ($first->[0][0] =~ /pg_database_size/) {
+			ndie 'Target database must be version 8.1 or higher to run the check_database_size action';
+		}
+	}
+
 	return;
 
 } ## end of check_database_size
@@ -1729,8 +1773,10 @@ sub check_relation_size {
 
 	my $info = run_command($SQL, {emptyok => 1});
 
+	my $found = 0;
 	for $db (@{$info->{db}}) {
 
+		$found = 1;
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
 			add_ok 'T-EXCLUDE-USEROK';
 			next;
@@ -1765,6 +1811,15 @@ sub check_relation_size {
 			add_ok $msg;
 		}
 	}
+
+	## If no results, probably a version problem
+	if (!$found and keys %unknown) {
+		(my $first) = values %unknown;
+		if ($first->[0][0] =~ /pg_relation_size/) {
+			ndie "Target database must be version 8.1 or higher to run the ${relkind}_size action";
+		}
+	}
+
 	return;
 
 } ## end of check_relations_size
