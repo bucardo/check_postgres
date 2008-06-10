@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.8.0';
+our $VERSION = '1.8.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2817,7 +2817,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.8.0
+This documents describes B<check_postgres.pl> version 1.8.1
 
 =head1 SYNOPSIS
 
@@ -3703,6 +3703,12 @@ Development happens using the git system. You can clone the latest version by do
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 1.8.1> (June 9, 2008)
+
+Allow check_bloat to work on Postgres version 8.0.
+Allow for different commands to be run for each action depending on the server version.
+Give better warnings when running actions not available on older Postgres servers.
 
 =item B<Version 1.8.0> (June 3, 2008)
 
