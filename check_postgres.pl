@@ -415,6 +415,7 @@ my %testaction = (
 				  relation_size    => 'VERSION: 8.1',
 				  table_size       => 'VERSION: 8.1',
 				  index_size       => 'VERSION: 8.1',
+				  query_time       => 'ON: stats_command_string(<8.3) VERSION: 8.0',
 				  txn_idle         => 'ON: stats_command_string(<8.3) VERSION: 8.0',
 				  txn_time         => 'VERSION: 8.3',
 				  wal_files        => 'VERSION: 8.1',
@@ -2256,11 +2257,21 @@ sub check_query_time {
 		  default_critical => '5 minutes',
 		  });
 
+	## Bail early if stats_command_string is off
+	$SQL = q{SELECT setting FROM pg_settings WHERE name = 'stats_command_string'};
+	my $info = run_command($SQL);
+	for my $db (@{$info->{db}}) {
+		if ($db->{slurp} =~ /off/) {
+			ndie q{Cannot run the txn_idle action unless stats_command_string is set to 'on'!};
+		}
+	}
+
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) }.
 		qq{FROM pg_stat_activity WHERE current_query <> '<IDLE>'$USERWHERECLAUSE GROUP BY 1};
 
-	my $info = run_command($SQL, { regex => qr{\s*.+?\s+\|\s+\d+}, emptyok => 1 } );
+	$info = run_command($SQL, { regex => qr{\s*.+?\s+\|\s+\d+}, emptyok => 1 } );
 
+	my $found = 0;
 	for $db (@{$info->{db}}) {
 
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
@@ -2268,6 +2279,7 @@ sub check_query_time {
 			next;
 		}
 
+		$found = 1;
 		my $max = 0;
 	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\d+)\s*/gsm) {
 			my ($dbname,$current) = ($1,$2);
@@ -2287,6 +2299,7 @@ sub check_query_time {
 			add_ok $msg;
 		}
 	}
+
 	return;
 
 } ## end of check_query_time
@@ -2423,7 +2436,6 @@ sub check_txn_idle {
 	if (!$found) {
 		$SQL = q{SELECT setting FROM pg_settings WHERE name = 'stats_command_string'};
 		$info = run_command($SQL);
-		my $nosuch = 0;
 		for my $db (@{$info->{db}}) {
 			if ($db->{slurp} =~ /off/) {
 				ndie q{Cannot run the txn_idle action unless stats_command_string is set to 'on'!};
