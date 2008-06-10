@@ -27,6 +27,7 @@
 	<li><a href="#basic_filtering">BASIC FILTERING</a></li>
 	<li><a href="#user_name_filtering">USER NAME FILTERING</a></li>
 	<li><a href="#test_mode">TEST MODE</a></li>
+	<li><a href="#tips_and_tricks">TIPS AND TRICKS</a></li>
 	<li><a href="#dependencies">DEPENDENCIES</a></li>
 	<li><a href="#development">DEVELOPMENT</a></li>
 	<li><a href="#history">HISTORY</a></li>
@@ -49,7 +50,7 @@
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This documents describes <strong>check_postgres.pl</strong> version 1.8.1</p>
+<p>This documents describes <strong>check_postgres.pl</strong> version 1.8.2</p>
 <p>
 </p>
 <hr />
@@ -1118,6 +1119,15 @@ of Postgres is new enough, and if stats_row_level is on.</p>
 <p>
 </p>
 <hr />
+<h1><a name="tips_and_tricks">TIPS AND TRICKS</a></h1>
+<p>Since this program uses the <strong>psql</strong> program, make sure it is accesible to the 
+uer running the script. If run as a cronjob, this often means modifying the 
+<strong>PATH</strong> environment variable.</p>
+<p>If you are using Nagios in embedded Perl mode, use the --action argument 
+instead of symlinks, so that the plugin only gets compiled one time.</p>
+<p>
+</p>
+<hr />
 <h1><a name="dependencies">DEPENDENCIES</a></h1>
 <p>Access to a working version of psql, and the following very standard Perl modules:</p>
 <dl>
@@ -1149,6 +1159,12 @@ is needed by the <strong>check_disk_space</strong> action.</p>
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="2" class="item"><strong>Version 1.8.2</strong> (June 10, 2008)</a></strong>
+
+<dd>
+<p>Changes to allow working under Nagios' embedded Perl mode. (Ioannis Tambouras)</p>
+</dd>
+</li>
 <dt><strong><a name="1" class="item"><strong>Version 1.8.1</strong> (June 9, 2008)</a></strong>
 
 <dd>
@@ -1188,7 +1204,7 @@ Thanks to Dustin Black for the bug report.</p>
 <p>Add the custom_query action.</p>
 </dd>
 </li>
-<dt><strong><a name="2" class="item"><strong>Version 1.5.2</strong> (May 2, 2008)</a></strong>
+<dt><strong><strong>Version 1.5.2</strong> (May 2, 2008)</strong>
 
 <dd>
 <p>Fix problem with too eager creation of custom pgpass file.</p>

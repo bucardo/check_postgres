@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.8.1';
+our $VERSION = '1.8.2';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2814,7 +2814,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.8.1
+This documents describes B<check_postgres.pl> version 1.8.2
 
 =head1 SYNOPSIS
 
@@ -3709,6 +3709,10 @@ Development happens using the git system. You can clone the latest version by do
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 1.8.2> (June 10, 2008)
+
+Changes to allow working under Nagios' embedded Perl mode. (Ioannis Tambouras)
 
 =item B<Version 1.8.1> (June 9, 2008)
 
