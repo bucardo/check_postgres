@@ -3665,6 +3665,15 @@ make sure that the databases can be contacted, and that certain per-action
 prerequisites are met, such as whether the user is a superuser, if the version 
 of Postgres is new enough, and if stats_row_level is on.
 
+=head1 TIPS AND TRICKS
+
+Since this program uses the B<psql> program, make sure it is accesible to the 
+uer running the script. If run as a cronjob, this often means modifying the 
+B<PATH> environment variable.
+
+If you are using Nagios in embedded Perl mode, use the --action argument 
+instead of symlinks, so that the plugin only gets compiled one time.
+
 =head1 DEPENDENCIES
 
 Access to a working version of psql, and the following very standard Perl modules:
@@ -3853,7 +3862,6 @@ Some example Nagios configuration settings using this script:
      service_description    dbhost PostgreSQL Service Database Locks
      check_command          check_postgres_locks!2!3
  }
-
 
 =head1 LICENSE AND COPYRIGHT
 
