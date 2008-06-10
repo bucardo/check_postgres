@@ -37,10 +37,10 @@ use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 $PSQL = '';
 
 ## If this is true, $opt{PSQL} is disabled for security reasons
-my $NO_PSQL_OPTION = 1;
+our $NO_PSQL_OPTION = 1;
 
 ## What type of output to use by default
-my $DEFAULT_OUTPUT = 'nagios';
+our $DEFAULT_OUTPUT = 'nagios';
 
 ## If true, we show how long each query took by default. Requires Time::HiRes to be installed.
 $opt{showtime} = 1;
@@ -52,13 +52,13 @@ $opt{defaultuser} = 'postgres';
 $opt{showperf} = 1;
 
 ## Default time display format, used for last_vacuum and last_analyze
-my $SHOWTIME = 'HH24:MI FMMonth DD, YYYY';
+our $SHOWTIME = 'HH24:MI FMMonth DD, YYYY';
 
 ## Always prepend 'postgres_' to the name of the service in the output string
-my $FANCYNAME = 1;
+our $FANCYNAME = 1;
 
 ## Change the service name to uppercase
-my $YELLNAME = 1;
+our $YELLNAME = 1;
 
 
 ## Nothing below this line should need to be changed for normal usage.
@@ -67,11 +67,11 @@ my $YELLNAME = 1;
 ## that could be made into a command-line option or moved above.
 
 ## Messages are stored in these until the final output via finishup()
-my (%ok, %warning, %critical, %unknown);
+our (%ok, %warning, %critical, %unknown);
 
-my $ME = basename($0);
-my $ME2 = 'check_postgres.pl';
-my $USAGE = qq{\nUsage: $ME <options>\n Try "$ME --help" for a complete list of options\n\n};
+our $ME = basename($0);
+our $ME2 = 'check_postgres.pl';
+our $USAGE = qq{\nUsage: $ME <options>\n Try "$ME --help" for a complete list of options\n\n};
 
 $opt{test} = 0;
 $opt{timeout} = 10;
@@ -122,9 +122,9 @@ die $USAGE unless
 	and keys %opt
 	and ! @ARGV;
 
-my $VERBOSE = $opt{verbose} || 0;
+our $VERBOSE = $opt{verbose} || 0;
 
-my $OUTPUT = $opt{output} || '';
+our $OUTPUT = $opt{output} || '';
 
 ## If not explicitly given an output, check the current directory,
 ## then fall back to the default.
@@ -144,7 +144,7 @@ if ($OUTPUT ne 'nagios' and $OUTPUT ne 'munin') { ## More coming soon...
 }
 
 ## See if we need to invoke something based on our name
-my $action = $opt{action} || '';
+our $action = $opt{action} || '';
 if ($ME =~ /check_postgres_(\w+)/) {
 	$action = $1;
 }
@@ -157,7 +157,7 @@ if ($opt{version}) {
 }
 
 ## Quick hash to put normal action information in one place:
-my $action_info = {
+our $action_info = {
  # Name                 # clusterwide? # helpstring
  backends            => [1, 'Number of connections, compared to max_connections.'],
  bloat               => [0, 'Check for table and index bloat.'],
@@ -187,8 +187,8 @@ my $action_info = {
  wal_files           => [1, 'Check the number of WAL files in the pg_xlog directory'],
 };
 
-my $action_usage = '';
-my $longname = 1;
+our $action_usage = '';
+our $longname = 1;
 for (keys %$action_info) {
 	$longname = length($_) if length($_) > $longname;
 }
@@ -291,7 +291,7 @@ if (! defined $PSQL or ! length $PSQL) {
 -x $PSQL or ndie qq{The file "$PSQL" does not appear to be executable\n};
 $res = qx{$PSQL --version};
 $res =~ /^psql \(PostgreSQL\) (\d+\.\d+)/ or ndie qq{Could not determine psql version\n};
-my $psql_version = $1;
+our $psql_version = $1;
 
 $VERBOSE >= 1 and warn qq{psql=$PSQL version=$psql_version\n};
 
@@ -299,7 +299,7 @@ $opt{defaultdb} = $psql_version >= 7.4 ? 'postgres' : 'template1';
 
 ## Standard messages. Use these whenever possible when building actions.
 
-my %template =
+our %template =
 	(
 	 'T-EXCLUDE-DB'      => 'No matching databases found due to exclusion/inclusion options',
 	 'T-EXCLUDE-FS'      => 'No matching file systems found due to exclusion/inclusion options',
@@ -394,19 +394,19 @@ sub finishup {
 
 
 ## For options that take a size e.g. --critical="10 GB"
-my $sizere = qr{^\s*(\d+\.?\d?)\s*([bkmgtpz])?\w*$}i; ## Don't care about the rest of the string
+our $sizere = qr{^\s*(\d+\.?\d?)\s*([bkmgtpz])?\w*$}i; ## Don't care about the rest of the string
 
 ## For options that take a time e.g. --critical="10 minutes" Fractions are allowed.
-my $timere = qr{^\s*(\d+(?:\.\d+)?)\s*(\w*)\s*$}i;
+our $timere = qr{^\s*(\d+(?:\.\d+)?)\s*(\w*)\s*$}i;
 
 ## For options that must be specified in seconds
-my $timesecre = qr{^\s*(\d+)\s*(?:s(?:econd|ec)?)?s?\s*$};
+our $timesecre = qr{^\s*(\d+)\s*(?:s(?:econd|ec)?)?s?\s*$};
 
 ## For simple checksums:
-my $checksumre = qr{^[a-f0-9]{32}$};
+our $checksumre = qr{^[a-f0-9]{32}$};
 
 ## If in test mode, verify that we can run each requested action
-my %testaction = (
+our %testaction = (
 				  last_vacuum      => 'ON: stats_row_level VERSION: 8.2',
 				  last_analyze     => 'ON: stats_row_level VERSION: 8.2',
 				  last_autovacuum  => 'ON: stats_row_level VERSION: 8.2',
@@ -478,7 +478,7 @@ if ($opt{test}) {
 }
 
 ## Expand the list of included/excluded users into a standard format
-my $USERWHERECLAUSE = '';
+our $USERWHERECLAUSE = '';
 if ($opt{includeuser}) {
 	my %userlist;
 	for my $user (@{$opt{includeuser}}) {
@@ -2804,9 +2804,6 @@ sub check_replicate_row {
 	return;
 
 } ## end of check_replicate_row
-
-
-__END__
 
 
 =pod
