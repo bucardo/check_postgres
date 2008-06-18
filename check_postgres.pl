@@ -3682,8 +3682,8 @@ of Postgres is new enough, and if stats_row_level is on.
 
 =head1 TIPS AND TRICKS
 
-Since this program uses the B<psql> program, make sure it is accesible to the 
-uer running the script. If run as a cronjob, this often means modifying the 
+Since this program uses the B<psql> program, make sure it is accessible to the 
+user running the script. If run as a cronjob, this often means modifying the 
 B<PATH> environment variable.
 
 If you are using Nagios in embedded Perl mode, use the --action argument 
