@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.8.2';
+our $VERSION = '1.8.3';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -1224,9 +1224,24 @@ sub check_backends {
 		ndie qq{Cannot specify a negative percent!\n};
 	}
 
-	$SQL = q{SELECT setting FROM pg_settings WHERE name = 'max_connections'};
-	$SQL = "SELECT COUNT(*), ($SQL), datname FROM pg_stat_activity GROUP BY 2,3";
+	my $MAXSQL = q{SELECT setting FROM pg_settings WHERE name = 'max_connections'};
+	$SQL = "SELECT COUNT(*), ($MAXSQL), datname FROM pg_stat_activity GROUP BY 2,3";
 	my $info = run_command($SQL, {regex => qr[\s*\d+ \| \d+\s+\|] } );
+
+	## There may be no entries returned if we catch pg_stat_activity at the right
+	## moment in older versions of Postgres
+	if (!defined $info->{db}[0]) {
+		$info = run_command($MAXSQL, {regex => qr[\d] } );
+		$db = $info->{db}[0];
+		if ($db->{slurp} !~ /(\d+)/) {
+			undef %unknown;
+			add_unknown q{Could not determine max_connections};
+			return;
+		}
+		my $limit = $1;
+		add_ok qq{0 of $limit connections};
+		return;
+	}
 
 	for $db (@{$info->{db}}) {
 
@@ -2814,7 +2829,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.8.2
+This documents describes B<check_postgres.pl> version 1.8.3
 
 =head1 SYNOPSIS
 
@@ -3710,6 +3725,12 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
+=item B<Version 1.8.3> (June 18, 2008)
+
+Fix check_backends action: there may be no rows in pg_stat_activity, so run a second 
+query if needed to find the max_connections setting.
+Thanks to Jeff Frost for the bug report.
+
 =item B<Version 1.8.2> (June 10, 2008)
 
 Changes to allow working under Nagios' embedded Perl mode. (Ioannis Tambouras)
@@ -3726,7 +3747,7 @@ Add the --reverse option to the custom_query action.
 
 =item B<Version 1.7.1> (June 2, 2008)
 
-Fix query_time action: account for race condition in which zero rows appear in pg_stat_activity.
+Fix check_query_time action: account for race condition in which zero rows appear in pg_stat_activity.
 Thanks to Dustin Black for the bug report.
 
 =item B<Version 1.7.0> (May 11, 2008)
