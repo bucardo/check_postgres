@@ -10,6 +10,7 @@ check_postgres.pl.html: check_postgres.pl
 index.html: check_postgres.pl
 
 	perl -pi -e "s/\d+\.\d+\.\d+/`grep describes check_postgres.pl | cut -d' ' -f6`/" index.html
+	perl -pi -e "s/released on ([^\.]+)/released on `date +\"%B %d, %Y\"`/" index.html
 
 critic:
 
