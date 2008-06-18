@@ -3719,6 +3719,18 @@ Development happens using the git system. You can clone the latest version by do
 
  git-clone http://bucardo.org/check_postgres.git
 
+=head1 MAILING LIST
+
+Two mailing lists are available. For discussions about the program, bug reports, 
+feature requests, and commit notices, send email to check_postgres@bucardo.org:
+
+https://mail.endcrypt.com/mailman/listinfo/check_postgres
+
+A low-volume list for announcement of new versions and important notices is the 
+'check_postgres-announce' list:
+
+https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
+
 =head1 HISTORY
 
 Items not specifically attributed are by Greg Sabino Mullane.

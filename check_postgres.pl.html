@@ -30,6 +30,7 @@
 	<li><a href="#tips_and_tricks">TIPS AND TRICKS</a></li>
 	<li><a href="#dependencies">DEPENDENCIES</a></li>
 	<li><a href="#development">DEVELOPMENT</a></li>
+	<li><a href="#mailing_list">MAILING LIST</a></li>
 	<li><a href="#history">HISTORY</a></li>
 	<li><a href="#bugs_and_limitations">BUGS AND LIMITATIONS</a></li>
 	<li><a href="#author">AUTHOR</a></li>
@@ -50,7 +51,7 @@
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This documents describes <strong>check_postgres.pl</strong> version 1.8.2</p>
+<p>This documents describes <strong>check_postgres.pl</strong> version 1.8.3</p>
 <p>
 </p>
 <hr />
@@ -1156,9 +1157,27 @@ is needed by the <strong>check_disk_space</strong> action.</p>
 <p>
 </p>
 <hr />
+<h1><a name="mailing_list">MAILING LIST</a></h1>
+<p>Two mailing lists are available. For discussions about the program, bug reports, 
+feature requests, and commit notices, send email to <a href="mailto:check_postgres@bucardo.org:">check_postgres@bucardo.org:</a></p>
+<p><a href="https://mail.endcrypt.com/mailman/listinfo/check_postgres">https://mail.endcrypt.com/mailman/listinfo/check_postgres</a></p>
+<p>A low-volume list for announcement of new versions and important notices is the 
+'check_postgres-announce' list:</p>
+<p><a href="https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce">https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce</a></p>
+<p>
+</p>
+<hr />
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="3" class="item"><strong>Version 1.8.3</strong> (June 18, 2008)</a></strong>
+
+<dd>
+<p>Fix check_backends action: there may be no rows in pg_stat_activity, so run a second 
+query if needed to find the max_connections setting.
+Thanks to Jeff Frost for the bug report.</p>
+</dd>
+</li>
 <dt><strong><a name="2" class="item"><strong>Version 1.8.2</strong> (June 10, 2008)</a></strong>
 
 <dd>
@@ -1182,7 +1201,7 @@ Give better warnings when running actions not available on older Postgres server
 <dt><strong><strong>Version 1.7.1</strong> (June 2, 2008)</strong>
 
 <dd>
-<p>Fix query_time action: account for race condition in which zero rows appear in pg_stat_activity.
+<p>Fix check_query_time action: account for race condition in which zero rows appear in pg_stat_activity.
 Thanks to Dustin Black for the bug report.</p>
 </dd>
 </li>
@@ -1222,7 +1241,7 @@ Thanks to Dustin Black for the bug report.</p>
 <p>Add the --includeuser and --excludeuser options. Documentation cleanup.</p>
 </dd>
 </li>
-<dt><strong><a name="3" class="item"><strong>Version 1.4.3</strong> (April 16, 2008)</a></strong>
+<dt><strong><strong>Version 1.4.3</strong> (April 16, 2008)</strong>
 
 <dd>
 <p>Add in the 'output' concept for future support of non-Nagios programs.</p>
