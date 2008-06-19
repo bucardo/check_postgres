@@ -1239,7 +1239,7 @@ sub check_backends {
 			return;
 		}
 		my $limit = $1;
-		add_ok qq{0 of $limit connections};
+		add_ok qq{1 of $limit connections};
 		return;
 	}
 
