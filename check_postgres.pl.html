@@ -51,7 +51,7 @@
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This documents describes <strong>check_postgres.pl</strong> version 1.8.3</p>
+<p>This documents describes <strong>check_postgres.pl</strong> version 1.8.4</p>
 <p>
 </p>
 <hr />
@@ -1121,8 +1121,8 @@ of Postgres is new enough, and if stats_row_level is on.</p>
 </p>
 <hr />
 <h1><a name="tips_and_tricks">TIPS AND TRICKS</a></h1>
-<p>Since this program uses the <strong>psql</strong> program, make sure it is accesible to the 
-uer running the script. If run as a cronjob, this often means modifying the 
+<p>Since this program uses the <strong>psql</strong> program, make sure it is accessible to the 
+user running the script. If run as a cronjob, this often means modifying the 
 <strong>PATH</strong> environment variable.</p>
 <p>If you are using Nagios in embedded Perl mode, use the --action argument 
 instead of symlinks, so that the plugin only gets compiled one time.</p>
@@ -1170,6 +1170,12 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="4" class="item"><strong>Version 1.8.4</strong> (June 19, 2008)</a></strong>
+
+<dd>
+<p>Better detection of problems in --replicate_row.</p>
+</dd>
+</li>
 <dt><strong><a name="3" class="item"><strong>Version 1.8.3</strong> (June 18, 2008)</a></strong>
 
 <dd>

@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.8.3';
+our $VERSION = '1.8.4';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2844,7 +2844,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.8.3
+This documents describes B<check_postgres.pl> version 1.8.4
 
 =head1 SYNOPSIS
 
@@ -3751,6 +3751,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 1.8.4> (June 19, 2008)
+
+Better detection of problems in --replicate_row.
 
 =item B<Version 1.8.3> (June 18, 2008)
 
