@@ -676,6 +676,7 @@ sub run_command {
 	## "regex" - the query must match this or we throw an error
 	## "emptyok" - it's okay to not match any rows at all
 	## "version" - alternate versions for different versions
+    ## "dbnumber" - connect with an alternate set of params, e.g. port2 dbname2
 
 	my $string = shift || '';
 	my $arg = shift || {};
@@ -2760,6 +2761,9 @@ sub check_replicate_row {
 		}
 	}
 	my $numslaves = $slave;
+	if ($numslaves < 1) {
+		ndie 'No slaves found';
+	}
 
 	my ($update,$newval);
 	if ($value1 eq $val1) {
@@ -2774,7 +2778,18 @@ sub check_replicate_row {
 		ndie "Cannot test replication: values are not the right ones ($value1 not $val1 nor $val2)";
 	}
 
-	$info1 = run_command($update);
+	$info1 = run_command($update, { failok => 1 } );
+
+	## Make sure the update worked
+	if (! defined $info1->{db}[0]) {
+		ndie 'Source update failed';
+	}
+
+	my $err = $info1->{db}[0]{error} || '';
+	if ($err) {
+		$err =~ s/ERROR://; ## e.g. Slony read-only
+		ndie $err;
+	}
 
 	## Start the clock
 	my $starttime = time();
