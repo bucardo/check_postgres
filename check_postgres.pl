@@ -1881,7 +1881,7 @@ sub check_last_vacuum_analyze {
 	$SQL = q{SELECT nspname, relname, CASE WHEN v IS NULL THEN -1 ELSE round(extract(epoch FROM now()-v)) END, }
 		   .qq{ CASE WHEN v IS NULL THEN '?' ELSE TO_CHAR(v, '$SHOWTIME') END FROM (}
 		   .qq{SELECT nspname, relname, $criteria AS v FROM pg_class c, pg_namespace n }
-		   .q{WHERE relkind = 'r' AND n.oid = c.relnamespace ORDER BY 2) AS foo};
+		   .q{WHERE relkind = 'r' AND n.oid = c.relnamespace ORDER BY 3) AS foo};
 	if ($opt{perflimit}) {
 		$SQL .= " ORDER BY 3 DESC LIMIT $opt{perflimit}";
 	}
