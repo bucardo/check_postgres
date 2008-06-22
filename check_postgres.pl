@@ -21,7 +21,7 @@ use Getopt::Long qw/GetOptions/;
 Getopt::Long::Configure(qw/no_ignore_case/);
 use File::Basename qw/basename/;
 use File::Temp qw/tempfile tempdir/;
-File::Temp->safe_level( File::Temp::MEDIUM ); ## no critic
+File::Temp->safe_level( File::Temp::MEDIUM );
 use Cwd;
 use Data::Dumper qw/Dumper/;
 $Data::Dumper::Varname = 'POSTGRES';
@@ -256,8 +256,8 @@ build_symlinks() if $action =~ /build_symlinks/; ## Does not return, may be 'bui
 ## Die if Time::HiRes is needed but not found
 if ($opt{showtime}) {
 	eval {
-		require Time::HiRes; ## no critic
-		import Time::HiRes qw/gettimeofday tv_interval sleep/; ## no critic
+		require Time::HiRes;
+		import Time::HiRes qw/gettimeofday tv_interval sleep/;
 	};
 	if ($@) {
 		die qq{Cannot find Time::HiRes, needed if 'showtime' is true\n};
@@ -326,7 +326,7 @@ sub add_response {
 	push @{$type->{$header}} => [$msg,$perf];
 }
 
-sub add_unknown { ## no critic
+sub add_unknown {
 	my $msg = shift || $db->{error};
 	add_response \%unknown, $msg;
 }
@@ -432,7 +432,7 @@ if ($opt{test}) {
 		}
 		print "Connection ok: $db->{pname}\n";
 		for (split /\n/ => $db->{slurp}) {
-			while (/(\S+)\s*\|\s*(.+)\s*/sg) { ## no critic 'ProhibitUnusedCapture'
+			while (/(\S+)\s*\|\s*(.+)\s*/sg) { ## no critic (ProhibitUnusedCapture)
 				$set{$db->{pname}}{$1} = $2;
 			}
 		}
@@ -835,7 +835,7 @@ sub run_command {
 		my $timeout = $arg->{timeout} || $opt{timeout};
 		alarm 0;
 
-		my $start = $opt{showtime} ? [gettimeofday()] : 0; ## no critic
+		my $start = $opt{showtime} ? [gettimeofday()] : 0;
 		open my $oldstderr, '>&', STDERR or ndie "Could not dupe STDERR\n";
 		open STDERR, '>', $errorfile or ndie qq{Could not open STDERR?!\n};
 		eval {
@@ -855,7 +855,7 @@ sub run_command {
 			}
 		}
 
-		$db->{totaltime} = sprintf '%.2f', $opt{showtime} ? tv_interval($start) : 0; ## no critic
+		$db->{totaltime} = sprintf '%.2f', $opt{showtime} ? tv_interval($start) : 0;
 
 		if ($res) {
 			$db->{fail} = $res;
@@ -1411,7 +1411,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 		}
 		my $max = -1;
 		my $maxmsg = '?';
-	  SLURP: while ($db->{slurp} =~ /$L/gsm) { ## no critic 'ProhibitUselessRegexModifiers'
+	  SLURP: while ($db->{slurp} =~ /$L/gsm) { ## no critic (ProhibitUselessRegexModifiers)
 			my ($schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws,
 				$index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws)
 				= ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18);
@@ -1476,7 +1476,7 @@ sub check_connection {
 
 	## Parse it out and return our information
 	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /PostgreSQL (\S+)/o) { ## no critic 'ProhibitUnusedCapture'
+		if ($db->{slurp} !~ /PostgreSQL (\S+)/o) { ## no critic (ProhibitUnusedCapture)
 			add_unknown "T-BAD-QUERY $db->{slurp}";
 			next;
 		}
@@ -1721,7 +1721,7 @@ sub check_wal_files {
 	my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
 
 	## Figure out where the pg_xlog directory is
-	$SQL = q{SELECT count(*) FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$'}; ## no critic
+	$SQL = q{SELECT count(*) FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$'}; ## no critic (RequireInterpolationOfMetachars)
 
 	my $info = run_command($SQL);
 

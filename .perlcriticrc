@@ -14,6 +14,7 @@ stop_words = Mullane Nagios Slony nols salesrep psql dbname postgres USERNAME us
 ## Severity 4:
 [-ErrorHandling::RequireUseOfExceptions]
 [-InputOutput::RequireBriefOpen]
+[-Modules::RequireExplicitInclusion]
 [-Subroutines::RequireFinalReturn]
 [-ValuesAndExpressions::ProhibitMixedBooleanOperators]
 
@@ -58,11 +59,11 @@ stop_words = Mullane Nagios Slony nols salesrep psql dbname postgres USERNAME us
 [-Variables::ProhibitPunctuationVars]
 
 ## Severity 1:
+[-BuiltinFunctions::ProhibitReverseSortBlock]
 [-CodeLayout::ProhibitParensWithBuiltins]
 [-CodeLayout::RequireTidyCode]
-[-InputOutput::RequireCheckedSyscalls]
-[-RegularExpressions::ProhibitUnusualDelimiters]
-[-BuiltinFunctions::ProhibitReverseSortBlock]
-[-RegularExpressions::ProhibitEscapedMetacharacters]
-[-RegularExpressions::ProhibitEnumeratedClasses]
 [-Documentation::RequirePodAtEnd]
+[-InputOutput::RequireCheckedSyscalls]
+[-RegularExpressions::ProhibitEnumeratedClasses]
+[-RegularExpressions::ProhibitEscapedMetacharacters]
+[-RegularExpressions::ProhibitUnusualDelimiters]
