@@ -407,10 +407,10 @@ our $checksumre = qr{^[a-f0-9]{32}$};
 
 ## If in test mode, verify that we can run each requested action
 our %testaction = (
-				  last_vacuum      => 'ON: stats_row_level VERSION: 8.2',
-				  last_analyze     => 'ON: stats_row_level VERSION: 8.2',
-				  last_autovacuum  => 'ON: stats_row_level VERSION: 8.2',
-				  last_autoanalyze => 'ON: stats_row_level VERSION: 8.2',
+				  last_vacuum      => 'ON: stats_row_level(<8.3) VERSION: 8.2',
+				  last_analyze     => 'ON: stats_row_level(<8.3) VERSION: 8.2',
+				  last_autovacuum  => 'ON: stats_row_level(<8.3) VERSION: 8.2',
+				  last_autoanalyze => 'ON: stats_row_level(<8.3) VERSION: 8.2',
 				  database_size    => 'VERSION: 8.1',
 				  relation_size    => 'VERSION: 8.1',
 				  table_size       => 'VERSION: 8.1',
@@ -1855,7 +1855,7 @@ sub check_last_vacuum_analyze {
 	my $auto = shift || 0;
 
 	## Check the last time things were vacuumed or analyzed
-	## NOTE: stats_row_level must be set to on in your database
+	## NOTE: stats_row_level must be set to on in your database (if version 8.2)
 	## By default, reports on the oldest value in the database
 	## Can exclude and include tables
 	## Warning and critical are times, default to seconds
@@ -3110,6 +3110,9 @@ before they can be considered by this test. If you really want to adjust these
 values, you can look for the variables B<$MINPAGES> and B<$MINIPAGES> at the top of the 
 C<check_bloat> subroutine.
 
+The schema named 'information_schema' is excluded from this test, as the only tables 
+it contains are small ans do not change.
+
 Please note that the values computed by this action are not precise, and 
 should be used as a guideline only. Great effort was made to estimate the 
 correct size of a table, but in the end it is only an estimate. The correct 
@@ -3280,14 +3283,20 @@ Example 3: Warn if any index not owned by postgres goes over 500 MB.
 
   check_postgres_index_size --port=5432 --excludeuser=postgres -w 500MB -c 600MB
 
-=item B<last_analyze> (symlink: C<check_postgres_last_analyze>)
 
 =item B<last_vacuum> (symlink: C<check_postgres_last_vacuum>)
 
+=item B<last_autovacuum> (symlink: C<check_postgres_last_autovacuum>)
+
+=item B<last_analyze> (symlink: C<check_postgres_last_analyze>)
+
+=item B<last_autoanalyze> (symlink: C<check_postgres_last_autoanalyze>)
+
+
 Checks how long it has been since vacuum (or analyze) was last run on each 
-table in one or more databases. Use of these actions requires that the Postgres 
-configuration variable B<stats_rows_level> is enabled, and that the target 
-database is version 8.2 or higher. Tables can be filtered with the 
+table in one or more databases. Use of these actions requires that the target 
+database is version 8.3 or greater, or that the version is 8.2 and the 
+configuration variable B<stats_rows_level> is enabled. Tables can be filtered with the 
 B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details.
 Tables can also be filtered by their owner by use of the 
@@ -3301,6 +3310,9 @@ default values are '1 day' and '2 days'. Please note that there are cases
 in which this field does not get automatically populated. If certain tables 
 are giving you problems, make sure that they have dead rows to vacuum, 
 or just exclude them from the test.
+
+The schema named 'information_schema' is excluded from this test, as the only tables 
+it contains are small and do not change.
 
 Example 1: Warn if any table has not been vacuumed in 3 days, and give a 
 critical at a week, for host wormwood
@@ -3602,7 +3614,8 @@ Example 2: Give a warning if any databases on hosts valley,grain, or sunshine is
 The options B<--include> and B<--exclude> can be combined to limit which 
 things are checked, depending on the action. The name of the database can 
 be filtered when using the following actions: 
-backends, database_size, last_vacuum, last_analyze, locks, and query_time.
+backends, database_size, last_vacuum, last_autovacuum, last_analyze, last_autoanalyze, 
+locks, and query_time.
 The name of a relation can be filtered when using the following actions: 
 bloat, index_size, table_size, and relation_size.
 The name of a setting can be filtered when using the settings_checksum action.
@@ -3661,7 +3674,11 @@ comma-separated list. The actions that currently use these options are:
 
 =item last_analyze
 
+=item last_autoanalyze
+
 =item last_vacuum
+
+=item last_autovacuum
 
 =item query_time
 
@@ -3695,7 +3712,7 @@ To help in setting things up, this program can be run in a "test mode" by
 specifying the B<--test> option. This will perform some basic tests to 
 make sure that the databases can be contacted, and that certain per-action 
 prerequisites are met, such as whether the user is a superuser, if the version 
-of Postgres is new enough, and if stats_row_level is on.
+of Postgres is new enough, and if stats_row_level is enabled.
 
 =head1 TIPS AND TRICKS
 
