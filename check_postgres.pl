@@ -432,7 +432,7 @@ if ($opt{test}) {
 		}
 		print "Connection ok: $db->{pname}\n";
 		for (split /\n/ => $db->{slurp}) {
-			while (/(\S+)\s*\|\s*(.+)\s*/sg) {
+			while (/(\S+)\s*\|\s*(.+)\s*/sg) { ## no critic 'ProhibitUnusedCapture'
 				$set{$db->{pname}}{$1} = $2;
 			}
 		}
@@ -655,8 +655,8 @@ sub pretty_size {
 	for my $p (1..@unit) {
 		if ($bytes <= 1024**$p) {
 			$bytes /= (1024**($p-1));
-			return $rounded ? 
-				sprintf ('%d %s', $bytes, $unit[$p-2]) : 
+			return $rounded ?
+				sprintf ('%d %s', $bytes, $unit[$p-2]) :
 					sprintf ('%.2f %s', $bytes, $unit[$p-2]);
 		}
 	}
@@ -1411,7 +1411,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 		}
 		my $max = -1;
 		my $maxmsg = '?';
-	  SLURP: while ($db->{slurp} =~ /$L/gsm) {
+	  SLURP: while ($db->{slurp} =~ /$L/gsm) { ## no critic 'ProhibitUselessRegexModifiers'
 			my ($schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws,
 				$index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws)
 				= ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18);
@@ -1438,7 +1438,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 			## Now the index, if it exists
 			if ($index ne '?') {
 				$db->{perf} .= " $index=$iwb" if $iwb;
-				my $msg = qq{index '$index' rows:$irows pages:$ipages shouldbe:$iotta (${ibloat}X)};
+				my $msg = qq{index $index rows:$irows pages:$ipages shouldbe:$iotta (${ibloat}X)};
 				$msg .= qq{ wasted bytes:$iwb ($iws)};
 				if ($critical and $iwb >= $critical) {
 					add_critical $msg;
@@ -1476,7 +1476,7 @@ sub check_connection {
 
 	## Parse it out and return our information
 	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /PostgreSQL (\S+)/o) {
+		if ($db->{slurp} !~ /PostgreSQL (\S+)/o) { ## no critic 'ProhibitUnusedCapture'
 			add_unknown "T-BAD-QUERY $db->{slurp}";
 			next;
 		}
@@ -1804,20 +1804,21 @@ sub check_relation_size {
 			next;
 		}
 
-		my ($max,$pmax,$kmax,$nmax) = (-1,0,0,'?');
+		my ($max,$pmax,$kmax,$nmax,$smax) = (-1,0,0,'?','?');
 	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\w)\s*\| (\S+)\s+\| (\S+)/gsm) {
 			my ($size,$psize,$kind,$name,$schema) = ($1,$2,$3,$4,$5);
 			next SLURP if skip_item($name);
-			$db->{perf} .= " $schema.$name=$size";
-			($max=$size, $pmax=$psize, $kmax=$kind, $nmax=$name) if $size > $max;
+			$db->{perf} .= sprintf " %s$name=$size", $kind eq 'r' ? "$schema." : '';
+			($max=$size, $pmax=$psize, $kmax=$kind, $nmax=$name, $smax=$schema) if $size > $max;
 		}
 		if ($max < 0) {
 			add_unknown 'T-EXCLUDE-REL';
 			next;
 		}
 
-		my $msg = sprintf qq{largest %s is %s"$nmax": $pmax},
-			$relkind, $relkind eq 'relation' ? ($kmax eq 'r' ? 'table ' : 'index ') : '';
+		my $msg = sprintf qq{largest %s is %s"%s$nmax": $pmax},
+			$relkind, $relkind eq 'relation' ? ($kmax eq 'r' ? 'table ' : 'index ') : '',
+				$kmax eq 'r' ? "$smax." : '';
 		if (length $critical and $max >= $critical) {
 			add_critical $msg;
 		}
@@ -1907,7 +1908,7 @@ sub check_last_vacuum_analyze {
 			$db->{perf} .= " $schema.$name=$time" if $time >= 0;
 			if ($time > $maxtime) {
 				$maxtime = $time;
-				$maxrel = $name;
+				$maxrel = "$schema.$name";
 				$maxptime = $ptime;
 			}
 		}
@@ -2844,7 +2845,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.8.4
+This documents describes B<check_postgres.pl> version 1.8.5
 
 =head1 SYNOPSIS
 
@@ -3751,6 +3752,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 1.8.5> (June 22, 2008)
+
+Output schema name before table name where appropriate.
+Thanks to Jeff Frost.
 
 =item B<Version 1.8.4> (June 19, 2008)
 
