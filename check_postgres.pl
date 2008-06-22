@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.8.4';
+our $VERSION = '1.9.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -960,6 +960,7 @@ sub skip_item {
 	## Determine if something should be skipped due to inclusion/exclusion options
 	## Exclusion checked first: inclusion can pull it back out.
 	my $name = shift;
+	my $schema = shift || '';
 
 	my $stat = 0;
 	## Is this excluded?
@@ -967,7 +968,15 @@ sub skip_item {
 		$stat = 1;
 		for (@{$opt{exclude}}) {
 			for my $ex (split /\s*,\s*/ => $_) {
-				if ($ex =~ s/^~//) {
+				if ($ex =~ s/\.$//) {
+					if ($ex =~ s/^~//) {
+						($stat += 2 and last) if $schema =~ /$ex/;
+					}
+					else {
+						($stat += 2 and last) if $schema eq $ex;
+					}
+				}
+				elsif ($ex =~ s/^~//) {
 					($stat += 2 and last) if $name =~ /$ex/;
 				}
 				else {
@@ -980,7 +989,15 @@ sub skip_item {
 		$stat += 4;
 		for (@{$opt{include}}) {
 			for my $in (split /\s*,\s*/ => $_) {
-				if ($in =~ s/^~//) {
+				if ($in =~ s/\.$//) {
+					if ($in =~ s/^~//) {
+						($stat += 8 and last) if $schema =~ /$in/;
+					}
+					else {
+						($stat += 8 and last) if $schema eq $in;
+					}
+				}
+				elsif ($in =~ s/^~//) {
 					($stat += 8 and last) if $name =~ /$in/;
 				}
 				else {
@@ -1415,7 +1432,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 			my ($schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws,
 				$index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws)
 				= ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18);
-			next SLURP if skip_item($table);
+			next SLURP if skip_item($table, $schema);
 			## Made it past the exclusions
 			$max = -2 if $max == -1;
 
@@ -1807,7 +1824,7 @@ sub check_relation_size {
 		my ($max,$pmax,$kmax,$nmax,$smax) = (-1,0,0,'?','?');
 	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\w)\s*\| (\S+)\s+\| (\S+)/gsm) {
 			my ($size,$psize,$kind,$name,$schema) = ($1,$2,$3,$4,$5);
-			next SLURP if skip_item($name);
+			next SLURP if skip_item($name, $schema);
 			$db->{perf} .= sprintf " %s$name=$size", $kind eq 'r' ? "$schema." : '';
 			($max=$size, $pmax=$psize, $kmax=$kind, $nmax=$name, $smax=$schema) if $size > $max;
 		}
@@ -1905,7 +1922,7 @@ sub check_last_vacuum_analyze {
 		my $maxrel = '?';
 		SLURP: while ($db->{slurp} =~ /(\S+)\s+\| (\S+)\s+\|\s+(\-?\d+) \| (.+)\s*$/gm) {
 			my ($schema,$name,$time,$ptime) = ($1,$2,$3,$4);
-			next SLURP if skip_item($name);
+			next SLURP if skip_item($name, $schema);
 			$db->{perf} .= " $schema.$name=$time" if $time >= 0;
 			if ($time > $maxtime) {
 				$maxtime = $time;
@@ -1914,7 +1931,7 @@ sub check_last_vacuum_analyze {
 			}
 		}
 		if ($maxtime == -2) {
-			add_unknown 'T-EXCLUDE-TABLES';
+			add_unknown 'T-EXCLUDE-TABLE';
 		}
 		elsif ($maxtime == -1) {
 			add_unknown sprintf "No matching tables have ever been $type%s",
@@ -2846,7 +2863,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.8.5
+This documents describes B<check_postgres.pl> version 1.9.0
 
 =head1 SYNOPSIS
 
@@ -3614,13 +3631,12 @@ Example 2: Give a warning if any databases on hosts valley,grain, or sunshine is
 The options B<--include> and B<--exclude> can be combined to limit which 
 things are checked, depending on the action. The name of the database can 
 be filtered when using the following actions: 
-backends, database_size, last_vacuum, last_autovacuum, last_analyze, last_autoanalyze, 
-locks, and query_time.
+backends, database_size, locks, query_time, txn_idle, and txn_time.
 The name of a relation can be filtered when using the following actions: 
-bloat, index_size, table_size, and relation_size.
+bloat, index_size, table_size, relation_size, last_vacuum, last_autovacuum, 
+last_analyze, and last_autoanalyze.
 The name of a setting can be filtered when using the settings_checksum action.
 The name of a file system can be filtered when using the disk_space action.
-The name of a setting can be filtered when using the settings_checksum action.
 
 If only an include option is given, then ONLY those entries that match will be 
 checked. However, if given both exclude and include, the exclusion is done first, 
@@ -3628,6 +3644,9 @@ and the inclusion after, to reinstate things that may have been excluded. Both
 B<--include> and B<--exclude> can be given multiple times, 
 and/or as comma-separated lists. A leading tilde will match the following word 
 as a regular expression.
+
+To match a schema, end the search term with a single period. Leading tildes can 
+be used for schemas as well.
 
 Examples:
 
@@ -3650,6 +3669,10 @@ Exclude the item named 'test':
 Exclude all items containing the letters 'test:
 
  --exclude=~test
+
+Exclude all items in the schema 'pg_catalog':
+
+ --exclude='pg_catalog.'
 
 Exclude all items containing the letters 'ace', but allow the item 'faceoff':
 
@@ -3770,6 +3793,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 1.9.0> (June 22, 2008)
+
+Don't include information_schema in certain checks. (Jeff Frost)
+Allow --include and --exclude to use schemas by using a trailing period.
 
 =item B<Version 1.8.5> (June 22, 2008)
 
