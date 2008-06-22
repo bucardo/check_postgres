@@ -1373,7 +1373,7 @@ FROM (
     ) AS foo
   ) AS rs
   JOIN pg_class cc ON cc.relname = rs.tablename
-  JOIN pg_namespace nn ON cc.relnamespace = nn.oid AND nn.nspname = rs.schemaname
+  JOIN pg_namespace nn ON cc.relnamespace = nn.oid AND nn.nspname = rs.schemaname AND nn.relname <> 'information_schema'
   LEFT JOIN pg_index i ON indrelid = cc.oid
   LEFT JOIN pg_class c2 ON c2.oid = i.indexrelid
 ) AS sml
@@ -1881,7 +1881,8 @@ sub check_last_vacuum_analyze {
 	$SQL = q{SELECT nspname, relname, CASE WHEN v IS NULL THEN -1 ELSE round(extract(epoch FROM now()-v)) END, }
 		   .qq{ CASE WHEN v IS NULL THEN '?' ELSE TO_CHAR(v, '$SHOWTIME') END FROM (}
 		   .qq{SELECT nspname, relname, $criteria AS v FROM pg_class c, pg_namespace n }
-		   .q{WHERE relkind = 'r' AND n.oid = c.relnamespace ORDER BY 3) AS foo};
+		   .q{WHERE relkind = 'r' AND n.oid = c.relnamespace AND n.nspname <> 'information_schema' }
+		   .q{ORDER BY 3) AS foo};
 	if ($opt{perflimit}) {
 		$SQL .= " ORDER BY 3 DESC LIMIT $opt{perflimit}";
 	}
