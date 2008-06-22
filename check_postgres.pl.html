@@ -51,7 +51,7 @@
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This documents describes <strong>check_postgres.pl</strong> version 1.8.5</p>
+<p>This documents describes <strong>check_postgres.pl</strong> version 1.9.0</p>
 <p>
 </p>
 <hr />
@@ -361,6 +361,10 @@ values, you can look for the variables <strong>$MINPAGES</strong> and <strong>$M
 <code>check_bloat</code> subroutine.</p>
 </dd>
 <dd>
+<p>The schema named 'information_schema' is excluded from this test, as the only tables 
+it contains are small ans do not change.</p>
+</dd>
+<dd>
 <p>Please note that the values computed by this action are not precise, and 
 should be used as a guideline only. Great effort was made to estimate the 
 correct size of a table, but in the end it is only an estimate. The correct 
@@ -597,15 +601,19 @@ will be given. To prevent this, it is recommended that you set the
   check_postgres_index_size --port=5432 --excludeuser=postgres -w 500MB -c 600MB</pre>
 </dd>
 </li>
+<dt><strong><a name="last_vacuum" class="item"><strong>last_vacuum</strong> (symlink: <code>check_postgres_last_vacuum</code>)</a></strong>
+
+<dt><strong><a name="last_autovacuum" class="item"><strong>last_autovacuum</strong> (symlink: <code>check_postgres_last_autovacuum</code>)</a></strong>
+
 <dt><strong><a name="last_analyze" class="item"><strong>last_analyze</strong> (symlink: <code>check_postgres_last_analyze</code>)</a></strong>
 
-<dt><strong><a name="last_vacuum" class="item"><strong>last_vacuum</strong> (symlink: <code>check_postgres_last_vacuum</code>)</a></strong>
+<dt><strong><a name="last_autoanalyze" class="item"><strong>last_autoanalyze</strong> (symlink: <code>check_postgres_last_autoanalyze</code>)</a></strong>
 
 <dd>
 <p>Checks how long it has been since vacuum (or analyze) was last run on each 
-table in one or more databases. Use of these actions requires that the Postgres 
-configuration variable <strong>stats_rows_level</strong> is enabled, and that the target 
-database is version 8.2 or higher. Tables can be filtered with the 
+table in one or more databases. Use of these actions requires that the target 
+database is version 8.3 or greater, or that the version is 8.2 and the 
+configuration variable <strong>stats_rows_level</strong> is enabled. Tables can be filtered with the 
 <strong>--include</strong> and <strong>--exclude</strong> options. See the <a href="#basic_filtering">BASIC FILTERING</a> section 
 for more details.
 Tables can also be filtered by their owner by use of the 
@@ -620,6 +628,10 @@ default values are '1 day' and '2 days'. Please note that there are cases
 in which this field does not get automatically populated. If certain tables 
 are giving you problems, make sure that they have dead rows to vacuum, 
 or just exclude them from the test.</p>
+</dd>
+<dd>
+<p>The schema named 'information_schema' is excluded from this test, as the only tables 
+it contains are small and do not change.</p>
 </dd>
 <dd>
 <p>Example 1: Warn if any table has not been vacuumed in 3 days, and give a 
@@ -1037,18 +1049,20 @@ the format <strong>X.Y</strong> or <strong>X.Y.Z</strong> where <strong>X</stron
 <p>The options <strong>--include</strong> and <strong>--exclude</strong> can be combined to limit which 
 things are checked, depending on the action. The name of the database can 
 be filtered when using the following actions: 
-backends, database_size, last_vacuum, last_analyze, locks, and query_time.
+backends, database_size, locks, query_time, txn_idle, and txn_time.
 The name of a relation can be filtered when using the following actions: 
-bloat, index_size, table_size, and relation_size.
+bloat, index_size, table_size, relation_size, last_vacuum, last_autovacuum, 
+last_analyze, and last_autoanalyze.
 The name of a setting can be filtered when using the settings_checksum action.
-The name of a file system can be filtered when using the disk_space action.
-The name of a setting can be filtered when using the settings_checksum action.</p>
+The name of a file system can be filtered when using the disk_space action.</p>
 <p>If only an include option is given, then ONLY those entries that match will be 
 checked. However, if given both exclude and include, the exclusion is done first, 
 and the inclusion after, to reinstate things that may have been excluded. Both 
 <strong>--include</strong> and <strong>--exclude</strong> can be given multiple times, 
 and/or as comma-separated lists. A leading tilde will match the following word 
 as a regular expression.</p>
+<p>To match a schema, end the search term with a single period. Leading tildes can 
+be used for schemas as well.</p>
 <p>Examples:</p>
 <p>Only checks items named pg_class:</p>
 <pre>
@@ -1065,6 +1079,9 @@ as a regular expression.</p>
 <p>Exclude all items containing the letters 'test:</p>
 <pre>
  --exclude=~test</pre>
+<p>Exclude all items in the schema 'pg_catalog':</p>
+<pre>
+ --exclude='pg_catalog.'</pre>
 <p>Exclude all items containing the letters 'ace', but allow the item 'faceoff':</p>
 <pre>
  --exclude=~ace --include=faceoff</pre>
@@ -1086,7 +1103,11 @@ comma-separated list. The actions that currently use these options are:</p>
 
 <dt><strong>last_analyze</strong>
 
+<dt><strong>last_autoanalyze</strong>
+
 <dt><strong>last_vacuum</strong>
+
+<dt><strong>last_autovacuum</strong>
 
 <dt><strong>query_time</strong>
 
@@ -1116,7 +1137,7 @@ comma-separated list. The actions that currently use these options are:</p>
 specifying the <strong>--test</strong> option. This will perform some basic tests to 
 make sure that the databases can be contacted, and that certain per-action 
 prerequisites are met, such as whether the user is a superuser, if the version 
-of Postgres is new enough, and if stats_row_level is on.</p>
+of Postgres is new enough, and if stats_row_level is enabled.</p>
 <p>
 </p>
 <hr />
@@ -1170,6 +1191,13 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="0" class="item"><strong>Version 1.9.0</strong> (June 22, 2008)</a></strong>
+
+<dd>
+<p>Don't include information_schema in certain checks. (Jeff Frost)
+Allow --include and --exclude to use schemas by using a trailing period.</p>
+</dd>
+</li>
 <dt><strong><a name="5" class="item"><strong>Version 1.8.5</strong> (June 22, 2008)</a></strong>
 
 <dd>
@@ -1205,7 +1233,7 @@ Allow for different commands to be run for each action depending on the server v
 Give better warnings when running actions not available on older Postgres servers.</p>
 </dd>
 </li>
-<dt><strong><a name="0" class="item"><strong>Version 1.8.0</strong> (June 3, 2008)</a></strong>
+<dt><strong><strong>Version 1.8.0</strong> (June 3, 2008)</strong>
 
 <dd>
 <p>Add the --reverse option to the custom_query action.</p>
