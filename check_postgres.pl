@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.9.0';
+our $VERSION = '1.9.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -1129,7 +1129,7 @@ sub validate_range {
 			if ($critical =~ $sizere) {
 				$critical = size_in_bytes($1,$2);
 			}
-			elsif ($critical !~ /^\d\d?\%$/) {
+			elsif ($critical !~ /^\d+\%$/) {
 				ndie qq{Invalid 'critical' option: must be size or percentage\n};
 			}
 		}
@@ -1137,7 +1137,7 @@ sub validate_range {
 			if ($warning =~ $sizere) {
 				$warning = size_in_bytes($1,$2);
 			}
-			elsif ($warning !~ /^\d\d?\%$/) {
+			elsif ($warning !~ /^\d+\%$/) {
 				ndie qq{Invalid 'warning' option: must be size or percentage\n};
 			}
 		}
@@ -1327,6 +1327,7 @@ sub check_bloat {
 	## Valid units: b, k, m, g, t, e
 	## All above may be written as plural or with a trailing 'b'
 	## Example: --critical="25 GB" --include="mylargetable"
+	## Can also specify percentages
 
 	## Don't bother with tables or indexes unless they have at least this many bloated pages
 	my $MINPAGES = 0;
@@ -1339,7 +1340,7 @@ sub check_bloat {
 
 	my ($warning, $critical) = validate_range
 		({
-		  type               => 'size',
+		  type               => 'size or percent',
 		  default_warning    => '1 GB',
 		  default_critical   => '5 GB',
 		  });
@@ -1390,7 +1391,7 @@ FROM (
     ) AS foo
   ) AS rs
   JOIN pg_class cc ON cc.relname = rs.tablename
-  JOIN pg_namespace nn ON cc.relnamespace = nn.oid AND nn.nspname = rs.schemaname AND nn.relname <> 'information_schema'
+  JOIN pg_namespace nn ON cc.relnamespace = nn.oid AND nn.nspname = rs.schemaname AND nn.nspname <> 'information_schema'
   LEFT JOIN pg_index i ON indrelid = cc.oid
   LEFT JOIN pg_class c2 ON c2.oid = i.indexrelid
 ) AS sml
@@ -1401,6 +1402,10 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 	(my $SQL2 = $SQL) =~ s/pg_size_pretty\((.+?)\) /$1 || ' bytes' /g;
 
 	my $info = run_command($SQL, { version => {'8.0' => $SQL2}});
+
+	if (defined $info->{db}[0] and exists $info->{db}[0]{error}) {
+		ndie $info->{db}[0]{error};
+	}
 
 	## schema, table, rows, pages, otta, bloat, wastedpages, wastedbytes, wastedsize
 	##         index, ""     "" ...
@@ -1441,31 +1446,76 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 				$db->{perf} .= " $schema.$table=$wb";
 				my $msg = qq{table $schema.$table rows:$tups pages:$pages shouldbe:$otta (${bloat}X)};
 				$msg .= qq{ wasted size:$wb ($ws)};
-				## The key here is the wastedbytes
-				if ($critical and $wb >= $critical) {
-					add_critical $msg;
+				my $ok = 1;
+				my $perbloat = $bloat * 100;
+
+				if (length $critical) {
+					if (index($critical,'%')>=0) {
+						(my $critical2 = $critical) =~ s/\%//;
+						if ($perbloat >= $critical2) {
+							add_critical $msg;
+							$ok = 0;
+						}
+					}
+					elsif ($wb >= $critical) {
+						add_critical $msg;
+						$ok = 0;
+					}
 				}
-				elsif ($warning and $wb >= $warning) {
-					add_warning $msg;
+
+				if (length $warning and $ok) {
+					if (index($warning,'%')>=0) {
+						(my $warning2 = $warning) =~ s/\%//;
+						if ($perbloat >= $warning2) {
+							add_warning $msg;
+							$ok = 0;
+						}
+					}
+					elsif ($wb >= $warning) {
+						add_warning $msg;
+						$ok = 0;
+					}
 				}
-				else {
-					($max = $wb, $maxmsg = $msg) if $wb > $max;
-				}
+				($max = $wb, $maxmsg = $msg) if $wb > $max and $ok;
 			}
+
 			## Now the index, if it exists
 			if ($index ne '?') {
 				$db->{perf} .= " $index=$iwb" if $iwb;
 				my $msg = qq{index $index rows:$irows pages:$ipages shouldbe:$iotta (${ibloat}X)};
 				$msg .= qq{ wasted bytes:$iwb ($iws)};
-				if ($critical and $iwb >= $critical) {
-					add_critical $msg;
+				my $ok = 1;
+				my $iperbloat = $ibloat * 100;
+
+				if (length $critical) {
+					if (index($critical,'%')>=0) {
+						(my $critical2 = $critical) =~ s/\%//;
+						if ($iperbloat >= $critical2) {
+							add_critical $msg;
+							$ok = 0;
+						}
+					}
+					elsif ($iwb >= $critical) {
+						add_critical $msg;
+						$ok = 0;
+					}
 				}
-				elsif ($warning and $iwb >= $warning) {
-					add_warning $msg;
+
+				if (length $warning and $ok) {
+					if (index($warning,'%')>=0) {
+						(my $warning2 = $warning) =~ s/\%//;
+						if ($iperbloat >= $warning2) {
+							add_warning $msg;
+							$ok = 0;
+						}
+					}
+					elsif ($iwb >= $warning) {
+						add_warning $msg;
+						$ok = 0;
+					}
 				}
-				else {
-					($max = $iwb, $maxmsg = $msg) if $iwb > $max;
-				}
+
+				($max = $iwb, $maxmsg = $msg) if $iwb > $max and $ok;
 			}
 		}
 		if ($max == -1) {
@@ -1701,7 +1751,7 @@ sub check_disk_space {
 					$ok = 0;
 				}
 			}
-			if (length $warning) {
+			if (length $warning and $ok) {
 				if (index($warning,'%')>=0) {
 					(my $warning2 = $warning) =~ s/\%//;
 					if ($percent >= $warning2) {
@@ -2863,7 +2913,7 @@ check_postgres.pl - Postgres monitoring script for Nagios
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.9.0
+This documents describes B<check_postgres.pl> version 1.9.1
 
 =head1 SYNOPSIS
 
@@ -3114,8 +3164,8 @@ enabled on the target databases, and requires that ANALYZE is run frequently.
 The B<--include> and B<--exclude> options can be used to filter out which tables 
 to look at. See the L</"BASIC FILTERING"> section for more details.
 
-The B<--warning> and B<--critical> options must be specified as sizes. 
-Valid units are bytes, kilobytes, megabytes, gigabytes, terabytes, and exabytes. 
+The B<--warning> and B<--critical> options can be specified as sizes or percents.
+Valid size units are bytes, kilobytes, megabytes, gigabytes, terabytes, and exabytes. 
 You can abbreviate all of those with the first letter. Items without units are 
 assumed to be 'bytes'. The default values are '1 GB' and '5 GB'. The value 
 represents the number of "wasted bytes", or the difference between what is actually 
@@ -3143,6 +3193,10 @@ Example 1: Warn if any table on port 5432 is over 100 MB bloated, and critical i
 Example 2: Give a critical if table 'orders' on host 'sami' has more than 10 megs of bloat
 
   check_postgres_bloat --host=sami --include=orders --critical='10 MB'
+
+Example 3: Give a critical if table 'q4' on database 'sales' is over 50% bloated
+
+  check_postgres_bloat --db=sales --include=q4 --critical='50%'
 
 =item B<connection> (symlink: check_postgres_connection)
 
@@ -3793,6 +3847,12 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 1.9.1> (June 24, 2008)
+
+Fix an error in the bloat SQL in 1.9.0
+Allow percentage arguments to be over 99%
+Allow percentages in the bloat --warning and --critical (thanks to Robert Treat for the idea)
 
 =item B<Version 1.9.0> (June 22, 2008)
 

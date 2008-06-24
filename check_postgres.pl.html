@@ -51,7 +51,7 @@
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This documents describes <strong>check_postgres.pl</strong> version 1.9.0</p>
+<p>This documents describes <strong>check_postgres.pl</strong> version 1.9.1</p>
 <p>
 </p>
 <hr />
@@ -346,8 +346,8 @@ The <strong>--include</strong> and <strong>--exclude</strong> options can be use
 to look at. See the <a href="#basic_filtering">BASIC FILTERING</a> section for more details.</p>
 </dd>
 <dd>
-<p>The <strong>--warning</strong> and <strong>--critical</strong> options must be specified as sizes. 
-Valid units are bytes, kilobytes, megabytes, gigabytes, terabytes, and exabytes. 
+<p>The <strong>--warning</strong> and <strong>--critical</strong> options can be specified as sizes or percents.
+Valid size units are bytes, kilobytes, megabytes, gigabytes, terabytes, and exabytes. 
 You can abbreviate all of those with the first letter. Items without units are 
 assumed to be 'bytes'. The default values are '1 GB' and '5 GB'. The value 
 represents the number of &quot;wasted bytes&quot;, or the difference between what is actually 
@@ -384,6 +384,13 @@ should give a rough idea of how bloated things are.</p>
 <dd>
 <pre>
   check_postgres_bloat --host=sami --include=orders --critical='10 MB'</pre>
+</dd>
+<dd>
+<p>Example 3: Give a critical if table 'q4' on database 'sales' is over 50% bloated</p>
+</dd>
+<dd>
+<pre>
+  check_postgres_bloat --db=sales --include=q4 --critical='50%'</pre>
 </dd>
 </li>
 <dt><strong><a name="connection" class="item"><strong>connection</strong> (symlink: check_postgres_connection)</a></strong>
@@ -1191,6 +1198,14 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="1" class="item"><strong>Version 1.9.1</strong> (June 24, 2008)</a></strong>
+
+<dd>
+<p>Fix an error in the bloat SQL in 1.9.0
+Allow percentage arguments to be over 99%
+Allow percentages in the bloat --warning and --critical (thanks to Robert Treat for the idea)</p>
+</dd>
+</li>
 <dt><strong><a name="0" class="item"><strong>Version 1.9.0</strong> (June 22, 2008)</a></strong>
 
 <dd>
@@ -1225,7 +1240,7 @@ Thanks to Jeff Frost for the bug report.</p>
 <p>Changes to allow working under Nagios' embedded Perl mode. (Ioannis Tambouras)</p>
 </dd>
 </li>
-<dt><strong><a name="1" class="item"><strong>Version 1.8.1</strong> (June 9, 2008)</a></strong>
+<dt><strong><strong>Version 1.8.1</strong> (June 9, 2008)</strong>
 
 <dd>
 <p>Allow check_bloat to work on Postgres version 8.0.
