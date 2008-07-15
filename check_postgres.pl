@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.9.1';
+our $VERSION = '1.10.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -112,6 +112,7 @@ die $USAGE unless
 
 			   'PSQL=s',
 
+			   'mrtg=s',      ## used by MRTG checks only
 			   'logfile=s',   ## used by check_logfile only
 			   'queryname=s', ## used by query_runtime only
 			   'query=s',     ## used by custom_query only
@@ -128,9 +129,10 @@ our $OUTPUT = $opt{output} || '';
 
 ## If not explicitly given an output, check the current directory,
 ## then fall back to the default.
+
 if (!$OUTPUT) {
 	my $dir = getcwd;
-	if ($dir =~ /(nagios|munin)/io) {
+	if ($dir =~ /(nagios|mrtg|simple)/io) {
 		$OUTPUT = lc $1;
 	}
 	else {
@@ -139,9 +141,13 @@ if (!$OUTPUT) {
 }
 
 ## Check for a valid output setting
-if ($OUTPUT ne 'nagios' and $OUTPUT ne 'munin') { ## More coming soon...
-	die qq{Invalid output: must be 'nagios' or 'munin'\n};
+if ($OUTPUT ne 'nagios' and $OUTPUT ne 'mrtg' and $OUTPUT ne 'simple') {
+	die qq{Invalid output: must be 'nagios' or 'mrtg' or 'simple'\n};
 }
+
+my $MRTG = ($OUTPUT eq 'mrtg' or $OUTPUT eq 'simple') ? 1 : 0;
+my %stats;
+my $SIMPLE = $OUTPUT eq 'simple' ? 1 : 0;
 
 ## See if we need to invoke something based on our name
 our $action = $opt{action} || '';
@@ -153,7 +159,7 @@ $VERBOSE >= 3 and warn Dumper \%opt;
 
 if ($opt{version}) {
 	print qq{$ME2 version $VERSION\n};
-	exit;
+	exit 0;
 }
 
 ## Quick hash to put normal action information in one place:
@@ -239,7 +245,7 @@ Or simply visit: http://bucardo.org/check_postgres/
 
 
 };
-	exit;
+	exit 0;
 }
 
 build_symlinks() if $opt{symlinks};
@@ -340,11 +346,56 @@ sub add_ok {
 	add_response \%ok, shift;
 }
 
+sub do_mrtg {
+	## Hashref of info to pass out for MRTG or stat
+	my $arg = shift;
+	my $one = $arg->{one} || 0;
+	my $two = $arg->{two} || '';
+	if ($SIMPLE) {
+		$one = $two if (length $two and $two > $one);
+		print "$one\n";
+	}
+	else {
+		my $uptime = $arg->{uptime} || '';
+		my $message = $arg->{msg} || '';
+		print "$one\n$two\n$uptime\n$message\n";
+	}
+	exit 0;
+}
+
+sub bad_mrtg {
+	my $msg = shift;
+	warn "Action $action failed: $msg\n";
+	exit 3;
+}
+
+sub do_mrtg_stats {
+
+	## Show the two highest items for mrtg stats hash
+
+	my $msg = shift || 'unknown error';
+
+	keys %stats or bad_mrtg($msg);
+	my ($one,$two) = ('','');
+	for (sort { $stats{$b} <=> $stats{$a} } keys %stats) {
+		if ($one eq '') {
+			$one = $stats{$_};
+			$msg = $_;
+			next;
+		}
+		$two = $stats{$_};
+		last;
+	}
+	do_mrtg({one => $one, two => $two, msg => $msg});
+}
+
 
 sub finishup {
 
 	## Final output
 	## These are meant to be compact and terse: sometimes messages go to pagers
+
+	$MRTG and do_mrtg_stats();
 
 	$action =~ s/^\s*(\S+)\s*$/$1/;
 	my $service = sprintf "%s$action", $FANCYNAME ? 'postgres_' : '';
@@ -474,7 +525,7 @@ if ($opt{test}) {
 		}
 	}
 	print "END OF TEST MODE\n";
-	exit;
+	exit 0;
 }
 
 ## Expand the list of included/excluded users into a standard format
@@ -600,7 +651,7 @@ check_replicate_row() if $action eq 'replicate_row';
 
 finishup();
 
-exit;
+exit 0;
 
 
 sub build_symlinks {
@@ -635,8 +686,7 @@ sub build_symlinks {
 		}
 	}
 
-
-	exit;
+	exit 0;
 
 } ## end of build_symlinks
 
@@ -899,6 +949,9 @@ sub run_command {
 		## find the version we are using, replace the string as needed, 
 		## then re-run the command to this connection.
 		if ($arg->{version}) {
+			if ($db->{error}) {
+				ndie $db->{error};
+			}
 			if ($db->{slurp} !~ /PostgreSQL (\d+\.\d+)/) {
 				ndie qq{Could not determine version of Postgres!\n};
 			}
@@ -1025,6 +1078,8 @@ sub validate_range {
 
 	my $arg = shift;
 	defined $arg and ref $arg eq 'HASH' or ndie qq{validate_range must be called with a hashref\n};
+
+	return if $MRTG and !$arg->{forcemrtg};
 
 	my $type = $arg->{type} or ndie qq{validate_range must be provided a 'type'\n};
 
@@ -1210,6 +1265,7 @@ sub validate_range {
 sub check_backends {
 
 	## Check the number of connections
+	## Supports: Nagios, MRTG
 	## It makes no sense to run this more than once on the same cluster
 	## Need to be superuser, else only your queries will be visible
 	## Warning and criticals can take three forms:
@@ -1246,6 +1302,8 @@ sub check_backends {
 	$SQL = "SELECT COUNT(*), ($MAXSQL), datname FROM pg_stat_activity GROUP BY 2,3";
 	my $info = run_command($SQL, {regex => qr[\s*\d+ \| \d+\s+\|] } );
 
+	my $mrtgmessage = 'Max connections:';
+
 	## There may be no entries returned if we catch pg_stat_activity at the right
 	## moment in older versions of Postgres
 	if (!defined $info->{db}[0]) {
@@ -1257,6 +1315,9 @@ sub check_backends {
 			return;
 		}
 		my $limit = $1;
+		if ($MRTG) {
+			do_mrtg({one => 1, msg => "$mrtgmessage $limit"});
+		}
 		add_ok qq{1 of $limit connections};
 		return;
 	}
@@ -1270,6 +1331,10 @@ sub check_backends {
 			next SLURP if skip_item($dbname);
 			$db->{perf} .= " $dbname=$current";
 			$total += $current;
+		}
+		if ($MRTG) {
+			$stats{$db->{dbname}} = $total;
+			next;
 		}
 		if (!$total) {
 			add_unknown 'T-EXCLUDE-DB';
@@ -1308,6 +1373,7 @@ sub check_backends {
 		}
 		add_ok $msg;
 	}
+
 	return;
 
 } ## end of check_backends
@@ -1317,6 +1383,7 @@ sub check_backends {
 sub check_bloat {
 
 	## Check how bloated the tables and indexes are
+	## Supports: Nagios, MRTG
 	## NOTE! This check depends on ANALYZE being run regularly
 	## Also requires stats collection to be on
 	## This action may be very slow on large databases
@@ -1418,12 +1485,12 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 	my %seenit;
 	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /$L/) {
-			add_ok q{no relations meet the minimum bloat criteria};
+			add_ok q{no relations meet the minimum bloat criteria} unless $MRTG;
 			next;
 		}
 		## Not a 'regex' to run_command as we need to check the above first.
 		if ($db->{slurp} !~ /\d+\s*\| \d+/) {
-			add_unknown qq{T-BAD-QUERY $db->{slurp}};
+			add_unknown qq{T-BAD-QUERY $db->{slurp}} unless $MRTG;
 			next;
 		}
 
@@ -1449,6 +1516,10 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 				my $ok = 1;
 				my $perbloat = $bloat * 100;
 
+				if ($MRTG) {
+					$stats{table}{"$db->{dbname}.$schema.$table"} = [$wb, $bloat];
+					next;
+				}
 				if (length $critical) {
 					if (index($critical,'%')>=0) {
 						(my $critical2 = $critical) =~ s/\%//;
@@ -1487,6 +1558,10 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 				my $ok = 1;
 				my $iperbloat = $ibloat * 100;
 
+				if ($MRTG) {
+					$stats{index}{"$db->{dbname}.$index"} = [$iwb, $ibloat];
+					next;
+				}
 				if (length $critical) {
 					if (index($critical,'%')>=0) {
 						(my $critical2 = $critical) =~ s/\%//;
@@ -1525,6 +1600,26 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 			add_ok $maxmsg;
 		}
 	}
+
+	if ($MRTG) {
+		keys %stats or bad_mrtg("unknown error");
+		## We are going to report the highest wasted bytes for table and index
+		my ($one,$two,$msg) = ('','');
+		## Can also sort by ratio
+		my $sortby = exists $opt{mrtg} and $opt{mrtg} eq 'ratio' ? 1 : 0;
+		for (sort { $stats{table}{$b}->[$sortby] <=> $stats{table}{$a}->[$sortby] } keys %{$stats{table}}) {
+			$one = $stats{table}{$_}->[$sortby];
+			$msg = $_;
+			last;
+		}
+		for (sort { $stats{index}{$b}->[$sortby] <=> $stats{index}{$a}->[$sortby] } keys %{$stats{index}}) {
+			$two = $stats{index}{$_}->[$sortby];
+			$msg .= " $_";
+			last;
+		}
+		do_mrtg({one => $one, two => $two, msg => $msg});
+	}
+
 	return;
 
 } ## end of check_bloat
@@ -1534,6 +1629,7 @@ sub check_connection {
 
 	## Check the connection, get the connection time and version
 	## No comparisons made: warning and critical are not allowed
+	## Suports: Nagios, MRTG
 
 	if ($opt{warning} or $opt{critical}) {
 		ndie qq{No warning or critical options are needed\n};
@@ -1549,6 +1645,11 @@ sub check_connection {
 		}
 		add_ok "version $1";
 	}
+
+	if ($MRTG) {
+		do_mrtg({one => keys %unknown ? 0 : 1});
+	}
+
 	return;
 
 } ## end of check_connection
@@ -1557,6 +1658,8 @@ sub check_connection {
 sub check_database_size {
 
 	## Check the size of one or more databases
+	## Supports: Nagios, MRTG
+	## mrtg reports the largest two databases
 	## By default, checks all databases
 	## Can check specific one(s) with include
 	## Can ignore some with exclude
@@ -1586,8 +1689,14 @@ sub check_database_size {
 	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\S+)/gsm) {
 			my ($size,$psize,$name) = ($1,$2,$3);
 			next SLURP if skip_item($name);
-			$max=$size if $size > $max;
+			if ($size >= $max) {
+				$max = $size;
+			}
 			$s{$name} = [$size,$psize];
+		}
+		if ($MRTG) {
+			$stats{$db->{dbname}} = $max;
+			next;
 		}
 		if ($max < 0) {
 			if ($USERWHERECLAUSE) {
@@ -1615,7 +1724,6 @@ sub check_database_size {
 		}
 	}
 
-
 	## If no results, probably a version problem
 	if (!$found and keys %unknown) {
 		(my $first) = values %unknown;
@@ -1632,6 +1740,7 @@ sub check_database_size {
 sub check_disk_space {
 
 	## Check the available disk space used by postgres
+	## Supports: Nagios, MRTG
 	## Requires the executable "/bin/df"
 	## Must run as a superuser in the database (to examine 'data_directory' setting)
 	## Critical and warning are maximum size, or percentages
@@ -1727,6 +1836,11 @@ sub check_disk_space {
 
 			next if skip_item($fs);
 
+			if ($MRTG) {
+				$stats{$fs} = [$total,$used,$avail,$percent];
+				next;
+			}
+
 			$gotone = 1;
 
 			## Rather than make another call with -h, do it ourselves
@@ -1769,10 +1883,35 @@ sub check_disk_space {
 			}
 		} ## end each dir
 
+		next if $MRTG;
+
 		if (!$gotone) {
 			add_unknown 'T-EXCLUDE-FS';
 		}
 	}
+
+	if ($MRTG) {
+		keys %stats or bad_mrtg("unknown error");
+		## Get the highest by total size or percent (total, used, avail, percent)
+		## We default to 'available'
+		my $sortby = exists $opt{mrtg}
+			? $opt{mrtg} eq 'total'   ? 0
+			: $opt{mrtg} eq 'used'    ? 1
+			: $opt{mrtg} eq 'avail'   ? 2
+			: $opt{mrtg} eq 'percent' ? 3 : 2 : 2;
+		my ($one,$two,$msg) = ('','','');
+		for (sort { $b->[$sortby] <=> $a->[$sortby] } keys %stats) {
+			if ($one eq '') {
+				$one = $stats{$_}->[$sortby];
+				$msg = $_;
+				next;
+			}
+			$two = $stats{$_}->[$sortby];
+			last;
+		}
+		do_mrtg({one => $one, two => $two, msg => $msg});
+	}
+
 	return;
 
 } ## end of check_disk_space
@@ -1781,6 +1920,7 @@ sub check_disk_space {
 sub check_wal_files {
 
 	## Check on the number of WAL files in use
+	## Supports: Nagios, MRTG
 	## Must run as a superuser
 	## Critical and warning are the number of files
 	## Example: --critical=40
@@ -1800,6 +1940,10 @@ sub check_wal_files {
 		}
 		$found = 1;
 		my $numfiles = $1;
+		if ($MRTG) {
+			$stats{$db->{dbname}} = $numfiles;
+			next;
+		}
 		my $msg = qq{$numfiles};
 		if (length $critical and $numfiles > $critical) {
 			add_critical $msg;
@@ -1830,6 +1974,7 @@ sub check_relation_size {
 	my $relkind = shift || 'relation';
 
 	## Check the size of one or more relations
+	## Supports: Nagios, MRTG
 	## By default, checks all relations
 	## Can check specific one(s) with include
 	## Can ignore some with exclude
@@ -1840,8 +1985,6 @@ sub check_relation_size {
 	## Exclude users with the excludeuser option
 
 	my ($warning, $critical) = validate_range({type => 'size'});
-
-	$VERBOSE >= 3 and warn "Warning and critical are now $warning and $critical\n";
 
 	$SQL = q{SELECT pg_relation_size(c.oid), pg_size_pretty(pg_relation_size(c.oid)), relkind, relname, nspname };
 	$SQL .= sprintf 'FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace',
@@ -1880,6 +2023,10 @@ sub check_relation_size {
 		}
 		if ($max < 0) {
 			add_unknown 'T-EXCLUDE-REL';
+			next;
+		}
+		if ($MRTG) {
+			$stats{$db->{dbname}} = $max;
 			next;
 		}
 
@@ -1922,6 +2069,7 @@ sub check_last_vacuum_analyze {
 	my $auto = shift || 0;
 
 	## Check the last time things were vacuumed or analyzed
+	## Supports: Nagios, MRTG
 	## NOTE: stats_row_level must be set to on in your database (if version 8.2)
 	## By default, reports on the oldest value in the database
 	## Can exclude and include tables
@@ -1970,6 +2118,7 @@ sub check_last_vacuum_analyze {
 		my $maxtime = -2;
 		my $maxptime = '?';
 		my $maxrel = '?';
+		my $mintime = 0; ## used for MRTG only
 		SLURP: while ($db->{slurp} =~ /(\S+)\s+\| (\S+)\s+\|\s+(\-?\d+) \| (.+)\s*$/gm) {
 			my ($schema,$name,$time,$ptime) = ($1,$2,$3,$4);
 			next SLURP if skip_item($name, $schema);
@@ -1979,6 +2128,11 @@ sub check_last_vacuum_analyze {
 				$maxrel = "$schema.$name";
 				$maxptime = $ptime;
 			}
+			$mintime = $time if $time > 0 and ($time < $mintime or !$mintime);
+		}
+		if ($MRTG) {
+			$stats{$db->{dbname}} = $mintime;
+			next;
 		}
 		if ($maxtime == -2) {
 			add_unknown 'T-EXCLUDE-TABLE';
@@ -2000,6 +2154,7 @@ sub check_last_vacuum_analyze {
 			}
 		}
 	}
+
 	return;
 
 } ## end of check_last_vacuum_analyze
@@ -2016,10 +2171,15 @@ sub check_last_analyze {
 sub check_listener {
 
 	## Check for a specific listener
+	## Supports: Nagios, MRTG
 	## Critical and warning are simple strings, or regex if starts with a ~
 	## Example: --critical="~bucardo"
 
-	my ($warning, $critical) = validate_range({type => 'restringex'});
+	if ($MRTG and exists $opt{mrtg}) {
+		$opt{critical} = $opt{mrtg};
+	}
+
+	my ($warning, $critical) = validate_range({type => 'restringex', forcemrtg => 1});
 
 	my $string = length $critical ? $critical : $warning;
 	my $regex = ($string =~ s/^~//) ? '~' : '=';
@@ -2033,6 +2193,9 @@ sub check_listener {
 			next;
 		}
 		my $count = $1;
+		if ($MRTG) {
+			do_mrtg({one => $count});
+		}
 		$db->{perf} .= " listening=$count";
 		my $msg = "listeners found: $count";
 		if ($count >= 1) {
@@ -2053,6 +2216,7 @@ sub check_listener {
 sub check_locks {
 
 	## Check the number of locks
+	## Supports: Nagios, MRTG
 	## By default, checks all databases
 	## Can check specific databases with include
 	## Can ignore databases with exclude
@@ -2086,6 +2250,10 @@ sub check_locks {
 			$lock{waiting}++ if $granted ne 't';
 			$lock{$dbname}++; ## We assume nobody names their db 'rowexclusivelock'
 			$dblock{$dbname}++;
+		}
+		if ($MRTG) {
+			$stats{$db->{dbname}} = $gotone ? $lock{total} : 0;
+			next;
 		}
 		for (sort keys %dblock) {
 			$db->{perf} .= " $_=$dblock{$_}";
@@ -2141,6 +2309,7 @@ sub check_locks {
 			add_ok $msg;
 		}
 	}
+
 	return;
 
 } ## end of check_locks
@@ -2149,6 +2318,7 @@ sub check_locks {
 sub check_logfile {
 
 	## Make sure the logfile is getting written to
+	## Supports: Nagios, MRTG
 	## Especially useful for syslog redirectors
 	## Should be run on the system housing the logs
 	## Optional argument "logfile" tells where the logfile is
@@ -2218,11 +2388,13 @@ sub check_logfile {
 		$VERBOSE >= 3 and warn "Final logfile: $logfile\n";
 
 		if (! -e $logfile) {
+			my $msg = "logfile $logfile does not exist!";
+			$MRTG and do_mrtg({one => 0, msg => $msg});
 			if ($critwarn)  {
-				add_unknown qq{logfile "$logfile" does not exist!};
+				add_unknown $msg;
 			}
 			else {
-				add_warning qq{logfile "$logfile" does not exist!};
+				add_warning $msg;
 			}
 			next;
 		}
@@ -2256,16 +2428,19 @@ sub check_logfile {
 			}
 			$MAXSLEEPTIME -= $SLEEP;
 			redo if $MAXSLEEPTIME > 0;
+			my $msg = "fails logging to: $logfile";
+			$MRTG and do_mrtg({one => 0, msg => $msg});
 			if ($critwarn) {
-				add_critical qq{fails logging to: $logfile};
+				add_critical $msg;
 			}
 			else {
-				add_warning qq{fails logging to: $logfile};
+				add_warning $msg;
 			}
 		}
 		close $logfh or ndie qq{Could not close $logfh: $!\n};
 
 		if ($found == 1) {
+			$MRTG and do_mrtg({one => 1});
 			add_ok qq{logs to: $logfile};
 		}
 	}
@@ -2278,6 +2453,7 @@ sub check_logfile {
 sub check_query_runtime {
 
 	## Make sure a known query runs at least as fast as we think it should
+	## Supports: Nagios, MRTG
 	## Warning and critical are time limits, defaulting to seconds
 	## Valid units: s[econd], m[inute], h[our], d[ay]
 	## Does a "EXPLAIN ANALYZE SELECT COUNT(1) FROM xyz"
@@ -2292,7 +2468,7 @@ sub check_query_runtime {
 
 	my $queryname = $opt{queryname} || '';
 
-	if ($queryname !~ /^[\w\.]+(?:\(\))?$/) {
+	if ($queryname !~ /^[\w\_\.]+(?:\(\))?$/) {
 		ndie q{Invalid queryname option: must be a simple view name};
 	}
 
@@ -2306,6 +2482,10 @@ sub check_query_runtime {
 			next;
 		}
 		my $totalseconds = $1 / 1000.0;
+		if ($MRTG) {
+			$stats{$db->{dbname}} = $totalseconds;
+			next;
+		}
 		$db->{perf} = " qtime=$totalseconds";
 		my $msg = qq{query runtime: $totalseconds seconds};
 		if (length $critical and $totalseconds >= $critical) {
@@ -2319,6 +2499,8 @@ sub check_query_runtime {
 		}
 	}
 
+	$MRTG and do_mrtg_stats('invalid queryname?');
+
 	return;
 
 } ## end of check_query_runtime
@@ -2327,6 +2509,7 @@ sub check_query_runtime {
 sub check_query_time {
 
 	## Check the length of running queries
+	## Supports: Nagios, MRTG
 	## It makes no sense to run this more than once on the same cluster
 	## Warning and critical are time limits - defaults to seconds
 	## Valid units: s[econd], m[inute], h[our], d[ay]
@@ -2371,6 +2554,10 @@ sub check_query_time {
 			next SLURP if skip_item($dbname);
 			$max = $current if $current > $max;
 		}
+		if ($MRTG) {
+			$stats{$db->{dbname}} = $max;
+			next;
+		}
 		$db->{perf} .= " maxtime:$max";
 
 		my $msg = qq{longest query: ${max}s};
@@ -2393,6 +2580,7 @@ sub check_query_time {
 sub check_txn_time {
 
 	## Check the length of running transactions
+	## Supports: Nagios, MRTG
 	## It makes no sense to run this more than once on the same cluster
 	## Warning and critical are time limits - defaults to seconds
 	## Valid units: s[econd], m[inute], h[our], d[ay]
@@ -2424,6 +2612,10 @@ sub check_txn_time {
 			my ($dbname,$current) = ($1,$2);
 			next SLURP if skip_item($dbname);
 			$max = $current if $current > $max;
+		}
+		if ($MRTG) {
+			$stats{$db->{dbname}} = $max;
+			next;
 		}
 		$db->{perf} .= " maxtime:$max";
 		if ($max < 0) {
@@ -2459,6 +2651,7 @@ sub check_txn_time {
 sub check_txn_idle {
 
 	## Check the length of "idle in transaction" connections
+	## Supports: Nagios, MRTG
 	## It makes no sense to run this more than once on the same cluster
 	## Warning and critical are time limits - defaults to seconds
 	## Valid units: s[econd], m[inute], h[our], d[ay]
@@ -2489,7 +2682,12 @@ sub check_txn_idle {
 		}
 
 		if ($db->{slurp} =~ /^\s*$/o) {
-			add_ok 'no idle in transaction';
+			if ($MRTG) {
+				$stats{$db->{dbname}} = 0;
+			}
+			else {
+				add_ok 'no idle in transaction';
+			}
 			next;
 		}
 
@@ -2498,6 +2696,10 @@ sub check_txn_idle {
 			my ($dbname,$current) = ($1,$2);
 			next SLURP if skip_item($dbname);
 			$max = $current if $current > $max;
+		}
+		if ($MRTG) {
+			$stats{$db->{dbname}} = $max;
+			next;
 		}
 		$db->{perf} .= " maxtime:$max";
 		if ($max < 0) {
@@ -2536,6 +2738,7 @@ sub check_txn_idle {
 sub check_settings_checksum {
 
 	## Verify the checksum of all settings
+	## Supports: Nagios, MRTG
 	## Not that this will vary from user to user due to ALTER USER
 	## and because superusers see additional settings
 	## One of warning or critical must be given (but not both)
@@ -2575,6 +2778,10 @@ sub check_settings_checksum {
 		my $checksum = Digest::MD5::md5_hex($newstring);
 
 		my $msg = "checksum: $checksum";
+		if ($MRTG) {
+			$opt{mrtg} or ndie qq{Must provide a checksum via the --mrtg option\n};
+			do_mrtg({one => $opt{mrtg} eq $checksum ? 1 : 0, msg => $checksum});
+		}
 		if ($critical and $critical ne $checksum) {
 			add_critical $msg;
 		}
