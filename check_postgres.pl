@@ -73,6 +73,9 @@ our $ME = basename($0);
 our $ME2 = 'check_postgres.pl';
 our $USAGE = qq{\nUsage: $ME <options>\n Try "$ME --help" for a complete list of options\n\n};
 
+## Global error string, mostly used for MRTG error handling
+our $ERROR = '';
+
 $opt{test} = 0;
 $opt{timeout} = 10;
 
@@ -365,6 +368,7 @@ sub do_mrtg {
 
 sub bad_mrtg {
 	my $msg = shift;
+	$ERROR and ndie $ERROR;
 	warn "Action $action failed: $msg\n";
 	exit 3;
 }
@@ -916,6 +920,7 @@ sub run_command {
 				$db->{error} = <$errfh> || '';
 				$db->{error} =~ s/\s*$//;
 				$db->{error} =~ s/^psql: //;
+				$ERROR = $db->{error};
 			}
 			if (!$db->{ok} and !$arg->{failok}) {
 				add_unknown;
@@ -2804,6 +2809,7 @@ sub check_settings_checksum {
 sub check_timesync {
 
 	## Compare local time to the database time
+	## Supports: Nagios, MRTG
 	## Warning and critical are given in number of seconds difference
 
 	my ($warning,$critical) = validate_range
@@ -2826,6 +2832,10 @@ sub check_timesync {
 		my ($pgepoch,$pgpretty) = ($1,$2);
 
 		my $diff = abs($pgepoch - $localepoch);
+		if ($MRTG) {
+			$stats{$db->{dbname}} = $diff;
+			next;
+		}
 		$db->{perf} = " diff:$diff";
 		my $localpretty = sprintf '%d-%02d-%02d %02d:%02d:%02d', $l[5]+1900, $l[4], $l[3],$l[2],$l[1],$l[0];
 		my $msg = qq{timediff=$diff DB=$pgpretty Local=$localpretty};
@@ -2848,6 +2858,7 @@ sub check_timesync {
 sub check_txn_wraparound {
 
 	## Check how close to transaction wraparound we are on all databases
+	## Supports: Nagios, MRTG
 	## Warning and critical are the number of transactions left
 	## See: http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND
 	## It makes no sense to run this more than once on the same cluster
@@ -2862,12 +2873,17 @@ sub check_txn_wraparound {
 	$SQL = q{SELECT datname, age(datfrozenxid) FROM pg_database WHERE datallowconn is true};
 	my $info = run_command($SQL, { regex => qr[\w+\s+\|\s+\d+] } );
 
+	my $max = 0;
 	for $db (@{$info->{db}}) {
 		while ($db->{slurp} =~ /(\S+)\s+\|\s+(\d+)/gsm) {
 			my ($dbname,$dbtxns) = ($1,$2);
 			my $msg = qq{$dbname: $dbtxns};
 			$db->{perf} .= " $dbname=$dbtxns";
 			$VERBOSE >= 3 and warn $msg;
+			if ($MRTG) {
+				$max = $dbtxns if $dbtxns > $max;
+				next;
+			}
 			if (length $critical and $dbtxns >= $critical) {
 				add_critical $msg;
 			}
@@ -2879,6 +2895,9 @@ sub check_txn_wraparound {
 			}
 		}
 	}
+
+	$MRTG and do_mrtg({one => $max});
+
 	return;
 
 } ## end of check_txn_wraparound
@@ -2887,26 +2906,31 @@ sub check_txn_wraparound {
 sub check_version {
 
 	## Compare version with what we think it should be
+	## Supports: Nagios, MRTG
 	## Warning and critical are the major and minor (e.g. 8.3)
 	## or the major, minor, and revision (e.g. 8.2.4 or even 8.3beta4)
 
-	my ($warning, $critical) = validate_range({type => 'version'});
+	my ($warning, $critical) = validate_range({type => 'version', forcemrtg => 1});
 
 	my ($warnfull, $critfull) = (($warning =~ /^\d+\.\d+$/ ? 0 : 1),($critical =~ /^\d+\.\d+$/ ? 0 : 1));
+
 	my $info = run_command('SELECT version()');
 
 	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /PostgreSQL ((\d+\.\d+)(\w+|\.\d+))/o) {
 			add_unknown "T-BAD-QUERY $db->{slurp}";
+			warn "FOO?\n";
 			next;
 		}
 		my ($full,$version,$revision) = ($1,$2,$3||'?');
 		$revision =~ s/^\.//;
 
 		my $ok = 1;
+
 		if (length $critical) {
 			if (($critfull and $critical ne $full)
 				or (!$critfull and $critical ne $version)) {
+				do_mrtg({one => 0, msg => $full});
 				add_critical qq{version $full, but expected $critical};
 				$ok = 0;
 			}
@@ -2914,14 +2938,17 @@ sub check_version {
 		elsif (length $warning) {
 			if (($warnfull and $warning ne $full)
 				or (!$warnfull and $warning ne $version)) {
+				do_mrtg({one => 0, msg => $full});
 				add_warning qq{version $full, but expected $warning};
 				$ok = 0;
 			}
 		}
 		if ($ok) {
+			do_mrtg({one => 1, msg => $full});
 			add_ok "version $full";
 		}
 	}
+
 	return;
 
 } ## end of check_version
@@ -2995,6 +3022,7 @@ sub check_custom_query {
 sub check_replicate_row {
 
     ## Make an update on one server, make sure it propogates to others
+	## Supports: Nagios, MRTG
 	## Warning and critical are time to replicate to all slaves
 
 	my ($warning, $critical) = validate_range({type => 'time', leastone => 1});
@@ -3072,6 +3100,8 @@ sub check_replicate_row {
 
 	## Loop until we get a match, check each in turn
 	my %slave;
+	my $time = 0;
+	$MRTG and $MRTG = 270; ## Ultimate timeout - 4 minutes 30 seconds
   LOOP: {
 		$info2 = run_command($select, { dbnumber => 2 } );
 		## Reset for final output
@@ -3082,9 +3112,15 @@ sub check_replicate_row {
 			$slave++;
 			next if exists $slave{$slave};
 			(my $value2 = $d->{slurp}) =~ s/^\s*(\S+)\s*$/$1/;
-			my $time = $db->{totaltime} = time - $starttime;
+			$time = $db->{totaltime} = time - $starttime;
 			if ($value2 eq $newval) {
 				$slave{$slave} = $time;
+				next;
+			}
+			if ($MRTG) {
+				if ($time > $MRTG) {
+					ndie "Row was not replicated. Timeout: $time";
+				}
 				next;
 			}
 			if ($warning and $time > $warning) {
@@ -3099,6 +3135,7 @@ sub check_replicate_row {
 		## Did they all match?
 		my $k = keys %slave;
 		if (keys %slave >= $numslaves) {
+			$MRTG and do_mrtg({one => $time});
 			add_ok 'Row was replicated';
 			return;
 		}
@@ -3106,6 +3143,7 @@ sub check_replicate_row {
 		redo;
 	}
 
+	$MRTG and ndie "Row was not replicated. Timeout: $time";
 	add_unknown 'Replication check failed';
 	return;
 
