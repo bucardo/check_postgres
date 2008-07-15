@@ -14,7 +14,7 @@
 
 package check_postgres;
 
-use v5.6.0;
+use 5.006001;
 use strict;
 use warnings;
 use Getopt::Long qw/GetOptions/;
@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '1.10.0';
+our $VERSION = '2.0.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -149,7 +149,7 @@ if ($OUTPUT ne 'nagios' and $OUTPUT ne 'mrtg' and $OUTPUT ne 'simple') {
 }
 
 my $MRTG = ($OUTPUT eq 'mrtg' or $OUTPUT eq 'simple') ? 1 : 0;
-my %stats;
+my (%stats, %statsmsg);
 my $SIMPLE = $OUTPUT eq 'simple' ? 1 : 0;
 
 ## See if we need to invoke something based on our name
@@ -384,7 +384,7 @@ sub do_mrtg_stats {
 	for (sort { $stats{$b} <=> $stats{$a} } keys %stats) {
 		if ($one eq '') {
 			$one = $stats{$_};
-			$msg = $_;
+			$msg = exists $statsmsg{$_} ? $statsmsg{$_} : "DB: $_";
 			next;
 		}
 		$two = $stats{$_};
@@ -1307,8 +1307,6 @@ sub check_backends {
 	$SQL = "SELECT COUNT(*), ($MAXSQL), datname FROM pg_stat_activity GROUP BY 2,3";
 	my $info = run_command($SQL, {regex => qr[\s*\d+ \| \d+\s+\|] } );
 
-	my $mrtgmessage = 'Max connections:';
-
 	## There may be no entries returned if we catch pg_stat_activity at the right
 	## moment in older versions of Postgres
 	if (!defined $info->{db}[0]) {
@@ -1321,7 +1319,7 @@ sub check_backends {
 		}
 		my $limit = $1;
 		if ($MRTG) {
-			do_mrtg({one => 1, msg => "$mrtgmessage $limit"});
+			do_mrtg({one => 1, msg => "DB=$db->{dbname} Max connections=$limit"});
 		}
 		add_ok qq{1 of $limit connections};
 		return;
@@ -1339,6 +1337,7 @@ sub check_backends {
 		}
 		if ($MRTG) {
 			$stats{$db->{dbname}} = $total;
+			$statsmsg{$db->{dbname}} = "DB=$db->{dbname} Max connections=$limit";
 			next;
 		}
 		if (!$total) {
@@ -1522,7 +1521,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 				my $perbloat = $bloat * 100;
 
 				if ($MRTG) {
-					$stats{table}{"$db->{dbname}.$schema.$table"} = [$wb, $bloat];
+					$stats{table}{"DB=$db->{dbname} TABLE=$schema.$table"} = [$wb, $bloat];
 					next;
 				}
 				if (length $critical) {
@@ -1564,7 +1563,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 				my $iperbloat = $ibloat * 100;
 
 				if ($MRTG) {
-					$stats{index}{"$db->{dbname}.$index"} = [$iwb, $ibloat];
+					$stats{index}{"DB=$db->{dbname} INDEX=$index"} = [$iwb, $ibloat];
 					next;
 				}
 				if (length $critical) {
@@ -1607,7 +1606,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 	}
 
 	if ($MRTG) {
-		keys %stats or bad_mrtg("unknown error");
+		keys %stats or bad_mrtg('unknown error');
 		## We are going to report the highest wasted bytes for table and index
 		my ($one,$two,$msg) = ('','');
 		## Can also sort by ratio
@@ -1896,7 +1895,7 @@ sub check_disk_space {
 	}
 
 	if ($MRTG) {
-		keys %stats or bad_mrtg("unknown error");
+		keys %stats or bad_mrtg('unknown error');
 		## Get the highest by total size or percent (total, used, avail, percent)
 		## We default to 'available'
 		my $sortby = exists $opt{mrtg}
@@ -1947,6 +1946,7 @@ sub check_wal_files {
 		my $numfiles = $1;
 		if ($MRTG) {
 			$stats{$db->{dbname}} = $numfiles;
+			$statsmsg{$db->{dbname}} = '';
 			next;
 		}
 		my $msg = qq{$numfiles};
@@ -2032,6 +2032,8 @@ sub check_relation_size {
 		}
 		if ($MRTG) {
 			$stats{$db->{dbname}} = $max;
+			$statsmsg{$db->{dbname}} = sprintf "DB: $db->{dbname} %s %s$nmax",
+				$kmax eq 'i' ? 'INDEX:' : 'TABLE:', $kmax eq 'i' ? '' : "$smax.";
 			next;
 		}
 
@@ -2122,7 +2124,7 @@ sub check_last_vacuum_analyze {
 
 		my $maxtime = -2;
 		my $maxptime = '?';
-		my $maxrel = '?';
+		my ($minrel,$maxrel) = ('?','?'); ## no critic
 		my $mintime = 0; ## used for MRTG only
 		SLURP: while ($db->{slurp} =~ /(\S+)\s+\| (\S+)\s+\|\s+(\-?\d+) \| (.+)\s*$/gm) {
 			my ($schema,$name,$time,$ptime) = ($1,$2,$3,$4);
@@ -2133,10 +2135,14 @@ sub check_last_vacuum_analyze {
 				$maxrel = "$schema.$name";
 				$maxptime = $ptime;
 			}
-			$mintime = $time if $time > 0 and ($time < $mintime or !$mintime);
+			if ($time > 0 and ($time < $mintime or !$mintime)) {
+				$mintime = $time;
+				$minrel = "$schema.$name";
+			}
 		}
 		if ($MRTG) {
 			$stats{$db->{dbname}} = $mintime;
+			$statsmsg{$db->{dbname}} = "DB: $db->{dbname} TABLE: $minrel";
 			next;
 		}
 		if ($maxtime == -2) {
@@ -2394,7 +2400,7 @@ sub check_logfile {
 
 		if (! -e $logfile) {
 			my $msg = "logfile $logfile does not exist!";
-			$MRTG and do_mrtg({one => 0, msg => $msg});
+			$MRTG and ndie $msg;
 			if ($critwarn)  {
 				add_unknown $msg;
 			}
@@ -2873,7 +2879,7 @@ sub check_txn_wraparound {
 	$SQL = q{SELECT datname, age(datfrozenxid) FROM pg_database WHERE datallowconn is true};
 	my $info = run_command($SQL, { regex => qr[\w+\s+\|\s+\d+] } );
 
-	my $max = 0;
+	my ($max,$maxmsg) = (0,'?');
 	for $db (@{$info->{db}}) {
 		while ($db->{slurp} =~ /(\S+)\s+\|\s+(\d+)/gsm) {
 			my ($dbname,$dbtxns) = ($1,$2);
@@ -2881,7 +2887,10 @@ sub check_txn_wraparound {
 			$db->{perf} .= " $dbname=$dbtxns";
 			$VERBOSE >= 3 and warn $msg;
 			if ($MRTG) {
-				$max = $dbtxns if $dbtxns > $max;
+				if ($dbtxns > $max) {
+					$max = $dbtxns;
+					$maxmsg = "DB: $dbname";
+				}
 				next;
 			}
 			if (length $critical and $dbtxns >= $critical) {
@@ -2896,7 +2905,7 @@ sub check_txn_wraparound {
 		}
 	}
 
-	$MRTG and do_mrtg({one => $max});
+	$MRTG and do_mrtg({one => $max, msg => $maxmsg});
 
 	return;
 
@@ -2909,6 +2918,18 @@ sub check_version {
 	## Supports: Nagios, MRTG
 	## Warning and critical are the major and minor (e.g. 8.3)
 	## or the major, minor, and revision (e.g. 8.2.4 or even 8.3beta4)
+
+	if ($MRTG) {
+		if (!exists $opt{mrtg} or $opt{mrtg} !~ /^\d+\.\d+/) {
+			ndie "Invalid mrtg version argument\n";
+		}
+		if ($opt{mrtg} =~ /^\d+\.\d+$/) {
+			$opt{critical} = $opt{mrtg};
+		}
+		else {
+			$opt{warning} = $opt{mrtg};
+		}
+	}
 
 	my ($warning, $critical) = validate_range({type => 'version', forcemrtg => 1});
 
@@ -3154,11 +3175,11 @@ sub check_replicate_row {
 
 =head1 NAME
 
-check_postgres.pl - Postgres monitoring script for Nagios
+check_postgres.pl - Postgres monitoring script for Nagios, MRTG, and others
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 1.9.1
+This documents describes B<check_postgres.pl> version 2.0.0
 
 =head1 SYNOPSIS
 
@@ -3174,6 +3195,9 @@ This documents describes B<check_postgres.pl> version 1.9.1
   ## Warn if > 100 locks, critical if > 200, or > 20 exclusive
   check_postgres_locks --warning=100 --critical="total=200;exclusive=20"
 
+  ## Show the current number of idle connections on port 6543:
+  check_postgres_txn_idle --port=6543 --output=simple
+
   ## There are many other actions and options, please keep reading.
 
 =head1 WEBSITE
@@ -3186,8 +3210,24 @@ http://bucardo.org/check_postgres/
 
 check_postgres.pl is a Perl script that runs many different tests against 
 one or more Postgres databases. It uses the psql program to gather the 
-information, and returns one of four exit codes used by Nagios, as well 
-as a short description of the results. The exit codes are:
+information, and outputs the results in one of three formats: Nagios, MRTG, 
+or simple.
+
+=head2 Output Modes
+
+The output can be changed by use of the C<--output> option. The default output 
+is nagios, although this can be changed at the top of the script if you wish. The 
+current option choices are "nagios", "mrtg", and "simple". To avoid having to 
+enter the output argument each time, the type of output is automatically set 
+if no --output argument is given, and if the current directory has one of the 
+output options in its name. For example, creating a directory named mrtg and 
+populating it with symlinks via the C<--symlinks> argument would ensure that 
+any actions run from that directory will always default to an output of "mrtg"
+
+=head3 Nagios output
+
+The default output format is Nagios, which is a single line of information, along 
+with four specific exit codes:
 
 =over 2
 
@@ -3200,6 +3240,31 @@ as a short description of the results. The exit codes are:
 =item 3 (UNKNOWN)
 
 =back
+
+The output line is one of the words above, a colon, and then a short description of what 
+was measured. Additional statistics information, as well as the total time the command 
+took, can be output as well: see the documentation on the arguments L<--showperf>, 
+L</--perflimit>, and L</--showtime>.
+
+=head3 MRTG output
+
+The MRTG output is four lines, with the first line always giving a single number of importance. 
+When possible, this number represents an actual value such as a number of bytes, but it 
+may also be a 1 or a 0 for actions that only return "true" or "false", such as check_version.
+The second line is an additional stat and is only used for some actions. The third line indicates 
+an "uptime" and is not used. The fourth line is a description and usually indicates the name of 
+the database the stat from the first line was pulled from, but may be different depending on the 
+action.
+
+Some actions accept an optional C<--mrtg> argument to further control the output.
+
+See the documentation on each action for details on the exact MRTG output for each one.
+
+=head3 Simple output
+
+The simple output is simply a truncated version of the MRTG one, and simply returns the first number 
+and nothing else. This is very useful when you just want to check the state of something, regardless 
+of any threshold.
 
 =head1 DATABASE CONNECTION OPTIONS
 
@@ -3298,7 +3363,7 @@ program which is sent to stderr.
 
 Determines if we output additional performance data in standard Nagios format 
 (at end of string, after a pipe symbol, using name=value). 
-VAL should be 0 or 1. The default is 1.
+VAL should be 0 or 1. The default is 1. Only takes effect if using Nagios output mode.
 
 =item B<--perflimit=i>
 
@@ -3307,12 +3372,13 @@ B<showperf> option. This only has an effect for actions that return a large
 number of items, such as B<table_size>. The default is 0, or no limit. Be 
 careful when using this with the B<--include> or B<--exclude> options, as 
 those restrictions are done I<after> the query has been run, and thus your 
-limit may not include the items you want.
+limit may not include the items you want. Only takes effect if using Nagios output mode.
 
 =item B<--showtime=VAL>
 
 Determines if the time taken to run each query is shown in the output. VAL 
 should be 0 or 1. The default is 1. No effect unless B<showperf> is on.
+Only takes effect if using Nagios output mode.
 
 =item B<--test>
 
@@ -3400,6 +3466,10 @@ Example 4: Check all databases except those with "test" in their name, but allow
 
  check_postgres_backends --dbhost=hong,kong --dbhost=fooey --dbport=5432 --dbport=5433 --warning=30 --critical=30 --exclude="~test" --include="pg_greatest,~prod"
 
+For MRTG output, the number of connections is reported on the first line, and the fourth line gives the name of the database, 
+plus the current maximum_connections. If more than one database has been queried, the one with the highest number of 
+connections is output.
+
 =item B<bloat> (symlink: C<check_postgres_bloat>)
 
 Checks the amount of bloat in tables and indexes. (Bloat is generally the amount 
@@ -3443,10 +3513,17 @@ Example 3: Give a critical if table 'q4' on database 'sales' is over 50% bloated
 
   check_postgres_bloat --db=sales --include=q4 --critical='50%'
 
+For MRTG output, the first line gives the highest number of wasted bytes for the tables, and the 
+second line gives the highest number of wasted bytes for the indexes. The fourth line gives the database 
+name, table name, and index name information. If you want to output the bloat ration instead (how many 
+times larger the relation is compared to how large it should be), just pass in C<--mrtg=ratio>.
+
 =item B<connection> (symlink: check_postgres_connection)
 
 Simply connects, issues a 'SELECT version()', and leaves.
 Takes no B<--warning> or B<--critical> options.
+
+For MRTG output, simply outputs a 1 (good connection) or a 0 (bad connection) on the first line.
 
 =item B<custom_query> (symlink: check_postgres_custom_query)
 
@@ -3497,6 +3574,8 @@ Example 2: Warn if the function "snazzo" returns less than 42:
 If you come up with a useful custom_query, consider sending in a patch to this program 
 to make it into a standard action that other people can use.
 
+This action does not support MRTG or simple output yet.
+
 =item B<database_size> (symlink: C<check_postgres_database_size>)
 
 Checks the size of all databases and complains when they are too big. 
@@ -3526,6 +3605,9 @@ Example 2: Give a critical if the database template1 on port 5432 is over 10 MB.
 Example 3: Give a warning if any database on host 'tardis' owned by the user 'tom' is over 5 GB
 
   check_postgres_database_size --host=tardis --includeuser=tom --warning='5 GB' --critical='10 GB'
+
+For MRTG output, returns the size in bytes of the largest database on the first line, 
+and the name of the database on the fourth line.
 
 =item B<disk_space> (symlink: C<check_postgres_disk_space>)
 
@@ -3561,6 +3643,9 @@ Example 1: Make sure that no file system is over 90% for the database on port 54
 Example 2: Check that all file systems starting with /dev/sda are smaller than 10 GB and 11 GB (warning and critical)
 
   check_postgres_disk_space --port=5432 --warning='10 GB' --critical='11 GB' --include="~^/dev/sda"
+
+For MRTG output, returns the size in bytes of the file system on the first line, 
+and the name of the file system on the fourth line.
 
 =item B<index_size> (symlink: C<check_postgres_index_size>)
 
@@ -3599,6 +3684,8 @@ Example 3: Warn if any index not owned by postgres goes over 500 MB.
 
   check_postgres_index_size --port=5432 --excludeuser=postgres -w 500MB -c 600MB
 
+For MRTG output, returns the size in bytes of the largest relation, and the name of the database 
+and relation as the fourth line.
 
 =item B<last_vacuum> (symlink: C<check_postgres_last_vacuum>)
 
@@ -3607,7 +3694,6 @@ Example 3: Warn if any index not owned by postgres goes over 500 MB.
 =item B<last_analyze> (symlink: C<check_postgres_last_analyze>)
 
 =item B<last_autoanalyze> (symlink: C<check_postgres_last_autoanalyze>)
-
 
 Checks how long it has been since vacuum (or analyze) was last run on each 
 table in one or more databases. Use of these actions requires that the target 
@@ -3639,6 +3725,9 @@ Example 2: Same as above, but skip tables belonging to the users 'eve' or 'mallo
 
   check_last_vacuum --host=wormwood --warning='3d' --critical='7d' --excludeusers=eve,mallory
 
+For MRTG output, returns (on the first line) the LEAST amount of time in seconds since a table was 
+last vacuumed or analyzed. The fourth line returns the name of the database and name of the table.
+
 =item B<listener> (symlink: C<check_postgres_listener>)
 
 Confirm that someone is listening for one or more specific strings. Only one of warning or critical is needed. The format 
@@ -3652,6 +3741,9 @@ Example 1: Give a warning if nobody is listening for the string bucardo_mcp_ping
 Example 2: Give a critical if there are no active LISTEN requests matching 'grimm' on database oskar
 
   check_postgres_listener --db oskar --critical=~grimm
+
+For MRTG output, returns a 1 or a 0 on the first, indicating success or failure. The name of the notice must 
+be provided via the <--mrtg> option.
 
 =item B<locks> (symlink: C<check_postgres_locks>)
 
@@ -3674,6 +3766,8 @@ Example 1: Warn if the number of locks is 100 or more, and critical if 200 or mo
 Example 2: On the host artemus, warn if 200 or more locks exist, and give a critical if over 250 total locks exist, or if over 20 exclusive locks exist, or if over 5 connections are waiting for a lock.
 
   check_postgres_locks --host=artemus --warning=200 --critical="total=250;waiting=5;exclusive=20"
+
+For MRTG output, returns the number of locks on the first line, and the name of the database on the fourth line.
 
 =item B<logfile> (symlink: C<check_postgres_logfile>)
 
@@ -3699,6 +3793,9 @@ Example 2: Same as above, but raise a warning, not a critical
 
   check_postgres_logfile --port=5432 --logfile=/home/greg/pg8.2.log -w 1
 
+For MRTG output, returns a 1 or 0 on the first line, indicating success or failure. In case of a 
+failure, the fourth line will provide more detail on the failure encountered.
+
 =item B<query_runtime> (symlink: C<check_postgres_query_runtime>)
 
 Checks how long a specific query takes to run, by executing a "EXPLAIN ANALYZE" 
@@ -3712,6 +3809,9 @@ of a single word (or schema.word), with optional parens at the end.
 Example 1: Give a critical if the function named "speedtest" fails to run in 10 seconds or less.
 
   check_postgres_query_runtime --queryname='speedtest()' --critical=10 --warning=10
+
+For MRTG output, reports the time in seconds for the query to complete on the first line. The fourth 
+line lists the database.
 
 =item B<query_time> (symlink: C<check_postgres_query_time>)
 
@@ -3740,6 +3840,9 @@ Example 2: Using default values (2 and 5 minutes), check all databases except th
 Example 3: Warn if user 'don' has a query running over 20 seconds
 
   check_postgres_query_time --port=5432 --inclucdeuser=don --warning=20s
+
+For MRTG output, returns the length in seconds of the longest running query on the first line. The fourth 
+line gives the name of the database.
 
 =item B<replicate_row> (symlink: C<check_postgres_replicate_row>)
 
@@ -3779,6 +3882,10 @@ this column, and throw a critical if the change is not on all three slaves withi
  check_postgres_replicate_row --host=green --port2=5455 --host2=red,blue,yellow
   --critical=5 --repinfo=receipt,receipt_id,9,zone,north,south
 
+For MRTG output, returns on the first line the time in seconds the replication takes to finish. 
+The maximum time is set to 4 minutes 30 seconds: if no replication has taken place in that long 
+a time, an error is thrown.
+
 =item B<txn_time> (symlink: C<check_postgres_txn_time>)
 
 Checks the length of open transactions on one or more databases. 
@@ -3804,6 +3911,9 @@ Example 1: Warn if user 'warehouse' has a transaction open over 30 seconds
 
   check_postgres_txn_time --port-5432 --warning=30s --includeuser=warehouse
 
+For MRTG output, returns the maximum time in seconds a transaction has been open on the 
+first line. The fourth line gives the name of the database.
+
 =item B<txn_idle> (symlink: C<check_postgres_txn_idle>)
 
 Checks the length of "idle in transaction" queries on one or more databases. There is 
@@ -3821,6 +3931,9 @@ This action requires Postgres 8.3 or better.
 Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:
 
   check_postgres_txn_idle --port=5432 --warning='15 seconds'
+
+For MRTG output, returns the time in seconds the longest idle transaction has been running. The fourth 
+line returns the name of the database.
 
 =item B<rebuild_symlinks>
 
@@ -3854,6 +3967,10 @@ Example 2: Make sure no settings have changed and warn if so, using the checksum
 
   check_postgres_settings_checksum --port=5555 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231
 
+For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
+checksum must be provided as the C<--mrtg> argument. The fourth line always gives the 
+current checksum.
+
 =item B<timesync> (symlink: C<check_postgres_timesync>)
 
 Compares the local system time with the time reported by one or more databases. 
@@ -3867,6 +3984,9 @@ The string returned shows the time difference as well as the time on each side w
 Example 1: Check that databases on hosts ankh, morpork, and klatch are no more than 3 seconds off from the local time:
 
   check_postgres_timesync --host=ankh,morpork.klatch --critical=3
+
+For MRTG output, returns one the first line the number of seconds difference between the local 
+time and the database time. The fourth line returns the name of the database.
 
 =item B<txn_wraparound> (symlink: C<check_postgres_txn_wraparound>)
 
@@ -3888,6 +4008,9 @@ Example 2: Check port 6000 and give a critical at 1.7 billion transactions left:
 
   check_postgres_txn_wraparound --port=6000 --critical=1_700_000_000t
 
+For MRTG output, returns the highest number of transactions for all databases on line one, 
+while line 4 indicates which database it is.
+
 =item B<wal_files> (symlink: C<check_postgres_wal_files>)
 
 Checks how many WAL files exist in the F<pg_xlog> directory, which is found 
@@ -3908,6 +4031,8 @@ Example 1: Check that the number of WAL files is 20 or less on host "pluto"
 
   check_postgres_txn_wraparound --host=pluto --critical=20
 
+For MRTG output, reports the number of WAL files on line 1.
+
 =item B<version> (symlink: C<check_version>)
 
 Checks that the required version of Postgres is running. The 
@@ -3924,6 +4049,9 @@ Example 2: Give a warning if any databases on hosts valley,grain, or sunshine is
   check_postgres_version -H valley,grain,sunshine --critical=8.3
 
 =back
+
+For MRTG output, reports a 1 or a 0 indicating success or failure on the first line. The 
+fourth line indicates the current version. The version must be provided via the C<--mrtg> option.
 
 =head1 BASIC FILTERING
 
@@ -4092,6 +4220,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.0.0> (July 2008)
+
+Add support for MRTG and "simple" output options.
+Many small improvements to nearly all actions.
 
 =item B<Version 1.9.1> (June 24, 2008)
 
