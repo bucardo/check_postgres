@@ -3217,16 +3217,16 @@ or simple.
 
 The output can be changed by use of the C<--output> option. The default output 
 is nagios, although this can be changed at the top of the script if you wish. The 
-current option choices are "nagios", "mrtg", and "simple". To avoid having to 
+current option choices are B<nagios>, B<mrtg>, and B<simple>. To avoid having to 
 enter the output argument each time, the type of output is automatically set 
 if no --output argument is given, and if the current directory has one of the 
 output options in its name. For example, creating a directory named mrtg and 
-populating it with symlinks via the C<--symlinks> argument would ensure that 
+populating it with symlinks via the I<--symlinks> argument would ensure that 
 any actions run from that directory will always default to an output of "mrtg"
 
 =head3 Nagios output
 
-The default output format is Nagios, which is a single line of information, along 
+The default output format is for Nagios, which is a single line of information, along 
 with four specific exit codes:
 
 =over 2
@@ -3243,8 +3243,10 @@ with four specific exit codes:
 
 The output line is one of the words above, a colon, and then a short description of what 
 was measured. Additional statistics information, as well as the total time the command 
-took, can be output as well: see the documentation on the arguments L<--showperf>, 
-L</--perflimit>, and L</--showtime>.
+took, can be output as well: see the documentation on the arguments 
+I<L<--showperf|/--showperf=VAL>>, 
+I<L<--perflimit|/--perflimit=i>>, and 
+I<L<--showtime|/--showtime=VAL>>.
 
 =head3 MRTG output
 
@@ -3256,7 +3258,7 @@ an "uptime" and is not used. The fourth line is a description and usually indica
 the database the stat from the first line was pulled from, but may be different depending on the 
 action.
 
-Some actions accept an optional C<--mrtg> argument to further control the output.
+Some actions accept an optional I<--mrtg> argument to further control the output.
 
 See the documentation on each action for details on the exact MRTG output for each one.
 
@@ -3300,7 +3302,7 @@ Instead, one should use a .pgpass file.
 
 =back
 
-The database connection options can be grouped: --host=a,b --host=c --port=1234 --port=3344
+The database connection options can be grouped: I<--host=a,b --host=c --port=1234 --port=3344>
 would connect to a-1234, b-1234, and c-3344. Note that once set, an option 
 carries over until it is changed again.
 
@@ -3368,16 +3370,16 @@ VAL should be 0 or 1. The default is 1. Only takes effect if using Nagios output
 =item B<--perflimit=i>
 
 Sets a limit as to how many items of interest are reported back when using the 
-B<showperf> option. This only has an effect for actions that return a large 
+I<showperf> option. This only has an effect for actions that return a large 
 number of items, such as B<table_size>. The default is 0, or no limit. Be 
-careful when using this with the B<--include> or B<--exclude> options, as 
+careful when using this with the I<--include> or I<--exclude> options, as 
 those restrictions are done I<after> the query has been run, and thus your 
 limit may not include the items you want. Only takes effect if using Nagios output mode.
 
 =item B<--showtime=VAL>
 
 Determines if the time taken to run each query is shown in the output. VAL 
-should be 0 or 1. The default is 1. No effect unless B<showperf> is on.
+should be 0 or 1. The default is 1. No effect unless I<showperf> is on.
 Only takes effect if using Nagios output mode.
 
 =item B<--test>
@@ -3402,6 +3404,10 @@ Creates symlinks to the main program for each action.
 Determines the format of the output, for use in various programs. The default is 'nagios'. No 
 other systems are supported yet.
 
+=item B<--mrtg=VAL>
+
+Used only for the MRTG or simple output, for a few specific actions.
+
 =back
 
 
@@ -3425,7 +3431,7 @@ if use the option --symlinks
 If the file name already exists, it will not be overwritten. If the file exists 
 and is a symlink, you can force it to overwrite by using "--action=build_symlinks_force"
 
-Most actions take a B<--warning> and an B<--critical> option, indicating at what 
+Most actions take a I<--warning> and a I<--critical> option, indicating at what 
 point we change from OK to WARNING, and what point we go to CRITICAL. Note that 
 because criticals are always checked first, setting the warning equal to the 
 critical is an effective way to turn warnings off and always give a critical.
@@ -3438,15 +3444,15 @@ The current supported actions are:
 
 Checks the current number of connections for one or more databases, and optionally 
 compares it to the maximum allowed, which is determined by the 
-Postgres configuration variable B<max_connections>. The B<--warning> and 
-B<--critical> options can take one of three forms. First, a simple number can be 
+Postgres configuration variable B<max_connections>. The I<--warning> and 
+I<--critical> options can take one of three forms. First, a simple number can be 
 given, which represents the number of connections at which the alert will be 
 given. This choice does not use the B<max_connections> setting. Second, the 
 percentage of available connections can be given. Third, a negative number can 
 be given which represents the number of connections left until B<max_connections> 
-is reached. The default values for B<--warning> and B<--critical> are '90%' and '95%'.
+is reached. The default values for I<--warning> and I<--critical> are '90%' and '95%'.
 You can also filter the databases by use of the 
-B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
+I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details.
 
 Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 140.
@@ -3476,10 +3482,10 @@ Checks the amount of bloat in tables and indexes. (Bloat is generally the amount
 of dead unused space taken up in a table or index. This space is usually reclaimed 
 by use of the VACUUM command.) This action requires that stats collection be 
 enabled on the target databases, and requires that ANALYZE is run frequently. 
-The B<--include> and B<--exclude> options can be used to filter out which tables 
+The I<--include> and I<--exclude> options can be used to filter out which tables 
 to look at. See the L</"BASIC FILTERING"> section for more details.
 
-The B<--warning> and B<--critical> options can be specified as sizes or percents.
+The I<--warning> and I<--critical> options can be specified as sizes or percents.
 Valid size units are bytes, kilobytes, megabytes, gigabytes, terabytes, and exabytes. 
 You can abbreviate all of those with the first letter. Items without units are 
 assumed to be 'bytes'. The default values are '1 GB' and '5 GB'. The value 
@@ -3489,7 +3495,7 @@ used by the table and index, and what we compute that it should be.
 Note that this action has two hard-coded values to avoid false alarms on 
 smaller relations. Tables must have at least 10 pages, and indexes at least 15, 
 before they can be considered by this test. If you really want to adjust these 
-values, you can look for the variables B<$MINPAGES> and B<$MINIPAGES> at the top of the 
+values, you can look for the variables I<$MINPAGES> and I<$MINIPAGES> at the top of the 
 C<check_bloat> subroutine.
 
 The schema named 'information_schema' is excluded from this test, as the only tables 
@@ -3521,7 +3527,7 @@ times larger the relation is compared to how large it should be), just pass in C
 =item B<connection> (symlink: check_postgres_connection)
 
 Simply connects, issues a 'SELECT version()', and leaves.
-Takes no B<--warning> or B<--critical> options.
+Takes no I<--warning> or I<--critical> options.
 
 For MRTG output, simply outputs a 1 (good connection) or a 0 (bad connection) on the first line.
 
@@ -3556,7 +3562,7 @@ terabytes, or exabytes. Each may be abbreviated to the first letter. If no units
 bytes are assumed. The first column should be an integer representing the number of bytes to check.
 
 Normally, an alert is triggered if the values returned are B<greater than> or equal to the critical or warning 
-value. However, an option of B<--reverse> will trigger the alert if the returned value is 
+value. However, an option of I<--reverse> will trigger the alert if the returned value is 
 B<lower than> or equal to the critical or warning value.
 
 Example 1: Warn if any relation over 100 pages is named "rad":
@@ -3581,10 +3587,10 @@ This action does not support MRTG or simple output yet.
 Checks the size of all databases and complains when they are too big. 
 There is no need to run this command more than once per database cluster. 
 Databases can be filtered with 
-the B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
+the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details. 
 They can also be filtered by the owner of the database with the 
-B<--includeuser> and B<--excludeuser> options.
+I<--includeuser> and I<--excludeuser> options.
 See the L</"USER NAME FILTERING"> section for more details.
 
 The warning and critical options can be specified as bytes, kilobytes, megabytes, 
@@ -3614,7 +3620,7 @@ and the name of the database on the fourth line.
 Checks on the available physical disk space used by Postgres. This action requires 
 that you have the executable "/bin/df" available to report on disk sizes, and it 
 also needs to be run as a superuser, so it can examine the B<data_directory> 
-setting inside of Postgres. The B<--warning> and B<--critical> options are 
+setting inside of Postgres. The I<--warning> and I<--critical> options are 
 given in either sizes or percentages. If using sizes, the standard unit types 
 are allowed: bytes, kilobytes, gigabytes, megabytes, gigabytes, terabytes, or 
 exabytes. Each may be abbreviated to the first letter only; no units at all 
@@ -3656,20 +3662,20 @@ and the name of the file system on the fourth line.
 The actions B<table_size> and B<index_size> are simply variations of the 
 B<relation_size> action, which checks for a relation that has grown too big. 
 Relations (in other words, tables and indexes) can be filtered with the 
-B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
+I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details. Relations can also be filtered by the user that owns them, 
-by using the B<--includeuser> and B<--excludeuser> options. 
+by using the I<--includeuser> and I<--excludeuser> options. 
 See the L</"USER NAME FILTERING"> section for more details.
 
-The values for the B<--warning> and B<--critical> options are file sizes, and 
+The values for the I<--warning> and I<--critical> options are file sizes, and 
 may have units of bytes, kilobytes, megabytes, gigabytes, terabytes, or exabytes. 
 Each can be abbreviated to the first letter. If no units are given, bytes are 
 assumed. There are no default values: both the warning and the critical option 
 must be given. The return text shows the size of the largest relation found.
 
-If the B<--showperf> option is enabled, I<all> of the relations with their sizes 
+If the I<--showperf> option is enabled, I<all> of the relations with their sizes 
 will be given. To prevent this, it is recommended that you set the 
-B<--perflimit> option, which will cause the query to do a 
+I<--perflimit> option, which will cause the query to do a 
 C<ORDER BY size DESC LIMIT (perflimit)>.
 
 Example 1: Give a critical if any table is larger than 600MB on host burrick.
@@ -3699,13 +3705,13 @@ Checks how long it has been since vacuum (or analyze) was last run on each
 table in one or more databases. Use of these actions requires that the target 
 database is version 8.3 or greater, or that the version is 8.2 and the 
 configuration variable B<stats_rows_level> is enabled. Tables can be filtered with the 
-B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
+I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details.
 Tables can also be filtered by their owner by use of the 
-B<--includeuser> and B<--excludeuser> options.
+I<--includeuser> and I<--excludeuser> options.
 See the L</"USER NAME FILTERING"> section for more details.
 
-The units for B<--warning> and B<--critical> are specified as times. 
+The units for I<--warning> and I<--critical> are specified as times. 
 Valid units are seconds, minutes, hours, and days; all can be abbreviated 
 to the first letter. If no units are given, 'seconds' are assumed. The 
 default values are '1 day' and '2 days'. Please note that there are cases 
@@ -3749,10 +3755,10 @@ be provided via the <--mrtg> option.
 
 Check the total number of locks on one or more databases. There is no 
 need to run this more than once per database cluster. Databases can be filtered 
-with the B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
+with the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details. 
 
-The B<--warning> and B<--critical> options can be specified as simple numbers, 
+The I<--warning> and I<--critical> options can be specified as simple numbers, 
 which represent the total number of locks, or they can be broken down by type of lock. 
 Valid lock names are C<'total'>, C<'waiting'>, or the name of a lock type used by Postgres. 
 These names are case-insensitive and do not need the "lock" part on the end, 
@@ -3777,7 +3783,7 @@ checking, and ensures that the message shows up in the logs. It scans the
 various log_* settings inside of Postgres to figure out where the logs should be. 
 If you are using syslog, it does a rough (but not foolproof) scan of 
 F</etc/syslog.conf>. Alternatively, you can provide the name of the logfile 
-with the B<--logfile> option. This is especially useful if the logs have a 
+with the I<--logfile> option. This is especially useful if the logs have a 
 custom rotation scheme driven be an external program. The B<--logfile> option 
 supports the following escape characters: C<%Y %m %d %H>, which represent 
 the current year, month, date, and hour respectively. An error is always 
@@ -3799,11 +3805,11 @@ failure, the fourth line will provide more detail on the failure encountered.
 =item B<query_runtime> (symlink: C<check_postgres_query_runtime>)
 
 Checks how long a specific query takes to run, by executing a "EXPLAIN ANALYZE" 
-against it. The B<--warning> and B<--critical> options are the maximum amount of 
+against it. The I<--warning> and I<--critical> options are the maximum amount of 
 time the query should take. Valid units are seconds, minutes, and hours; any can be 
 abbreviated to the first letter. If no units are given, 'seconds' are assumed. 
 Both the warning and the critical option must be given. The name of the view or 
-function to be run must be passed in to the B<--queryname> option. It must consist 
+function to be run must be passed in to the I<--queryname> option. It must consist 
 of a single word (or schema.word), with optional parens at the end.
 
 Example 1: Give a critical if the function named "speedtest" fails to run in 10 seconds or less.
@@ -3818,12 +3824,12 @@ line lists the database.
 Checks the length of running queries on one or more databases. There is 
 no need to run this more than once on the same database cluster.
 Databases can be filtered 
-by using the B<--include> and B<--exclude> options. See the L</"BASIC FILTERING">
+by using the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING">
 section for more details. You can also filter on the user running the 
-query with the B<--includeuser> and B<--excludeuser> options.
+query with the I<--includeuser> and I<--excludeuser> options.
 See the L</"USER NAME FILTERING"> section for more details.
 
-The values for the B<--warning> and B<--critical> options are amounts of 
+The values for the I<--warning> and I<--critical> options are amounts of 
 time, and default to '2 minutes' and '5 minutes' respectively. Valid units 
 are 'seconds', 'minutes', 'hours', or 'days'. Each may be written singular or 
 abbreviated to just the first letter. If no units are given, the unit is 
@@ -3849,7 +3855,7 @@ line gives the name of the database.
 Checks that master-slave replication is working to one or more slaves.
 The slaves are specified the same as the normal databases, except with 
 the number 2 at the end of them, so "--port2" instead of "--port", etc.
-The values or the B<--warning> and B<--critical> options are units of time, and 
+The values or the I<--warning> and I<--critical> options are units of time, and 
 at least one must be provided (no defaults). Valid units are 'seconds', 'minutes', 'hours', 
 or 'days'. Each may be written singular or abbreviated to just the first letter. 
 If no units are given, the units are assumed to be seconds.
@@ -3891,12 +3897,12 @@ a time, an error is thrown.
 Checks the length of open transactions on one or more databases. 
 There is no need to run this command more than once per database cluster. 
 Databases can be filtered by use of the 
-B<--include> and B<--exclude> options. See the L</"BASIC FILTERING"> section 
+I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details. The owner of the transaction can also be filtered, by use of 
-the B<--includeuser> and B<--excludeuser> options.
+the I<--includeuser> and I<--excludeuser> options.
 See the L</"USER NAME FILTERING"> section for more details.
 
-The values or the B<--warning> and B<--critical> options are units of time, and 
+The values or the I<--warning> and I<--critical> options are units of time, and 
 must be provided (no default). Valid units are 'seconds', 'minutes', 'hours', 
 or 'days'. Each may be written singular or abbreviated to just the first letter. 
 If no units are given, the units are assumed to be seconds.
@@ -3918,10 +3924,10 @@ first line. The fourth line gives the name of the database.
 
 Checks the length of "idle in transaction" queries on one or more databases. There is 
 no need to run this more than once on the same database cluster. Databases can be filtered 
-by using the B<--include> and B<--exclude> options. See the L<"BASIC FILTERING"> 
+by using the I<--include> and I<--exclude> options. See the L<"BASIC FILTERING"> 
 section below for more details.
 
-The B<--warning> and B<--critical> options are given as units of time, and both must 
+The I<--warning> and I<--critical> options are given as units of time, and both must 
 be provided (there are no defaults). Valid units are 'seconds', 'minutes', 'hours', 
 or 'days'. Each may be written singular or abbreviated to just the first letter. 
 If no units are given, the unit are assumed to be seconds.
@@ -3952,7 +3958,7 @@ Check that all the Postgres settings are the same as last time you checked.
 This is done by generating a checksum of a sorted list of setting names and 
 their values. Note that different users in the same database may have different 
 checksums, due to ALTER USER usage, and due to the fact that superusers see more 
-settings than ordinary users. Either the B<--warning> or the B<--critical> option 
+settings than ordinary users. Either the I<--warning> or the I<--critical> option 
 should be given, but not both. The value of each one is the checksum, a 
 32-character hexadecimal value. You can run with the special C<--critical=0> option 
 to find out an existing checksum.
@@ -3971,10 +3977,10 @@ For MRTG output, returns a 1 or 0 indicating success of failure of the checksum 
 checksum must be provided as the C<--mrtg> argument. The fourth line always gives the 
 current checksum.
 
-=item B<timesync> (symlink: C<check_postgres_timesync>)
+=item I<timesync> (symlink: C<check_postgres_timesync>)
 
 Compares the local system time with the time reported by one or more databases. 
-The B<--warning> and B<--critical> options represent the number of seconds between 
+The I<--warning> and I<--critical> options represent the number of seconds between 
 the two systems before an alert is given. If neither is specified, the default values 
 are used, which are '2' and '5'. The warning value cannot be greater than the critical
 value. Due to the non-exact nature of this test, values of '0' or '1' are not recommended.
@@ -3991,7 +3997,7 @@ time and the database time. The fourth line returns the name of the database.
 =item B<txn_wraparound> (symlink: C<check_postgres_txn_wraparound>)
 
 Checks how close to transaction wraparound one or more databases are getting. 
-The B<--warning> and B<--critical> options indicate the number of transactions 
+The I<--warning> and I<--critical> options indicate the number of transactions 
 left, and must be a positive integer. If either option is not given, the default 
 values of 1.3 and 1.4 billion are used. There is no need to run this command 
 more than once per database cluster. For a more detailed discussion of what this 
@@ -4017,7 +4023,7 @@ Checks how many WAL files exist in the F<pg_xlog> directory, which is found
 off of your B<data_directory>, sometimes as a symlink to another physical disk for 
 performance reasons. This action must be run as a superuser, in order to access the 
 contents of the F<pg_xlog> directory. The minimum version to use this action is 
-Postgres 8.1. The B<--warning> and B<--critical> options are simply the number of 
+Postgres 8.1. The I<--warning> and I<--critical> options are simply the number of 
 files in the F<pg_xlog> directory. What number to set this to will vary, but a general 
 guideline is to put a number slightly higher than what is normally there, to catch 
 problems early.
@@ -4036,7 +4042,7 @@ For MRTG output, reports the number of WAL files on line 1.
 =item B<version> (symlink: C<check_version>)
 
 Checks that the required version of Postgres is running. The 
-B<--warning> and B<--critical> options (only one is required) must be of 
+I<--warning> and I<--critical> options (only one is required) must be of 
 the format B<X.Y> or B<X.Y.Z> where B<X> is the major version number, 
 B<Y> is the minor version number, and B<Z> is the revision.
 
@@ -4055,7 +4061,7 @@ fourth line indicates the current version. The version must be provided via the 
 
 =head1 BASIC FILTERING
 
-The options B<--include> and B<--exclude> can be combined to limit which 
+The options I<--include> and I<--exclude> can be combined to limit which 
 things are checked, depending on the action. The name of the database can 
 be filtered when using the following actions: 
 backends, database_size, locks, query_time, txn_idle, and txn_time.
@@ -4068,7 +4074,7 @@ The name of a file system can be filtered when using the disk_space action.
 If only an include option is given, then ONLY those entries that match will be 
 checked. However, if given both exclude and include, the exclusion is done first, 
 and the inclusion after, to reinstate things that may have been excluded. Both 
-B<--include> and B<--exclude> can be given multiple times, 
+I<--include> and I<--exclude> can be given multiple times, 
 and/or as comma-separated lists. A leading tilde will match the following word 
 as a regular expression.
 
@@ -4112,9 +4118,9 @@ or which are named 'sql_settings' or 'green'. Specifically check items with the 
 
 =head1 USER NAME FILTERING
 
-The options B<--includeuser> and B<--excludeuser> can be used on some actions 
+The options I<--includeuser> and I<--excludeuser> can be used on some actions 
 to only examine database objects owned by (or not owned by) one or more users. 
-An B<--includeuser> option always trumps an B<--excludeuser> option. You can 
+An I<--includeuser> option always trumps an I<--excludeuser> option. You can 
 give each option more than once for multiple users, or you can give a 
 comma-separated list. The actions that currently use these options are:
 
@@ -4159,7 +4165,7 @@ Check all items except for those belonging to the user scott:
 =head1 TEST MODE
 
 To help in setting things up, this program can be run in a "test mode" by 
-specifying the B<--test> option. This will perform some basic tests to 
+specifying the I<--test> option. This will perform some basic tests to 
 make sure that the databases can be contacted, and that certain per-action 
 prerequisites are met, such as whether the user is a superuser, if the version 
 of Postgres is new enough, and if stats_row_level is enabled.
@@ -4194,7 +4200,7 @@ Access to a working version of psql, and the following very standard Perl module
 The B<settings_checksum> action requires the B<Digest::MD5> module.
 
 Some actions require access to external programs. If psql is not explicitly 
-specified, the command B<which> is used to find it. The program B</bin/df> 
+specified, the command B<C<which>> is used to find it. The program B<C</bin/df>> 
 is needed by the B<check_disk_space> action.
 
 =head1 DEVELOPMENT
@@ -4221,7 +4227,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.0.0> (July 2008)
+=item B<Version 2.0.0> (July 15, 2008)
 
 Add support for MRTG and "simple" output options.
 Many small improvements to nearly all actions.
