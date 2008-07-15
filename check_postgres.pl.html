@@ -2,7 +2,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>check_postgres.pl - Postgres monitoring script for Nagios</title>
+<title>check_postgres.pl - Postgres monitoring script for Nagios, MRTG, and others</title>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 
 </head>
@@ -21,6 +21,18 @@
 	<li><a href="#synopsis">SYNOPSIS</a></li>
 	<li><a href="#website">WEBSITE</a></li>
 	<li><a href="#description">DESCRIPTION</a></li>
+	<ul>
+
+		<li><a href="#output_modes">Output Modes</a></li>
+		<ul>
+
+			<li><a href="#nagios_output">Nagios output</a></li>
+			<li><a href="#mrtg_output">MRTG output</a></li>
+			<li><a href="#simple_output">Simple output</a></li>
+		</ul>
+
+	</ul>
+
 	<li><a href="#database_connection_options">DATABASE CONNECTION OPTIONS</a></li>
 	<li><a href="#other_options">OTHER OPTIONS</a></li>
 	<li><a href="#actions">ACTIONS</a></li>
@@ -46,12 +58,12 @@
 </p>
 <hr />
 <h1><a name="name">NAME</a></h1>
-<p>check_postgres.pl - Postgres monitoring script for Nagios</p>
+<p>check_postgres.pl - Postgres monitoring script for Nagios, MRTG, and others</p>
 <p>
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This documents describes <strong>check_postgres.pl</strong> version 1.9.1</p>
+<p>This documents describes <strong>check_postgres.pl</strong> version 2.0.0</p>
 <p>
 </p>
 <hr />
@@ -69,6 +81,9 @@
   ## Warn if &gt; 100 locks, critical if &gt; 200, or &gt; 20 exclusive
   check_postgres_locks --warning=100 --critical=&quot;total=200;exclusive=20&quot;</pre>
 <pre>
+  ## Show the current number of idle connections on port 6543:
+  check_postgres_txn_idle --port=6543 --output=simple</pre>
+<pre>
   ## There are many other actions and options, please keep reading.</pre>
 <p>
 </p>
@@ -82,8 +97,24 @@
 <h1><a name="description">DESCRIPTION</a></h1>
 <p>check_postgres.pl is a Perl script that runs many different tests against 
 one or more Postgres databases. It uses the psql program to gather the 
-information, and returns one of four exit codes used by Nagios, as well 
-as a short description of the results. The exit codes are:</p>
+information, and outputs the results in one of three formats: Nagios, MRTG, 
+or simple.</p>
+<p>
+</p>
+<h2><a name="output_modes">Output Modes</a></h2>
+<p>The output can be changed by use of the <code>--output</code> option. The default output 
+is nagios, although this can be changed at the top of the script if you wish. The 
+current option choices are &quot;nagios&quot;, &quot;mrtg&quot;, and &quot;simple&quot;. To avoid having to 
+enter the output argument each time, the type of output is automatically set 
+if no --output argument is given, and if the current directory has one of the 
+output options in its name. For example, creating a directory named mrtg and 
+populating it with symlinks via the <a href="#symlinks"><code>--symlinks</code></a> argument would ensure that 
+any actions run from that directory will always default to an output of &quot;mrtg&quot;</p>
+<p>
+</p>
+<h3><a name="nagios_output">Nagios output</a></h3>
+<p>The default output format is Nagios, which is a single line of information, along 
+with four specific exit codes:</p>
 <ol>
 <li><strong><a name="ok" class="item">(OK)</a></strong>
 
@@ -94,6 +125,28 @@ as a short description of the results. The exit codes are:</p>
 <li><strong><a name="unknown" class="item">(UNKNOWN)</a></strong>
 
 </ol>
+<p>The output line is one of the words above, a colon, and then a short description of what 
+was measured. Additional statistics information, as well as the total time the command 
+took, can be output as well: see the documentation on the arguments <em>--showperf</em>, 
+<a href="#__perflimit">--perflimit</a>, and <a href="#__showtime">--showtime</a>.</p>
+<p>
+</p>
+<h3><a name="mrtg_output">MRTG output</a></h3>
+<p>The MRTG output is four lines, with the first line always giving a single number of importance. 
+When possible, this number represents an actual value such as a number of bytes, but it 
+may also be a 1 or a 0 for actions that only return &quot;true&quot; or &quot;false&quot;, such as check_version.
+The second line is an additional stat and is only used for some actions. The third line indicates 
+an &quot;uptime&quot; and is not used. The fourth line is a description and usually indicates the name of 
+the database the stat from the first line was pulled from, but may be different depending on the 
+action.</p>
+<p>Some actions accept an optional <code>--mrtg</code> argument to further control the output.</p>
+<p>See the documentation on each action for details on the exact MRTG output for each one.</p>
+<p>
+</p>
+<h3><a name="simple_output">Simple output</a></h3>
+<p>The simple output is simply a truncated version of the MRTG one, and simply returns the first number 
+and nothing else. This is very useful when you just want to check the state of something, regardless 
+of any threshold.</p>
 <p>
 </p>
 <hr />
@@ -213,7 +266,7 @@ program which is sent to stderr.</p>
 <dd>
 <p>Determines if we output additional performance data in standard Nagios format 
 (at end of string, after a pipe symbol, using name=value). 
-VAL should be 0 or 1. The default is 1.</p>
+VAL should be 0 or 1. The default is 1. Only takes effect if using Nagios output mode.</p>
 </dd>
 </li>
 <dt><strong><a name="perflimit_i" class="item"><strong>--perflimit=i</strong></a></strong>
@@ -224,14 +277,15 @@ VAL should be 0 or 1. The default is 1.</p>
 number of items, such as <strong>table_size</strong>. The default is 0, or no limit. Be 
 careful when using this with the <strong>--include</strong> or <strong>--exclude</strong> options, as 
 those restrictions are done <em>after</em> the query has been run, and thus your 
-limit may not include the items you want.</p>
+limit may not include the items you want. Only takes effect if using Nagios output mode.</p>
 </dd>
 </li>
 <dt><strong><a name="showtime_val" class="item"><strong>--showtime=VAL</strong></a></strong>
 
 <dd>
 <p>Determines if the time taken to run each query is shown in the output. VAL 
-should be 0 or 1. The default is 1. No effect unless <strong>showperf</strong> is on.</p>
+should be 0 or 1. The default is 1. No effect unless <strong>showperf</strong> is on.
+Only takes effect if using Nagios output mode.</p>
 </dd>
 </li>
 <dt><strong><a name="test" class="item"><strong>--test</strong></a></strong>
@@ -334,6 +388,11 @@ when we have only 5 left.</p>
 <pre>
  check_postgres_backends --dbhost=hong,kong --dbhost=fooey --dbport=5432 --dbport=5433 --warning=30 --critical=30 --exclude=&quot;~test&quot; --include=&quot;pg_greatest,~prod&quot;</pre>
 </dd>
+<dd>
+<p>For MRTG output, the number of connections is reported on the first line, and the fourth line gives the name of the database, 
+plus the current maximum_connections. If more than one database has been queried, the one with the highest number of 
+connections is output.</p>
+</dd>
 </li>
 <dt><strong><a name="bloat" class="item"><strong>bloat</strong> (symlink: <code>check_postgres_bloat</code>)</a></strong>
 
@@ -392,12 +451,21 @@ should give a rough idea of how bloated things are.</p>
 <pre>
   check_postgres_bloat --db=sales --include=q4 --critical='50%'</pre>
 </dd>
+<dd>
+<p>For MRTG output, the first line gives the highest number of wasted bytes for the tables, and the 
+second line gives the highest number of wasted bytes for the indexes. The fourth line gives the database 
+name, table name, and index name information. If you want to output the bloat ration instead (how many 
+times larger the relation is compared to how large it should be), just pass in <code>--mrtg=ratio</code>.</p>
+</dd>
 </li>
 <dt><strong><a name="connection" class="item"><strong>connection</strong> (symlink: check_postgres_connection)</a></strong>
 
 <dd>
 <p>Simply connects, issues a 'SELECT version()', and leaves.
 Takes no <strong>--warning</strong> or <strong>--critical</strong> options.</p>
+</dd>
+<dd>
+<p>For MRTG output, simply outputs a 1 (good connection) or a 0 (bad connection) on the first line.</p>
 </dd>
 </li>
 <dt><strong><a name="custom_query" class="item"><strong>custom_query</strong> (symlink: check_postgres_custom_query)</a></strong>
@@ -466,6 +534,9 @@ value. However, an option of <strong>--reverse</strong> will trigger the alert i
 <p>If you come up with a useful custom_query, consider sending in a patch to this program 
 to make it into a standard action that other people can use.</p>
 </dd>
+<dd>
+<p>This action does not support MRTG or simple output yet.</p>
+</dd>
 </li>
 <dt><strong><a name="database_size" class="item"><strong>database_size</strong> (symlink: <code>check_postgres_database_size</code>)</a></strong>
 
@@ -507,6 +578,10 @@ showing both raw bytes and a &quot;pretty&quot; version of the size.</p>
 <dd>
 <pre>
   check_postgres_database_size --host=tardis --includeuser=tom --warning='5 GB' --critical='10 GB'</pre>
+</dd>
+<dd>
+<p>For MRTG output, returns the size in bytes of the largest database on the first line, 
+and the name of the database on the fourth line.</p>
 </dd>
 </li>
 <dt><strong><a name="disk_space" class="item"><strong>disk_space</strong> (symlink: <code>check_postgres_disk_space</code>)</a></strong>
@@ -556,6 +631,10 @@ maps to a file system: these can be included or excluded. See the
 <dd>
 <pre>
   check_postgres_disk_space --port=5432 --warning='10 GB' --critical='11 GB' --include=&quot;~^/dev/sda&quot;</pre>
+</dd>
+<dd>
+<p>For MRTG output, returns the size in bytes of the file system on the first line, 
+and the name of the file system on the fourth line.</p>
 </dd>
 </li>
 <dt><strong><a name="index_size" class="item"><strong>index_size</strong> (symlink: <code>check_postgres_index_size</code>)</a></strong>
@@ -607,6 +686,10 @@ will be given. To prevent this, it is recommended that you set the
 <pre>
   check_postgres_index_size --port=5432 --excludeuser=postgres -w 500MB -c 600MB</pre>
 </dd>
+<dd>
+<p>For MRTG output, returns the size in bytes of the largest relation, and the name of the database 
+and relation as the fourth line.</p>
+</dd>
 </li>
 <dt><strong><a name="last_vacuum" class="item"><strong>last_vacuum</strong> (symlink: <code>check_postgres_last_vacuum</code>)</a></strong>
 
@@ -655,6 +738,10 @@ critical at a week, for host wormwood</p>
 <pre>
   check_last_vacuum --host=wormwood --warning='3d' --critical='7d' --excludeusers=eve,mallory</pre>
 </dd>
+<dd>
+<p>For MRTG output, returns (on the first line) the LEAST amount of time in seconds since a table was 
+last vacuumed or analyzed. The fourth line returns the name of the database and name of the table.</p>
+</dd>
 </li>
 <dt><strong><a name="listener" class="item"><strong>listener</strong> (symlink: <code>check_postgres_listener</code>)</a></strong>
 
@@ -676,6 +763,10 @@ check.</p>
 <dd>
 <pre>
   check_postgres_listener --db oskar --critical=~grimm</pre>
+</dd>
+<dd>
+<p>For MRTG output, returns a 1 or a 0 on the first, indicating success or failure. The name of the notice must 
+be provided via the &lt;--mrtg&gt; option.</p>
 </dd>
 </li>
 <dt><strong><a name="locks" class="item"><strong>locks</strong> (symlink: <code>check_postgres_locks</code>)</a></strong>
@@ -707,6 +798,9 @@ items separated by semicolons.</p>
 <dd>
 <pre>
   check_postgres_locks --host=artemus --warning=200 --critical=&quot;total=250;waiting=5;exclusive=20&quot;</pre>
+</dd>
+<dd>
+<p>For MRTG output, returns the number of locks on the first line, and the name of the database on the fourth line.</p>
 </dd>
 </li>
 <dt><strong><a name="logfile" class="item"><strong>logfile</strong> (symlink: <code>check_postgres_logfile</code>)</a></strong>
@@ -740,6 +834,10 @@ options should <em>not</em> be used.</p>
 <pre>
   check_postgres_logfile --port=5432 --logfile=/home/greg/pg8.2.log -w 1</pre>
 </dd>
+<dd>
+<p>For MRTG output, returns a 1 or 0 on the first line, indicating success or failure. In case of a 
+failure, the fourth line will provide more detail on the failure encountered.</p>
+</dd>
 </li>
 <dt><strong><a name="query_runtime" class="item"><strong>query_runtime</strong> (symlink: <code>check_postgres_query_runtime</code>)</a></strong>
 
@@ -758,6 +856,10 @@ of a single word (or schema.word), with optional parens at the end.</p>
 <dd>
 <pre>
   check_postgres_query_runtime --queryname='speedtest()' --critical=10 --warning=10</pre>
+</dd>
+<dd>
+<p>For MRTG output, reports the time in seconds for the query to complete on the first line. The fourth 
+line lists the database.</p>
 </dd>
 </li>
 <dt><strong><a name="query_time" class="item"><strong>query_time</strong> (symlink: <code>check_postgres_query_time</code>)</a></strong>
@@ -798,6 +900,10 @@ assumed to be seconds.</p>
 <dd>
 <pre>
   check_postgres_query_time --port=5432 --inclucdeuser=don --warning=20s</pre>
+</dd>
+<dd>
+<p>For MRTG output, returns the length in seconds of the longest running query on the first line. The fourth 
+line gives the name of the database.</p>
 </dd>
 </li>
 <dt><strong><a name="replicate_row" class="item"><strong>replicate_row</strong> (symlink: <code>check_postgres_replicate_row</code>)</a></strong>
@@ -846,6 +952,11 @@ this column, and throw a critical if the change is not on all three slaves withi
  check_postgres_replicate_row --host=green --port2=5455 --host2=red,blue,yellow
   --critical=5 --repinfo=receipt,receipt_id,9,zone,north,south</pre>
 </dd>
+<dd>
+<p>For MRTG output, returns on the first line the time in seconds the replication takes to finish. 
+The maximum time is set to 4 minutes 30 seconds: if no replication has taken place in that long 
+a time, an error is thrown.</p>
+</dd>
 </li>
 <dt><strong><a name="txn_time" class="item"><strong>txn_time</strong> (symlink: <code>check_postgres_txn_time</code>)</a></strong>
 
@@ -881,6 +992,10 @@ If no units are given, the units are assumed to be seconds.</p>
 <pre>
   check_postgres_txn_time --port-5432 --warning=30s --includeuser=warehouse</pre>
 </dd>
+<dd>
+<p>For MRTG output, returns the maximum time in seconds a transaction has been open on the 
+first line. The fourth line gives the name of the database.</p>
+</dd>
 </li>
 <dt><strong><a name="txn_idle" class="item"><strong>txn_idle</strong> (symlink: <code>check_postgres_txn_idle</code>)</a></strong>
 
@@ -905,6 +1020,10 @@ If no units are given, the unit are assumed to be seconds.</p>
 <dd>
 <pre>
   check_postgres_txn_idle --port=5432 --warning='15 seconds'</pre>
+</dd>
+<dd>
+<p>For MRTG output, returns the time in seconds the longest idle transaction has been running. The fourth 
+line returns the name of the database.</p>
 </dd>
 </li>
 <dt><strong><a name="rebuild_symlinks" class="item"><strong>rebuild_symlinks</strong></a></strong>
@@ -949,6 +1068,11 @@ to find out an existing checksum.</p>
 <pre>
   check_postgres_settings_checksum --port=5555 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231</pre>
 </dd>
+<dd>
+<p>For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
+checksum must be provided as the <code>--mrtg</code> argument. The fourth line always gives the 
+current checksum.</p>
+</dd>
 </li>
 <dt><strong><a name="timesync" class="item"><strong>timesync</strong> (symlink: <code>check_postgres_timesync</code>)</a></strong>
 
@@ -968,6 +1092,10 @@ value. Due to the non-exact nature of this test, values of '0' or '1' are not re
 <dd>
 <pre>
   check_postgres_timesync --host=ankh,morpork.klatch --critical=3</pre>
+</dd>
+<dd>
+<p>For MRTG output, returns one the first line the number of seconds difference between the local 
+time and the database time. The fourth line returns the name of the database.</p>
 </dd>
 </li>
 <dt><strong><a name="txn_wraparound" class="item"><strong>txn_wraparound</strong> (symlink: <code>check_postgres_txn_wraparound</code>)</a></strong>
@@ -998,6 +1126,10 @@ number represents and what to do about it, please visit the page
 <pre>
   check_postgres_txn_wraparound --port=6000 --critical=1_700_000_000t</pre>
 </dd>
+<dd>
+<p>For MRTG output, returns the highest number of transactions for all databases on line one, 
+while line 4 indicates which database it is.</p>
+</dd>
 </li>
 <dt><strong><a name="wal_files" class="item"><strong>wal_files</strong> (symlink: <code>check_postgres_wal_files</code>)</a></strong>
 
@@ -1024,6 +1156,9 @@ out of space, at which point Postgres will shut down.</p>
 <pre>
   check_postgres_txn_wraparound --host=pluto --critical=20</pre>
 </dd>
+<dd>
+<p>For MRTG output, reports the number of WAL files on line 1.</p>
+</dd>
 </li>
 <dt><strong><a name="version" class="item"><strong>version</strong> (symlink: <code>check_version</code>)</a></strong>
 
@@ -1049,6 +1184,8 @@ the format <strong>X.Y</strong> or <strong>X.Y.Z</strong> where <strong>X</stron
 </dd>
 </li>
 </dl>
+<p>For MRTG output, reports a 1 or a 0 indicating success or failure on the first line. The 
+fourth line indicates the current version. The version must be provided via the <code>--mrtg</code> option.</p>
 <p>
 </p>
 <hr />
@@ -1198,6 +1335,13 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="0" class="item"><strong>Version 2.0.0</strong> (July 2008)</a></strong>
+
+<dd>
+<p>Add support for MRTG and &quot;simple&quot; output options.
+Many small improvements to nearly all actions.</p>
+</dd>
+</li>
 <dt><strong><a name="1" class="item"><strong>Version 1.9.1</strong> (June 24, 2008)</a></strong>
 
 <dd>
@@ -1206,7 +1350,7 @@ Allow percentage arguments to be over 99%
 Allow percentages in the bloat --warning and --critical (thanks to Robert Treat for the idea)</p>
 </dd>
 </li>
-<dt><strong><a name="0" class="item"><strong>Version 1.9.0</strong> (June 22, 2008)</a></strong>
+<dt><strong><strong>Version 1.9.0</strong> (June 22, 2008)</strong>
 
 <dd>
 <p>Don't include information_schema in certain checks. (Jeff Frost)
