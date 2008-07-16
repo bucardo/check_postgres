@@ -1478,17 +1478,9 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 		ndie $info->{db}[0]{error};
 	}
 
-	## schema, table, rows, pages, otta, bloat, wastedpages, wastedbytes, wastedsize
-	##         index, ""     "" ...
-	my $N = qr{ (.+?)\s*\|};
-	my $D = qr{\s+(\d+) \|};
-	my $F = qr{\s+(\d+\.\d) \|};
-	my $S = qr{ (\d+ \w+)\s+\|};
-	my $E = qr{ (\d+ \w+)\s*};
-	my $L = qr{$N$N$D$D$D$F$D$D$S$N$D$D$D$F$D$D$E$};
 	my %seenit;
 	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /$L/) {
+		if ($db->{slurp} !~ /\w+\s+\|/o) {
 			add_ok q{no relations meet the minimum bloat criteria} unless $MRTG;
 			next;
 		}
@@ -1504,10 +1496,11 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 		}
 		my $max = -1;
 		my $maxmsg = '?';
-	  SLURP: while ($db->{slurp} =~ /$L/gsm) { ## no critic (ProhibitUselessRegexModifiers)
+	  SLURP: for (split /\n/ => $db->{slurp}) {
 			my ($schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws,
 				$index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws)
-				= ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18);
+				= split /\s*\|\s*/;
+			$schema =~ s/^\s+//;
 			next SLURP if skip_item($table, $schema);
 			## Made it past the exclusions
 			$max = -2 if $max == -1;
