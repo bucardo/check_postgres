@@ -4223,6 +4223,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.0.1> (July 16, 2008)
 
 Optimizations to speed up the "bloat" action quite a bit.
+Fix "version" action to not always output in mrtg mode.
 
 =item B<Version 2.0.0> (July 15, 2008)
 
