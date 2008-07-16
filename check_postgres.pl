@@ -2944,7 +2944,7 @@ sub check_version {
 		if (length $critical) {
 			if (($critfull and $critical ne $full)
 				or (!$critfull and $critical ne $version)) {
-				do_mrtg({one => 0, msg => $full});
+				$MRTG and do_mrtg({one => 0, msg => $full});
 				add_critical qq{version $full, but expected $critical};
 				$ok = 0;
 			}
@@ -2952,13 +2952,13 @@ sub check_version {
 		elsif (length $warning) {
 			if (($warnfull and $warning ne $full)
 				or (!$warnfull and $warning ne $version)) {
-				do_mrtg({one => 0, msg => $full});
+				$MRTG and do_mrtg({one => 0, msg => $full});
 				add_warning qq{version $full, but expected $warning};
 				$ok = 0;
 			}
 		}
 		if ($ok) {
-			do_mrtg({one => 1, msg => $full});
+			$MRTG and do_mrtg({one => 1, msg => $full});
 			add_ok "version $full";
 		}
 	}
