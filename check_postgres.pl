@@ -1025,7 +1025,7 @@ sub skip_item {
 	if (defined $opt{exclude}) {
 		$stat = 1;
 		for (@{$opt{exclude}}) {
-			for my $ex (split /\s*,\s*/ => $_) {
+			for my $ex (split /\s*,\s*/o => $_) {
 				if ($ex =~ s/\.$//) {
 					if ($ex =~ s/^~//) {
 						($stat += 2 and last) if $schema =~ /$ex/;
@@ -1046,7 +1046,7 @@ sub skip_item {
 	if (defined $opt{include}) {
 		$stat += 4;
 		for (@{$opt{include}}) {
-			for my $in (split /\s*,\s*/ => $_) {
+			for my $in (split /\s*,\s*/o => $_) {
 				if ($in =~ s/\.$//) {
 					if ($in =~ s/^~//) {
 						($stat += 8 and last) if $schema =~ /$in/;
@@ -1496,10 +1496,10 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 		}
 		my $max = -1;
 		my $maxmsg = '?';
-	  SLURP: for (split /\n/ => $db->{slurp}) {
+	  SLURP: for (split /\n/o => $db->{slurp}) {
 			my ($schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws,
-				$index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws)
-				= split /\s*\|\s*/;
+			 $index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws)
+				= split /\s*\|\s*/o;
 			$schema =~ s/^\s+//;
 			next SLURP if skip_item($table, $schema);
 			## Made it past the exclusions
