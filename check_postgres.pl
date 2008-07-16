@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.0.0';
+our $VERSION = '2.0.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -3172,7 +3172,7 @@ check_postgres.pl - Postgres monitoring script for Nagios, MRTG, and others
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 2.0.0
+This documents describes B<check_postgres.pl> version 2.0.1
 
 =head1 SYNOPSIS
 
@@ -4219,6 +4219,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.0.1> (July 16, 2008)
+
+Optimizations to speed up the "bloat" action quite a bit.
 
 =item B<Version 2.0.0> (July 15, 2008)
 
