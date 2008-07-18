@@ -4330,6 +4330,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.1.0> (July 18, 2008)
 
 Add the "autovac_freeze" action, thanks to Robert Treat for the idea and design.
+Put an ORDER BY on the "txn_wraparound" action.
 
 =item B<Version 2.0.1> (July 16, 2008)
 
