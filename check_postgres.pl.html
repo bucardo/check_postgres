@@ -63,7 +63,7 @@
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This documents describes <strong>check_postgres.pl</strong> version 2.0.1</p>
+<p>This documents describes <strong>check_postgres.pl</strong> version 2.1.0</p>
 <p>
 </p>
 <hr />
@@ -351,6 +351,30 @@ because criticals are always checked first, setting the warning equal to the
 critical is an effective way to turn warnings off and always give a critical.</p>
 <p>The current supported actions are:</p>
 <dl>
+<dt><strong><a name="autovac_freeze" class="item"><strong>autovac_freeze</strong> (symlink: <code>check_postgres_autovac_freeze</code>)</a></strong>
+
+<dd>
+<p>Checks how close each database is to the Postgres <strong>autovacuum_freeze_max_age</strong> setting. This 
+action will only work for databases version 8.2 or higher. The <em>--warning</em> and 
+<em>--critical</em> options should be expressed as percentages. The 'age' of the transactions 
+in each database is compared to the autovacuum_freeze_max_age setting (200 million by default) 
+to generate a rounded percentage. The default values are <strong>90%</strong> for the warning and <strong>95%</strong> for 
+the critical. Databases can be filtered by use of the <em>--include</em> and <em>--exclude</em> options. See 
+the <a href="#basic_filtering">BASIC FILTERING</a> section for more details.</p>
+</dd>
+<dd>
+<p>Example 1: Give a warning when any databases on port 5432 are above 80%</p>
+</dd>
+<dd>
+<pre>
+  check_postgres_autovac_freeze --port=5432 --warning=&quot;80%&quot;</pre>
+</dd>
+<dd>
+<p>For MRTG output, the highest overall percentage is reported on the first line, and the highest age is 
+reported on the second line. All databases which have the percentage from the first line are reported 
+on the fourth line, separated by a pipe symbol.</p>
+</dd>
+</li>
 <dt><strong><a name="backends" class="item"><strong>backends</strong> (symlink: <code>check_postgres_backends</code>)</a></strong>
 
 <dd>
@@ -1343,13 +1367,20 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="0" class="item"><strong>Version 2.1.0</strong> (July 18, 2008)</a></strong>
+
+<dd>
+<p>Add the &quot;autovac_freeze&quot; action, thanks to Robert Treat for the idea and design.</p>
+</dd>
+</li>
 <dt><strong><a name="1" class="item"><strong>Version 2.0.1</strong> (July 16, 2008)</a></strong>
 
 <dd>
-<p>Optimizations to speed up the &quot;bloat&quot; action quite a bit.</p>
+<p>Optimizations to speed up the &quot;bloat&quot; action quite a bit.
+Fix &quot;version&quot; action to not always output in mrtg mode.</p>
 </dd>
 </li>
-<dt><strong><a name="0" class="item"><strong>Version 2.0.0</strong> (July 15, 2008)</a></strong>
+<dt><strong><strong>Version 2.0.0</strong> (July 15, 2008)</strong>
 
 <dd>
 <p>Add support for MRTG and &quot;simple&quot; output options.

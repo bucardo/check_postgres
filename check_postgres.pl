@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.0.1';
+our $VERSION = '2.1.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -168,6 +168,7 @@ if ($opt{version}) {
 ## Quick hash to put normal action information in one place:
 our $action_info = {
  # Name                 # clusterwide? # helpstring
+ autovac_freeze      => [1, 'Checks how close databases are to autovacuum_freeze_max_age.'],
  backends            => [1, 'Number of connections, compared to max_connections.'],
  bloat               => [0, 'Check for table and index bloat.'],
  connection          => [0, 'Simple connection check.'],
@@ -462,6 +463,7 @@ our $checksumre = qr{^[a-f0-9]{32}$};
 
 ## If in test mode, verify that we can run each requested action
 our %testaction = (
+				  autovac_freeze   => 'VERSION: 8.2',
 				  last_vacuum      => 'ON: stats_row_level(<8.3) VERSION: 8.2',
 				  last_analyze     => 'ON: stats_row_level(<8.3) VERSION: 8.2',
 				  last_autovacuum  => 'ON: stats_row_level(<8.3) VERSION: 8.2',
@@ -652,6 +654,9 @@ check_custom_query() if $action eq 'custom_query';
 
 ## Test of replication
 check_replicate_row() if $action eq 'replicate_row';
+
+## See how close we are to autovacuum_freeze_max_age
+check_autovac_freeze() if $action eq 'autovac_freeze';
 
 finishup();
 
@@ -1184,6 +1189,18 @@ sub validate_range {
 		my $regex = ($string =~ s/^~//) ? '~' : '=';
 		$string =~ /^\w+$/ or die qq{Invalid option\n};
 	}
+	elsif ('percent' eq $type) {
+		if (length $critical) {
+			if ($critical !~ /^\d+\%$/) {
+				ndie qq{Invalid 'critical' option: must be percentage\n};
+			}
+		}
+		if (length $warning) {
+			if ($warning !~ /^\d+\%$/) {
+				ndie qq{Invalid 'warning' option: must be percentage\n};
+			}
+		}
+	}
 	elsif ('size or percent' eq $type) {
 		if (length $critical) {
 			if ($critical =~ $sizere) {
@@ -1267,6 +1284,79 @@ sub validate_range {
 } ## end of validate_range
 
 
+sub check_autovac_freeze {
+
+	## Check how close all databases are to autovacuum_freeze_max_age
+	## Supports: Nagios, MRTG
+	## It makes no sense to run this more than once on the same cluster
+	## Warning and criticals are percentages
+	## Can also ignore databases with exclude, and limit with include
+
+	my ($warning, $critical) = validate_range
+		({
+		  type              => 'percent',
+		  default_warning   => '90%',
+		  default_critical  => '95%',
+		  forcemrtg         => 1,
+		  });
+
+	(my $w = $warning) =~ s/\D//;
+	(my $c = $critical) =~ s/\D//;
+	my $SQL = q{SELECT freez, txns, ROUND(100*(txns/freez::float)) AS perc, datname}.
+		q{ FROM (SELECT foo.freez::int, age(datfrozenxid) AS txns, datname}.
+		q{ FROM pg_database d JOIN (SELECT setting AS freez FROM pg_settings WHERE name = 'autovacuum_freeze_max_age') AS foo}.
+		q{ ON (true)) AS foo2 ORDER BY 3 DESC, 4 ASC};
+	my $info = run_command($SQL, {regex => qr[\w+] } );
+
+	for $db (@{$info->{db}}) {
+		my (@crit,@warn,@ok);
+		my ($maxp,$maxt,$maxdb) = (0,0,''); ## used by MRTG only
+	  SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+) \| (.+?)$/gsm) {
+			my ($freeze,$age,$percent,$dbname) = ($1,$2,$3,$4);
+			next SLURP if skip_item($dbname);
+
+			if ($MRTG) {
+				if ($percent > $maxp) {
+					$maxdb = $dbname;
+				}
+				elsif ($percent == $maxp) {
+					$maxdb .= sprintf "%s$dbname", length $maxdb ? ' | ' : '';
+				}
+				$maxt = $age if $age > $maxt;
+				next;
+			}
+
+			my $msg = "$dbname=$percent\% ($age)";
+			$db->{perf} .= " $msg";
+			if (length $critical and $percent >= $c) {
+				push @crit => $msg;
+			}
+			elsif (length $warning and $percent >= $w) {
+				push @warn => $msg;
+			}
+			else {
+				push @ok => $msg;
+			}
+		}
+		if ($MRTG) {
+			do_mrtg({one => $maxp, two => $maxt, msg => $maxdb});
+		}
+		if (@crit) {
+			add_critical join ' ' => @crit;
+		}
+		elsif (@warn) {
+			add_warning join ' ' => @warn;
+		}
+		else {
+			add_ok join ' ' => @ok;
+		}
+	}
+
+	return;
+
+} ## end of check_autovac_freeze
+
+
 sub check_backends {
 
 	## Check the number of connections
@@ -1277,8 +1367,8 @@ sub check_backends {
 	## critical = 12 -- complain if there are 12 or more connections
 	## critical = 95% -- complain if >= 95% of available connections are used
 	## critical = -5 -- complain if there are only 5 or fewer connection slots left
-	## Can also ignore databases with exclude, and limit with include
 	## The former two options only work with simple numbers - no percentage or negative
+	## Can also ignore databases with exclude, and limit with include
 
 	my $warning  = $opt{warning}  || '90%';
 	my $critical = $opt{critical} || '95%';
@@ -1381,7 +1471,6 @@ sub check_backends {
 	return;
 
 } ## end of check_backends
-
 
 
 sub check_bloat {
@@ -3172,7 +3261,7 @@ check_postgres.pl - Postgres monitoring script for Nagios, MRTG, and others
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 2.0.1
+This documents describes B<check_postgres.pl> version 2.1.0
 
 =head1 SYNOPSIS
 
@@ -3432,6 +3521,24 @@ critical is an effective way to turn warnings off and always give a critical.
 The current supported actions are:
 
 =over 4
+
+=item B<autovac_freeze> (symlink: C<check_postgres_autovac_freeze>)
+
+Checks how close each database is to the Postgres B<autovacuum_freeze_max_age> setting. This 
+action will only work for databases version 8.2 or higher. The I<--warning> and 
+I<--critical> options should be expressed as percentages. The 'age' of the transactions 
+in each database is compared to the autovacuum_freeze_max_age setting (200 million by default) 
+to generate a rounded percentage. The default values are B<90%> for the warning and B<95%> for 
+the critical. Databases can be filtered by use of the I<--include> and I<--exclude> options. See 
+the L</"BASIC FILTERING"> section for more details.
+
+Example 1: Give a warning when any databases on port 5432 are above 80%
+
+  check_postgres_autovac_freeze --port=5432 --warning="80%"
+
+For MRTG output, the highest overall percentage is reported on the first line, and the highest age is 
+reported on the second line. All databases which have the percentage from the first line are reported 
+on the fourth line, separated by a pipe symbol.
 
 =item B<backends> (symlink: C<check_postgres_backends>)
 
@@ -4219,6 +4326,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.1.0> (July 18, 2008)
+
+Add the "autovac_freeze" action, thanks to Robert Treat for the idea and design.
 
 =item B<Version 2.0.1> (July 16, 2008)
 

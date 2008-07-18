@@ -177,6 +177,7 @@ xmlns
 artemus
 Astill
 AUTOanalyze
+autovac
 autovacuum
 AUTOvacuum
 backends
