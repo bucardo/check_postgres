@@ -2958,7 +2958,7 @@ sub check_txn_wraparound {
 		  default_critical => 1_400_000_000,
 		  });
 
-	$SQL = q{SELECT datname, age(datfrozenxid) FROM pg_database WHERE datallowconn is true};
+	$SQL = q{SELECT datname, age(datfrozenxid) FROM pg_database WHERE datallowconn is true ORDER BY 2 desc, 1};
 	my $info = run_command($SQL, { regex => qr[\w+\s+\|\s+\d+] } );
 
 	my ($max,$maxmsg) = (0,'?');
