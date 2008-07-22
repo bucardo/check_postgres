@@ -63,7 +63,7 @@
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This documents describes <strong>check_postgres.pl</strong> version 2.1.0</p>
+<p>This documents describes <strong>check_postgres.pl</strong> version 2.1.1</p>
 <p>
 </p>
 <hr />
@@ -1367,6 +1367,12 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="1" class="item"><strong>Version 2.1.1</strong> (July 22, 2008)</a></strong>
+
+<dd>
+<p>Don't check databases with datallowconn false for the &quot;autovac_freeze&quot; action.</p>
+</dd>
+</li>
 <dt><strong><a name="0" class="item"><strong>Version 2.1.0</strong> (July 18, 2008)</a></strong>
 
 <dd>
@@ -1374,7 +1380,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 Put an ORDER BY on the &quot;txn_wraparound&quot; action.</p>
 </dd>
 </li>
-<dt><strong><a name="1" class="item"><strong>Version 2.0.1</strong> (July 16, 2008)</a></strong>
+<dt><strong><strong>Version 2.0.1</strong> (July 16, 2008)</strong>
 
 <dd>
 <p>Optimizations to speed up the &quot;bloat&quot; action quite a bit.

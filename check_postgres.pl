@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.1.0';
+our $VERSION = '2.1.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -1305,7 +1305,7 @@ sub check_autovac_freeze {
 	my $SQL = q{SELECT freez, txns, ROUND(100*(txns/freez::float)) AS perc, datname}.
 		q{ FROM (SELECT foo.freez::int, age(datfrozenxid) AS txns, datname}.
 		q{ FROM pg_database d JOIN (SELECT setting AS freez FROM pg_settings WHERE name = 'autovacuum_freeze_max_age') AS foo}.
-		q{ ON (true)) AS foo2 ORDER BY 3 DESC, 4 ASC};
+		q{ ON (true) WHERE d.datallowconn) AS foo2 ORDER BY 3 DESC, 4 ASC};
 	my $info = run_command($SQL, {regex => qr[\w+] } );
 
 	for $db (@{$info->{db}}) {
@@ -2958,7 +2958,7 @@ sub check_txn_wraparound {
 		  default_critical => 1_400_000_000,
 		  });
 
-	$SQL = q{SELECT datname, age(datfrozenxid) FROM pg_database WHERE datallowconn is true ORDER BY 2 desc, 1};
+	$SQL = q{SELECT datname, age(datfrozenxid) FROM pg_database WHERE datallowconn ORDER BY 2 desc, 1};
 	my $info = run_command($SQL, { regex => qr[\w+\s+\|\s+\d+] } );
 
 	my ($max,$maxmsg) = (0,'?');
@@ -3261,7 +3261,7 @@ check_postgres.pl - Postgres monitoring script for Nagios, MRTG, and others
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 2.1.0
+This documents describes B<check_postgres.pl> version 2.1.1
 
 =head1 SYNOPSIS
 
@@ -4326,6 +4326,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.1.1> (July 22, 2008)
+
+Don't check databases with datallowconn false for the "autovac_freeze" action.
 
 =item B<Version 2.1.0> (July 18, 2008)
 
