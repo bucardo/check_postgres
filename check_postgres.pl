@@ -1986,7 +1986,7 @@ sub check_disk_space {
 			: $opt{mrtg} eq 'avail'   ? 2
 			: $opt{mrtg} eq 'percent' ? 3 : 2 : 2;
 		my ($one,$two,$msg) = ('','','');
-		for (sort { $b->[$sortby] <=> $a->[$sortby] } keys %stats) {
+		for (sort { $stats{$b}->[$sortby] <=> $stats{$a}->[$sortby] } keys %stats) {
 			if ($one eq '') {
 				$one = $stats{$_}->[$sortby];
 				$msg = $_;
