@@ -3261,11 +3261,8 @@ sub check_replicate_row {
 
 =head1 NAME
 
-check_postgres.pl - Postgres monitoring script for Nagios, MRTG, and others
-
-=head1 VERSION
-
-This documents describes B<check_postgres.pl> version 2.1.2
+B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
+This documents describes check_postgres.pl version 2.1.2
 
 =head1 SYNOPSIS
 
@@ -3286,11 +3283,8 @@ This documents describes B<check_postgres.pl> version 2.1.2
 
   ## There are many other actions and options, please keep reading.
 
-=head1 WEBSITE
-
-The latest news and documentation can always be found at:
-
-http://bucardo.org/check_postgres/
+  The latest news and documentation can always be found at:
+  http://bucardo.org/check_postgres/
 
 =head1 DESCRIPTION
 
@@ -3527,11 +3521,9 @@ critical is an effective way to turn warnings off and always give a critical.
 
 The current supported actions are:
 
-=over 4
+=head2 B<autovac_freeze>
 
-=item B<autovac_freeze> (symlink: C<check_postgres_autovac_freeze>)
-
-Checks how close each database is to the Postgres B<autovacuum_freeze_max_age> setting. This 
+(C<symlink: check_postgres_autovac_freeze>) Checks how close each database is to the Postgres B<autovacuum_freeze_max_age> setting. This 
 action will only work for databases version 8.2 or higher. The I<--warning> and 
 I<--critical> options should be expressed as percentages. The 'age' of the transactions 
 in each database is compared to the autovacuum_freeze_max_age setting (200 million by default) 
@@ -3547,9 +3539,9 @@ For MRTG output, the highest overall percentage is reported on the first line, a
 reported on the second line. All databases which have the percentage from the first line are reported 
 on the fourth line, separated by a pipe symbol.
 
-=item B<backends> (symlink: C<check_postgres_backends>)
+=head2 B<backends>
 
-Checks the current number of connections for one or more databases, and optionally 
+(C<symlink: check_postgres_backends>) Checks the current number of connections for one or more databases, and optionally 
 compares it to the maximum allowed, which is determined by the 
 Postgres configuration variable B<max_connections>. The I<--warning> and 
 I<--critical> options can take one of three forms. First, a simple number can be 
@@ -3583,9 +3575,9 @@ For MRTG output, the number of connections is reported on the first line, and th
 plus the current maximum_connections. If more than one database has been queried, the one with the highest number of 
 connections is output.
 
-=item B<bloat> (symlink: C<check_postgres_bloat>)
+=head2 B<bloat>
 
-Checks the amount of bloat in tables and indexes. (Bloat is generally the amount 
+(C<symlink: check_postgres_bloat>) Checks the amount of bloat in tables and indexes. (Bloat is generally the amount 
 of dead unused space taken up in a table or index. This space is usually reclaimed 
 by use of the VACUUM command.) This action requires that stats collection be 
 enabled on the target databases, and requires that ANALYZE is run frequently. 
@@ -3631,16 +3623,16 @@ second line gives the highest number of wasted bytes for the indexes. The fourth
 name, table name, and index name information. If you want to output the bloat ration instead (how many 
 times larger the relation is compared to how large it should be), just pass in C<--mrtg=ratio>.
 
-=item B<connection> (symlink: check_postgres_connection)
+=head2 B<connection>
 
-Simply connects, issues a 'SELECT version()', and leaves.
+(C<symlink: check_postgres_connection>) Simply connects, issues a 'SELECT version()', and leaves.
 Takes no I<--warning> or I<--critical> options.
 
 For MRTG output, simply outputs a 1 (good connection) or a 0 (bad connection) on the first line.
 
-=item B<custom_query> (symlink: check_postgres_custom_query)
+=head2 B<custom_query>
 
-Runs a custom query of your choosing, and parses the results. The query itself is passed in through 
+(C<symlink: check_postgres_custom_query>) Runs a custom query of your choosing, and parses the results. The query itself is passed in through 
 the C<custom_query> argument, and should be kept as simple as possible. If at all possible, wrap it in 
 a view or a function to keep things easier to manage. The query should return one or two columns: the first 
 is the result that will be checked, and the second is any performance data you want sent.
@@ -3689,9 +3681,9 @@ to make it into a standard action that other people can use.
 
 This action does not support MRTG or simple output yet.
 
-=item B<database_size> (symlink: C<check_postgres_database_size>)
+=head2 B<database_size>
 
-Checks the size of all databases and complains when they are too big. 
+(C<symlink: check_postgres_database_size>) Checks the size of all databases and complains when they are too big. 
 There is no need to run this command more than once per database cluster. 
 Databases can be filtered with 
 the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
@@ -3722,9 +3714,9 @@ Example 3: Give a warning if any database on host 'tardis' owned by the user 'to
 For MRTG output, returns the size in bytes of the largest database on the first line, 
 and the name of the database on the fourth line.
 
-=item B<disk_space> (symlink: C<check_postgres_disk_space>)
+=head2 B<disk_space>
 
-Checks on the available physical disk space used by Postgres. This action requires 
+(C<symlink: check_postgres_disk_space>) Checks on the available physical disk space used by Postgres. This action requires 
 that you have the executable "/bin/df" available to report on disk sizes, and it 
 also needs to be run as a superuser, so it can examine the B<data_directory> 
 setting inside of Postgres. The I<--warning> and I<--critical> options are 
@@ -3760,12 +3752,13 @@ Example 2: Check that all file systems starting with /dev/sda are smaller than 1
 For MRTG output, returns the size in bytes of the file system on the first line, 
 and the name of the file system on the fourth line.
 
-=item B<index_size> (symlink: C<check_postgres_index_size>)
+=head2 B<index_size>
 
-=item B<table_size> (symlink: C<check_postgres_table_size>)
+=head2 B<table_size>
 
-=item B<relation_size> (symlink: C<check_postgres_relation_size>)
+=head2 B<relation_size>
 
+(symlinks: C<check_postgres_index_size>, C<check_postgres_table_size>, and C<check_postgres_relation_size>)
 The actions B<table_size> and B<index_size> are simply variations of the 
 B<relation_size> action, which checks for a relation that has grown too big. 
 Relations (in other words, tables and indexes) can be filtered with the 
@@ -3800,14 +3793,16 @@ Example 3: Warn if any index not owned by postgres goes over 500 MB.
 For MRTG output, returns the size in bytes of the largest relation, and the name of the database 
 and relation as the fourth line.
 
-=item B<last_vacuum> (symlink: C<check_postgres_last_vacuum>)
+=head2 B<last_vacuum>
 
-=item B<last_autovacuum> (symlink: C<check_postgres_last_autovacuum>)
+=head2 B<last_autovacuum>
 
-=item B<last_analyze> (symlink: C<check_postgres_last_analyze>)
+=head2 B<last_analyze>
 
-=item B<last_autoanalyze> (symlink: C<check_postgres_last_autoanalyze>)
+=head2 B<last_autoanalyze>
 
+(symlinks: C<check_postgres_last_vacuum>, C<check_postgres_last_autovacuum>, C<check_postgres_last_analyze>, and 
+C<check_postgres_last_autoanalyze>)
 Checks how long it has been since vacuum (or analyze) was last run on each 
 table in one or more databases. Use of these actions requires that the target 
 database is version 8.3 or greater, or that the version is 8.2 and the 
@@ -3841,9 +3836,9 @@ Example 2: Same as above, but skip tables belonging to the users 'eve' or 'mallo
 For MRTG output, returns (on the first line) the LEAST amount of time in seconds since a table was 
 last vacuumed or analyzed. The fourth line returns the name of the database and name of the table.
 
-=item B<listener> (symlink: C<check_postgres_listener>)
+=head2 B<listener>
 
-Confirm that someone is listening for one or more specific strings. Only one of warning or critical is needed. The format 
+(C<symlink: check_postgres_listener>) Confirm that someone is listening for one or more specific strings. Only one of warning or critical is needed. The format 
 is a simple string representing the LISTEN target, or a tilde character followed by a string for a regular expression 
 check.
 
@@ -3858,9 +3853,9 @@ Example 2: Give a critical if there are no active LISTEN requests matching 'grim
 For MRTG output, returns a 1 or a 0 on the first, indicating success or failure. The name of the notice must 
 be provided via the <--mrtg> option.
 
-=item B<locks> (symlink: C<check_postgres_locks>)
+=head2 B<locks>
 
-Check the total number of locks on one or more databases. There is no 
+(C<symlink: check_postgres_locks>) Check the total number of locks on one or more databases. There is no 
 need to run this more than once per database cluster. Databases can be filtered 
 with the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details. 
@@ -3882,9 +3877,9 @@ Example 2: On the host artemus, warn if 200 or more locks exist, and give a crit
 
 For MRTG output, returns the number of locks on the first line, and the name of the database on the fourth line.
 
-=item B<logfile> (symlink: C<check_postgres_logfile>)
+=head2 B<logfile>
 
-Ensures that the logfile is in the expected location and is being logged to. 
+(C<symlink: check_postgres_logfile>) Ensures that the logfile is in the expected location and is being logged to. 
 This action issues a command that throws an error on each database it is 
 checking, and ensures that the message shows up in the logs. It scans the 
 various log_* settings inside of Postgres to figure out where the logs should be. 
@@ -3909,9 +3904,9 @@ Example 2: Same as above, but raise a warning, not a critical
 For MRTG output, returns a 1 or 0 on the first line, indicating success or failure. In case of a 
 failure, the fourth line will provide more detail on the failure encountered.
 
-=item B<query_runtime> (symlink: C<check_postgres_query_runtime>)
+=head2 B<query_runtime>
 
-Checks how long a specific query takes to run, by executing a "EXPLAIN ANALYZE" 
+(C<symlink: check_postgres_query_runtime>) Checks how long a specific query takes to run, by executing a "EXPLAIN ANALYZE" 
 against it. The I<--warning> and I<--critical> options are the maximum amount of 
 time the query should take. Valid units are seconds, minutes, and hours; any can be 
 abbreviated to the first letter. If no units are given, 'seconds' are assumed. 
@@ -3926,9 +3921,9 @@ Example 1: Give a critical if the function named "speedtest" fails to run in 10 
 For MRTG output, reports the time in seconds for the query to complete on the first line. The fourth 
 line lists the database.
 
-=item B<query_time> (symlink: C<check_postgres_query_time>)
+=head2 B<query_time>
 
-Checks the length of running queries on one or more databases. There is 
+(C<symlink: check_postgres_query_time>) Checks the length of running queries on one or more databases. There is 
 no need to run this more than once on the same database cluster.
 Databases can be filtered 
 by using the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING">
@@ -3957,9 +3952,9 @@ Example 3: Warn if user 'don' has a query running over 20 seconds
 For MRTG output, returns the length in seconds of the longest running query on the first line. The fourth 
 line gives the name of the database.
 
-=item B<replicate_row> (symlink: C<check_postgres_replicate_row>)
+=head2 B<replicate_row>
 
-Checks that master-slave replication is working to one or more slaves.
+(C<symlink: check_postgres_replicate_row>) Checks that master-slave replication is working to one or more slaves.
 The slaves are specified the same as the normal databases, except with 
 the number 2 at the end of them, so "--port2" instead of "--port", etc.
 The values or the I<--warning> and I<--critical> options are units of time, and 
@@ -3999,9 +3994,10 @@ For MRTG output, returns on the first line the time in seconds the replication t
 The maximum time is set to 4 minutes 30 seconds: if no replication has taken place in that long 
 a time, an error is thrown.
 
-=item B<txn_time> (symlink: C<check_postgres_txn_time>)
+=head2 B<txn_time>
 
-Checks the length of open transactions on one or more databases. 
+
+(C<symlink: check_postgres_txn_time>) Checks the length of open transactions on one or more databases. 
 There is no need to run this command more than once per database cluster. 
 Databases can be filtered by use of the 
 I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
@@ -4027,9 +4023,9 @@ Example 1: Warn if user 'warehouse' has a transaction open over 30 seconds
 For MRTG output, returns the maximum time in seconds a transaction has been open on the 
 first line. The fourth line gives the name of the database.
 
-=item B<txn_idle> (symlink: C<check_postgres_txn_idle>)
+=head2 B<txn_idle>
 
-Checks the length of "idle in transaction" queries on one or more databases. There is 
+(C<symlink: check_postgres_txn_idle>) Checks the length of "idle in transaction" queries on one or more databases. There is 
 no need to run this more than once on the same database cluster. Databases can be filtered 
 by using the I<--include> and I<--exclude> options. See the L<"BASIC FILTERING"> 
 section below for more details.
@@ -4048,9 +4044,9 @@ Example 1: Give a warning if any connection has been idle in transaction for mor
 For MRTG output, returns the time in seconds the longest idle transaction has been running. The fourth 
 line returns the name of the database.
 
-=item B<rebuild_symlinks>
+=head2 B<rebuild_symlinks>
 
-=item B<rebuild_symlinks_force>
+=head2 B<rebuild_symlinks_force>
 
 This action requires no other arguments, and does not connect to any databases, 
 but simply creates symlinks in the current directory for each action, in the form 
@@ -4059,9 +4055,9 @@ If the file already exists, it will not be overwritten. If the action is rebuild
 then symlinks will be overwritten. The option --symlinks is a shorter way of saying 
 --action=rebuild_symlinks
 
-=item B<settings_checksum> (symlink: C<check_postgres_settings_checksum>)
+=head2 B<settings_checksum>
 
-Check that all the Postgres settings are the same as last time you checked. 
+(C<symlink: check_postgres_settings_checksum>) Checks that all the Postgres settings are the same as last time you checked. 
 This is done by generating a checksum of a sorted list of setting names and 
 their values. Note that different users in the same database may have different 
 checksums, due to ALTER USER usage, and due to the fact that superusers see more 
@@ -4084,9 +4080,9 @@ For MRTG output, returns a 1 or 0 indicating success of failure of the checksum 
 checksum must be provided as the C<--mrtg> argument. The fourth line always gives the 
 current checksum.
 
-=item I<timesync> (symlink: C<check_postgres_timesync>)
+=head2 B<timesync>
 
-Compares the local system time with the time reported by one or more databases. 
+(C<symlink: check_postgres_timesync>) Compares the local system time with the time reported by one or more databases. 
 The I<--warning> and I<--critical> options represent the number of seconds between 
 the two systems before an alert is given. If neither is specified, the default values 
 are used, which are '2' and '5'. The warning value cannot be greater than the critical
@@ -4101,9 +4097,9 @@ Example 1: Check that databases on hosts ankh, morpork, and klatch are no more t
 For MRTG output, returns one the first line the number of seconds difference between the local 
 time and the database time. The fourth line returns the name of the database.
 
-=item B<txn_wraparound> (symlink: C<check_postgres_txn_wraparound>)
+=head2 B<txn_wraparound>
 
-Checks how close to transaction wraparound one or more databases are getting. 
+(C<symlink: check_postgres_txn_wraparound>) Checks how close to transaction wraparound one or more databases are getting. 
 The I<--warning> and I<--critical> options indicate the number of transactions 
 left, and must be a positive integer. If either option is not given, the default 
 values of 1.3 and 1.4 billion are used. There is no need to run this command 
@@ -4124,9 +4120,9 @@ Example 2: Check port 6000 and give a critical at 1.7 billion transactions left:
 For MRTG output, returns the highest number of transactions for all databases on line one, 
 while line 4 indicates which database it is.
 
-=item B<wal_files> (symlink: C<check_postgres_wal_files>)
+=head2 B<wal_files>
 
-Checks how many WAL files exist in the F<pg_xlog> directory, which is found 
+(C<symlink: check_postgres_wal_files>) Checks how many WAL files exist in the F<pg_xlog> directory, which is found 
 off of your B<data_directory>, sometimes as a symlink to another physical disk for 
 performance reasons. This action must be run as a superuser, in order to access the 
 contents of the F<pg_xlog> directory. The minimum version to use this action is 
@@ -4146,9 +4142,9 @@ Example 1: Check that the number of WAL files is 20 or less on host "pluto"
 
 For MRTG output, reports the number of WAL files on line 1.
 
-=item B<version> (symlink: C<check_version>)
+=head2 B<version>
 
-Checks that the required version of Postgres is running. The 
+(C<symlink: check_version>) Checks that the required version of Postgres is running. The 
 I<--warning> and I<--critical> options (only one is required) must be of 
 the format B<X.Y> or B<X.Y.Z> where B<X> is the major version number, 
 B<Y> is the minor version number, and B<Z> is the revision.
@@ -4160,8 +4156,6 @@ Example 1: Give a warning if the database on port 5678 is not version 8.4.10:
 Example 2: Give a warning if any databases on hosts valley,grain, or sunshine is not 8.3:
 
   check_postgres_version -H valley,grain,sunshine --critical=8.3
-
-=back
 
 For MRTG output, reports a 1 or a 0 indicating success or failure on the first line. The 
 fourth line indicates the current version. The version must be provided via the C<--mrtg> option.
@@ -4283,7 +4277,7 @@ Since this program uses the B<psql> program, make sure it is accessible to the
 user running the script. If run as a cronjob, this often means modifying the 
 B<PATH> environment variable.
 
-If you are using Nagios in embedded Perl mode, use the --action argument 
+If you are using Nagios in embedded Perl mode, use the C<--action> argument 
 instead of symlinks, so that the plugin only gets compiled one time.
 
 =head1 DEPENDENCIES
@@ -4304,11 +4298,11 @@ Access to a working version of psql, and the following very standard Perl module
 
 =back
 
-The B<settings_checksum> action requires the B<Digest::MD5> module.
+The L</settings_checksum> action requires the B<Digest::MD5> module.
 
 Some actions require access to external programs. If psql is not explicitly 
 specified, the command B<C<which>> is used to find it. The program B<C</bin/df>> 
-is needed by the B<check_disk_space> action.
+is needed by the L</disk_space> action.
 
 =head1 DEVELOPMENT
 
@@ -4319,7 +4313,7 @@ Development happens using the git system. You can clone the latest version by do
 =head1 MAILING LIST
 
 Two mailing lists are available. For discussions about the program, bug reports, 
-feature requests, and commit notices, send email to check_postgres@bucardo.org:
+feature requests, and commit notices, send email to check_postgres@bucardo.org
 
 https://mail.endcrypt.com/mailman/listinfo/check_postgres
 
@@ -4336,166 +4330,154 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.1.2> (July 28, 2008)
 
-Fix sorting error in the "disk_space" action for non-Nagios output.
-Allow --simple as a shortcut for --output=simple.
+ Fix sorting error in the "disk_space" action for non-Nagios output.
+ Allow --simple as a shortcut for --output=simple.
 
 =item B<Version 2.1.1> (July 22, 2008)
 
-Don't check databases with datallowconn false for the "autovac_freeze" action.
+ Don't check databases with datallowconn false for the "autovac_freeze" action.
 
 =item B<Version 2.1.0> (July 18, 2008)
 
-Add the "autovac_freeze" action, thanks to Robert Treat for the idea and design.
-Put an ORDER BY on the "txn_wraparound" action.
+ Add the "autovac_freeze" action, thanks to Robert Treat for the idea and design.
+ Put an ORDER BY on the "txn_wraparound" action.
 
 =item B<Version 2.0.1> (July 16, 2008)
 
-Optimizations to speed up the "bloat" action quite a bit.
-Fix "version" action to not always output in mrtg mode.
+ Optimizations to speed up the "bloat" action quite a bit.
+ Fix "version" action to not always output in mrtg mode.
 
 =item B<Version 2.0.0> (July 15, 2008)
 
-Add support for MRTG and "simple" output options.
-Many small improvements to nearly all actions.
+ Add support for MRTG and "simple" output options.
+ Many small improvements to nearly all actions.
 
 =item B<Version 1.9.1> (June 24, 2008)
 
-Fix an error in the bloat SQL in 1.9.0
-Allow percentage arguments to be over 99%
-Allow percentages in the bloat --warning and --critical (thanks to Robert Treat for the idea)
+ Fix an error in the bloat SQL in 1.9.0
+ Allow percentage arguments to be over 99%
+ Allow percentages in the bloat --warning and --critical (thanks to Robert Treat for the idea)
 
 =item B<Version 1.9.0> (June 22, 2008)
 
-Don't include information_schema in certain checks. (Jeff Frost)
-Allow --include and --exclude to use schemas by using a trailing period.
+ Don't include information_schema in certain checks. (Jeff Frost)
+ Allow --include and --exclude to use schemas by using a trailing period.
 
 =item B<Version 1.8.5> (June 22, 2008)
 
-Output schema name before table name where appropriate.
-Thanks to Jeff Frost.
+ Output schema name before table name where appropriate.
+ Thanks to Jeff Frost.
 
 =item B<Version 1.8.4> (June 19, 2008)
 
-Better detection of problems in --replicate_row.
+ Better detection of problems in --replicate_row.
 
 =item B<Version 1.8.3> (June 18, 2008)
 
-Fix check_backends action: there may be no rows in pg_stat_activity, so run a second 
-query if needed to find the max_connections setting.
-Thanks to Jeff Frost for the bug report.
+ Fix check_backends action: there may be no rows in pg_stat_activity, so run a second 
+   query if needed to find the max_connections setting.
+ Thanks to Jeff Frost for the bug report.
 
 =item B<Version 1.8.2> (June 10, 2008)
 
-Changes to allow working under Nagios' embedded Perl mode. (Ioannis Tambouras)
+ Changes to allow working under Nagios' embedded Perl mode. (Ioannis Tambouras)
 
 =item B<Version 1.8.1> (June 9, 2008)
 
-Allow check_bloat to work on Postgres version 8.0.
-Allow for different commands to be run for each action depending on the server version.
-Give better warnings when running actions not available on older Postgres servers.
+ Allow check_bloat to work on Postgres version 8.0.
+ Allow for different commands to be run for each action depending on the server version.
+ Give better warnings when running actions not available on older Postgres servers.
 
 =item B<Version 1.8.0> (June 3, 2008)
 
-Add the --reverse option to the custom_query action.
+ Add the --reverse option to the custom_query action.
 
 =item B<Version 1.7.1> (June 2, 2008)
 
-Fix check_query_time action: account for race condition in which zero rows appear in pg_stat_activity.
-Thanks to Dustin Black for the bug report.
+ Fix check_query_time action: account for race condition in which zero rows appear in pg_stat_activity.
+ Thanks to Dustin Black for the bug report.
 
 =item B<Version 1.7.0> (May 11, 2008)
 
-Add --replicate_row action
+ Add --replicate_row action
 
 =item B<Version 1.6.1> (May 11, 2008)
 
-Add --symlinks option as a shortcut to --action=rebuild_symlinks
+ Add --symlinks option as a shortcut to --action=rebuild_symlinks
 
 =item B<Version 1.6.0> (May 11, 2008)
 
-Add the custom_query action.
+ Add the custom_query action.
 
 =item B<Version 1.5.2> (May 2, 2008)
 
-Fix problem with too eager creation of custom pgpass file.
+ Fix problem with too eager creation of custom pgpass file.
 
 =item B<Version 1.5.1> (April 17, 2008)
 
-Add example Nagios configuration settings (Brian A. Seklecki)
+ Add example Nagios configuration settings (Brian A. Seklecki)
 
 =item B<Version 1.5.0> (April 16, 2008)
 
-Add the --includeuser and --excludeuser options. Documentation cleanup.
+ Add the --includeuser and --excludeuser options. Documentation cleanup.
 
 =item B<Version 1.4.3> (April 16, 2008)
 
-Add in the 'output' concept for future support of non-Nagios programs.
+ Add in the 'output' concept for future support of non-Nagios programs.
 
 =item B<Version 1.4.2> (April 8, 2008)
 
-Fix bug preventing --dbpass argument from working (Robert Treat).
+ Fix bug preventing --dbpass argument from working (Robert Treat).
 
 =item B<Version 1.4.1> (April 4, 2008)
 
-Minor documentation fixes.
+ Minor documentation fixes.
 
 =item B<Version 1.4.0> (April 2, 2008)
 
-Have check_wal_files use pg_ls_dir (idea by Robert Treat).
-
-For last_vacuum and last_analyze, respect autovacuum effects, add separate 
-autovacuum checks (ideas by Robert Treat).
+ Have check_wal_files use pg_ls_dir (idea by Robert Treat).
+ For last_vacuum and last_analyze, respect autovacuum effects, add separate 
+   autovacuum checks (ideas by Robert Treat).
 
 =item B<Version 1.3.1> (April 2, 2008)
 
-Have txn_idle use query_start, not xact_start.
+ Have txn_idle use query_start, not xact_start.
 
 =item B<Version 1.3.0> (March 23, 2008)
 
-Add in txn_idle and txn_time actions.
+ Add in txn_idle and txn_time actions.
 
 =item B<Version 1.2.0> (February 21, 2008)
 
-Add the check_wal_files method, which counts the number of WAL files
-in your pg_xlog directory.
-
-Fix some typos in the docs.
-
-Explicitly allow -v as an argument.
-
-Allow for a null syslog_facility in check_logfile.
+ Add the check_wal_files method, which counts the number of WAL files
+   in your pg_xlog directory.
+ Fix some typos in the docs.
+ Explicitly allow -v as an argument.
+ Allow for a null syslog_facility in check_logfile.
 
 =item B<Version 1.1.2> (February 5, 2008)
 
-Fix error preventing --action=rebuild_symlinks from working.
+ Fix error preventing --action=rebuild_symlinks from working.
 
 =item B<Version 1.1.1> (February 3, 2008)
 
-Switch vacuum and analyze date output to use 'DD', not 'D'. (Glyn Astill)
+ Switch vacuum and analyze date output to use 'DD', not 'D'. (Glyn Astill)
 
 =item B<Version 1.1.0> (December 16, 2008)
 
-Fixes, enhancements, and performance tracking.
-
-Add performance data tracking via --showperf and --perflimit
-
-Lots of refactoring and cleanup of how actions handle arguments.
-
-Do basic checks to figure out syslog file for 'logfile' action.
-
-Allow for exact matching of beta versions with 'version' action.
-
-Redo the default arguments to only populate when neither 'warning' nor 'critical' is provided.
-
-Allow just warning OR critical to be given for the 'timesync' action.
-
-Remove 'redirect_stderr' requirement from 'logfile' due to 8.3 changes.
-
-Actions 'last_vacuum' and 'last_analyze' are 8.2 only (Robert Treat)
+ Fixes, enhancements, and performance tracking.
+ Add performance data tracking via --showperf and --perflimit
+ Lots of refactoring and cleanup of how actions handle arguments.
+ Do basic checks to figure out syslog file for 'logfile' action.
+ Allow for exact matching of beta versions with 'version' action.
+ Redo the default arguments to only populate when neither 'warning' nor 'critical' is provided.
+ Allow just warning OR critical to be given for the 'timesync' action.
+ Remove 'redirect_stderr' requirement from 'logfile' due to 8.3 changes.
+ Actions 'last_vacuum' and 'last_analyze' are 8.2 only (Robert Treat)
 
 =item B<Version 1.0.16> (December 7, 2007)
 
-First public release, December 2007
+ First public release, December 2007
 
 =back
 
