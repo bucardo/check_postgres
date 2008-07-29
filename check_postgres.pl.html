@@ -63,7 +63,7 @@
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This documents describes <strong>check_postgres.pl</strong> version 2.1.1</p>
+<p>This documents describes <strong>check_postgres.pl</strong> version 2.1.2</p>
 <p>
 </p>
 <hr />
@@ -110,6 +110,8 @@ if no --output argument is given, and if the current directory has one of the
 output options in its name. For example, creating a directory named mrtg and 
 populating it with symlinks via the <em>--symlinks</em> argument would ensure that 
 any actions run from that directory will always default to an output of &quot;mrtg&quot;</p>
+As a shortcut for --output=simple, you can enter --simple, which also overrides 
+the directory naming trick.
 <p>
 </p>
 <h3><a name="nagios_output">Nagios output</a></h3>
@@ -1367,6 +1369,13 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="1" class="item"><strong>Version 2.1.2</strong> (July 28, 2008)</a></strong>
+
+<dd>
+<p>Fix sorting error in the "disk_space" action for non-Nagios output.
+Allow --simple as a shortcut for --output=simple.</p>
+</dd>
+</li>
 <dt><strong><a name="1" class="item"><strong>Version 2.1.1</strong> (July 22, 2008)</a></strong>
 
 <dd>

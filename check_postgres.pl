@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.1.1';
+our $VERSION = '2.1.2';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -86,6 +86,7 @@ die $USAGE unless
 			   'verbose|v+',
 			   'help|h',
 			   'output=s',
+			   'simple',
 			   'showperf=i',
 			   'perflimit=i',
 			   'showtime=i',
@@ -137,6 +138,9 @@ if (!$OUTPUT) {
 	my $dir = getcwd;
 	if ($dir =~ /(nagios|mrtg|simple)/io) {
 		$OUTPUT = lc $1;
+	}
+	elsif ($opt{simple}) {
+		$OUTPUT = 'simple';
 	}
 	else {
 		$OUTPUT = $DEFAULT_OUTPUT;
@@ -3261,7 +3265,7 @@ check_postgres.pl - Postgres monitoring script for Nagios, MRTG, and others
 
 =head1 VERSION
 
-This documents describes B<check_postgres.pl> version 2.1.1
+This documents describes B<check_postgres.pl> version 2.1.2
 
 =head1 SYNOPSIS
 
@@ -3305,6 +3309,9 @@ if no --output argument is given, and if the current directory has one of the
 output options in its name. For example, creating a directory named mrtg and 
 populating it with symlinks via the I<--symlinks> argument would ensure that 
 any actions run from that directory will always default to an output of "mrtg"
+As a shortcut for --output=simple, you can enter --simple, which also overrides 
+the directory naming trick.
+
 
 =head3 Nagios output
 
@@ -4326,6 +4333,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.1.2> (July 28, 2008)
+
+Fix sorting error in the "disk_space" action for non-Nagios output.
+Allow --simple as a shortcut for --output=simple.
 
 =item B<Version 2.1.1> (July 22, 2008)
 
