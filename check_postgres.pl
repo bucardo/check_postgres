@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.1.4';
+our $VERSION = '2.1.3';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2692,7 +2692,7 @@ sub check_txn_time {
 		  });
 
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-xact_start)),0)) }.
-		qq{FROM pg_stat_activity WHERE xact_start IS NOT NULL$USERWHERECLAUSE GROUP BY 1};
+		qq{FROM pg_stat_activity WHERE xact_start IS NOT NULL $USERWHERECLAUSE GROUP BY 1};
 
 	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+], emptyok => 1 } );
 
@@ -3262,7 +3262,7 @@ sub check_replicate_row {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.1.4
+This documents describes check_postgres.pl version 2.1.3
 
 =head1 SYNOPSIS
 
@@ -4331,7 +4331,6 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.1.3> (September 22, 2008)
 
  Allow alternate arguments "dbhost" for "host" and "dbport" for "port".
-
  Output a zero as default value for second line of MRTG output.
 
 =item B<Version 2.1.2> (July 28, 2008)
@@ -4380,7 +4379,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 1.8.3> (June 18, 2008)
 
- Fix check_backends action: there may be no rows in pg_stat_activity, so run a second 
+ Fix check_backends action: there may be no rows in pg_stat_activity, so run a second
    query if needed to find the max_connections setting.
  Thanks to Jeff Frost for the bug report.
 
