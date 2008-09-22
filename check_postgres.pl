@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.1.3';
+our $VERSION = '2.1.4';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -59,7 +59,6 @@ our $FANCYNAME = 1;
 
 ## Change the service name to uppercase
 our $YELLNAME = 1;
-
 
 ## Nothing below this line should need to be changed for normal usage.
 ## If you do find yourself needing to change something,
@@ -93,6 +92,7 @@ die $USAGE unless
 			   'timeout|t=i',
 			   'test',
 			   'symlinks',
+			   'debugoutput=s',
 
 			   'action=s',
 			   'warning=s',
@@ -130,6 +130,12 @@ die $USAGE unless
 our $VERBOSE = $opt{verbose} || 0;
 
 our $OUTPUT = $opt{output} || '';
+
+## Output the actual string returned by psql in the normal output
+## Argument is 'a' for all, 'w' for warning, 'c' for critical, 'u' for unknown
+## Can be grouped together
+our $DEBUGOUTPUT = $opt{debugoutput} || '';
+our $DEBUG_INFO = '?';
 
 ## If not explicitly given an output, check the current directory,
 ## then fall back to the default.
@@ -414,14 +420,25 @@ sub finishup {
 
 	sub dumpresult {
 		my $SEP = ' * ';
-		my $type = shift;
-		for (sort keys %$type) {
-			printf "$_ %s ", join $SEP => map { $_->[0] } @{$type->{$_}};
+		my ($type,$info) = @_;
+		## Are we showing DEBUG_INFO?
+		my $showdebug = 0;
+		if ($DEBUGOUTPUT) {
+			$showdebug = 1 if $DEBUGOUTPUT =~ /a/io
+				or ($DEBUGOUTPUT =~ /c/io and $type eq 'c')
+				or ($DEBUGOUTPUT =~ /w/io and $type eq 'w')
+				or ($DEBUGOUTPUT =~ /o/io and $type eq 'o')
+				or ($DEBUGOUTPUT =~ /u/io and $type eq 'u');
+		}
+		for (sort keys %$info) {
+			printf "$_ %s%s ",
+				$showdebug ? "[DEBUG: $DEBUG_INFO] " : '',
+				join $SEP => map { $_->[0] } @{$info->{$_}};
 		}
 		if ($opt{showperf}) {
 			print '| ';
-			for (sort keys %$type) {
-				printf '%s ', join $SEP => map { $_->[1] } @{$type->{$_}};
+			for (sort keys %$info) {
+				printf '%s ', join $SEP => map { $_->[1] } @{$info->{$_}};
 			}
 		}
 		print "\n";
@@ -429,22 +446,22 @@ sub finishup {
 
 	if (keys %critical) {
 		print 'CRITICAL: ';
-		dumpresult(\%critical);
+		dumpresult(c => \%critical);
 		exit 2;
 	}
 	if (keys %warning) {
 		print 'WARNING: ';
-		dumpresult(\%warning);
+		dumpresult(w => \%warning);
 		exit 1;
 	}
 	if (keys %ok) {
 		print 'OK: ';
-		dumpresult(\%ok);
+		dumpresult(o => \%ok);
 		exit 0;
 	}
 	if (keys %unknown) {
 		print 'UNKNOWN: ';
-		dumpresult(\%unknown);
+		dumpresult(u => \%unknown);
 		exit 3;
 	}
 
@@ -984,6 +1001,14 @@ sub run_command {
 	$info->{hosts} = keys %host;
 
 	$VERBOSE >= 3 and warn Dumper $info;
+
+	if ($DEBUGOUTPUT) {
+		if (defined $info->{db} and defined $info->{db}[0]{slurp}) {
+			$DEBUG_INFO = $info->{db}[0]{slurp};
+			$DEBUG_INFO =~ s/\n/\\n/g;
+			$DEBUG_INFO =~ s/\|/<SEP>/g;
+		}
+	}
 
 	return $info;
 
@@ -2714,11 +2739,16 @@ sub check_txn_time {
 			$stats{$db->{dbname}} = $max;
 			next;
 		}
-		$db->{perf} .= " maxtime:$max";
 		if ($max < 0) {
-			add_unknown 'T-EXCLUDE-DB';
+			if ($USERWHERECLAUSE) {
+				add_unknown 'T-EXCLUDE-DB2';
+			}
+			else {
+				add_ok 'No transactions';
+			}
 			next;
 		}
+		$db->{perf} .= " maxtime:$max";
 
 		my $msg = qq{longest txn: ${max}s};
 		if (length $critical and $max >= $critical) {
@@ -3262,7 +3292,7 @@ sub check_replicate_row {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.1.3
+This documents describes check_postgres.pl version 2.1.4
 
 =head1 SYNOPSIS
 
