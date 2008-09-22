@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.1.2';
+our $VERSION = '2.1.3';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -3262,7 +3262,7 @@ sub check_replicate_row {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.1.2
+This documents describes check_postgres.pl version 2.1.3
 
 =head1 SYNOPSIS
 
@@ -3360,12 +3360,12 @@ All actions accept a common set of database options. At least one is required.
 =item B<-H NAME> or B<--host=NAME>
 
 Connect to the host indicated by NAME. Can be a comma-separated list of names. Multiple host arguments 
-are allowed. If no host is given, defaults to a local Unix socket.
+are allowed. If no host is given, defaults to a local Unix socket. You may also use "--dbhost".
 
 =item B<-p PORT> or B<--port=PORT>
 
 Connects using the specified PORT number. Can be a comma-separated list of port numbers, and multiple 
-port arguments are allowed. If no port number is given, the default is 5432.
+port arguments are allowed. If no port number is given, the default is 5432. You may also use "--dbport"
 
 =item B<-db NAME> or B<--dbname=NAME>
 
@@ -4327,6 +4327,12 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.1.3> (September 22, 2008)
+
+ Allow alternate arguments "dbhost" for "host" and "dbport" for "port".
+
+ Output a zero as default value for second line of MRTG output.
 
 =item B<Version 2.1.2> (July 28, 2008)
 
