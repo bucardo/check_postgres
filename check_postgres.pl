@@ -3521,6 +3521,12 @@ other systems are supported yet.
 
 Used only for the MRTG or simple output, for a few specific actions.
 
+=item B<--debugoutput=VAL>
+
+Outputs the exact string returned by psql, for use in debugging. The value is one or more letters, 
+deterining if the output is displayed or not, where 'a' = all, 'c' = critical, 'w' = warning, 
+'o' = ok, and 'u' = unknown. Letters can be combined.
+
 =back
 
 
