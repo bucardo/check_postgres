@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <title>B&lt;check_postgres.pl&gt; - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.1.2</title>
+This documents describes check_postgres.pl version 2.1.3</title>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 
 </head>
@@ -87,7 +87,7 @@ This documents describes check_postgres.pl version 2.1.2</title>
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.1.2</p>
+This documents describes check_postgres.pl version 2.1.3</p>
 <p>
 </p>
 <hr />
@@ -186,13 +186,13 @@ of any threshold.</p>
 
 <dd>
 <p>Connect to the host indicated by NAME. Can be a comma-separated list of names. Multiple host arguments 
-are allowed. If no host is given, defaults to a local Unix socket.</p>
+are allowed. If no host is given, defaults to a local Unix socket. You may also use &quot;--dbhost&quot;.</p>
 </dd>
 <dt><strong><a name="item__2dp_port_or__2d_2dport_3dport"><strong>-p PORT</strong> or <strong>--port=PORT</strong></a></strong></dt>
 
 <dd>
 <p>Connects using the specified PORT number. Can be a comma-separated list of port numbers, and multiple 
-port arguments are allowed. If no port number is given, the default is 5432.</p>
+port arguments are allowed. If no port number is given, the default is 5432. You may also use &quot;--dbport&quot;</p>
 </dd>
 <dt><strong><a name="item__2ddb_name_or__2d_2ddbname_3dname"><strong>-db NAME</strong> or <strong>--dbname=NAME</strong></a></strong></dt>
 
@@ -1051,6 +1051,14 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="item_3"><strong>Version 2.1.3</strong> (September 22, 2008)</a></strong></dt>
+
+<dd>
+<pre>
+ Allow alternate arguments &quot;dbhost&quot; for &quot;host&quot; and &quot;dbport&quot; for &quot;port&quot;.</pre>
+<pre>
+ Output a zero as default value for second line of MRTG output.</pre>
+</dd>
 <dt><strong><a name="item_2"><strong>Version 2.1.2</strong> (July 28, 2008)</a></strong></dt>
 
 <dd>
@@ -1113,7 +1121,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
  Better detection of problems in --replicate_row.</pre>
 </dd>
-<dt><strong><a name="item_3"><strong>Version 1.8.3</strong> (June 18, 2008)</a></strong></dt>
+<dt><strong><strong>Version 1.8.3</strong> (June 18, 2008)</strong></dt>
 
 <dd>
 <pre>
