@@ -102,14 +102,14 @@ die $USAGE unless
 			   'includeuser=s@',
 			   'excludeuser=s@',
 
-			   'host|H=s@',
-			   'port=s@',
+			   'dbhost|host|H=s@',
+			   'dbport|port=s@',
 			   'dbname|db=s@',
 			   'dbuser|u=s@',
 			   'dbpass=s@',
 
-			   'host2|H2=s@',
-			   'port2=s@',
+			   'dbhost2|host2|H2=s@',
+			   'dbport2|port2=s@',
 			   'dbname2|db2=s@',
 			   'dbuser2|u2=s@',
 			   'dbpass2=s@',
