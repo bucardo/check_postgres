@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.1.3';
+our $VERSION = '2.1.4';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -102,8 +102,8 @@ die $USAGE unless
 			   'includeuser=s@',
 			   'excludeuser=s@',
 
-			   'dbhost|host|H=s@',
-			   'dbport|port=s@',
+			   'host|dbhost|H=s@',
+			   'port|dbport=s@',
 			   'dbname|db=s@',
 			   'dbuser|u=s@',
 			   'dbpass=s@',
@@ -3262,7 +3262,7 @@ sub check_replicate_row {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.1.3
+This documents describes check_postgres.pl version 2.1.4
 
 =head1 SYNOPSIS
 
