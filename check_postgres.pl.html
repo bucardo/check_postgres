@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <title>B&lt;check_postgres.pl&gt; - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.1.3</title>
+This documents describes check_postgres.pl version 2.1.4</title>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 
 </head>
@@ -87,7 +87,7 @@ This documents describes check_postgres.pl version 2.1.3</title>
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.1.3</p>
+This documents describes check_postgres.pl version 2.1.4</p>
 <p>
 </p>
 <hr />
@@ -332,6 +332,13 @@ other systems are supported yet.</p>
 
 <dd>
 <p>Used only for the MRTG or simple output, for a few specific actions.</p>
+</dd>
+<dt><strong><a name="item__2d_2ddebugoutput_3dval"><strong>--debugoutput=VAL</strong></a></strong></dt>
+
+<dd>
+<p>Outputs the exact string returned by psql, for use in debugging. The value is one or more letters, 
+deterining if the output is displayed or not, where 'a' = all, 'c' = critical, 'w' = warning, 
+'o' = ok, and 'u' = unknown. Letters can be combined.</p>
 </dd>
 </dl>
 <p>
@@ -1051,12 +1058,18 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="item_4"><strong>Version 2.1.4</strong> (September 22, 2008)</a></strong></dt>
+
+<dd>
+<pre>
+ Fix for race condition in txn_time action.
+ Add --debugoutput option.</pre>
+</dd>
 <dt><strong><a name="item_3"><strong>Version 2.1.3</strong> (September 22, 2008)</a></strong></dt>
 
 <dd>
 <pre>
- Allow alternate arguments &quot;dbhost&quot; for &quot;host&quot; and &quot;dbport&quot; for &quot;port&quot;.</pre>
-<pre>
+ Allow alternate arguments &quot;dbhost&quot; for &quot;host&quot; and &quot;dbport&quot; for &quot;port&quot;.
  Output a zero as default value for second line of MRTG output.</pre>
 </dd>
 <dt><strong><a name="item_2"><strong>Version 2.1.2</strong> (July 28, 2008)</a></strong></dt>
@@ -1115,7 +1128,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
  Output schema name before table name where appropriate.
  Thanks to Jeff Frost.</pre>
 </dd>
-<dt><strong><a name="item_4"><strong>Version 1.8.4</strong> (June 19, 2008)</a></strong></dt>
+<dt><strong><strong>Version 1.8.4</strong> (June 19, 2008)</strong></dt>
 
 <dd>
 <pre>
@@ -1125,7 +1138,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 
 <dd>
 <pre>
- Fix check_backends action: there may be no rows in pg_stat_activity, so run a second 
+ Fix check_backends action: there may be no rows in pg_stat_activity, so run a second
    query if needed to find the max_connections setting.
  Thanks to Jeff Frost for the bug report.</pre>
 </dd>

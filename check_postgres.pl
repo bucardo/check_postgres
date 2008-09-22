@@ -419,8 +419,8 @@ sub finishup {
 	}
 
 	sub dumpresult {
-		my $SEP = ' * ';
 		my ($type,$info) = @_;
+		my $SEP = ' * ';
 		## Are we showing DEBUG_INFO?
 		my $showdebug = 0;
 		if ($DEBUGOUTPUT) {
@@ -3514,7 +3514,7 @@ Creates symlinks to the main program for each action.
 
 =item B<--output=VAL>
 
-Determines the format of the output, for use in various programs. The default is 'nagios'. No 
+Determines the format of the output, for use in various programs. The default is 'nagios'. No
 other systems are supported yet.
 
 =item B<--mrtg=VAL>
@@ -3523,8 +3523,8 @@ Used only for the MRTG or simple output, for a few specific actions.
 
 =item B<--debugoutput=VAL>
 
-Outputs the exact string returned by psql, for use in debugging. The value is one or more letters, 
-deterining if the output is displayed or not, where 'a' = all, 'c' = critical, 'w' = warning, 
+Outputs the exact string returned by psql, for use in debugging. The value is one or more letters,
+which determine if the output is displayed or not, where 'a' = all, 'c' = critical, 'w' = warning,
 'o' = ok, and 'u' = unknown. Letters can be combined.
 
 =back
@@ -4363,6 +4363,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.1.4> (September 22, 2008)
+
+ Fix for race condition in txn_time action.
+ Add --debugoutput option.
 
 =item B<Version 2.1.3> (September 22, 2008)
 

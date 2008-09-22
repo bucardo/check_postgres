@@ -219,6 +219,7 @@ MRTG
 nagios
 NAGIOS
 nols
+ok
 oskar
 perflimit
 pgpass
