@@ -2,8 +2,8 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>B&lt;check_postgres.pl&gt; - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.1.4</title>
+<title>check_postgres.pl - a Postgres monitoring script for Nagios, MRTG, and others</title>
+
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 
 </head>
@@ -325,7 +325,7 @@ your psql location into the <code>$PSQL</code> variable, also near the top of th
 <dt><strong><a name="item__2d_2doutput_3dval"><strong>--output=VAL</strong></a></strong></dt>
 
 <dd>
-<p>Determines the format of the output, for use in various programs. The default is 'nagios'. No 
+<p>Determines the format of the output, for use in various programs. The default is 'nagios'. No
 other systems are supported yet.</p>
 </dd>
 <dt><strong><a name="item__2d_2dmrtg_3dval"><strong>--mrtg=VAL</strong></a></strong></dt>
@@ -336,8 +336,8 @@ other systems are supported yet.</p>
 <dt><strong><a name="item__2d_2ddebugoutput_3dval"><strong>--debugoutput=VAL</strong></a></strong></dt>
 
 <dd>
-<p>Outputs the exact string returned by psql, for use in debugging. The value is one or more letters, 
-deterining if the output is displayed or not, where 'a' = all, 'c' = critical, 'w' = warning, 
+<p>Outputs the exact string returned by psql, for use in debugging. The value is one or more letters,
+which determine if the output is displayed or not, where 'a' = all, 'c' = critical, 'w' = warning,
 'o' = ok, and 'u' = unknown. Letters can be combined.</p>
 </dd>
 </dl>
