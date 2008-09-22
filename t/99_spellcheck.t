@@ -188,8 +188,10 @@ cperl
 criticals
 cronjob
 datallowconn
+dbhost
 dbname
 dbpass
+dbport
 dbuser
 exabytes
 excludeuser
