@@ -358,7 +358,7 @@ sub do_mrtg {
 	## Hashref of info to pass out for MRTG or stat
 	my $arg = shift;
 	my $one = $arg->{one} || 0;
-	my $two = $arg->{two} || '';
+	my $two = $arg->{two} || 0;
 	if ($SIMPLE) {
 		$one = $two if (length $two and $two > $one);
 		print "$one\n";
