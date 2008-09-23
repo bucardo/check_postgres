@@ -3590,7 +3590,7 @@ You can also filter the databases by use of the
 I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details.
 
-Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 140.
+Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 150.
 
   check_postgres_backends --host=quirm --warning=120 --critical=150
 
@@ -3634,7 +3634,7 @@ values, you can look for the variables I<$MINPAGES> and I<$MINIPAGES> at the top
 C<check_bloat> subroutine.
 
 The schema named 'information_schema' is excluded from this test, as the only tables 
-it contains are small ans do not change.
+it contains are small and do not change.
 
 Please note that the values computed by this action are not precise, and 
 should be used as a guideline only. Great effort was made to estimate the 
@@ -3704,7 +3704,7 @@ Example 1: Warn if any relation over 100 pages is named "rad":
 
   check_postgres_custom_query --checktype=string -w "rad" --query="SELECT relname FROM pg_class WHERE relpages > 100" --port=5432
 
-Example 2: Give a critical if the "foobar" function returns over 5GB of bytes:
+Example 2: Give a critical if the "foobar" function returns a number over 5MB:
 
   check_postgres_custom_query --port=5432 --critical='5MB'--checktype=size --query="SELECT foobar()"
 
