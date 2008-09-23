@@ -2723,7 +2723,9 @@ sub check_txn_time {
 
 	my $found = 0;
 	for $db (@{$info->{db}}) {
-
+		if (!exists $db->{ok}) {
+			ndie 'Query failed';
+		}
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
 			add_ok 'T-EXCLUDE-USEROK';
 			next;
