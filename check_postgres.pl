@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.1.5';
+our $VERSION = '2.2.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -123,6 +123,7 @@ die $USAGE unless
 			   'checktype=s', ## used by custom_query only
 			   'reverse',     ## used by custom_query only
 			   'repinfo=s',   ## used by replicate_row only
+			   'schema=s',    ## used by fsm_* checks only
 			   )
 	and keys %opt
 	and ! @ARGV;
@@ -185,6 +186,8 @@ our $action_info = {
  custom_query        => [0, 'Run a custom query.'],
  database_size       => [0, 'Report if a database is too big.'],
  disk_space          => [1, 'Checks space of local disks Postgres is using.'],
+ fsm_pages           => [1, 'Checks percentage of pages used in free space map.'],
+ fsm_relations       => [1, 'Checks percentage of relations used in free space map.'],
  index_size          => [0, 'Checks the size of indexes only.'],
  table_size          => [0, 'Checks the size of tables only.'],
  relation_size       => [0, 'Checks the size of tables and indexes.'],
@@ -497,6 +500,8 @@ our %testaction = (
 				  txn_idle         => 'ON: stats_command_string(<8.3) VERSION: 8.0',
 				  txn_time         => 'VERSION: 8.3',
 				  wal_files        => 'VERSION: 8.1',
+				  fsm_pages        => 'VERSION: 8.2',
+				  fsm_relations    => 'VERSION: 8.2',
 );
 if ($opt{test}) {
 	print "BEGIN TEST MODE\n";
@@ -678,6 +683,12 @@ check_replicate_row() if $action eq 'replicate_row';
 
 ## See how close we are to autovacuum_freeze_max_age
 check_autovac_freeze() if $action eq 'autovac_freeze';
+
+## See how many pages we have used up compared to max_fsm_pages
+check_fsm_pages() if $action eq 'fsm_pages';
+
+## See how many relations we have used up compared to max_fsm_relations
+check_fsm_relations() if $action eq 'fsm_relations';
 
 finishup();
 
@@ -2032,6 +2043,110 @@ sub check_disk_space {
 } ## end of check_disk_space
 
 
+sub check_fsm_pages {
+
+	## Check on the percentage of free space map pages in use
+	## Supports: Nagios
+	## Must run as superuser
+	## Requires pg_freespacemap contrib module
+	## Takes an optional --schema argument, defaults to 'public'
+	## Critical and warning are a percentage of max_fsm_pages
+	## Example: --critical=95
+
+	my ($warning, $critical) = validate_range
+		({
+		  type              => 'percent',
+		  default_warning   => '85%',
+		  default_critical  => '95%',
+		  });
+
+    my $schema = ($opt{schema}) ? $opt{schema} : 'public';
+
+	(my $w = $warning) =~ s/\D//;
+	(my $c = $critical) =~ s/\D//;
+	my $SQL = qq{SELECT pages, maxx, ROUND(100*(pages/maxx)) AS percent\n}.
+	 		  qq{FROM (SELECT\n}.
+			  qq{ (SUM(GREATEST(interestingpages,storedpages))+COUNT(DISTINCT(relfilenode)))*8 AS pages,\n}.
+			  qq{ (SELECT setting::NUMERIC FROM pg_settings WHERE name = 'max_fsm_pages') AS maxx\n}.
+			  qq{ FROM $schema.pg_freespacemap_relations) x};
+
+	my $info = run_command($SQL, {regex => qr[\w+] } );
+
+	for $db (@{$info->{db}}) {
+	  SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+)$/gsm) {
+			my ($pages,$max,$percent) = ($1,$2,$3);
+
+			my $msg = "fsm page slots used: $pages of $max ($percent%)";
+			if (length $critical and $percent >= $c) {
+				add_critical $msg;
+			}
+			elsif (length $warning and $percent >= $w) {
+				add_warning $msg;
+			}
+			else {
+				add_ok $msg;
+			}
+		}
+
+	}
+
+	return;
+
+} ## end of check_fsm_pages
+
+
+sub check_fsm_relations {
+
+	## Check on the % of free space map relations in use
+	## Supports: Nagios
+	## Must run as superuser
+	## Requires pg_freespacemap contrib module
+	## Takes an optional --schema argument, defaults to 'public'
+	## Critical and warning are a percentage of max_fsm_relations
+	## Example: --critical=95
+
+	my ($warning, $critical) = validate_range
+		({
+		  type              => 'percent',
+		  default_warning   => '85%',
+		  default_critical  => '95%',
+		  });
+
+    my $schema = ($opt{schema}) ? $opt{schema} : 'public';
+
+	(my $w = $warning) =~ s/\D//;
+	(my $c = $critical) =~ s/\D//;
+
+	my $SQL = qq{SELECT maxx, cur, ROUND(100*(cur/maxx))\n}.
+			  qq{FROM (SELECT\n}.
+			  qq{ (SELECT COUNT(*) FROM $schema.pg_freespacemap_relations) AS cur,\n}.
+			  qq{ (SELECT setting::NUMERIC FROM pg_settings WHERE name='max_fsm_relations') AS maxx) x\n};
+
+	my $info = run_command($SQL, {regex => qr[\w+] } );
+
+	for $db (@{$info->{db}}) {
+	  SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+)$/gsm) {
+			my ($max,$cur,$percent) = ($1,$2,$3);
+
+			my $msg = "fsm relations used: $cur of $max ($percent%)";
+			if (length $critical and $percent >= $c) {
+				add_critical $msg;
+			}
+			elsif (length $warning and $percent >= $w) {
+				add_warning $msg;
+			}
+			else {
+				add_ok $msg;
+			}
+		}
+
+	}
+
+	return;
+
+} ## end of check_fsm_relations
+
+
 sub check_wal_files {
 
 	## Check on the number of WAL files in use
@@ -2723,9 +2838,11 @@ sub check_txn_time {
 
 	my $found = 0;
 	for $db (@{$info->{db}}) {
+
 		if (!exists $db->{ok}) {
 			ndie 'Query failed';
 		}
+
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
 			add_ok 'T-EXCLUDE-USEROK';
 			next;
@@ -3294,7 +3411,7 @@ sub check_replicate_row {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.1.5
+This documents describes check_postgres.pl version 2.2.0
 
 =head1 SYNOPSIS
 
@@ -3789,6 +3906,41 @@ Example 2: Check that all file systems starting with /dev/sda are smaller than 1
 
 For MRTG output, returns the size in bytes of the file system on the first line, 
 and the name of the file system on the fourth line.
+
+=head2 B<fsm_pages>
+
+(C<symlink: check_postgres_fsm_pages>) Checks how close a cluster is to the Postgres B<max_fsm_pages> setting.
+This action will only work for databases of 8.2 or higher, and it requires the contrib
+module B<pg_freespacemap> be installed. The I<--warning> and I<--critical> options should be expressed
+as percentages. The number of used pages in the free-space-map is determined by looking in the
+pg_freespacemap_relations view, and running a formula based on the formula used for
+outputting free-space-map pageslots in the vacuum verbose command. The default values are B<85%> for the 
+warning and B<95%> for the critical.
+
+Example 1: Give a warning when our cluster has used up 76% of the free-space pageslots, with pg_freespacemap installed in database robert 
+
+  check_postgres_autovac_freeze --dbname=robert --warning="76%"
+
+While you need to pass in the name of the database where pg_freespacemap is installed (and optionally a schema name if you have
+installed the module in a non-standard schema), you only need to run this check once per cluster. Also, checking this information
+does require obtaining special locks on the free-space-map, so it is recommend you do not run this check with short intervals.
+
+=head2 B<fsm_relations>
+
+(C<symlink: check_postgres_fsm_relations>) Checks how close a cluster is to the Postgres B<max_fsm_relations> setting. 
+This action will only work for databases of 8.2 or higher, and it requires the contrib module B<pg_freespacemap> be 
+installed. The I<--warning> and I<--critical> options should be expressed as percentages. The number of used relations 
+in the free-space-map is determined by looking in the pg_freespacemap_relations view. The default values are B<85%> for 
+the warning and B<95%> for the critical.
+
+Example 1: Give a warning when our cluster has used up 80% of the free-space relations, with pg_freespacemap installed in database dylan, in non-standard schema emma
+
+  check_postgres_autovac_freeze --dbname=dylan --warning="75%" --schema=emma
+
+While you need to pass in the name of the database where pg_freespacemap is installed (and optionally a schema name
+if you have installed the module in a non-standard schema), you only need to run this check once per cluster. Also,
+checking this information does require obtaining special locks on the free-space-map, so it is recommend you do not
+run this check with short intervals.
 
 =head2 B<index_size>
 
@@ -4366,9 +4518,9 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.1.5> (September 23, 2008)
+=item B<Version 2.2.0> (September 2008)
 
- Don't use STDERR bareword. (Chris Butler)
+ Add fsm_pages and fsm_relations actions. (Robert Treat)
 
 =item B<Version 2.1.4> (September 22, 2008)
 

@@ -42,6 +42,8 @@
 		<li><a href="#custom_query"><strong>custom_query</strong></a></li>
 		<li><a href="#database_size"><strong>database_size</strong></a></li>
 		<li><a href="#disk_space"><strong>disk_space</strong></a></li>
+		<li><a href="#fsm_pages"><strong>fsm_pages</strong></a></li>
+		<li><a href="#fsm_relations"><strong>fsm_relations</strong></a></li>
 		<li><a href="#index_size"><strong>index_size</strong></a></li>
 		<li><a href="#table_size"><strong>table_size</strong></a></li>
 		<li><a href="#relation_size"><strong>relation_size</strong></a></li>
@@ -87,7 +89,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.1.4</p>
+This documents describes check_postgres.pl version 2.2.0</p>
 <p>
 </p>
 <hr />
@@ -395,7 +397,7 @@ is reached. The default values for <em>--warning</em> and <em>--critical</em> ar
 You can also filter the databases by use of the 
 <em>--include</em> and <em>--exclude</em> options. See the <a href="#basic_filtering">BASIC FILTERING</a> section 
 for more details.</p>
-<p>Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 140.</p>
+<p>Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 150.</p>
 <pre>
   check_postgres_backends --host=quirm --warning=120 --critical=150</pre>
 <p>Example 2: Give a critical when we reach 75% of our max_connections setting on hosts lancre or lancre2.</p>
@@ -432,7 +434,7 @@ before they can be considered by this test. If you really want to adjust these
 values, you can look for the variables <em>$MINPAGES</em> and <em>$MINIPAGES</em> at the top of the 
 <code>check_bloat</code> subroutine.</p>
 <p>The schema named 'information_schema' is excluded from this test, as the only tables 
-it contains are small ans do not change.</p>
+it contains are small and do not change.</p>
 <p>Please note that the values computed by this action are not precise, and 
 should be used as a guideline only. Great effort was made to estimate the 
 correct size of a table, but in the end it is only an estimate. The correct 
@@ -488,7 +490,7 @@ value. However, an option of <em>--reverse</em> will trigger the alert if the re
 <p>Example 1: Warn if any relation over 100 pages is named &quot;rad&quot;:</p>
 <pre>
   check_postgres_custom_query --checktype=string -w &quot;rad&quot; --query=&quot;SELECT relname FROM pg_class WHERE relpages &gt; 100&quot; --port=5432</pre>
-<p>Example 2: Give a critical if the &quot;foobar&quot; function returns over 5GB of bytes:</p>
+<p>Example 2: Give a critical if the &quot;foobar&quot; function returns a number over 5MB:</p>
 <pre>
   check_postgres_custom_query --port=5432 --critical='5MB'--checktype=size --query=&quot;SELECT foobar()&quot;</pre>
 <p>Example 2: Warn if the function &quot;snazzo&quot; returns less than 42:</p>
@@ -554,6 +556,37 @@ maps to a file system: these can be included or excluded. See the
   check_postgres_disk_space --port=5432 --warning='10 GB' --critical='11 GB' --include=&quot;~^/dev/sda&quot;</pre>
 <p>For MRTG output, returns the size in bytes of the file system on the first line, 
 and the name of the file system on the fourth line.</p>
+<p>
+</p>
+<h2><a name="fsm_pages"><strong>fsm_pages</strong></a></h2>
+<p>(<code>symlink: check_postgres_fsm_pages</code>) Checks how close a cluster is to the Postgres <strong>max_fsm_pages</strong> setting.
+This action will only work for databases of 8.2 or higher, and it requires the contrib
+module <strong>pg_freespacemap</strong> be installed. The <em>--warning</em> and <em>--critical</em> options should be expressed
+as percentages. The number of used pages in the free-space-map is determined by looking in the
+pg_freespacemap_relations view, and running a formula based on the formula used for
+outputting free-space-map pageslots in the vacuum verbose command. The default values are <strong>85%</strong> for the 
+warning and <strong>95%</strong> for the critical.</p>
+<p>Example 1: Give a warning when our cluster has used up 76% of the free-space pageslots, with pg_freespacemap installed in database robert</p>
+<pre>
+  check_postgres_autovac_freeze --dbname=robert --warning=&quot;76%&quot;</pre>
+<p>While you need to pass in the name of the database where pg_freespacemap is installed (and optionally a schema name if you have
+installed the module in a non-standard schema), you only need to run this check once per cluster. Also, checking this information
+does require obtaining special locks on the free-space-map, so it is recommend you do not run this check with short intervals.</p>
+<p>
+</p>
+<h2><a name="fsm_relations"><strong>fsm_relations</strong></a></h2>
+<p>(<code>symlink: check_postgres_fsm_relations</code>) Checks how close a cluster is to the Postgres <strong>max_fsm_relations</strong> setting. 
+This action will only work for databases of 8.2 or higher, and it requires the contrib module <strong>pg_freespacemap</strong> be 
+installed. The <em>--warning</em> and <em>--critical</em> options should be expressed as percentages. The number of used relations 
+in the free-space-map is determined by looking in the pg_freespacemap_relations view. The default values are <strong>85%</strong> for 
+the warning and <strong>95%</strong> for the critical.</p>
+<p>Example 1: Give a warning when our cluster has used up 80% of the free-space relations, with pg_freespacemap installed in database dylan, in non-standard schema emma</p>
+<pre>
+  check_postgres_autovac_freeze --dbname=dylan --warning=&quot;75%&quot; --schema=emma</pre>
+<p>While you need to pass in the name of the database where pg_freespacemap is installed (and optionally a schema name
+if you have installed the module in a non-standard schema), you only need to run this check once per cluster. Also,
+checking this information does require obtaining special locks on the free-space-map, so it is recommend you do not
+run this check with short intervals.</p>
 <p>
 </p>
 <h2><a name="index_size"><strong>index_size</strong></a></h2>
@@ -1058,6 +1091,12 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="item_0"><strong>Version 2.2.0</strong> (September 2008)</a></strong></dt>
+
+<dd>
+<pre>
+ Add fsm_pages and fsm_relations actions. (Robert Treat)</pre>
+</dd>
 <dt><strong><a name="item_4"><strong>Version 2.1.4</strong> (September 22, 2008)</a></strong></dt>
 
 <dd>
@@ -1085,7 +1124,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
  Don't check databases with datallowconn false for the &quot;autovac_freeze&quot; action.</pre>
 </dd>
-<dt><strong><a name="item_0"><strong>Version 2.1.0</strong> (July 18, 2008)</a></strong></dt>
+<dt><strong><strong>Version 2.1.0</strong> (July 18, 2008)</strong></dt>
 
 <dd>
 <pre>

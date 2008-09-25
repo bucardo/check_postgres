@@ -184,6 +184,7 @@ backends
 burrick
 checksum
 checksums
+contrib
 cperl
 criticals
 cronjob
@@ -193,6 +194,8 @@ dbname
 dbpass
 dbport
 dbuser
+dylan
+emma
 exabytes
 excludeuser
 ExclusiveLock
@@ -200,6 +203,7 @@ faceoff
 finishup
 flagg
 franklin
+fsm
 garrett
 greg
 grimm
@@ -221,6 +225,7 @@ NAGIOS
 nols
 ok
 oskar
+pageslots
 perflimit
 pgpass
 pluto
@@ -230,6 +235,7 @@ PSQL
 queryname
 quirm
 refactoring
+robert
 runtime
 salesrep
 sami
