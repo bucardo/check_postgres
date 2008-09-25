@@ -4518,7 +4518,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.2.0> (September 2008)
+=item B<Version 2.2.0> (September 25, 2008)
 
  Add fsm_pages and fsm_relations actions. (Robert Treat)
 
