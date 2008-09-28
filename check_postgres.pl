@@ -1129,7 +1129,7 @@ sub validate_range {
 	my $arg = shift;
 	defined $arg and ref $arg eq 'HASH' or ndie qq{validate_range must be called with a hashref\n};
 
-	return if $MRTG and !$arg->{forcemrtg};
+	return ('','') if $MRTG and !$arg->{forcemrtg};
 
 	my $type = $arg->{type} or ndie qq{validate_range must be provided a 'type'\n};
 
@@ -2046,7 +2046,7 @@ sub check_disk_space {
 sub check_fsm_pages {
 
 	## Check on the percentage of free space map pages in use
-	## Supports: Nagios
+	## Supports: Nagios, MRTG
 	## Must run as superuser
 	## Requires pg_freespacemap contrib module
 	## Takes an optional --schema argument, defaults to 'public'
@@ -2076,7 +2076,13 @@ sub check_fsm_pages {
 	  SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+)$/gsm) {
 			my ($pages,$max,$percent) = ($1,$2,$3);
 
+			if ($MRTG) {
+				do_mrtg({one => $percent, two => $pages});
+				return;
+			}
+
 			my $msg = "fsm page slots used: $pages of $max ($percent%)";
+
 			if (length $critical and $percent >= $c) {
 				add_critical $msg;
 			}
@@ -2098,7 +2104,7 @@ sub check_fsm_pages {
 sub check_fsm_relations {
 
 	## Check on the % of free space map relations in use
-	## Supports: Nagios
+	## Supports: Nagios, MRTG
 	## Must run as superuser
 	## Requires pg_freespacemap contrib module
 	## Takes an optional --schema argument, defaults to 'public'
@@ -2128,7 +2134,13 @@ sub check_fsm_relations {
 	  SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+)$/gsm) {
 			my ($max,$cur,$percent) = ($1,$2,$3);
 
+			if ($MRTG) {
+				do_mrtg({one => $percent, two => $cur});
+				return;
+			}
+
 			my $msg = "fsm relations used: $cur of $max ($percent%)";
+
 			if (length $critical and $percent >= $c) {
 				add_critical $msg;
 			}
@@ -3925,6 +3937,9 @@ While you need to pass in the name of the database where pg_freespacemap is inst
 installed the module in a non-standard schema), you only need to run this check once per cluster. Also, checking this information
 does require obtaining special locks on the free-space-map, so it is recommend you do not run this check with short intervals.
 
+For MRTG output, returns the percent of free-space-map on the first line, the number of pages currently used on 
+the second line.
+
 =head2 B<fsm_relations>
 
 (C<symlink: check_postgres_fsm_relations>) Checks how close a cluster is to the Postgres B<max_fsm_relations> setting. 
@@ -3941,6 +3956,9 @@ While you need to pass in the name of the database where pg_freespacemap is inst
 if you have installed the module in a non-standard schema), you only need to run this check once per cluster. Also,
 checking this information does require obtaining special locks on the free-space-map, so it is recommend you do not
 run this check with short intervals.
+
+For MRTG output, returns the percent of free-space-map on the first line, the number of relations currently used on 
+the second line.
 
 =head2 B<index_size>
 
