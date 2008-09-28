@@ -4541,6 +4541,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.2.1>
 
  Add MRTG output to fsm_pages and fsm_relations.
+ Force error messages to one-line for proper Nagios output.
 
 =item B<Version 2.2.0> (September 25, 2008)
 
