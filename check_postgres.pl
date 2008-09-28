@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.2.0';
+our $VERSION = '2.2.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -3423,7 +3423,7 @@ sub check_replicate_row {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.2.0
+This documents describes check_postgres.pl version 2.2.1
 
 =head1 SYNOPSIS
 
@@ -4535,6 +4535,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.2.1>
+
+ Add MRTG output to fsm_pages and fsm_relations.
 
 =item B<Version 2.2.0> (September 25, 2008)
 

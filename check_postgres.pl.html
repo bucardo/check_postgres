@@ -89,7 +89,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.2.0</p>
+This documents describes check_postgres.pl version 2.2.1</p>
 <p>
 </p>
 <hr />
@@ -572,6 +572,8 @@ warning and <strong>95%</strong> for the critical.</p>
 <p>While you need to pass in the name of the database where pg_freespacemap is installed (and optionally a schema name if you have
 installed the module in a non-standard schema), you only need to run this check once per cluster. Also, checking this information
 does require obtaining special locks on the free-space-map, so it is recommend you do not run this check with short intervals.</p>
+<p>For MRTG output, returns the percent of free-space-map on the first line, the number of pages currently used on 
+the second line.</p>
 <p>
 </p>
 <h2><a name="fsm_relations"><strong>fsm_relations</strong></a></h2>
@@ -587,6 +589,8 @@ the warning and <strong>95%</strong> for the critical.</p>
 if you have installed the module in a non-standard schema), you only need to run this check once per cluster. Also,
 checking this information does require obtaining special locks on the free-space-map, so it is recommend you do not
 run this check with short intervals.</p>
+<p>For MRTG output, returns the percent of free-space-map on the first line, the number of relations currently used on 
+the second line.</p>
 <p>
 </p>
 <h2><a name="index_size"><strong>index_size</strong></a></h2>
@@ -1091,7 +1095,13 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
-<dt><strong><a name="item_0"><strong>Version 2.2.0</strong> (September 2008)</a></strong></dt>
+<dt><strong><a name="item_version_2_2e2_2e1"><strong>Version 2.2.1</strong></a></strong></dt>
+
+<dd>
+<pre>
+ Add MRTG output to fsm_pages and fsm_relations.</pre>
+</dd>
+<dt><strong><a name="item_0"><strong>Version 2.2.0</strong> (September 25, 2008)</a></strong></dt>
 
 <dd>
 <pre>
