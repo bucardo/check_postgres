@@ -351,6 +351,8 @@ sub add_response {
 
 sub add_unknown {
 	my $msg = shift || $db->{error};
+	$msg =~ s/[\r\n]\s*/\\n /g;
+	$msg =~ s/\|/<PIPE>/g if $opt{showperf};
 	add_response \%unknown, $msg;
 }
 sub add_critical {
