@@ -2116,12 +2116,13 @@ sub check_fsm_pages {
 	(my $w = $warning) =~ s/\D//;
 	(my $c = $critical) =~ s/\D//;
 	my $SQL = qq{SELECT pages, maxx, ROUND(100*(pages/maxx)) AS percent\n}.
-	 		  qq{FROM (SELECT\n}.
-			  qq{ (SUM(GREATEST(interestingpages,storedpages))+COUNT(DISTINCT(relfilenode)))*8 AS pages,\n}.
-			  qq{ (SELECT setting::NUMERIC FROM pg_settings WHERE name = 'max_fsm_pages') AS maxx\n}.
-			  qq{ FROM $schema.pg_freespacemap_relations) x};
+	 		  qq{FROM (SELECT (sumrequests+numrels)*chunkpages AS pages\n}.
+			  qq{ FROM (SELECT SUM(CASE WHEN avgrequest IS NULL THEN interestingpages/32 }.
+			  qq{ ELSE interestingpages/16 END) AS sumrequests,\n}.
+			  qq{ COUNT(relfilenode) AS numrels, 16 AS chunkpages FROM pg_freespacemap_relations) AS foo) AS foo2,\n}.
+			  qq{ (SELECT setting::NUMERIC AS maxx FROM pg_settings WHERE name = 'max_fsm_pages') AS foo3};
 
-	my $info = run_command($SQL, {regex => qr[\w+] } );
+	my $info = run_command($SQL, {regex => qr[\d+] } );
 
 	for $db (@{$info->{db}}) {
 	  SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+)$/gsm) {
@@ -4587,11 +4588,12 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.2.1>
+=item B<Version 2.2.1> (September 28, 2008)
 
  Add MRTG output to fsm_pages and fsm_relations.
  Force error messages to one-line for proper Nagios output.
  Check for invalid prereqs on failed command. From conversations with Euler Taveira de Oliveira.
+ Tweak the fsm_pages formula a little.
 
 =item B<Version 2.2.0> (September 25, 2008)
 
