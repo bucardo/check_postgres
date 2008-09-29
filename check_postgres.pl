@@ -981,6 +981,9 @@ sub run_command {
 			## If we were provided with a regex, check and bail if it fails
 			elsif ($arg->{regex}) {
 				if ($db->{slurp} !~ $arg->{regex}) {
+					## Check if problem is due to backend being to old for this check
+					verify_version($db->{slurp});
+
 					add_unknown qq{T-BAD-QUERY $db->{slurp}};
 					## Remove it from the returned hash
 					pop @{$info->{db}};
@@ -1027,6 +1030,52 @@ sub run_command {
 
 
 } ## end of run_command
+
+
+sub verify_version {
+
+	## Check if the backend can handle the current action
+	my $limit = $testaction{lc $action} || '';
+
+	return if ! $limit;
+
+	## We almost always need the version, so just grab it for any limitation
+	$SQL = q{SELECT setting FROM pg_settings WHERE name = 'server_version'};
+	my $info = run_command($SQL);
+	if (!defined $info->{db}[0] or $info->{db}[0]{slurp} !~ /((\d+)\.(\d+))/) {
+		die "Could not determine version while running $SQL\n";
+	}
+	my ($sver,$smaj,$smin) = ($1,$2,$3);
+
+	if ($limit =~ /VERSION: ((\d+)\.(\d+))/) {
+		my ($rver,$rmaj,$rmin) = ($1,$2,$3);
+		if ($smaj < $rmaj or ($smaj==$rmaj and $smin < $rmin)) {
+			die qq{Cannot run "$action": server version must be >= $rver, but is $sver\n};
+		}
+	}
+
+	while ($limit =~ /\bON: (\w+)(?:\(([<>=])(\d+\.\d+)\))?/g) {
+		my ($setting,$op,$ver) = ($1,$2||'',$3||0);
+		if ($ver) {
+			next if $op eq '<' and $sver >= $ver;
+			next if $op eq '>' and $sver <= $ver;
+			next if $op eq '=' and $sver != $ver;
+		}
+
+		$SQL = qq{SELECT setting FROM pg_settings WHERE name = '$setting'};
+		my $info = run_command($SQL);
+		if (!defined $info->{db}[0]) {
+			die "Could not fetch setting '$setting'\n";
+		}
+		my $val = $info->{db}[0]{slurp};
+		if ($val ne 'on') {
+			die qq{Cannot run "$action": $setting is not set to on\n};
+		}
+	}
+
+	return;
+
+} ## end of verify_version
 
 
 sub size_in_bytes { ## no critic (RequireArgUnpacking)
@@ -4542,6 +4591,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
  Add MRTG output to fsm_pages and fsm_relations.
  Force error messages to one-line for proper Nagios output.
+ Check for invalid prereqs on failed command. From conversations with Euler Taveira de Oliveira.
 
 =item B<Version 2.2.0> (September 25, 2008)
 
