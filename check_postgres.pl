@@ -962,6 +962,10 @@ sub run_command {
 				$ERROR = $db->{error};
 			}
 			if (!$db->{ok} and !$arg->{failok}) {
+
+				## Check if problem is due to backend being too old for this check
+				verify_version();
+
 				add_unknown;
 				## Remove it from the returned hash
 				pop @{$info->{db}};
@@ -981,12 +985,10 @@ sub run_command {
 			## If we were provided with a regex, check and bail if it fails
 			elsif ($arg->{regex}) {
 				if ($db->{slurp} !~ $arg->{regex}) {
-					my $oldslurp = $db->{slurp};
 
 					## Check if problem is due to backend being too old for this check
-					verify_version($db->{slurp});
+					verify_version();
 
-					$db->{slurp} = $oldslurp;
 					add_unknown qq{T-BAD-QUERY $db->{slurp}};
 					## Remove it from the returned hash
 					pop @{$info->{db}};
@@ -1044,6 +1046,7 @@ sub verify_version {
 
 	## We almost always need the version, so just grab it for any limitation
 	$SQL = q{SELECT setting FROM pg_settings WHERE name = 'server_version'};
+	my $oldslurp = $db->{slurp} || '';
 	my $info = run_command($SQL);
 	if (!defined $info->{db}[0] or $info->{db}[0]{slurp} !~ /((\d+)\.(\d+))/) {
 		die "Could not determine version while running $SQL\n";
@@ -1076,6 +1079,7 @@ sub verify_version {
 		}
 	}
 
+	$db->{slurp} = $oldslurp;
 	return;
 
 } ## end of verify_version
@@ -2227,7 +2231,7 @@ sub check_wal_files {
 	## Figure out where the pg_xlog directory is
 	$SQL = q{SELECT count(*) FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$'}; ## no critic (RequireInterpolationOfMetachars)
 
-	my $info = run_command($SQL);
+	my $info = run_command($SQL, {regex => qr[\d] });
 
 	my $found = 0;
 	for $db (@{$info->{db}}) {
@@ -2251,14 +2255,6 @@ sub check_wal_files {
 		}
 		else {
 			add_ok $msg;
-		}
-	}
-
-	## If no results, probably a version problem
-	if (!$found and keys %unknown) {
-		(my $first) = values %unknown;
-		if ($first->[0][0] =~ /pg_ls_dir/) {
-			ndie 'Target database must be version 8.1 or higher to run the check_wal_files action';
 		}
 	}
 
@@ -2341,14 +2337,6 @@ sub check_relation_size {
 		}
 		else {
 			add_ok $msg;
-		}
-	}
-
-	## If no results, probably a version problem
-	if (!$found and keys %unknown) {
-		(my $first) = values %unknown;
-		if ($first->[0][0] =~ /pg_relation_size/) {
-			ndie "Target database must be version 8.1 or higher to run the ${relkind}_size action";
 		}
 	}
 
@@ -2462,6 +2450,7 @@ sub check_last_vacuum_analyze {
 	return;
 
 } ## end of check_last_vacuum_analyze
+
 sub check_last_vacuum {
 	my $auto = shift || '';
 	return check_last_vacuum_analyze('vacuum', $auto);
@@ -2948,14 +2937,6 @@ sub check_txn_time {
 		}
 	}
 
-	## If no results, probably a version problem
-	if (!$found and keys %unknown) {
-		(my $first) = values %unknown;
-		if ($first->[0][0] =~ /xact_start/) {
-			ndie 'Target database must be version 8.3 or higher to run the txn_time action';
-		}
-	}
-
 	return;
 
 } ## end of check_txn_time
@@ -3034,13 +3015,7 @@ sub check_txn_idle {
 
 	## If no results, let's be paranoid and check their settings
 	if (!$found) {
-		$SQL = q{SELECT setting FROM pg_settings WHERE name = 'stats_command_string'};
-		$info = run_command($SQL);
-		for my $db (@{$info->{db}}) {
-			if ($db->{slurp} =~ /off/) {
-				ndie q{Cannot run the txn_idle action unless stats_command_string is set to 'on'!};
-			}
-		}
+		verify_version();
 	}
 
 	return;
