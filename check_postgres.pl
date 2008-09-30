@@ -3983,13 +3983,13 @@ warning and B<95%> for the critical.
 
 Example 1: Give a warning when our cluster has used up 76% of the free-space pageslots, with pg_freespacemap installed in database robert 
 
-  check_postgres_autovac_freeze --dbname=robert --warning="76%"
+  check_postgres_fsm_pages --dbname=robert --warning="76%"
 
 While you need to pass in the name of the database where pg_freespacemap is installed (and optionally a schema name if you have
 installed the module in a non-standard schema), you only need to run this check once per cluster. Also, checking this information
 does require obtaining special locks on the free-space-map, so it is recommend you do not run this check with short intervals.
 
-For MRTG output, returns the percent of free-space-map on the first line, the number of pages currently used on 
+For MRTG output, returns the percent of free-space-map on the first line, and the number of pages currently used on 
 the second line.
 
 =head2 B<fsm_relations>
@@ -4002,7 +4002,7 @@ the warning and B<95%> for the critical.
 
 Example 1: Give a warning when our cluster has used up 80% of the free-space relations, with pg_freespacemap installed in database dylan, in non-standard schema emma
 
-  check_postgres_autovac_freeze --dbname=dylan --warning="75%" --schema=emma
+  check_postgres_fsm_relations --dbname=dylan --warning="75%" --schema=emma
 
 While you need to pass in the name of the database where pg_freespacemap is installed (and optionally a schema name
 if you have installed the module in a non-standard schema), you only need to run this check once per cluster. Also,
