@@ -89,7 +89,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.2.1</p>
+This documents describes check_postgres.pl version 2.2.2</p>
 <p>
 </p>
 <hr />
@@ -568,11 +568,11 @@ outputting free-space-map pageslots in the vacuum verbose command. The default v
 warning and <strong>95%</strong> for the critical.</p>
 <p>Example 1: Give a warning when our cluster has used up 76% of the free-space pageslots, with pg_freespacemap installed in database robert</p>
 <pre>
-  check_postgres_autovac_freeze --dbname=robert --warning=&quot;76%&quot;</pre>
+  check_postgres_fsm_pages --dbname=robert --warning=&quot;76%&quot;</pre>
 <p>While you need to pass in the name of the database where pg_freespacemap is installed (and optionally a schema name if you have
 installed the module in a non-standard schema), you only need to run this check once per cluster. Also, checking this information
 does require obtaining special locks on the free-space-map, so it is recommend you do not run this check with short intervals.</p>
-<p>For MRTG output, returns the percent of free-space-map on the first line, the number of pages currently used on 
+<p>For MRTG output, returns the percent of free-space-map on the first line, and the number of pages currently used on 
 the second line.</p>
 <p>
 </p>
@@ -584,7 +584,7 @@ in the free-space-map is determined by looking in the pg_freespacemap_relations 
 the warning and <strong>95%</strong> for the critical.</p>
 <p>Example 1: Give a warning when our cluster has used up 80% of the free-space relations, with pg_freespacemap installed in database dylan, in non-standard schema emma</p>
 <pre>
-  check_postgres_autovac_freeze --dbname=dylan --warning=&quot;75%&quot; --schema=emma</pre>
+  check_postgres_fsm_relations --dbname=dylan --warning=&quot;75%&quot; --schema=emma</pre>
 <p>While you need to pass in the name of the database where pg_freespacemap is installed (and optionally a schema name
 if you have installed the module in a non-standard schema), you only need to run this check once per cluster. Also,
 checking this information does require obtaining special locks on the free-space-map, so it is recommend you do not
@@ -1095,6 +1095,12 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="item_2"><strong>Version 2.2.2</strong> (September 30, 2008)</a></strong></dt>
+
+<dd>
+<pre>
+ Fixes for minor output and scoping problems.</pre>
+</dd>
 <dt><strong><a name="item_1"><strong>Version 2.2.1</strong> (September 28, 2008)</a></strong></dt>
 
 <dd>
@@ -1124,7 +1130,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
  Allow alternate arguments &quot;dbhost&quot; for &quot;host&quot; and &quot;dbport&quot; for &quot;port&quot;.
  Output a zero as default value for second line of MRTG output.</pre>
 </dd>
-<dt><strong><a name="item_2"><strong>Version 2.1.2</strong> (July 28, 2008)</a></strong></dt>
+<dt><strong><strong>Version 2.1.2</strong> (July 28, 2008)</strong></dt>
 
 <dd>
 <pre>
