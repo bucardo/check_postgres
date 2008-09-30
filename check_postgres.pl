@@ -159,9 +159,9 @@ if ($OUTPUT ne 'nagios' and $OUTPUT ne 'mrtg' and $OUTPUT ne 'simple') {
 	die qq{Invalid output: must be 'nagios' or 'mrtg' or 'simple'\n};
 }
 
-my $MRTG = ($OUTPUT eq 'mrtg' or $OUTPUT eq 'simple') ? 1 : 0;
-my (%stats, %statsmsg);
-my $SIMPLE = $OUTPUT eq 'simple' ? 1 : 0;
+our $MRTG = ($OUTPUT eq 'mrtg' or $OUTPUT eq 'simple') ? 1 : 0;
+our (%stats, %statsmsg);
+our $SIMPLE = $OUTPUT eq 'simple' ? 1 : 0;
 
 ## See if we need to invoke something based on our name
 our $action = $opt{action} || '';
