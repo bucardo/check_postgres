@@ -981,9 +981,12 @@ sub run_command {
 			## If we were provided with a regex, check and bail if it fails
 			elsif ($arg->{regex}) {
 				if ($db->{slurp} !~ $arg->{regex}) {
-					## Check if problem is due to backend being to old for this check
+					my $oldslurp = $db->{slurp};
+
+					## Check if problem is due to backend being too old for this check
 					verify_version($db->{slurp});
 
+					$db->{slurp} = $oldslurp;
 					add_unknown qq{T-BAD-QUERY $db->{slurp}};
 					## Remove it from the returned hash
 					pop @{$info->{db}};
