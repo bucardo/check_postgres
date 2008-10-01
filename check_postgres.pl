@@ -3328,10 +3328,16 @@ sub check_replicate_row {
 	if (!$opt{repinfo}) {
 		die "Need a repinfo argument\n";
 	}
-	if ($opt{repinfo} !~ m{(\w+),(\w+),(\w+),(\w+),(.*),(.+)}) {
-		die "Invalid value for repinfo argument\n";
+	my @repinfo = split /,/ => ($opt{repinfo} || '');
+	if ($#repinfo != 5) {
+		die "Invalid repfino argument: expected 6 comma-separated values\n";
 	}
-	my ($table,$pk,$id,$col,$val1,$val2) = ($1,$2,$3,$4,$5,$6);
+	my ($table,$pk,$id,$col,$val1,$val2) = (@repinfo);
+
+	## Quote funky identifiers
+	$table = qq{"$table"} if $table !~ /^\w+$/;
+	$pk    = qq{"$pk"}    if $pk    !~ /^\w+$/;
+	$col   = qq{"$col"}   if $col   !~ /^\w+$/;
 
 	if ($val1 eq $val2) {
 	  ndie 'Makes no sense to test replication with same values';
@@ -3349,7 +3355,7 @@ sub check_replicate_row {
 	## Squirrel away the $db setting for later
 	my $sourcedb = $info1->{db}[0];
 	if (!defined $sourcedb) {
-		ndie 'Replication source row not found';
+		ndie "Replication source row not found: $table.$col";
 	}
 	(my $value1 = $info1->{db}[0]{slurp}) =~ s/^\s*(\S+)\s*$/$1/;
 
@@ -4571,7 +4577,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.2.3>
 
- Documentaion tweaks.
+ Expand range of allowed names for --repinfo argument (Glyn Astill)
+ Documentation tweaks.
 
 =item B<Version 2.2.2> (September 30, 2008)
 
