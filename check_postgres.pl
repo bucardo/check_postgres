@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.2.2';
+our $VERSION = '2.2.3';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -3453,7 +3453,7 @@ sub check_replicate_row {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.2.2
+This documents describes check_postgres.pl version 2.2.3
 
 =head1 SYNOPSIS
 
@@ -3793,6 +3793,9 @@ smaller relations. Tables must have at least 10 pages, and indexes at least 15,
 before they can be considered by this test. If you really want to adjust these 
 values, you can look for the variables I<$MINPAGES> and I<$MINIPAGES> at the top of the 
 C<check_bloat> subroutine.
+
+Only the top 10 most bloated relations are shown. You can change this number by 
+using the I<--perflimit> option to set your own limit.
 
 The schema named 'information_schema' is excluded from this test, as the only tables 
 it contains are small and do not change.
@@ -4565,6 +4568,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.2.3>
+
+ Documentaion tweaks.
 
 =item B<Version 2.2.2> (September 30, 2008)
 
