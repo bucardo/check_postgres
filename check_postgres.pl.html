@@ -89,7 +89,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.2.2</p>
+This documents describes check_postgres.pl version 2.2.3</p>
 <p>
 </p>
 <hr />
@@ -433,6 +433,8 @@ smaller relations. Tables must have at least 10 pages, and indexes at least 15,
 before they can be considered by this test. If you really want to adjust these 
 values, you can look for the variables <em>$MINPAGES</em> and <em>$MINIPAGES</em> at the top of the 
 <code>check_bloat</code> subroutine.</p>
+<p>Only the top 10 most bloated relations are shown. You can change this number by 
+using the <em>--perflimit</em> option to set your own limit.</p>
 <p>The schema named 'information_schema' is excluded from this test, as the only tables 
 it contains are small and do not change.</p>
 <p>Please note that the values computed by this action are not precise, and 
@@ -1095,6 +1097,13 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="item_version_2_2e2_2e3"><strong>Version 2.2.3</strong></a></strong></dt>
+
+<dd>
+<pre>
+ Expand range of allowed names for --repinfo argument (Glyn Astill)
+ Documentation tweaks.</pre>
+</dd>
 <dt><strong><a name="item_2"><strong>Version 2.2.2</strong> (September 30, 2008)</a></strong></dt>
 
 <dd>
