@@ -2890,7 +2890,7 @@ sub check_txn_time {
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-xact_start)),0)) }.
 		qq{FROM pg_stat_activity WHERE xact_start IS NOT NULL $USERWHERECLAUSE GROUP BY 1};
 
-	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+], emptyok => 1 } );
+	my $info = run_command($SQL, { regex => qr[\s+\|\s+\d+], emptyok => 1 } );
 
 	my $found = 0;
 	for $db (@{$info->{db}}) {
