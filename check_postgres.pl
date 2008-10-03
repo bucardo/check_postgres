@@ -2916,7 +2916,7 @@ sub check_txn_time {
 		}
 		if ($max < 0) {
 			if ($USERWHERECLAUSE) {
-				add_unknown 'T-EXCLUDE-DB2';
+				add_unknown 'T-EXCLUDE-DB';
 			}
 			else {
 				add_ok 'No transactions';
