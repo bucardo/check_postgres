@@ -217,11 +217,13 @@ localtime
 logfile
 Logfile
 mallory
+minvalue
 morpork
 mrtg
 MRTG
 nagios
 NAGIOS
+nextval
 nols
 ok
 oskar

@@ -130,7 +130,7 @@ die $USAGE unless
 
 our $VERBOSE = $opt{verbose} || 0;
 
-our $OUTPUT = $opt{output} || '';
+our $OUTPUT = lc $opt{output} || '';
 
 ## Output the actual string returned by psql in the normal output
 ## Argument is 'a' for all, 'w' for warning, 'c' for critical, 'u' for unknown
@@ -1917,7 +1917,7 @@ sub check_database_size {
 	if (!$found and keys %unknown) {
 		(my $first) = values %unknown;
 		if ($first->[0][0] =~ /pg_database_size/) {
-			ndie 'Target database must be version 8.1 or higher to run the check_database_size action';
+			ndie 'Target database must be version 8.1 or higher to run the database_size action';
 		}
 	}
 
@@ -3039,7 +3039,7 @@ sub check_settings_checksum {
 	## You can use --critical="0" to find out the checksum
 	## You can include or exclude settings as well
 	## Example:
-	##  check_settings_checksum --critical="4e7ba68eb88915d3d1a36b2009da4acd"
+	##  check_postgres_settings_checksum --critical="4e7ba68eb88915d3d1a36b2009da4acd"
 
 	my ($warning, $critical) = validate_range({type => 'checksum', onlyone => 1});
 
@@ -3617,7 +3617,7 @@ I<L<--showtime|/--showtime=VAL>>.
 
 The MRTG output is four lines, with the first line always giving a single number of importance. 
 When possible, this number represents an actual value such as a number of bytes, but it 
-may also be a 1 or a 0 for actions that only return "true" or "false", such as check_version.
+may also be a 1 or a 0 for actions that only return "true" or "false", such as check_postgres_version.
 The second line is an additional stat and is only used for some actions. The third line indicates 
 an "uptime" and is not used. The fourth line is a description and usually indicates the name of 
 the database the stat from the first line was pulled from, but may be different depending on the 
@@ -4159,11 +4159,11 @@ it contains are small and do not change.
 Example 1: Warn if any table has not been vacuumed in 3 days, and give a 
 critical at a week, for host wormwood
 
-  check_last_vacuum --host=wormwood --warning='3d' --critical='7d'
+  check_postgres_last_vacuum --host=wormwood --warning='3d' --critical='7d'
 
 Example 2: Same as above, but skip tables belonging to the users 'eve' or 'mallory'
 
-  check_last_vacuum --host=wormwood --warning='3d' --critical='7d' --excludeusers=eve,mallory
+  check_postgres_last_vacuum --host=wormwood --warning='3d' --critical='7d' --excludeusers=eve,mallory
 
 For MRTG output, returns (on the first line) the LEAST amount of time in seconds since a table was 
 last vacuumed or analyzed. The fourth line returns the name of the database and name of the table.
@@ -4288,7 +4288,7 @@ line gives the name of the database.
 
 (C<symlink: check_postgres_sequence>) Checks how much room is left on all sequences in the database.
 This is measured as the percent of total possible values that have been used for each sequence. 
-The I<--warning> and I<--critical> options sould be expressed as percentages. The default values 
+The I<--warning> and I<--critical> options should be expressed as percentages. The default values 
 are B<85%> for the warning and B<95%> for the critical. You may use --include and --exclude to 
 control which sequences are to be checked. Note that this check does account for unusual B<minvalue> 
 and B<increment by> values, but does not care if the sequence is set to cycle or not.
@@ -4501,7 +4501,7 @@ For MRTG output, reports the number of WAL files on line 1.
 
 =head2 B<version>
 
-(C<symlink: check_version>) Checks that the required version of Postgres is running. The 
+(C<symlink: check_postgres_version>) Checks that the required version of Postgres is running. The 
 I<--warning> and I<--critical> options (only one is required) must be of 
 the format B<X.Y> or B<X.Y.Z> where B<X> is the major version number, 
 B<Y> is the minor version number, and B<Z> is the revision.
@@ -4689,6 +4689,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
  Add the "sequence" action, thanks to Gavin M. Roy for the idea.
  Fix minor problem with autovac_freeze action when using MRTG output.
+ Allow output argument to be case-insensitive.
+ Documentation fixes.
 
 =item B<Version 2.2.4>
 
@@ -4770,7 +4772,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 1.8.3> (June 18, 2008)
 
- Fix check_backends action: there may be no rows in pg_stat_activity, so run a second
+ Fix 'backends' action: there may be no rows in pg_stat_activity, so run a second
    query if needed to find the max_connections setting.
  Thanks to Jeff Frost for the bug report.
 
@@ -4780,7 +4782,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 1.8.1> (June 9, 2008)
 
- Allow check_bloat to work on Postgres version 8.0.
+ Allow 'bloat' action to work on Postgres version 8.0.
  Allow for different commands to be run for each action depending on the server version.
  Give better warnings when running actions not available on older Postgres servers.
 
@@ -4790,7 +4792,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 1.7.1> (June 2, 2008)
 
- Fix check_query_time action: account for race condition in which zero rows appear in pg_stat_activity.
+ Fix 'query_time' action: account for race condition in which zero rows appear in pg_stat_activity.
  Thanks to Dustin Black for the bug report.
 
 =item B<Version 1.7.0> (May 11, 2008)
@@ -4831,7 +4833,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 1.4.0> (April 2, 2008)
 
- Have check_wal_files use pg_ls_dir (idea by Robert Treat).
+ Have 'wal_files' action use pg_ls_dir (idea by Robert Treat).
  For last_vacuum and last_analyze, respect autovacuum effects, add separate 
    autovacuum checks (ideas by Robert Treat).
 
@@ -4845,11 +4847,11 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 1.2.0> (February 21, 2008)
 
- Add the check_wal_files method, which counts the number of WAL files
+ Add the 'wal_files' action, which counts the number of WAL files
    in your pg_xlog directory.
  Fix some typos in the docs.
  Explicitly allow -v as an argument.
- Allow for a null syslog_facility in check_logfile.
+ Allow for a null syslog_facility in the 'logfile' action.
 
 =item B<Version 1.1.2> (February 5, 2008)
 
