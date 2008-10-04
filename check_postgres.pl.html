@@ -56,6 +56,7 @@
 		<li><a href="#logfile"><strong>logfile</strong></a></li>
 		<li><a href="#query_runtime"><strong>query_runtime</strong></a></li>
 		<li><a href="#query_time"><strong>query_time</strong></a></li>
+		<li><a href="#sequence"><strong>sequence</strong></a></li>
 		<li><a href="#replicate_row"><strong>replicate_row</strong></a></li>
 		<li><a href="#txn_time"><strong>txn_time</strong></a></li>
 		<li><a href="#txn_idle"><strong>txn_idle</strong></a></li>
@@ -89,7 +90,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.2.4</p>
+This documents describes check_postgres.pl version 2.3.0</p>
 <p>
 </p>
 <hr />
@@ -165,7 +166,7 @@ took, can be output as well: see the documentation on the arguments
 <h3><a name="mrtg_output">MRTG output</a></h3>
 <p>The MRTG output is four lines, with the first line always giving a single number of importance. 
 When possible, this number represents an actual value such as a number of bytes, but it 
-may also be a 1 or a 0 for actions that only return &quot;true&quot; or &quot;false&quot;, such as check_version.
+may also be a 1 or a 0 for actions that only return &quot;true&quot; or &quot;false&quot;, such as check_postgres_version.
 The second line is an additional stat and is only used for some actions. The third line indicates 
 an &quot;uptime&quot; and is not used. The fourth line is a description and usually indicates the name of 
 the database the stat from the first line was pulled from, but may be different depending on the 
@@ -665,10 +666,10 @@ it contains are small and do not change.</p>
 <p>Example 1: Warn if any table has not been vacuumed in 3 days, and give a 
 critical at a week, for host wormwood</p>
 <pre>
-  check_last_vacuum --host=wormwood --warning='3d' --critical='7d'</pre>
+  check_postgres_last_vacuum --host=wormwood --warning='3d' --critical='7d'</pre>
 <p>Example 2: Same as above, but skip tables belonging to the users 'eve' or 'mallory'</p>
 <pre>
-  check_last_vacuum --host=wormwood --warning='3d' --critical='7d' --excludeusers=eve,mallory</pre>
+  check_postgres_last_vacuum --host=wormwood --warning='3d' --critical='7d' --excludeusers=eve,mallory</pre>
 <p>For MRTG output, returns (on the first line) the LEAST amount of time in seconds since a table was 
 last vacuumed or analyzed. The fourth line returns the name of the database and name of the table.</p>
 <p>
@@ -770,6 +771,27 @@ assumed to be seconds.</p>
   check_postgres_query_time --port=5432 --inclucdeuser=don --warning=20s</pre>
 <p>For MRTG output, returns the length in seconds of the longest running query on the first line. The fourth 
 line gives the name of the database.</p>
+<p>
+</p>
+<h2><a name="sequence"><strong>sequence</strong></a></h2>
+<p>(<code>symlink: check_postgres_sequence</code>) Checks how much room is left on all sequences in the database.
+This is measured as the percent of total possible values that have been used for each sequence. 
+The <em>--warning</em> and <em>--critical</em> options should be expressed as percentages. The default values 
+are <strong>85%</strong> for the warning and <strong>95%</strong> for the critical. You may use --include and --exclude to 
+control which sequences are to be checked. Note that this check does account for unusual <strong>minvalue</strong> 
+and <strong>increment by</strong> values, but does not care if the sequence is set to cycle or not.</p>
+<p>The output for Nagios gives the name of the sequence, the percentage used, and the number of 'calls' 
+left, indicating how many more times nextval can be called on that sequence before running into 
+the maximum value.</p>
+<p>The output for MRTG returns the highest percentage across all sequences on the first line, and 
+the name of each sequence with that percentage on the fourth line, separated by a &quot;|&quot; (pipe) 
+if there are more than one sequence at that percentage.</p>
+<p>Example 1: Give a warning if any sequences are approaching 95% full.</p>
+<pre>
+  check_postgres_sequence --dbport=5432 --warning=95%</pre>
+<p>Example 2: Check that the sequence named &quot;orders_id_seq&quot; is not more than half full.</p>
+<pre>
+  check_postgres_sequence --dbport=5432 --critical=50% --include=orders_id_seq</pre>
 <p>
 </p>
 <h2><a name="replicate_row"><strong>replicate_row</strong></a></h2>
@@ -936,7 +958,7 @@ out of space, at which point Postgres will shut down.</p>
 <p>
 </p>
 <h2><a name="version"><strong>version</strong></a></h2>
-<p>(<code>symlink: check_version</code>) Checks that the required version of Postgres is running. The 
+<p>(<code>symlink: check_postgres_version</code>) Checks that the required version of Postgres is running. The 
 <em>--warning</em> and <em>--critical</em> options (only one is required) must be of 
 the format <strong>X.Y</strong> or <strong>X.Y.Z</strong> where <strong>X</strong> is the major version number, 
 <strong>Y</strong> is the minor version number, and <strong>Z</strong> is the revision.</p>
@@ -1097,6 +1119,15 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="item_version_2_2e3_2e0"><strong>Version 2.3.0</strong></a></strong></dt>
+
+<dd>
+<pre>
+ Add the &quot;sequence&quot; action, thanks to Gavin M. Roy for the idea.
+ Fix minor problem with autovac_freeze action when using MRTG output.
+ Allow output argument to be case-insensitive.
+ Documentation fixes.</pre>
+</dd>
 <dt><strong><a name="item_version_2_2e2_2e4"><strong>Version 2.2.4</strong></a></strong></dt>
 
 <dd>
@@ -1211,7 +1242,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 
 <dd>
 <pre>
- Fix check_backends action: there may be no rows in pg_stat_activity, so run a second
+ Fix 'backends' action: there may be no rows in pg_stat_activity, so run a second
    query if needed to find the max_connections setting.
  Thanks to Jeff Frost for the bug report.</pre>
 </dd>
@@ -1225,7 +1256,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 
 <dd>
 <pre>
- Allow check_bloat to work on Postgres version 8.0.
+ Allow 'bloat' action to work on Postgres version 8.0.
  Allow for different commands to be run for each action depending on the server version.
  Give better warnings when running actions not available on older Postgres servers.</pre>
 </dd>
@@ -1239,7 +1270,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 
 <dd>
 <pre>
- Fix check_query_time action: account for race condition in which zero rows appear in pg_stat_activity.
+ Fix 'query_time' action: account for race condition in which zero rows appear in pg_stat_activity.
  Thanks to Dustin Black for the bug report.</pre>
 </dd>
 <dt><strong><strong>Version 1.7.0</strong> (May 11, 2008)</strong></dt>
@@ -1300,7 +1331,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 
 <dd>
 <pre>
- Have check_wal_files use pg_ls_dir (idea by Robert Treat).
+ Have 'wal_files' action use pg_ls_dir (idea by Robert Treat).
  For last_vacuum and last_analyze, respect autovacuum effects, add separate 
    autovacuum checks (ideas by Robert Treat).</pre>
 </dd>
@@ -1320,11 +1351,11 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 
 <dd>
 <pre>
- Add the check_wal_files method, which counts the number of WAL files
+ Add the 'wal_files' action, which counts the number of WAL files
    in your pg_xlog directory.
  Fix some typos in the docs.
  Explicitly allow -v as an argument.
- Allow for a null syslog_facility in check_logfile.</pre>
+ Allow for a null syslog_facility in the 'logfile' action.</pre>
 </dd>
 <dt><strong><strong>Version 1.1.2</strong> (February 5, 2008)</strong></dt>
 
