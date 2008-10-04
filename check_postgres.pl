@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.2.4';
+our $VERSION = '2.3.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -201,6 +201,7 @@ our $action_info = {
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
  replicate_row       => [0, 'Verify a simple update gets replicated to another server.'],
+ sequence            => [0, 'Checks remaining calls left in sequences.'],
  settings_checksum   => [0, 'Check that no settings have changed since the last check.'],
  timesync            => [0, 'Compare database time to local system time.'],
  txn_idle            => [1, 'Checks the maximum "idle in transaction" time.'],
@@ -682,6 +683,9 @@ check_custom_query() if $action eq 'custom_query';
 
 ## Test of replication
 check_replicate_row() if $action eq 'replicate_row';
+
+## Check sequence values
+check_sequence() if $action eq 'sequence';
 
 ## See how close we are to autovacuum_freeze_max_age
 check_autovac_freeze() if $action eq 'autovac_freeze';
@@ -1416,6 +1420,7 @@ sub check_autovac_freeze {
 			if ($MRTG) {
 				if ($percent > $maxp) {
 					$maxdb = $dbname;
+					$maxp = $percent;
 				}
 				elsif ($percent == $maxp) {
 					$maxdb .= sprintf "%s$dbname", length $maxdb ? ' | ' : '';
@@ -3454,12 +3459,92 @@ sub check_replicate_row {
 } ## end of check_replicate_row
 
 
+sub check_sequence {
+
+	## Checks how many values are left in sequences
+	## Supports: Nagios, MRTG
+	## Warning and critical are percentages
+	## Can exclude and include sequences
+
+	my ($warning, $critical) = validate_range
+		({
+		  type              => 'percent',
+		  default_warning   => '85%',
+		  default_critical  => '95%',
+		  forcemrtg         => 1,
+	  });
+
+	(my $w = $warning) =~ s/\D//;
+	(my $c = $critical) =~ s/\D//;
+
+	## Gather up all sequence names
+	my $SQL = q{SELECT nspname, relname, quote_ident(nspname)||'.'||quote_ident(relname)}.
+		q{ FROM pg_class JOIN pg_namespace n ON (relnamespace = n.oid) }.
+		q{ WHERE relkind = 'S' ORDER BY pg_class.oid DESC};
+
+	my $info = run_command($SQL, {regex => qr{\w}, emptyok => 1} );
+
+	for $db (@{$info->{db}}) {
+		my (@crit,@warn,@ok);
+		my $maxp = 0;
+		my %seqinfo;
+	  SLURP: while ($db->{slurp} =~ /\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gsm) {
+			my ($schema, $seq, $seqname) = ($1,$2,$3);
+			next if skip_item($seq);
+			$SQL = q{SELECT last_value, slots, used, ROUND(used/slots*100) AS percent, slots - used AS numleft FROM }.
+				q{ (SELECT last_value, CEIL((max_value-min_value+1)/increment_by::NUMERIC) AS slots,}.
+				qq{ CEIL((last_value-min_value+1)/increment_by::NUMERIC) AS used FROM $seqname) foo};
+			my $seqinfo = run_command($SQL);
+			if (!defined $seqinfo->{db}[0] or $seqinfo->{db}[0]{slurp} !~ /(\d+)\D+(\d+)\D+(\d+)\D+(\d+)\D+(\d+)/) {
+				ndie "Could not determine information about sequence $seqname";
+			}
+			my ($last, $slots, $used, $percent, $left) = ($1,$2,$3,$4,$5);
+			my $msg = "$seqname=$percent\% (calls left=$left)";
+			if ($percent >= $maxp) {
+				$maxp = $percent;
+				push @{$seqinfo{$percent}} => $MRTG ? [$seqname,$percent,$slots,$used,$left] : $msg;
+			}
+			next if $MRTG;
+
+			$db->{perf} .= " $seqname=$percent|$slots|$used|$left";
+			if (length $critical and $percent >= $c) {
+				push @crit => $msg;
+			}
+			elsif (length $warning and $percent >= $w) {
+				push @warn => $msg;
+			}
+		}
+		if ($MRTG) {
+			my $msg = join ' | ' => map { $_->[0] } @{$seqinfo{$maxp}};
+			do_mrtg({one => $maxp, msg => $msg});
+		}
+		if (@crit) {
+			add_critical join ' ' => @crit;
+		}
+		elsif (@warn) {
+			add_warning join ' ' => @warn;
+		}
+		else {
+			if (keys %seqinfo) {
+				add_ok join ' ' => @{$seqinfo{$maxp}};
+			}
+			else {
+				add_ok 'No sequences found';
+			}
+		}
+	}
+
+	return;
+
+} ## end of check_sequence
+
+
 =pod
 
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.2.4
+This documents describes check_postgres.pl version 2.3.0
 
 =head1 SYNOPSIS
 
@@ -4199,6 +4284,31 @@ Example 3: Warn if user 'don' has a query running over 20 seconds
 For MRTG output, returns the length in seconds of the longest running query on the first line. The fourth 
 line gives the name of the database.
 
+=head2 B<sequence>
+
+(C<symlink: check_postgres_sequence>) Checks how much room is left on all sequences in the database.
+This is measured as the percent of total possible values that have been used for each sequence. 
+The I<--warning> and I<--critical> options sould be expressed as percentages. The default values 
+are B<85%> for the warning and B<95%> for the critical. You may use --include and --exclude to 
+control which sequences are to be checked. Note that this check does account for unusual B<minvalue> 
+and B<increment by> values, but does not care if the sequence is set to cycle or not.
+
+The output for Nagios gives the name of the sequence, the percentage used, and the number of 'calls' 
+left, indicating how many more times nextval can be called on that sequence before running into 
+the maximum value.
+
+The output for MRTG returns the highest percentage across all sequences on the first line, and 
+the name of each sequence with that percentage on the fourth line, separated by a "|" (pipe) 
+if there are more than one sequence at that percentage.
+
+Example 1: Give a warning if any sequences are approaching 95% full.
+
+  check_postgres_sequence --dbport=5432 --warning=95%
+
+Example 2: Check that the sequence named "orders_id_seq" is not more than half full.
+
+  check_postgres_sequence --dbport=5432 --critical=50% --include=orders_id_seq
+
 =head2 B<replicate_row>
 
 (C<symlink: check_postgres_replicate_row>) Checks that master-slave replication is working to one or more slaves.
@@ -4574,6 +4684,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.3.0>
+
+ Add the "sequence" action, thanks to Gavin M. Roy for the idea.
+ Fix minor problem with autovac_freeze action when using MRTG output.
 
 =item B<Version 2.2.4>
 
