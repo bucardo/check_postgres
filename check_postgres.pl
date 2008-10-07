@@ -965,6 +965,11 @@ sub run_command {
 				$db->{error} =~ s/^psql: //;
 				$ERROR = $db->{error};
 			}
+
+			if ($db->{error} =~ /FATAL/) {
+				ndie "$db->{error}";
+			}
+
 			if (!$db->{ok} and !$arg->{failok}) {
 
 				## Check if problem is due to backend being too old for this check
