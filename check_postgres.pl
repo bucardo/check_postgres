@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.3.1';
+our $VERSION = '2.3.2';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -3344,10 +3344,10 @@ sub check_replicate_row {
 	}
 	my ($table,$pk,$id,$col,$val1,$val2) = (@repinfo);
 
-	## Quote funky identifiers
-	$table = qq{"$table"} if $table !~ /^\w+$/;
-	$pk    = qq{"$pk"}    if $pk    !~ /^\w+$/;
-	$col   = qq{"$col"}   if $col   !~ /^\w+$/;
+	## Quote everything, just to be safe (e.g. columns named 'desc')
+	$table = qq{"$table"};
+	$pk    = qq{"$pk"};
+	$col   = qq{"$col"};
 
 	if ($val1 eq $val2) {
 	  ndie 'Makes no sense to test replication with same values';
@@ -3549,7 +3549,7 @@ sub check_sequence {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.1
+This documents describes check_postgres.pl version 2.3.2
 
 =head1 SYNOPSIS
 
@@ -4689,6 +4689,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.3.2>
+
+ Always quote identifiers in check_replicate_row action.
 
 =item B<Version 2.3.1>
 
