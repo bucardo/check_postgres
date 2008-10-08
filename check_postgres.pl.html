@@ -90,7 +90,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.2</p>
+This documents describes check_postgres.pl version 2.3.3</p>
 <p>
 </p>
 <hr />
@@ -1120,6 +1120,13 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
 <dt><strong><a name="item_version_2_2e3_2e2"><strong>Version 2.3.2</strong></a></strong></dt>
+
+<dd>
+<pre>
+ Account for cases where some rounding queries give -0 instead of 0.
+  Thanks to Glyn Astill for helping to track this down.</pre>
+</dd>
+<dt><strong><strong>Version 2.3.2</strong></strong></dt>
 
 <dd>
 <pre>

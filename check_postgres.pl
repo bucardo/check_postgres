@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.3.2';
+our $VERSION = '2.3.3';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2840,7 +2840,7 @@ sub check_query_time {
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) }.
 		qq{FROM pg_stat_activity WHERE current_query <> '<IDLE>'$USERWHERECLAUSE GROUP BY 1};
 
-	$info = run_command($SQL, { regex => qr{\s*.+?\s+\|\s+\d+}, emptyok => 1 } );
+	$info = run_command($SQL, { regex => qr{\s*.+?\s+\|\s+\-?\d+}, emptyok => 1 } );
 
 	my $found = 0;
 	for $db (@{$info->{db}}) {
@@ -2852,8 +2852,8 @@ sub check_query_time {
 
 		$found = 1;
 		my $max = 0;
-	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\d+)\s*/gsm) {
-			my ($dbname,$current) = ($1,$2);
+	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
+			my ($dbname,$current) = ($1, int $2);
 			next SLURP if skip_item($dbname);
 			$max = $current if $current > $max;
 		}
@@ -2900,7 +2900,7 @@ sub check_txn_time {
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-xact_start)),0)) }.
 		qq{FROM pg_stat_activity WHERE xact_start IS NOT NULL $USERWHERECLAUSE GROUP BY 1};
 
-	my $info = run_command($SQL, { regex => qr[\s+\|\s+\d+], emptyok => 1 } );
+	my $info = run_command($SQL, { regex => qr[\s+\|\s+\-?\d+], emptyok => 1 } );
 
 	my $found = 0;
 	for $db (@{$info->{db}}) {
@@ -2915,8 +2915,8 @@ sub check_txn_time {
 		}
 		$found = 1;
 		my $max = -1;
-	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\d+)\s*/gsm) {
-			my ($dbname,$current) = ($1,$2);
+	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
+			my ($dbname,$current) = ($1, int $2);
 			next SLURP if skip_item($dbname);
 			$max = $current if $current > $max;
 		}
@@ -2973,7 +2973,7 @@ sub check_txn_idle {
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) }.
 		qq{FROM pg_stat_activity WHERE current_query = '<IDLE> in transaction'$USERWHERECLAUSE GROUP BY 1};
 
-	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\d+], emptyok => 1 } );
+	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\-?\d+], emptyok => 1 } );
 
 	my $found = 0;
 	for $db (@{$info->{db}}) {
@@ -2996,8 +2996,8 @@ sub check_txn_idle {
 		}
 
 		$found = 1;
-	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\d+)\s*/gsm) {
-			my ($dbname,$current) = ($1,$2);
+	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
+			my ($dbname,$current) = ($1, int $2);
 			next SLURP if skip_item($dbname);
 			$max = $current if $current > $max;
 		}
@@ -3549,7 +3549,7 @@ sub check_sequence {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.2
+This documents describes check_postgres.pl version 2.3.3
 
 =head1 SYNOPSIS
 
@@ -4689,6 +4689,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.3.2>
+
+ Account for cases where some rounding queries give -0 instead of 0.
+  Thanks to Glyn Astill for helping to track this down.
 
 =item B<Version 2.3.2>
 
