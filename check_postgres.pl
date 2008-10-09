@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.3.3';
+our $VERSION = '2.3.4';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -290,6 +290,7 @@ if ($opt{showtime}) {
 
 ## We don't (usually) want to die, but want a graceful Nagios-like exit instead
 sub ndie {
+	File::Temp::cleanup();
 	my $msg = shift;
 	chomp $msg;
 	print "ERROR: $msg\n";
@@ -1028,6 +1029,8 @@ sub run_command {
 	close $errfh or ndie qq{Could not close $errorfile: $!\n};
 	close $tempfh or ndie qq{Could not close $tempfile: $!\n};
 
+	File::Temp::cleanup();
+
 	$info->{hosts} = keys %host;
 
 	$VERBOSE >= 3 and warn Dumper $info;
@@ -1041,7 +1044,6 @@ sub run_command {
 	}
 
 	return $info;
-
 
 } ## end of run_command
 
@@ -3549,7 +3551,7 @@ sub check_sequence {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.3
+This documents describes check_postgres.pl version 2.3.4
 
 =head1 SYNOPSIS
 
@@ -4690,7 +4692,11 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.3.2>
+=item B<Version 2.3.4>
+
+ Do explicit cleanups of the temp directory, per problems reported by sb@nnx.com.
+
+=item B<Version 2.3.3>
 
  Account for cases where some rounding queries give -0 instead of 0.
   Thanks to Glyn Astill for helping to track this down.
