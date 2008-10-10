@@ -90,7 +90,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.4</p>
+This documents describes check_postgres.pl version 2.3.5</p>
 <p>
 </p>
 <hr />
@@ -470,7 +470,7 @@ the <code>custom_query</code> argument, and should be kept as simple as possible
 a view or a function to keep things easier to manage. The query should return one or two columns: the first 
 is the result that will be checked, and the second is any performance data you want sent.</p>
 <p>At least one warning or critical argument must be specified. What these are set to depends on the type of 
-query you are running. There are four types of custom_queries that can be run, specified by the <code>checktype</code> 
+query you are running. There are four types of custom_queries that can be run, specified by the <code>valtype</code> 
 argument. If none is specified, this action defaults to 'integer'. The four types are:</p>
 <p><strong>integer</strong>:
 Does a simple integer comparison. The first column should be a simple integer, and the warning and 
@@ -492,10 +492,10 @@ value. However, an option of <em>--reverse</em> will trigger the alert if the re
 <strong>lower than</strong> or equal to the critical or warning value.</p>
 <p>Example 1: Warn if any relation over 100 pages is named &quot;rad&quot;:</p>
 <pre>
-  check_postgres_custom_query --checktype=string -w &quot;rad&quot; --query=&quot;SELECT relname FROM pg_class WHERE relpages &gt; 100&quot; --port=5432</pre>
+  check_postgres_custom_query --valtype=string -w &quot;rad&quot; --query=&quot;SELECT relname FROM pg_class WHERE relpages &gt; 100&quot; --port=5432</pre>
 <p>Example 2: Give a critical if the &quot;foobar&quot; function returns a number over 5MB:</p>
 <pre>
-  check_postgres_custom_query --port=5432 --critical='5MB'--checktype=size --query=&quot;SELECT foobar()&quot;</pre>
+  check_postgres_custom_query --port=5432 --critical='5MB'--valtype=size --query=&quot;SELECT foobar()&quot;</pre>
 <p>Example 2: Warn if the function &quot;snazzo&quot; returns less than 42:</p>
 <pre>
   check_postgres_custom_query --port=5432 --critical=42 --query=&quot;SELECT snazzo()&quot; --reverse</pre>
@@ -1119,6 +1119,13 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="item_version_2_2e3_2e5"><strong>Version 2.3.5</strong></a></strong></dt>
+
+<dd>
+<pre>
+ Change option 'checktype' to 'valtype' to prevent collisions with -c[ritical]
+ Better handling of errors.</pre>
+</dd>
 <dt><strong><a name="item_version_2_2e3_2e4"><strong>Version 2.3.4</strong></a></strong></dt>
 
 <dd>
