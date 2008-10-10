@@ -971,10 +971,14 @@ sub run_command {
 				ndie "$db->{error}";
 			}
 
-			if (!$db->{ok} and !$arg->{failok}) {
+			if (!$db->{ok} and !$arg->{failok} and !$arg->{noverify}) {
 
 				## Check if problem is due to backend being too old for this check
 				verify_version();
+
+				if (exists $db->{error}) {
+					ndie $db->{error};
+				}
 
 				add_unknown;
 				## Remove it from the returned hash
@@ -1058,7 +1062,14 @@ sub verify_version {
 	## We almost always need the version, so just grab it for any limitation
 	$SQL = q{SELECT setting FROM pg_settings WHERE name = 'server_version'};
 	my $oldslurp = $db->{slurp} || '';
-	my $info = run_command($SQL);
+	my $info = run_command($SQL, {noverify => 1});
+	if (defined $info->{db}[0]
+		and exists $info->{db}[0]{error}
+		and defined $info->{db}[0]{error}
+		) {
+		ndie $info->{db}[0]{error};
+	}
+
 	if (!defined $info->{db}[0] or $info->{db}[0]{slurp} !~ /((\d+)\.(\d+))/) {
 		die "Could not determine version while running $SQL\n";
 	}
@@ -4695,6 +4706,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.3.5>
 
  Change option 'checktype' to 'valtype' to prevent collisions with -c[ritical]
+ Better handling of errors.
 
 =item B<Version 2.3.4>
 
