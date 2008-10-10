@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.3.4';
+our $VERSION = '2.3.5';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -120,7 +120,7 @@ die $USAGE unless
 			   'logfile=s',   ## used by check_logfile only
 			   'queryname=s', ## used by query_runtime only
 			   'query=s',     ## used by custom_query only
-			   'checktype=s', ## used by custom_query only
+			   'valtype=s',   ## used by custom_query only
 			   'reverse',     ## used by custom_query only
 			   'repinfo=s',   ## used by replicate_row only
 			   'schema=s',    ## used by fsm_* checks only
@@ -3269,9 +3269,9 @@ sub check_custom_query {
     ## Run a user-supplied query, then parse the results
 	## If you end up using this to make a useful query, consider making it 
 	## into a specific action and sending in a patch!
-	## Checktype must be one of: string, time, size, integer
+	## valtype must be one of: string, time, size, integer
 
-	my $valtype = $opt{checktype} || 'integer';
+	my $valtype = $opt{valtype} || 'integer';
 
 	my ($warning, $critical) = validate_range({type => $valtype, leastone => 1});
 
@@ -3551,7 +3551,7 @@ sub check_sequence {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.4
+This documents describes check_postgres.pl version 2.3.5
 
 =head1 SYNOPSIS
 
@@ -3936,7 +3936,7 @@ a view or a function to keep things easier to manage. The query should return on
 is the result that will be checked, and the second is any performance data you want sent.
 
 At least one warning or critical argument must be specified. What these are set to depends on the type of 
-query you are running. There are four types of custom_queries that can be run, specified by the C<checktype> 
+query you are running. There are four types of custom_queries that can be run, specified by the C<valtype> 
 argument. If none is specified, this action defaults to 'integer'. The four types are:
 
 B<integer>:
@@ -3964,11 +3964,11 @@ B<lower than> or equal to the critical or warning value.
 
 Example 1: Warn if any relation over 100 pages is named "rad":
 
-  check_postgres_custom_query --checktype=string -w "rad" --query="SELECT relname FROM pg_class WHERE relpages > 100" --port=5432
+  check_postgres_custom_query --valtype=string -w "rad" --query="SELECT relname FROM pg_class WHERE relpages > 100" --port=5432
 
 Example 2: Give a critical if the "foobar" function returns a number over 5MB:
 
-  check_postgres_custom_query --port=5432 --critical='5MB'--checktype=size --query="SELECT foobar()"
+  check_postgres_custom_query --port=5432 --critical='5MB'--valtype=size --query="SELECT foobar()"
 
 Example 2: Warn if the function "snazzo" returns less than 42:
 
@@ -4691,6 +4691,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.3.5>
+
+ Change option 'checktype' to 'valtype' to prevent collisions with -c[ritical]
 
 =item B<Version 2.3.4>
 
