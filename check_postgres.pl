@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.3.5';
+our $VERSION = '2.3.6';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2149,7 +2149,7 @@ sub check_fsm_pages {
 	 		  qq{FROM (SELECT (sumrequests+numrels)*chunkpages AS pages\n}.
 			  qq{ FROM (SELECT SUM(CASE WHEN avgrequest IS NULL THEN interestingpages/32 }.
 			  qq{ ELSE interestingpages/16 END) AS sumrequests,\n}.
-			  qq{ COUNT(relfilenode) AS numrels, 16 AS chunkpages FROM pg_freespacemap_relations) AS foo) AS foo2,\n}.
+			  qq{ COUNT(relfilenode) AS numrels, 16 AS chunkpages FROM $schema.pg_freespacemap_relations) AS foo) AS foo2,\n}.
 			  qq{ (SELECT setting::NUMERIC AS maxx FROM pg_settings WHERE name = 'max_fsm_pages') AS foo3};
 
 	my $info = run_command($SQL, {regex => qr[\d+] } );
@@ -3562,7 +3562,7 @@ sub check_sequence {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.5
+This documents describes check_postgres.pl version 2.3.6
 
 =head1 SYNOPSIS
 
@@ -4702,6 +4702,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.3.6>
+
+ Add missing $schema to check_fsm_pages. (Robert Treat)
 
 =item B<Version 2.3.5>
 
