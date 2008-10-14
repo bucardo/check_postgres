@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.3.6';
+our $VERSION = '2.3.7';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -824,7 +824,12 @@ sub run_command {
 
 		## If we were passed in a target, use that and move on
 		if (exists $arg->{target}) {
-			push @target, $arg->{target};
+			## Make a copy, in case we are passed in a ref
+			my $newtarget;
+			for my $key (keys %$conn) {
+				$newtarget->{$key} = exists $arg->{target}{$key} ? $arg->{target}{$key} : $conn->{$key};
+			}
+			push @target, $newtarget;
 			last GROUP;
 		}
 
@@ -3506,13 +3511,14 @@ sub check_sequence {
 		my (@crit,@warn,@ok);
 		my $maxp = 0;
 		my %seqinfo;
+		my $multidb = @{$info->{db}} > 1 ? "$db->{dbname}." : '';
 	  SLURP: while ($db->{slurp} =~ /\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gsm) {
 			my ($schema, $seq, $seqname) = ($1,$2,$3);
 			next if skip_item($seq);
 			$SQL = q{SELECT last_value, slots, used, ROUND(used/slots*100) AS percent, slots - used AS numleft FROM }.
 				q{ (SELECT last_value, CEIL((max_value-min_value+1)/increment_by::NUMERIC) AS slots,}.
 				qq{ CEIL((last_value-min_value+1)/increment_by::NUMERIC) AS used FROM $seqname) foo};
-			my $seqinfo = run_command($SQL);
+			my $seqinfo = run_command($SQL, { target => $db });
 			if (!defined $seqinfo->{db}[0] or $seqinfo->{db}[0]{slurp} !~ /(\d+)\D+(\d+)\D+(\d+)\D+(\d+)\D+(\d+)/) {
 				ndie "Could not determine information about sequence $seqname";
 			}
@@ -3524,7 +3530,7 @@ sub check_sequence {
 			}
 			next if $MRTG;
 
-			$db->{perf} .= " $seqname=$percent|$slots|$used|$left";
+			$db->{perf} .= " $multidb$seqname=$percent|$slots|$used|$left";
 			if (length $critical and $percent >= $c) {
 				push @crit => $msg;
 			}
@@ -3562,7 +3568,7 @@ sub check_sequence {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.6
+This documents describes check_postgres.pl version 2.3.7
 
 =head1 SYNOPSIS
 
@@ -4702,6 +4708,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.3.7>
+
+ Allow multiple databases in 'sequence' action. Reported by Christoph Zwerschke.
 
 =item B<Version 2.3.6>
 
