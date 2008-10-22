@@ -354,7 +354,7 @@ sub add_response {
 			$db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
 				$db->{port} eq $DEF_PGPORT ? '' : qq{(port=$db->{port}) };
 	$header =~ s/\s+$//;
-	my $perf = $opt{showtime} ? "time=$db->{totaltime}" : '';
+	my $perf = ($opt{showtime} and $db->{totaltime}) ? "time=$db->{totaltime}" : '';
 	if ($db->{perf}) {
 		$perf .= " $db->{perf}";
 	}
