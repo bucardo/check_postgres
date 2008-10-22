@@ -4525,7 +4525,7 @@ Example 1: Check the default values for the localhost database
 
 Example 2: Check port 6000 and give a critical at 1.7 billion transactions left:
 
-  check_postgres_txn_wraparound --port=6000 --critical=1_700_000_000t
+  check_postgres_txn_wraparound --port=6000 --critical=1_700_000_000
 
 For MRTG output, returns the highest number of transactions for all databases on line one, 
 while line 4 indicates which database it is.
