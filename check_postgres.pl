@@ -2761,8 +2761,8 @@ sub check_logfile {
 		delete $db->{ok}; delete $db->{slurp}; delete $db->{totaltime};
 		my $badinfo = run_command("SELECT $funky", {failok => 1, target => $db} );
 
-		my $MAXSLEEPTIME = 3;
-		my $SLEEP = 0.5;
+		my $MAXSLEEPTIME = 4;
+		my $SLEEP = 1;
 		my $found = 0;
 	  LOGWAIT: {
 			sleep $SLEEP;
