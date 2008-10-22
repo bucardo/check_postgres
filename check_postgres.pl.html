@@ -90,7 +90,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.7</p>
+This documents describes check_postgres.pl version 2.3.8</p>
 <p>
 </p>
 <hr />
@@ -178,7 +178,10 @@ action.</p>
 <h3><a name="simple_output">Simple output</a></h3>
 <p>The simple output is simply a truncated version of the MRTG one, and simply returns the first number 
 and nothing else. This is very useful when you just want to check the state of something, regardless 
-of any threshold.</p>
+of any threshold. You can transform the numeric output by appending KB, MB, GB, TB, or EB to the output 
+argument, for example:</p>
+<pre>
+  --output=simple,MB</pre>
 <p>
 </p>
 <hr />
@@ -1119,6 +1122,13 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="item_version_2_2e3_2e8"><strong>Version 2.3.8</strong></a></strong></dt>
+
+<dd>
+<pre>
+ Allow the default port to be changed easily.
+ Allow transform of simple output by MB, GB, etc.</pre>
+</dd>
 <dt><strong><a name="item_version_2_2e3_2e7"><strong>Version 2.3.7</strong></a></strong></dt>
 
 <dd>

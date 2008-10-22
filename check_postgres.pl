@@ -3594,7 +3594,7 @@ sub check_sequence {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.7
+This documents describes check_postgres.pl version 2.3.8
 
 =head1 SYNOPSIS
 
