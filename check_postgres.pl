@@ -28,7 +28,9 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.3.7';
+our $VERSION = '2.3.8';
+
+our $DEF_PGPORT = 5432;
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -228,7 +230,7 @@ This is version $VERSION.
 
 Common connection options:
  -H,  --host=NAME    hostname(s) to connect to; defaults to none (Unix socket)
- -p,  --port=NUM     port(s) to connect to; defaults to 5432.
+ -p,  --port=NUM     port(s) to connect to; defaults to $DEF_PGPORT.
  -db, --dbname=NAME  database name(s) to connect to; defaults to 'postgres' or 'template1'
  -u   --dbuser=NAME  database user(s) to connect as; defaults to 'postgres'
       --dbpass=PASS  database password(s); use a .pgpass file instead when possible
@@ -341,7 +343,7 @@ sub add_response {
 	my $header = sprintf q{%s%s%s},
 		$action_info->{$action}[0] ? '' : qq{DB "$db->{dbname}" },
 			$db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
-				$db->{port} eq '5432' ? '' : qq{(port=$db->{port}) };
+				$db->{port} eq $DEF_PGPORT ? '' : qq{(port=$db->{port}) };
 	$header =~ s/\s+$//;
 	my $perf = $opt{showtime} ? "time=$db->{totaltime}" : '';
 	if ($db->{perf}) {
@@ -812,7 +814,7 @@ sub run_command {
 	my $conn =
 		{
 		 host   => ['<none>'],
-		 port   => [5432],
+		 port   => [$DEF_PGPORT],
 		 dbname => [$opt{defaultdb}],
 		 dbuser => [$opt{defaultuser}],
 		 dbpass => [''],
