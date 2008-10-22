@@ -156,6 +156,15 @@ if (!$OUTPUT) {
 	}
 }
 
+
+## Extract transforms from the output
+$opt{transform} = '';
+if ($OUTPUT =~ /\b(kb|mb|gb|tb|eb)\b/) {
+	$opt{transform} = uc $1;
+}
+if ($OUTPUT =~ /(nagios|mrtg|simple)/io) {
+	$OUTPUT = lc $1;
+}
 ## Check for a valid output setting
 if ($OUTPUT ne 'nagios' and $OUTPUT ne 'mrtg' and $OUTPUT ne 'simple') {
 	die qq{Invalid output: must be 'nagios' or 'mrtg' or 'simple'\n};
@@ -376,6 +385,21 @@ sub do_mrtg {
 	my $two = $arg->{two} || 0;
 	if ($SIMPLE) {
 		$one = $two if (length $two and $two > $one);
+		if ($opt{transform} eq 'KB' and $one =~ /^\d+$/) {
+			$one = int $one/(1024);
+		}
+		if ($opt{transform} eq 'MB' and $one =~ /^\d+$/) {
+			$one = int $one/(1024*1024);
+		}
+		elsif ($opt{transform} eq 'GB' and $one =~ /^\d+$/) {
+			$one = int $one/(1024*1024*1024);
+		}
+		elsif ($opt{transform} eq 'TB' and $one =~ /^\d+$/) {
+			$one = int $one/(1024*1024*1024*1024);
+		}
+		elsif ($opt{transform} eq 'EB' and $one =~ /^\d+$/) {
+			$one = int $one/(1024*1024*1024*1024*1024);
+		}
 		print "$one\n";
 	}
 	else {
@@ -3657,7 +3681,10 @@ See the documentation on each action for details on the exact MRTG output for ea
 
 The simple output is simply a truncated version of the MRTG one, and simply returns the first number 
 and nothing else. This is very useful when you just want to check the state of something, regardless 
-of any threshold.
+of any threshold. You can transform the numeric output by appending KB, MB, GB, TB, or EB to the output 
+argument, for example:
+
+  --output=simple,MB
 
 =head1 DATABASE CONNECTION OPTIONS
 
@@ -4710,6 +4737,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.3.8>
+
+ Allow the default port to be changed easily.
+ Allow transform of simple output by MB, GB, etc.
 
 =item B<Version 2.3.7>
 
