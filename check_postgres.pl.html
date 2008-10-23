@@ -90,7 +90,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.8</p>
+This documents describes check_postgres.pl version 2.3.9</p>
 <p>
 </p>
 <hr />
@@ -936,7 +936,7 @@ number represents and what to do about it, please visit the page
   check_postgres_txn_wraparound --host=localhost</pre>
 <p>Example 2: Check port 6000 and give a critical at 1.7 billion transactions left:</p>
 <pre>
-  check_postgres_txn_wraparound --port=6000 --critical=1_700_000_000t</pre>
+  check_postgres_txn_wraparound --port=6000 --critical=1_700_000_000</pre>
 <p>For MRTG output, returns the highest number of transactions for all databases on line one, 
 while line 4 indicates which database it is.</p>
 <p>
@@ -1122,6 +1122,12 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="item_version_2_2e3_2e9"><strong>Version 2.3.9</strong></a></strong></dt>
+
+<dd>
+<pre>
+ Minor tweak to way we store the default port.</pre>
+</dd>
 <dt><strong><a name="item_version_2_2e3_2e8"><strong>Version 2.3.8</strong></a></strong></dt>
 
 <dd>
