@@ -28,9 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.3.8';
-
-our $DEF_PGPORT = 5432;
+our $VERSION = '2.3.9';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -49,6 +47,9 @@ $opt{showtime} = 1;
 
 ## Which user to connect as if --dbuser is not given
 $opt{defaultuser} = 'postgres';
+
+## Which port to connect to if --dbport is not given
+$opt{defaultport} = 5432;
 
 ## If true, we show "after the pipe" statistics
 $opt{showperf} = 1;
@@ -239,9 +240,9 @@ This is version $VERSION.
 
 Common connection options:
  -H,  --host=NAME    hostname(s) to connect to; defaults to none (Unix socket)
- -p,  --port=NUM     port(s) to connect to; defaults to $DEF_PGPORT.
+ -p,  --port=NUM     port(s) to connect to; defaults to $opt{defaultport}.
  -db, --dbname=NAME  database name(s) to connect to; defaults to 'postgres' or 'template1'
- -u   --dbuser=NAME  database user(s) to connect as; defaults to 'postgres'
+ -u   --dbuser=NAME  database user(s) to connect as; defaults to '$opt{defaultuser}'
       --dbpass=PASS  database password(s); use a .pgpass file instead when possible
 
 Connection options can be grouped: --host=a,b --host=c --port=1234 --port=3344
@@ -352,7 +353,7 @@ sub add_response {
 	my $header = sprintf q{%s%s%s},
 		$action_info->{$action}[0] ? '' : qq{DB "$db->{dbname}" },
 			$db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
-				$db->{port} eq $DEF_PGPORT ? '' : qq{(port=$db->{port}) };
+				$db->{port} eq $opt{defaultport} ? '' : qq{(port=$db->{port}) };
 	$header =~ s/\s+$//;
 	my $perf = ($opt{showtime} and $db->{totaltime}) ? "time=$db->{totaltime}" : '';
 	if ($db->{perf}) {
@@ -838,7 +839,7 @@ sub run_command {
 	my $conn =
 		{
 		 host   => ['<none>'],
-		 port   => [$DEF_PGPORT],
+		 port   => [$opt{defaultport}],
 		 dbname => [$opt{defaultdb}],
 		 dbuser => [$opt{defaultuser}],
 		 dbpass => [''],
@@ -3594,7 +3595,7 @@ sub check_sequence {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.8
+This documents describes check_postgres.pl version 2.3.9
 
 =head1 SYNOPSIS
 
@@ -4737,6 +4738,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.3.9>
+
+ Minor tweak to way we store the default port.
 
 =item B<Version 2.3.8>
 
