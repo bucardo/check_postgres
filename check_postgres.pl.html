@@ -90,7 +90,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.9</p>
+This documents describes check_postgres.pl version 2.3.10</p>
 <p>
 </p>
 <hr />
@@ -1122,6 +1122,14 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="item_version_2_2e3_2e10"><strong>Version 2.3.10</strong></a></strong></dt>
+
+<dd>
+<pre>
+ Fix minor warning in action check_bloat with multiple databases.
+ Allow warning to be greater than critical when using the --reverse option.
+ Support the --perflimit option for the check_sequence action.</pre>
+</dd>
 <dt><strong><a name="item_version_2_2e3_2e9"><strong>Version 2.3.9</strong></a></strong></dt>
 
 <dd>

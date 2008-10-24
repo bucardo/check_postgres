@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.3.9';
+our $VERSION = '2.3.10';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -1327,6 +1327,7 @@ sub validate_range {
 				$type =~ /positive/ ? 'a positive' : 'an';
 		}
 		if (length $warning and length $critical and $warning > $critical) {
+			return if $opt{reverse};
 			ndie qq{The 'warning' option cannot be greater than the 'critical' option\n};
 		}
 	}
@@ -1665,12 +1666,12 @@ SELECT
   ROUND(CASE WHEN otta=0 THEN 0.0 ELSE sml.relpages/otta::numeric END,1) AS tbloat,
   CASE WHEN relpages < otta THEN 0 ELSE relpages::bigint - otta END AS wastedpages,
   CASE WHEN relpages < otta THEN 0 ELSE bs*(sml.relpages-otta)::bigint END AS wastedbytes,
-  CASE WHEN relpages < otta THEN pg_size_pretty(0) ELSE pg_size_pretty((bs*(relpages-otta))::bigint) END AS wastedsize,
+  CASE WHEN relpages < otta THEN '0 bytes'::text ELSE (bs*(relpages-otta))::bigint || ' bytes' END AS wastedsize,
   iname, ituples::bigint, ipages::bigint, iotta,
   ROUND(CASE WHEN iotta=0 OR ipages=0 THEN 0.0 ELSE ipages/iotta::numeric END,1) AS ibloat,
   CASE WHEN ipages < iotta THEN 0 ELSE ipages::bigint - iotta END AS wastedipages,
   CASE WHEN ipages < iotta THEN 0 ELSE bs*(ipages-iotta) END AS wastedibytes,
-  CASE WHEN ipages < iotta THEN pg_size_pretty(0) ELSE pg_size_pretty((bs*(ipages-iotta))::bigint) END AS wastedisize
+  CASE WHEN ipages < iotta THEN '0 bytes' ELSE (bs*(ipages-iotta))::bigint || ' bytes' END AS wastedisize
 FROM (
   SELECT
     schemaname, tablename, cc.reltuples, cc.relpages, bs,
@@ -1712,9 +1713,7 @@ WHERE sml.relpages - otta > $MINPAGES OR ipages - iotta > $MINIPAGES
 ORDER BY wastedbytes DESC LIMIT $LIMIT
 };
 
-	(my $SQL2 = $SQL) =~ s/pg_size_pretty\((.+?)\) /$1 || ' bytes' /g;
-
-	my $info = run_command($SQL, { version => {'8.0' => $SQL2}});
+	my $info = run_command($SQL);
 
 	if (defined $info->{db}[0] and exists $info->{db}[0]{error}) {
 		ndie $info->{db}[0]{error};
@@ -1732,10 +1731,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 			next;
 		}
 
-		## 8.0 does not have pg_size_pretty, so we'll do it ourselves
-		if ($db->{version} eq '8.0') {
-			$db->{slurp} =~ s/\| (\d+) bytes/'| ' . pretty_size($1,1)/ge;
-		}
+		$db->{slurp} =~ s/\| (\d+) bytes/'| ' . pretty_size($1,1)/ge;
 		my $max = -1;
 		my $maxmsg = '?';
 	  SLURP: for (split /\n/o => $db->{slurp}) {
@@ -3538,6 +3534,7 @@ sub check_sequence {
 		my (@crit,@warn,@ok);
 		my $maxp = 0;
 		my %seqinfo;
+		my %seqperf;
 		my $multidb = @{$info->{db}} > 1 ? "$db->{dbname}." : '';
 	  SLURP: while ($db->{slurp} =~ /\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gsm) {
 			my ($schema, $seq, $seqname) = ($1,$2,$3);
@@ -3551,13 +3548,13 @@ sub check_sequence {
 			}
 			my ($last, $slots, $used, $percent, $left) = ($1,$2,$3,$4,$5);
 			my $msg = "$seqname=$percent\% (calls left=$left)";
+			$seqperf{$percent}{$seqname} = [$left, " $multidb$seqname=$percent|$slots|$used|$left"];
 			if ($percent >= $maxp) {
 				$maxp = $percent;
 				push @{$seqinfo{$percent}} => $MRTG ? [$seqname,$percent,$slots,$used,$left] : $msg;
 			}
 			next if $MRTG;
 
-			$db->{perf} .= " $multidb$seqname=$percent|$slots|$used|$left";
 			if (length $critical and $percent >= $c) {
 				push @crit => $msg;
 			}
@@ -3569,6 +3566,14 @@ sub check_sequence {
 			my $msg = join ' | ' => map { $_->[0] } @{$seqinfo{$maxp}};
 			do_mrtg({one => $maxp, msg => $msg});
 		}
+		my $limit = 0;
+	  PERF: for my $val (sort { $b <=> $a } keys %seqperf) {
+			for my $seq (sort { $seqperf{$val}{$a}->[0] <=> $seqperf{$val}{$b}->[0] or $a cmp $b } keys %{$seqperf{$val}}) {
+				last PERF if exists $opt{perflimit} and $limit++ >= $opt{perflimit};
+				$db->{perf} .= $seqperf{$val}{$seq}->[1];
+			}
+		}
+
 		if (@crit) {
 			add_critical join ' ' => @crit;
 		}
@@ -3595,7 +3600,7 @@ sub check_sequence {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.9
+This documents describes check_postgres.pl version 2.3.10
 
 =head1 SYNOPSIS
 
@@ -4738,6 +4743,12 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.3.10>
+
+ Fix minor warning in action check_bloat with multiple databases.
+ Allow warning to be greater than critical when using the --reverse option.
+ Support the --perflimit option for the check_sequence action.
 
 =item B<Version 2.3.9>
 
