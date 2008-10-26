@@ -1635,7 +1635,8 @@ sub check_backends {
 		if ($MRTG) {
 			do_mrtg({one => 1, msg => "DB=$db->{dbname} Max connections=$limit"});
 		}
-		add_ok qq{1 of $limit connections};
+		my $percent = (int 1/$limit*100) || 1;
+		add_ok qq{1 of $limit connections ($percent%)};
 		return;
 	}
 
@@ -1658,7 +1659,8 @@ sub check_backends {
 			add_unknown 'T-EXCLUDE-DB';
 			next;
 		}
-		my $msg = qq{$total of $limit connections};
+		my $percent = (int $total / $limit*100) || 1;
+		my $msg = qq{$total of $limit connections ($percent%)};
 		my $ok = 1;
 		if ($e1) { ## minus
 			$ok = 0 if $limit-$total >= $e2;
@@ -4819,6 +4821,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.3.11>
 
  Pretty up the time output for last vacuum and analyze actions.
+ Show the percentage of backends on the check_backends action.
 
 =item B<Version 2.3.10>
 
