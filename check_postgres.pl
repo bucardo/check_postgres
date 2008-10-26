@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.3.10';
+our $VERSION = '2.3.11';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -789,6 +789,76 @@ sub pretty_size {
 	return $bytes;
 
 } ## end of pretty_size
+
+
+sub pretty_time {
+
+	## Transform number of seconds to a more human-readable format
+	## First argument is number of seconds
+	## Second optional arg is highest transform: s,m,h,d,w
+	## If uppercase, it indicates to "round that one out"
+
+	my $sec = shift;
+	my $tweak = shift || '';
+
+	## Just seconds (< 2:00)
+	if ($sec < 120 or $tweak =~ /s/) {
+		return sprintf "$sec %s", $sec==1 ? 'second' : 'seconds';
+	}
+
+	## Minutes and seconds (< 60:00)
+	if ($sec < 60*60 or $tweak =~ /m/) {
+		my $min = int $sec / 60;
+		$sec %= 60;
+		my $ret = sprintf "$min %s", $min==1 ? 'minute' : 'minutes';
+		$sec and $tweak !~ /S/ and $ret .= sprintf " $sec %s", $sec==1 ? 'second' : 'seconds';
+		return $ret;
+	}
+
+	## Hours, minutes, and seconds (< 48:00:00)
+	if ($sec < 60*60*24*2 or $tweak =~ /h/) {
+		my $hour = int $sec / (60*60);
+		$sec -= ($hour*60*60);
+		my $min = int $sec / 60;
+		$sec -= ($min*60);
+		my $ret = sprintf "$hour %s", $hour==1 ? 'hour' : 'hours';
+		$min and $tweak !~ /M/ and $ret .= sprintf " $min %s", $min==1 ? 'minute' : 'minutes';
+		$sec and $tweak !~ /[SM]/ and $ret .= sprintf " $sec %s", $sec==1 ? 'second' : 'seconds';
+		return $ret;
+	}
+
+	## Days, hours, minutes, and seconds (< 28 days)
+	if ($sec < 60*60*24*28 or $tweak =~ /d/) {
+		my $day = int $sec / (60*60*24);
+		$sec -= ($day*60*60*24);
+		my $our = int $sec / (60*60);
+		$sec -= ($our*60*60);
+		my $min = int $sec / 60;
+		$sec -= ($min*60);
+		my $ret = sprintf "$day %s", $day==1 ? 'day' : 'days';
+		$our and $tweak !~ /H/     and $ret .= sprintf " $our %s", $our==1 ? 'hour'   : 'hours';
+		$min and $tweak !~ /[HM]/  and $ret .= sprintf " $min %s", $min==1 ? 'minute' : 'minutes';
+		$sec and $tweak !~ /[HMS]/ and $ret .= sprintf " $sec %s", $sec==1 ? 'second' : 'seconds';
+		return $ret;
+	}
+
+	## Weeks, days, hours, minutes, and seconds (< 28 days)
+	my $week = int $sec / (60*60*24*7);
+	$sec -= ($week*60*60*24*7);
+	my $day = int $sec / (60*60*24);
+	$sec -= ($day*60*60*24);
+	my $our = int $sec / (60*60);
+	$sec -= ($our*60*60);
+	my $min = int $sec / 60;
+	$sec -= ($min*60);
+	my $ret = sprintf "$week %s", $week==1 ? 'week' : 'weeks';
+	$day and $tweak !~ /D/      and $ret .= sprintf " $day %s", $day==1 ? 'day'    : 'days';
+	$our and $tweak !~ /[DH]/   and $ret .= sprintf " $our %s", $our==1 ? 'hour'   : 'hours';
+	$min and $tweak !~ /[DHM]/  and $ret .= sprintf " $min %s", $min==1 ? 'minute' : 'minutes';
+	$sec and $tweak !~ /[DHMS]/ and $ret .= sprintf " $sec %s", $sec==1 ? 'second' : 'seconds';
+	return $ret;
+
+} ## end of pretty_time
 
 
 sub run_command {
@@ -2394,6 +2464,7 @@ sub check_relation_size {
 	return;
 
 } ## end of check_relations_size
+
 sub check_table_size {
 	return check_relation_size('table');
 }
@@ -2485,7 +2556,8 @@ sub check_last_vacuum_analyze {
 				$type eq 'vacuum' ? 'ed' : 'd';
 		}
 		else {
-			my $msg = "$maxrel: $maxptime ($maxtime s)";
+			my $showtime = pretty_time($maxtime, 'S');
+			my $msg = "$maxrel: $maxptime ($showtime)";
 			if ($critical and $maxtime >= $critical) {
 				add_critical $msg;
 			}
@@ -3600,7 +3672,7 @@ sub check_sequence {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.10
+This documents describes check_postgres.pl version 2.3.11
 
 =head1 SYNOPSIS
 
@@ -4743,6 +4815,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.3.11>
+
+ Pretty up the time output for last vacuum and analyze actions.
 
 =item B<Version 2.3.10>
 
