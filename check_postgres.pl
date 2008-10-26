@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.3.11';
+our $VERSION = '2.4.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -146,7 +146,7 @@ our $DEBUG_INFO = '?';
 
 if (!$OUTPUT) {
 	my $dir = getcwd;
-	if ($dir =~ /(nagios|mrtg|simple)/io) {
+	if ($dir =~ /(nagios|mrtg|simple|cacti)/io) {
 		$OUTPUT = lc $1;
 	}
 	elsif ($opt{simple}) {
@@ -163,12 +163,12 @@ $opt{transform} = '';
 if ($OUTPUT =~ /\b(kb|mb|gb|tb|eb)\b/) {
 	$opt{transform} = uc $1;
 }
-if ($OUTPUT =~ /(nagios|mrtg|simple)/io) {
+if ($OUTPUT =~ /(nagios|mrtg|simple|cacti)/io) {
 	$OUTPUT = lc $1;
 }
 ## Check for a valid output setting
-if ($OUTPUT ne 'nagios' and $OUTPUT ne 'mrtg' and $OUTPUT ne 'simple') {
-	die qq{Invalid output: must be 'nagios' or 'mrtg' or 'simple'\n};
+if ($OUTPUT ne 'nagios' and $OUTPUT ne 'mrtg' and $OUTPUT ne 'simple' and $OUTPUT ne 'cacti') {
+	die qq{Invalid output: must be 'nagios' or 'mrtg' or 'simple' or 'cacti'\n};
 }
 
 our $MRTG = ($OUTPUT eq 'mrtg' or $OUTPUT eq 'simple') ? 1 : 0;
@@ -197,6 +197,7 @@ our $action_info = {
  connection          => [0, 'Simple connection check.'],
  custom_query        => [0, 'Run a custom query.'],
  database_size       => [0, 'Report if a database is too big.'],
+ dbstats             => [1, 'Returns stats from pg_stat_database: Cacti output only'],
  disk_space          => [1, 'Checks space of local disks Postgres is using.'],
  fsm_pages           => [1, 'Checks percentage of pages used in free space map.'],
  fsm_relations       => [1, 'Checks percentage of relations used in free space map.'],
@@ -724,6 +725,9 @@ check_fsm_pages() if $action eq 'fsm_pages';
 ## See how many relations we have used up compared to max_fsm_relations
 check_fsm_relations() if $action eq 'fsm_relations';
 
+## Spit back info from the pg_stat_database table. Cacti only
+show_dbstats() if $action eq 'dbstats';
+
 finishup();
 
 exit 0;
@@ -986,10 +990,10 @@ sub run_command {
 
 	## Create a temp file to store our results
 	$tempdir = tempdir(CLEANUP => 1);
-	($tempfh,$tempfile) = tempfile('nagios_psql.XXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
+	($tempfh,$tempfile) = tempfile('check_postgres_psql.XXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
 
 	## Create another one to catch any errors
-	($errfh,$errorfile) = tempfile('nagios_psql_stderr.XXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
+	($errfh,$errorfile) = tempfile('check_postgres_psql_stderr.XXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
 
 	for $db (@target) {
 
@@ -1010,7 +1014,7 @@ sub run_command {
 
 		if (defined $db->{dbpass} and length $db->{dbpass}) {
 			## Make a custom PGPASSFILE. Far better to simply use your own .pgpass of course
-			($passfh,$passfile) = tempfile('nagios.XXXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
+			($passfh,$passfile) = tempfile('check_postgres.XXXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
 			$VERBOSE >= 3 and warn "Created temporary pgpass file $passfile\n";
 			$ENV{PGPASSFILE} = $passfile;
 			printf $passfh "%s:%s:%s:%s:%s\n",
@@ -1477,6 +1481,11 @@ sub validate_range {
 		}
 		elsif (length $warning and $warning !~ /^\d+$/) {
 			ndie qq{Invalid 'warning' option: must be number of locks, or "type1=#;type2=#"\n};
+		}
+	}
+	elsif ('cacti' eq $type) { ## Takes no args, just dumps data
+		if (length $warning or length $critical) {
+			die "This action is for cacti use only and takes not warning or critical arguments\n";
 		}
 	}
 	else {
@@ -3668,13 +3677,55 @@ sub check_sequence {
 
 } ## end of check_sequence
 
+sub show_dbstats {
+
+	## Returns values from the pg_stat_database view
+	## Supports: Cacti
+	## Assumes psql and target are the same version for the 8.3 check
+
+	my ($warning, $critical) = validate_range
+		({
+		  type => 'cacti',
+	  });
+
+	my $SQL = q{SELECT datname,numbackends,xact_commit,xact_rollback,blks_read,blks_hit};
+	$psql_version >= 8.3 and $SQL .= q{,tup_returned,tup_fetched,tup_inserted,tup_updated,tup_deleted};
+	$SQL .= q{ FROM pg_catalog.pg_stat_database};
+
+	my $info = run_command($SQL, {regex => qr{\w}} );
+
+	for $db (@{$info->{db}}) {
+	  SLURP: for my $row (split /\n/ => $db->{slurp}) {
+			my @stats = split /\s*\|\s*/ => $row;
+			(my $dbname = shift @stats) =~ s/^\s*//;
+			next SLURP if skip_item($dbname);
+			## If dbnames were specififed, use those for filtering as well
+			if (@{$opt{dbname}}) {
+				my $keepit = 0;
+				for my $drow (@{$opt{dbname}}) {
+					for my $d (split /,/ => $drow) {
+						$d eq $dbname and $keepit = 1;
+					}
+				}
+				next SLURP unless $keepit;
+			}
+			my $template = "backends:%d commits:%d rollbacks:%d read:%d hit:%d ret:%d fetch:%d ins:%d del:%d";
+			my $msg = sprintf "$template", @stats, (0,0,0,0);
+			print "$msg dbname:$dbname\n";
+		}
+	}
+
+	exit 0;
+
+} ## end of show_dbstats
+
 
 =pod
 
 =head1 NAME
 
-B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.11
+B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
+This documents describes check_postgres.pl version 2.4.0
 
 =head1 SYNOPSIS
 
@@ -3765,6 +3816,13 @@ of any threshold. You can transform the numeric output by appending KB, MB, GB, 
 argument, for example:
 
   --output=simple,MB
+
+=head3 Simple output
+
+The Cacti output consists of one or more items on the same line, with a simple name, a colon, and 
+then a number. At the moment, the only action with explicit Cacti output is 'dbstats', and using 
+the --output option is not needed in this case, Cacti is the only output for this action. For many 
+other actions, using --simple is enough to make Cacti happy.
 
 =head1 DATABASE CONNECTION OPTIONS
 
@@ -4137,6 +4195,72 @@ Example 3: Give a warning if any database on host 'tardis' owned by the user 'to
 
 For MRTG output, returns the size in bytes of the largest database on the first line, 
 and the name of the database on the fourth line.
+
+=head2 B<dbstats>
+
+(C<symlink: check_postgres_dbstats>) Reports information from the pg_stat_database view, 
+and outputs it in a Cacti-friendly manner. No other output are supports, as the output 
+is informational and does not lend itself to alerts, such as used with Nagios. If no 
+options are given, all databases are returned, one per line. You can include a specific 
+database by use of the C<--include> option, or you can use the C<--dbname> option.
+
+Eleven items are returned on each line, in the format name:value, separated by a single 
+space. The items are:
+
+=over 4
+
+=item backends
+
+The number of currently running backends for this database.
+
+=item commits
+
+The total number of commits for this database since it was created or reset.
+
+=item rollbacks
+
+The total number of rollbacks for this database since it was created or reset.
+
+=item read
+
+The total number of disk blocks read.
+
+=item hit
+
+The total number of buffer hits.
+
+=item ret
+
+The total number of rows returned.
+
+=item fetch
+
+The total number of rows fetched.
+
+=item ins
+
+The total number of rows inserted.
+
+=item upd
+
+The total number of rows updated.
+
+=item del
+
+The total number of rows deleted.
+
+=item dbname
+
+The name of the database.
+
+=back
+
+Note that ret, fetch, ins, upd, and del items will always be 0 if Postgres is version 8.2 or lower, as those stats were 
+not available in those versions.
+
+Example 1: Grab the stats for a database named "products" on host "willow":
+
+  check_postgres_dbstats --dbhost willow --dbname products
 
 =head2 B<disk_space>
 
@@ -4818,8 +4942,9 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.3.11>
+=item B<Version 2.4.0>
 
+ Add Cacti support with the dbstats action.
  Pretty up the time output for last vacuum and analyze actions.
  Show the percentage of backends on the check_backends action.
 

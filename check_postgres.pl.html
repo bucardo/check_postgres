@@ -2,7 +2,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>check_postgres.pl - a Postgres monitoring script for Nagios, MRTG, and others</title>
+<title>check_postgres.pl - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</title>
 
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 
@@ -26,6 +26,7 @@
 			<li><a href="#nagios_output">Nagios output</a></li>
 			<li><a href="#mrtg_output">MRTG output</a></li>
 			<li><a href="#simple_output">Simple output</a></li>
+			<li><a href="#simple_output">Simple output</a></li>
 		</ul>
 
 	</ul>
@@ -41,6 +42,7 @@
 		<li><a href="#connection"><strong>connection</strong></a></li>
 		<li><a href="#custom_query"><strong>custom_query</strong></a></li>
 		<li><a href="#database_size"><strong>database_size</strong></a></li>
+		<li><a href="#dbstats"><strong>dbstats</strong></a></li>
 		<li><a href="#disk_space"><strong>disk_space</strong></a></li>
 		<li><a href="#fsm_pages"><strong>fsm_pages</strong></a></li>
 		<li><a href="#fsm_relations"><strong>fsm_relations</strong></a></li>
@@ -89,8 +91,8 @@
 </p>
 <hr />
 <h1><a name="name">NAME</a></h1>
-<p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, and others
-This documents describes check_postgres.pl version 2.3.10</p>
+<p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
+This documents describes check_postgres.pl version 2.4.0</p>
 <p>
 </p>
 <hr />
@@ -182,6 +184,13 @@ of any threshold. You can transform the numeric output by appending KB, MB, GB, 
 argument, for example:</p>
 <pre>
   --output=simple,MB</pre>
+<p>
+</p>
+<h3><a name="simple_output">Simple output</a></h3>
+<p>The Cacti output consists of one or more items on the same line, with a simple name, a colon, and 
+then a number. At the moment, the only action with explicit Cacti output is 'dbstats', and using 
+the --output option is not needed in this case, Cacti is the only output for this action. For many 
+other actions, using --simple is enough to make Cacti happy.</p>
 <p>
 </p>
 <hr />
@@ -533,6 +542,78 @@ showing both raw bytes and a &quot;pretty&quot; version of the size.</p>
   check_postgres_database_size --host=tardis --includeuser=tom --warning='5 GB' --critical='10 GB'</pre>
 <p>For MRTG output, returns the size in bytes of the largest database on the first line, 
 and the name of the database on the fourth line.</p>
+<p>
+</p>
+<h2><a name="dbstats"><strong>dbstats</strong></a></h2>
+<p>(<code>symlink: check_postgres_dbstats</code>) Reports information from the pg_stat_database view, 
+and outputs it in a Cacti-friendly manner. No other output are supports, as the output 
+is informational and does not lend itself to alerts, such as used with Nagios. If no 
+options are given, all databases are returned, one per line. You can include a specific 
+database by use of the <code>--include</code> option, or you can use the <code>--dbname</code> option.</p>
+<p>Eleven items are returned on each line, in the format name:value, separated by a single 
+space. The items are:</p>
+<dl>
+<dt><strong><a name="item_backends">backends</a></strong></dt>
+
+<dd>
+<p>The number of currently running backends for this database.</p>
+</dd>
+<dt><strong><a name="item_commits">commits</a></strong></dt>
+
+<dd>
+<p>The total number of commits for this database since it was created or reset.</p>
+</dd>
+<dt><strong><a name="item_rollbacks">rollbacks</a></strong></dt>
+
+<dd>
+<p>The total number of rollbacks for this database since it was created or reset.</p>
+</dd>
+<dt><strong><a name="item_read">read</a></strong></dt>
+
+<dd>
+<p>The total number of disk blocks read.</p>
+</dd>
+<dt><strong><a name="item_hit">hit</a></strong></dt>
+
+<dd>
+<p>The total number of buffer hits.</p>
+</dd>
+<dt><strong><a name="item_ret">ret</a></strong></dt>
+
+<dd>
+<p>The total number of rows returned.</p>
+</dd>
+<dt><strong><a name="item_fetch">fetch</a></strong></dt>
+
+<dd>
+<p>The total number of rows fetched.</p>
+</dd>
+<dt><strong><a name="item_ins">ins</a></strong></dt>
+
+<dd>
+<p>The total number of rows inserted.</p>
+</dd>
+<dt><strong><a name="item_upd">upd</a></strong></dt>
+
+<dd>
+<p>The total number of rows updated.</p>
+</dd>
+<dt><strong><a name="item_del">del</a></strong></dt>
+
+<dd>
+<p>The total number of rows deleted.</p>
+</dd>
+<dt><strong><a name="item_dbname">dbname</a></strong></dt>
+
+<dd>
+<p>The name of the database.</p>
+</dd>
+</dl>
+<p>Note that ret, fetch, ins, upd, and del items will always be 0 if Postgres is version 8.2 or lower, as those stats were 
+not available in those versions.</p>
+<p>Example 1: Grab the stats for a database named &quot;products&quot; on host &quot;willow&quot;:</p>
+<pre>
+  check_postgres_dbstats --dbhost willow --dbname products</pre>
 <p>
 </p>
 <h2><a name="disk_space"><strong>disk_space</strong></a></h2>
@@ -1122,6 +1203,14 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="item_version_2_2e4_2e0"><strong>Version 2.4.0</strong></a></strong></dt>
+
+<dd>
+<pre>
+ Add Cacti support with the dbstats action.
+ Pretty up the time output for last vacuum and analyze actions.
+ Show the percentage of backends on the check_backends action.</pre>
+</dd>
 <dt><strong><a name="item_version_2_2e3_2e10"><strong>Version 2.3.10</strong></a></strong></dt>
 
 <dd>

@@ -193,7 +193,9 @@ dbhost
 dbname
 dbpass
 dbport
+dbstats
 dbuser
+del
 dylan
 emma
 exabytes
@@ -237,6 +239,7 @@ PSQL
 queryname
 quirm
 refactoring
+ret
 robert
 runtime
 salesrep
@@ -259,6 +262,7 @@ Tambouras
 tardis
 timesync
 txn
+upd
 uptime
 USERNAME
 usernames
