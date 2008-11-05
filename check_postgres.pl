@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.4.0';
+our $VERSION = '2.4.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -3623,8 +3623,8 @@ sub check_sequence {
 			my ($schema, $seq, $seqname) = ($1,$2,$3);
 			next if skip_item($seq);
 			$SQL = q{SELECT last_value, slots, used, ROUND(used/slots*100) AS percent, slots - used AS numleft FROM }.
-				q{ (SELECT last_value, CEIL((max_value-min_value+1)/increment_by::NUMERIC) AS slots,}.
-				qq{ CEIL((last_value-min_value+1)/increment_by::NUMERIC) AS used FROM $seqname) foo};
+				q{ (SELECT last_value, CEIL((max_value-min_value::numeric+1)/increment_by::NUMERIC) AS slots,}.
+				qq{ CEIL((last_value-min_value::numeric+1)/increment_by::NUMERIC) AS used FROM $seqname) foo};
 			my $seqinfo = run_command($SQL, { target => $db });
 			if (!defined $seqinfo->{db}[0] or $seqinfo->{db}[0]{slurp} !~ /(\d+)\D+(\d+)\D+(\d+)\D+(\d+)\D+(\d+)/) {
 				ndie "Could not determine information about sequence $seqname";
@@ -3725,7 +3725,7 @@ sub show_dbstats {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This documents describes check_postgres.pl version 2.4.0
+This documents describes check_postgres.pl version 2.4.1
 
 =head1 SYNOPSIS
 
@@ -4941,6 +4941,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.4.1>
+
+  Cast numbers to numeric to support sequences ranges > bigint in check_sequence action.
+  Thanks to Scott Marlowe for reporting this.
 
 =item B<Version 2.4.0>
 
