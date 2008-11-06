@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.4.1';
+our $VERSION = '2.4.2';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -303,7 +303,7 @@ if ($opt{showtime}) {
 
 ## We don't (usually) want to die, but want a graceful Nagios-like exit instead
 sub ndie {
-	File::Temp::cleanup();
+	eval { File::Temp::cleanup(); };
 	my $msg = shift;
 	chomp $msg;
 	print "ERROR: $msg\n";
@@ -1139,7 +1139,7 @@ sub run_command {
 	close $errfh or ndie qq{Could not close $errorfile: $!\n};
 	close $tempfh or ndie qq{Could not close $tempfile: $!\n};
 
-	File::Temp::cleanup();
+	eval { File::Temp::cleanup(); };
 
 	$info->{hosts} = keys %host;
 
@@ -3725,7 +3725,7 @@ sub show_dbstats {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This documents describes check_postgres.pl version 2.4.1
+This documents describes check_postgres.pl version 2.4.2
 
 =head1 SYNOPSIS
 
@@ -4941,6 +4941,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.4.2>
+
+  Wrap File::Temp::cleanup() calls in eval, in case File::Temp is an older version.
+  Patch by Chris Butler.
 
 =item B<Version 2.4.1>
 
