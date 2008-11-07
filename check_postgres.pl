@@ -111,8 +111,8 @@ die $USAGE unless
 			   'dbuser|u=s@',
 			   'dbpass=s@',
 
-			   'dbhost2|host2|H2=s@',
-			   'dbport2|port2=s@',
+			   'host2|dbhost2|H2=s@',
+			   'port2|dbport2=s@',
 			   'dbname2|db2=s@',
 			   'dbuser2|u2=s@',
 			   'dbpass2=s@',
@@ -881,7 +881,7 @@ sub run_command {
 	my $arg = shift || {};
 	my $info = { command => $string, db => [], hosts => 0 };
 
-	$VERBOSE >= 3 and warn qq{Starting run_command with "$string"\n};
+	$VERBOSE >= 3 and warn qq{Starting run_command with: $string\n};
 
 	my (%host,$passfile,$passfh,$tempdir,$tempfile,$tempfh,$errorfile,$errfh);
 	my $offset = -1;
