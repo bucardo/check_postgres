@@ -92,7 +92,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This documents describes check_postgres.pl version 2.4.3</p>
+This documents describes check_postgres.pl version 2.5.0</p>
 <p>
 </p>
 <hr />
@@ -228,6 +228,13 @@ dbuser arguments are allowed. If this is not provided, the default is 'postgres'
 <p>Provides the password to connect to the database with. Use of this option is highly discouraged. 
 Instead, one should use a .pgpass file.</p>
 </dd>
+<dt><strong><a name="item__2d_2ddbservice_3dname"><strong>--dbservice=NAME</strong></a></strong></dt>
+
+<dd>
+<p>The name of a service inside of the pg_service.conf file. This file is in your home directory by 
+default and contains a simple list of connection options. You can also pass additional information 
+when using this option such as --dbservice=&quot;maindatabase sslmode=require&quot;</p>
+</dd>
 </dl>
 <p>The database connection options can be grouped: <em>--host=a,b --host=c --port=1234 --port=3344</em>
 would connect to a-1234, b-1234, and c-3344. Note that once set, an option 
@@ -245,6 +252,9 @@ carries over until it is changed again.</p>
 <pre>
   --host=a,b --host=x --port=5432,5433 --dbuser=alice --dbuser=bob -db=baz
   Connects three times: a-5432-alice-baz b-5433-alice-baz x-5433-bob-baz</pre>
+<pre>
+  --dbservice=&quot;foo&quot; --port=5433
+  Connects using the named service 'foo' in the pg_service.conf file, but overrides the port</pre>
 <p>
 </p>
 <hr />
@@ -1203,6 +1213,12 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="item_version_2_2e5_2e0"><strong>Version 2.5.0</strong></a></strong></dt>
+
+<dd>
+<pre>
+  Add support for the pg_Service.conf file with the --dbservice option.</pre>
+</dd>
 <dt><strong><a name="item_version_2_2e4_2e3"><strong>Version 2.4.3</strong></a></strong></dt>
 
 <dd>

@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.4.3';
+our $VERSION = '2.5.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -110,12 +110,14 @@ die $USAGE unless
 			   'dbname|db=s@',
 			   'dbuser|u=s@',
 			   'dbpass=s@',
+			   'dbservice=s@',
 
 			   'host2|dbhost2|H2=s@',
 			   'port2|dbport2=s@',
 			   'dbname2|db2=s@',
 			   'dbuser2|u2=s@',
 			   'dbpass2=s@',
+			   'dbservice2=s@',
 
 			   'PSQL=s',
 
@@ -240,11 +242,12 @@ Returns with an exit code of 0 (success), 1 (warning), 2 (critical), or 3 (unkno
 This is version $VERSION.
 
 Common connection options:
- -H,  --host=NAME    hostname(s) to connect to; defaults to none (Unix socket)
- -p,  --port=NUM     port(s) to connect to; defaults to $opt{defaultport}.
- -db, --dbname=NAME  database name(s) to connect to; defaults to 'postgres' or 'template1'
- -u   --dbuser=NAME  database user(s) to connect as; defaults to '$opt{defaultuser}'
-      --dbpass=PASS  database password(s); use a .pgpass file instead when possible
+ -H,  --host=NAME       hostname(s) to connect to; defaults to none (Unix socket)
+ -p,  --port=NUM        port(s) to connect to; defaults to $opt{defaultport}.
+ -db, --dbname=NAME     database name(s) to connect to; defaults to 'postgres' or 'template1'
+ -u   --dbuser=NAME     database user(s) to connect as; defaults to '$opt{defaultuser}'
+      --dbpass=PASS     database password(s); use a .pgpass file instead when possible
+      --dbservice=NAME  service name to use inside of pg_service.conf
 
 Connection options can be grouped: --host=a,b --host=c --port=1234 --port=3344
 would connect to a-1234, b-1234, and c-3344
@@ -352,9 +355,9 @@ sub add_response {
 	my ($type,$msg) = @_;
 
 	my $header = sprintf q{%s%s%s},
-		$action_info->{$action}[0] ? '' : qq{DB "$db->{dbname}" },
+		$action_info->{$action}[0] ? '' : defined $db->{dbservice} ? qq{service=$db->{dbservice} } : qq{DB "$db->{dbname}" },
 			$db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
-				$db->{port} eq $opt{defaultport} ? '' : qq{(port=$db->{port}) };
+				defined $db->{port} ? ($db->{port} eq $opt{defaultport} ? '' : qq{(port=$db->{port}) }) : '';
 	$header =~ s/\s+$//;
 	my $perf = ($opt{showtime} and $db->{totaltime}) ? "time=$db->{totaltime}" : '';
 	if ($db->{perf}) {
@@ -912,13 +915,21 @@ sub run_command {
 	## Default connection options
 	my $conn =
 		{
-		 host   => ['<none>'],
-		 port   => [$opt{defaultport}],
-		 dbname => [$opt{defaultdb}],
-		 dbuser => [$opt{defaultuser}],
-		 dbpass => [''],
+		 host   =>    ['<none>'],
+		 port   =>    [$opt{defaultport}],
+		 dbname =>    [$opt{defaultdb}],
+		 dbuser =>    [$opt{defaultuser}],
+		 dbpass =>    [''],
+		 dbservice => [''],
 		 };
 
+
+	## Don't set any default values if a service is being used
+	if (length $opt{dbservice}->[0]) {
+		$conn->{dbname} = [];
+		$conn->{port} = [];
+		$conn->{dbuser} = [];
+	}
 	my $gbin = 0;
   GROUP: {
 		## This level controls a "group" of targets
@@ -944,7 +955,7 @@ sub run_command {
 			}
 			if (defined $opt{$v}->[$gbin]) {
 				my $new = $opt{$v}->[$gbin];
-				$new =~ s/\s+//g;
+				$new =~ s/\s+//g unless $vname eq 'dbservice';
 				## Set this as the new default
 				$conn->{$vname} = [split /,/ => $new];
 				$foundgroup = 1;
@@ -1004,13 +1015,21 @@ sub run_command {
 		## Store this target in the global target list
 		push @{$info->{db}}, $db;
 
-		$db->{pname} = "port=$db->{port} host=$db->{host} db=$db->{dbname} user=$db->{dbuser}";
-		my @args = ('-q', '-U', "$db->{dbuser}", '-d', $db->{dbname}, '-t');
+		my @args = ('-q', '-t');
+		if (defined $db->{dbservice} and length $db->{dbservice}) { ## XX Check for simple names
+			$db->{pname} = "service=$db->{dbservice}";
+			push @args, qq{service=$db->{dbservice}};
+		}
+		else {
+			$db->{pname} = "port=$db->{port} host=$db->{host} db=$db->{dbname} user=$db->{dbuser}";
+		}
+		defined $db->{dbname} and push @args, '-d', $db->{dbname};
+		defined $db->{dbuser} and push @args, '-U', $db->{dbuser};
+		defined $db->{port} and push @args => '-p', $db->{port};
 		if ($db->{host} ne '<none>') {
 			push @args => '-h', $db->{host};
 			$host{$db->{host}}++; ## For the overall count
 		}
-		push @args => '-p', $db->{port};
 
 		if (defined $db->{dbpass} and length $db->{dbpass}) {
 			## Make a custom PGPASSFILE. Far better to simply use your own .pgpass of course
@@ -3725,7 +3744,7 @@ sub show_dbstats {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This documents describes check_postgres.pl version 2.4.3
+This documents describes check_postgres.pl version 2.5.0
 
 =head1 SYNOPSIS
 
@@ -3856,6 +3875,12 @@ dbuser arguments are allowed. If this is not provided, the default is 'postgres'
 Provides the password to connect to the database with. Use of this option is highly discouraged. 
 Instead, one should use a .pgpass file.
 
+=item B<--dbservice=NAME>
+
+The name of a service inside of the pg_service.conf file. This file is in your home directory by 
+default and contains a simple list of connection options. You can also pass additional information 
+when using this option such as --dbservice="maindatabase sslmode=require"
+
 =back
 
 The database connection options can be grouped: I<--host=a,b --host=c --port=1234 --port=3344>
@@ -3875,6 +3900,9 @@ Examples:
 
   --host=a,b --host=x --port=5432,5433 --dbuser=alice --dbuser=bob -db=baz
   Connects three times: a-5432-alice-baz b-5433-alice-baz x-5433-bob-baz
+
+  --dbservice="foo" --port=5433
+  Connects using the named service 'foo' in the pg_service.conf file, but overrides the port
 
 =head1 OTHER OPTIONS
 
@@ -4941,6 +4969,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.5.0>
+
+  Add support for the pg_Service.conf file with the --dbservice option.
 
 =item B<Version 2.4.3>
 
