@@ -4974,94 +4974,94 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.5.1>
+=item B<Version 2.5.1> (December 11, 2008)
 
   Add support for --noidle flag to prevent backends action from counting idle processes.
   Patch by Selena Deckelmann.
 
   Fix small undefined warning when not using --dbservice.
 
-=item B<Version 2.5.0>
+=item B<Version 2.5.0> (December 4, 2008)
 
   Add support for the pg_Service.conf file with the --dbservice option.
 
-=item B<Version 2.4.3>
+=item B<Version 2.4.3> (November 7, 2008)
 
   Fix options for replicate_row action, per report from Jason Gordon.
 
-=item B<Version 2.4.2>
+=item B<Version 2.4.2> (November 6, 2008)
 
   Wrap File::Temp::cleanup() calls in eval, in case File::Temp is an older version.
   Patch by Chris Butler.
 
-=item B<Version 2.4.1>
+=item B<Version 2.4.1> (November 5, 2008)
 
   Cast numbers to numeric to support sequences ranges > bigint in check_sequence action.
   Thanks to Scott Marlowe for reporting this.
 
-=item B<Version 2.4.0>
+=item B<Version 2.4.0> (October 26, 2008)
 
  Add Cacti support with the dbstats action.
  Pretty up the time output for last vacuum and analyze actions.
  Show the percentage of backends on the check_backends action.
 
-=item B<Version 2.3.10>
+=item B<Version 2.3.10> (October 23, 2008)
 
  Fix minor warning in action check_bloat with multiple databases.
  Allow warning to be greater than critical when using the --reverse option.
  Support the --perflimit option for the check_sequence action.
 
-=item B<Version 2.3.9>
+=item B<Version 2.3.9> (October 23, 2008)
 
  Minor tweak to way we store the default port.
 
-=item B<Version 2.3.8>
+=item B<Version 2.3.8> (October 21, 2008)
 
  Allow the default port to be changed easily.
  Allow transform of simple output by MB, GB, etc.
 
-=item B<Version 2.3.7>
+=item B<Version 2.3.7> (October 14, 2008)
 
  Allow multiple databases in 'sequence' action. Reported by Christoph Zwerschke.
 
-=item B<Version 2.3.6>
+=item B<Version 2.3.6>  (October 13, 2008)
 
  Add missing $schema to check_fsm_pages. (Robert Treat)
 
-=item B<Version 2.3.5>
+=item B<Version 2.3.5> (October 9, 2008)
 
  Change option 'checktype' to 'valtype' to prevent collisions with -c[ritical]
  Better handling of errors.
 
-=item B<Version 2.3.4>
+=item B<Version 2.3.4> (October 9, 2008)
 
  Do explicit cleanups of the temp directory, per problems reported by sb@nnx.com.
 
-=item B<Version 2.3.3>
+=item B<Version 2.3.3> (October 8, 2008)
 
  Account for cases where some rounding queries give -0 instead of 0.
-  Thanks to Glyn Astill for helping to track this down.
+ Thanks to Glyn Astill for helping to track this down.
 
-=item B<Version 2.3.2>
+=item B<Version 2.3.2> (October 8, 2008)
 
  Always quote identifiers in check_replicate_row action.
 
-=item B<Version 2.3.1>
+=item B<Version 2.3.1> (October 7, 2008)
 
  Give a better error if one of the databases cannot be reached.
 
-=item B<Version 2.3.0>
+=item B<Version 2.3.0> (October 4, 2008)
 
  Add the "sequence" action, thanks to Gavin M. Roy for the idea.
  Fix minor problem with autovac_freeze action when using MRTG output.
  Allow output argument to be case-insensitive.
  Documentation fixes.
 
-=item B<Version 2.2.4>
+=item B<Version 2.2.4> (October 3, 2008)
 
  Fix some minor typos
 
-=item B<Version 2.2.3>
+=item B<Version 2.2.3> (October 1, 2008)
 
  Expand range of allowed names for --repinfo argument (Glyn Astill)
  Documentation tweaks.
