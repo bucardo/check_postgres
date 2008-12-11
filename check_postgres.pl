@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.5.0';
+our $VERSION = '2.5.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -129,6 +129,7 @@ die $USAGE unless
 			   'reverse',     ## used by custom_query only
 			   'repinfo=s',   ## used by replicate_row only
 			   'schema=s',    ## used by fsm_* checks only
+			   'noidle',      ## used by backends only
 			   )
 	and keys %opt
 	and ! @ARGV;
@@ -925,7 +926,7 @@ sub run_command {
 
 
 	## Don't set any default values if a service is being used
-	if (length $opt{dbservice}->[0]) {
+	if (defined $opt{dbservice} and length $opt{dbservice}->[0]) {
 		$conn->{dbname} = [];
 		$conn->{port} = [];
 		$conn->{dbuser} = [];
@@ -1624,6 +1625,7 @@ sub check_backends {
 
 	my $warning  = $opt{warning}  || '90%';
 	my $critical = $opt{critical} || '95%';
+	my $noidle   = $opt{noidle}   || 0;
 
 	my $validre = qr{^(\-?)(\d+)(\%?)$};
 	if ($warning !~ $validre) {
@@ -1646,7 +1648,9 @@ sub check_backends {
 	}
 
 	my $MAXSQL = q{SELECT setting FROM pg_settings WHERE name = 'max_connections'};
-	$SQL = "SELECT COUNT(*), ($MAXSQL), datname FROM pg_stat_activity GROUP BY 2,3";
+	my $NOIDLE = $noidle ? q{WHERE current_query <> '<IDLE>'} : '';
+	my $GROUPBY = q{GROUP BY 2,3};
+	$SQL = "SELECT COUNT(*), ($MAXSQL), datname FROM pg_stat_activity $NOIDLE $GROUPBY";
 	my $info = run_command($SQL, {regex => qr[\s*\d+ \| \d+\s+\|] } );
 
 	## There may be no entries returned if we catch pg_stat_activity at the right
@@ -3744,7 +3748,7 @@ sub show_dbstats {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This documents describes check_postgres.pl version 2.5.0
+This documents describes check_postgres.pl version 2.5.1
 
 =head1 SYNOPSIS
 
@@ -4057,9 +4061,9 @@ given. This choice does not use the B<max_connections> setting. Second, the
 percentage of available connections can be given. Third, a negative number can 
 be given which represents the number of connections left until B<max_connections> 
 is reached. The default values for I<--warning> and I<--critical> are '90%' and '95%'.
-You can also filter the databases by use of the 
-I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
-for more details.
+You can also specify I<--noidle> to return a count of non-idle processes.
+You can also filter the databases by use of the <--include> and I<--exclude> options.
+See the L</"BASIC FILTERING"> section for more details.
 
 Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 150.
 
@@ -4969,6 +4973,13 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.5.1>
+
+  Add support for --noidle flag to prevent backends action from counting idle processes.
+  Patch by Selena Deckelmann.
+
+  Fix small undefined warning when not using --dbservice.
 
 =item B<Version 2.5.0>
 
