@@ -32,6 +32,15 @@ our $VERSION = '2.5.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
+## Which user to connect as if --dbuser is not given
+$opt{defaultuser} = 'postgres';
+
+## Which port to connect to if --dbport is not given
+$opt{defaultport} = 5432;
+
+## What type of output to use by default
+our $DEFAULT_OUTPUT = 'nagios';
+
 ## If psql is not in your path, it is recommended that hardcode it here,
 ## as an alternative to the --PSQL option
 $PSQL = '';
@@ -39,17 +48,8 @@ $PSQL = '';
 ## If this is true, $opt{PSQL} is disabled for security reasons
 our $NO_PSQL_OPTION = 1;
 
-## What type of output to use by default
-our $DEFAULT_OUTPUT = 'nagios';
-
 ## If true, we show how long each query took by default. Requires Time::HiRes to be installed.
 $opt{showtime} = 1;
-
-## Which user to connect as if --dbuser is not given
-$opt{defaultuser} = 'postgres';
-
-## Which port to connect to if --dbport is not given
-$opt{defaultport} = 5432;
 
 ## If true, we show "after the pipe" statistics
 $opt{showperf} = 1;
