@@ -4061,9 +4061,11 @@ given. This choice does not use the B<max_connections> setting. Second, the
 percentage of available connections can be given. Third, a negative number can 
 be given which represents the number of connections left until B<max_connections> 
 is reached. The default values for I<--warning> and I<--critical> are '90%' and '95%'.
-You can also specify I<--noidle> to return a count of non-idle processes.
 You can also filter the databases by use of the <--include> and I<--exclude> options.
 See the L</"BASIC FILTERING"> section for more details.
+
+To view only non-idle processes, you can use the I<--noidle> argument. Note that the 
+user you are connecting as must be a superuser for this to work properly.
 
 Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 150.
 
