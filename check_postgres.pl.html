@@ -92,7 +92,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This documents describes check_postgres.pl version 2.5.1</p>
+This documents describes check_postgres.pl version 2.5.2</p>
 <p>
 </p>
 <hr />
@@ -417,9 +417,10 @@ given. This choice does not use the <strong>max_connections</strong> setting. Se
 percentage of available connections can be given. Third, a negative number can 
 be given which represents the number of connections left until <strong>max_connections</strong> 
 is reached. The default values for <em>--warning</em> and <em>--critical</em> are '90%' and '95%'.
-You can also specify <em>--noidle</em> to return a count of non-idle processes.
 You can also filter the databases by use of the &lt;--include&gt; and <em>--exclude</em> options.
 See the <a href="#basic_filtering">BASIC FILTERING</a> section for more details.</p>
+<p>To view only non-idle processes, you can use the <em>--noidle</em> argument. Note that the 
+user you are connecting as must be a superuser for this to work properly.</p>
 <p>Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 150.</p>
 <pre>
   check_postgres_backends --host=quirm --warning=120 --critical=150</pre>
@@ -1213,7 +1214,13 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
-<dt><strong><a name="item_version_2_2e5_2e1"><strong>Version 2.5.1</strong></a></strong></dt>
+<dt><strong><a name="item_2"><strong>Version 2.5.2</strong> (December 16, 2008)</a></strong></dt>
+
+<dd>
+<pre>
+  Minor documentation tweak.</pre>
+</dd>
+<dt><strong><a name="item_1"><strong>Version 2.5.1</strong> (December 11, 2008)</a></strong></dt>
 
 <dd>
 <pre>
@@ -1222,33 +1229,33 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
   Fix small undefined warning when not using --dbservice.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e5_2e0"><strong>Version 2.5.0</strong></a></strong></dt>
+<dt><strong><a name="item_0"><strong>Version 2.5.0</strong> (December 4, 2008)</a></strong></dt>
 
 <dd>
 <pre>
   Add support for the pg_Service.conf file with the --dbservice option.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e4_2e3"><strong>Version 2.4.3</strong></a></strong></dt>
+<dt><strong><a name="item_3"><strong>Version 2.4.3</strong> (November 7, 2008)</a></strong></dt>
 
 <dd>
 <pre>
   Fix options for replicate_row action, per report from Jason Gordon.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e4_2e2"><strong>Version 2.4.2</strong></a></strong></dt>
+<dt><strong><strong>Version 2.4.2</strong> (November 6, 2008)</strong></dt>
 
 <dd>
 <pre>
   Wrap File::Temp::cleanup() calls in eval, in case File::Temp is an older version.
   Patch by Chris Butler.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e4_2e1"><strong>Version 2.4.1</strong></a></strong></dt>
+<dt><strong><strong>Version 2.4.1</strong> (November 5, 2008)</strong></dt>
 
 <dd>
 <pre>
   Cast numbers to numeric to support sequences ranges &gt; bigint in check_sequence action.
   Thanks to Scott Marlowe for reporting this.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e4_2e0"><strong>Version 2.4.0</strong></a></strong></dt>
+<dt><strong><strong>Version 2.4.0</strong> (October 26, 2008)</strong></dt>
 
 <dd>
 <pre>
@@ -1256,7 +1263,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
  Pretty up the time output for last vacuum and analyze actions.
  Show the percentage of backends on the check_backends action.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e3_2e10"><strong>Version 2.3.10</strong></a></strong></dt>
+<dt><strong><a name="item_10"><strong>Version 2.3.10</strong> (October 23, 2008)</a></strong></dt>
 
 <dd>
 <pre>
@@ -1264,64 +1271,64 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
  Allow warning to be greater than critical when using the --reverse option.
  Support the --perflimit option for the check_sequence action.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e3_2e9"><strong>Version 2.3.9</strong></a></strong></dt>
+<dt><strong><a name="item_9"><strong>Version 2.3.9</strong> (October 23, 2008)</a></strong></dt>
 
 <dd>
 <pre>
  Minor tweak to way we store the default port.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e3_2e8"><strong>Version 2.3.8</strong></a></strong></dt>
+<dt><strong><a name="item_8"><strong>Version 2.3.8</strong> (October 21, 2008)</a></strong></dt>
 
 <dd>
 <pre>
  Allow the default port to be changed easily.
  Allow transform of simple output by MB, GB, etc.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e3_2e7"><strong>Version 2.3.7</strong></a></strong></dt>
+<dt><strong><a name="item_7"><strong>Version 2.3.7</strong> (October 14, 2008)</a></strong></dt>
 
 <dd>
 <pre>
  Allow multiple databases in 'sequence' action. Reported by Christoph Zwerschke.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e3_2e6"><strong>Version 2.3.6</strong></a></strong></dt>
+<dt><strong><a name="item_6"><strong>Version 2.3.6</strong>  (October 13, 2008)</a></strong></dt>
 
 <dd>
 <pre>
  Add missing $schema to check_fsm_pages. (Robert Treat)</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e3_2e5"><strong>Version 2.3.5</strong></a></strong></dt>
+<dt><strong><a name="item_5"><strong>Version 2.3.5</strong> (October 9, 2008)</a></strong></dt>
 
 <dd>
 <pre>
  Change option 'checktype' to 'valtype' to prevent collisions with -c[ritical]
  Better handling of errors.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e3_2e4"><strong>Version 2.3.4</strong></a></strong></dt>
+<dt><strong><a name="item_4"><strong>Version 2.3.4</strong> (October 9, 2008)</a></strong></dt>
 
 <dd>
 <pre>
  Do explicit cleanups of the temp directory, per problems reported by sb@nnx.com.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e3_2e3"><strong>Version 2.3.3</strong></a></strong></dt>
+<dt><strong><strong>Version 2.3.3</strong> (October 8, 2008)</strong></dt>
 
 <dd>
 <pre>
  Account for cases where some rounding queries give -0 instead of 0.
-  Thanks to Glyn Astill for helping to track this down.</pre>
+ Thanks to Glyn Astill for helping to track this down.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e3_2e2"><strong>Version 2.3.2</strong></a></strong></dt>
+<dt><strong><strong>Version 2.3.2</strong> (October 8, 2008)</strong></dt>
 
 <dd>
 <pre>
  Always quote identifiers in check_replicate_row action.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e3_2e1"><strong>Version 2.3.1</strong></a></strong></dt>
+<dt><strong><strong>Version 2.3.1</strong> (October 7, 2008)</strong></dt>
 
 <dd>
 <pre>
  Give a better error if one of the databases cannot be reached.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e3_2e0"><strong>Version 2.3.0</strong></a></strong></dt>
+<dt><strong><strong>Version 2.3.0</strong> (October 4, 2008)</strong></dt>
 
 <dd>
 <pre>
@@ -1330,26 +1337,26 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
  Allow output argument to be case-insensitive.
  Documentation fixes.</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e2_2e4"><strong>Version 2.2.4</strong></a></strong></dt>
+<dt><strong><strong>Version 2.2.4</strong> (October 3, 2008)</strong></dt>
 
 <dd>
 <pre>
  Fix some minor typos</pre>
 </dd>
-<dt><strong><a name="item_version_2_2e2_2e3"><strong>Version 2.2.3</strong></a></strong></dt>
+<dt><strong><strong>Version 2.2.3</strong> (October 1, 2008)</strong></dt>
 
 <dd>
 <pre>
  Expand range of allowed names for --repinfo argument (Glyn Astill)
  Documentation tweaks.</pre>
 </dd>
-<dt><strong><a name="item_2"><strong>Version 2.2.2</strong> (September 30, 2008)</a></strong></dt>
+<dt><strong><strong>Version 2.2.2</strong> (September 30, 2008)</strong></dt>
 
 <dd>
 <pre>
  Fixes for minor output and scoping problems.</pre>
 </dd>
-<dt><strong><a name="item_1"><strong>Version 2.2.1</strong> (September 28, 2008)</a></strong></dt>
+<dt><strong><strong>Version 2.2.1</strong> (September 28, 2008)</strong></dt>
 
 <dd>
 <pre>
@@ -1358,20 +1365,20 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
  Check for invalid prereqs on failed command. From conversations with Euler Taveira de Oliveira.
  Tweak the fsm_pages formula a little.</pre>
 </dd>
-<dt><strong><a name="item_0"><strong>Version 2.2.0</strong> (September 25, 2008)</a></strong></dt>
+<dt><strong><strong>Version 2.2.0</strong> (September 25, 2008)</strong></dt>
 
 <dd>
 <pre>
  Add fsm_pages and fsm_relations actions. (Robert Treat)</pre>
 </dd>
-<dt><strong><a name="item_4"><strong>Version 2.1.4</strong> (September 22, 2008)</a></strong></dt>
+<dt><strong><strong>Version 2.1.4</strong> (September 22, 2008)</strong></dt>
 
 <dd>
 <pre>
  Fix for race condition in txn_time action.
  Add --debugoutput option.</pre>
 </dd>
-<dt><strong><a name="item_3"><strong>Version 2.1.3</strong> (September 22, 2008)</a></strong></dt>
+<dt><strong><strong>Version 2.1.3</strong> (September 22, 2008)</strong></dt>
 
 <dd>
 <pre>
@@ -1427,7 +1434,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
  Don't include information_schema in certain checks. (Jeff Frost)
  Allow --include and --exclude to use schemas by using a trailing period.</pre>
 </dd>
-<dt><strong><a name="item_5"><strong>Version 1.8.5</strong> (June 22, 2008)</a></strong></dt>
+<dt><strong><strong>Version 1.8.5</strong> (June 22, 2008)</strong></dt>
 
 <dd>
 <pre>
