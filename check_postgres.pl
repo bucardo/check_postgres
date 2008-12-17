@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.5.2';
+our $VERSION = '2.5.3';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -1222,7 +1222,7 @@ sub verify_version {
 			die "Could not fetch setting '$setting'\n";
 		}
 		my $val = $info->{db}[0]{slurp};
-		if ($val ne 'on') {
+		if ($val !~ /^on\b/) {
 			die qq{Cannot run "$action": $setting is not set to on\n};
 		}
 	}
@@ -3748,7 +3748,7 @@ sub show_dbstats {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This documents describes check_postgres.pl version 2.5.2
+This documents describes check_postgres.pl version 2.5.3
 
 =head1 SYNOPSIS
 
@@ -4975,6 +4975,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.5.3> (December 17, 2008)
+
+  Minor fix to regex in verify_version (Lee Jensen)
 
 =item B<Version 2.5.2> (December 16, 2008)
 
