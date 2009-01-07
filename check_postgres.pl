@@ -926,7 +926,7 @@ sub run_command {
 
 
 	## Don't set any default values if a service is being used
-	if (defined $opt{dbservice} and length $opt{dbservice}->[0]) {
+	if (defined $opt{dbservice} and defined $opt{dbservice}->[0] and length $opt{dbservice}->[0]) {
 		$conn->{dbname} = [];
 		$conn->{port} = [];
 		$conn->{dbuser} = [];
