@@ -4136,7 +4136,7 @@ Example 3: Give a critical if table 'q4' on database 'sales' is over 50% bloated
 
 For MRTG output, the first line gives the highest number of wasted bytes for the tables, and the 
 second line gives the highest number of wasted bytes for the indexes. The fourth line gives the database 
-name, table name, and index name information. If you want to output the bloat ration instead (how many 
+name, table name, and index name information. If you want to output the bloat ratio instead (how many 
 times larger the relation is compared to how large it should be), just pass in C<--mrtg=ratio>.
 
 =head2 B<connection>
@@ -4233,7 +4233,7 @@ and the name of the database on the fourth line.
 =head2 B<dbstats>
 
 (C<symlink: check_postgres_dbstats>) Reports information from the pg_stat_database view, 
-and outputs it in a Cacti-friendly manner. No other output are supports, as the output 
+and outputs it in a Cacti-friendly manner. No other output is supported, as the output 
 is informational and does not lend itself to alerts, such as used with Nagios. If no 
 options are given, all databases are returned, one per line. You can include a specific 
 database by use of the C<--include> option, or you can use the C<--dbname> option.
@@ -4681,7 +4681,7 @@ section below for more details.
 The I<--warning> and I<--critical> options are given as units of time, and both must 
 be provided (there are no defaults). Valid units are 'seconds', 'minutes', 'hours', 
 or 'days'. Each may be written singular or abbreviated to just the first letter. 
-If no units are given, the unit are assumed to be seconds.
+If no units are given, the units are assumed to be seconds.
 
 This action requires Postgres 8.3 or better.
 
@@ -4755,7 +4755,7 @@ more than once per database cluster. For a more detailed discussion of what this
 number represents and what to do about it, please visit the page 
 L<http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND>
 
-The warning and value can have underscores in the number for legibility, as Perl does.
+The warning and critical values can have underscores in the number for legibility, as Perl does.
 
 Example 1: Check the default values for the localhost database
 
