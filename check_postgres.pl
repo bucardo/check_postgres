@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.5.3';
+our $VERSION = '2.5.4';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -3748,7 +3748,7 @@ sub show_dbstats {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This documents describes check_postgres.pl version 2.5.3
+This documents describes check_postgres.pl version 2.5.4
 
 =head1 SYNOPSIS
 
@@ -4975,6 +4975,12 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.5.4> (January 7, 2009)
+
+  Better checking of $opt{dbservice} structure (Cédric Villemain)
+  Fix time display in timesync action output (Selena Deckelmann)
+  Fix documentation typos (Josh Tolley)
 
 =item B<Version 2.5.3> (December 17, 2008)
 
