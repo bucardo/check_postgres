@@ -3277,7 +3277,7 @@ sub check_timesync {
 			next;
 		}
 		$db->{perf} = " diff:$diff";
-		my $localpretty = sprintf '%d-%02d-%02d %02d:%02d:%02d', $l[5]+1900, $l[4], $l[3],$l[2],$l[1],$l[0];
+		my $localpretty = sprintf '%d-%02d-%02d %02d:%02d:%02d', $l[5]+1900, $l[4]+1, $l[3],$l[2],$l[1],$l[0];
 		my $msg = qq{timediff=$diff DB=$pgpretty Local=$localpretty};
 
 		if (length $critical and $diff >= $critical) {
