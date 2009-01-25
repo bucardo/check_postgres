@@ -356,9 +356,10 @@ sub add_response {
 	my ($type,$msg) = @_;
 
 	my $header = sprintf q{%s%s%s},
-		$action_info->{$action}[0] ? '' : defined $db->{dbservice} ? qq{service=$db->{dbservice} } : qq{DB "$db->{dbname}" },
-			$db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
-				defined $db->{port} ? ($db->{port} eq $opt{defaultport} ? '' : qq{(port=$db->{port}) }) : '';
+		$action_info->{$action}[0] ? '' : (defined $db->{dbservice} and length $db->{dbservice}) ? 
+			qq{service=$db->{dbservice} } : qq{DB "$db->{dbname}" },
+				$db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
+					defined $db->{port} ? ($db->{port} eq $opt{defaultport} ? '' : qq{(port=$db->{port}) }) : '';
 	$header =~ s/\s+$//;
 	my $perf = ($opt{showtime} and $db->{totaltime}) ? "time=$db->{totaltime}" : '';
 	if ($db->{perf}) {
