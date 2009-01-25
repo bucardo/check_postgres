@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.5.4';
+our $VERSION = '2.6.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -130,6 +130,7 @@ die $USAGE unless
 			   'repinfo=s',   ## used by replicate_row only
 			   'schema=s',    ## used by fsm_* checks only
 			   'noidle',      ## used by backends only
+			   'datadir=s',   ## used by checkpoint only
 			   )
 	and keys %opt
 	and ! @ARGV;
@@ -197,6 +198,7 @@ our $action_info = {
  autovac_freeze      => [1, 'Checks how close databases are to autovacuum_freeze_max_age.'],
  backends            => [1, 'Number of connections, compared to max_connections.'],
  bloat               => [0, 'Check for table and index bloat.'],
+ checkpoint          => [1, 'Checks how long since the last checkpoint'],
  connection          => [0, 'Simple connection check.'],
  custom_query        => [0, 'Run a custom query.'],
  database_size       => [0, 'Report if a database is too big.'],
@@ -356,7 +358,7 @@ sub add_response {
 	my ($type,$msg) = @_;
 
 	my $header = sprintf q{%s%s%s},
-		$action_info->{$action}[0] ? '' : (defined $db->{dbservice} and length $db->{dbservice}) ? 
+		$action_info->{$action}[0] ? '' : (defined $db->{dbservice} and length $db->{dbservice}) ?
 			qq{service=$db->{dbservice} } : qq{DB "$db->{dbname}" },
 				$db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
 					defined $db->{port} ? ($db->{port} eq $opt{defaultport} ? '' : qq{(port=$db->{port}) }) : '';
@@ -732,6 +734,9 @@ check_fsm_relations() if $action eq 'fsm_relations';
 
 ## Spit back info from the pg_stat_database table. Cacti only
 show_dbstats() if $action eq 'dbstats';
+
+## Check how long since the last checkpoint
+check_checkpoint() if $action eq 'checkpoint';
 
 finishup();
 
@@ -3701,6 +3706,80 @@ sub check_sequence {
 
 } ## end of check_sequence
 
+sub check_checkpoint {
+
+	## Checks how long in seconds since the last checkpoint
+	## Supports: Nagios, MRTG
+	## Warning and critical are seconds
+	## Requires $ENV{PGATA} or --datadir
+
+	my ($warning, $critical) = validate_range
+		({
+		  type              => 'time',
+		  default_warning   => '120',
+		  default_critical  => '600',
+		  forcemrtg         => 1,
+	  });
+
+	## Find the data directory, make sure it exists
+	my $dir = $opt{datadir} || $ENV{PGDATA};
+
+	if (!defined $dir or ! length $dir) {
+		ndie "Must supply a --datadir argument or set the PGDATA environment variable\n";
+	}
+
+	if (! -d $dir) {
+		ndie qq{Invalid data_directory: "$dir"\n};
+	}
+
+	$db->{host} = '<none>';
+
+	## Run pg_controldata, grab the time
+	$COM = "pg_controldata $dir";
+	eval {
+		$res = qx{$COM 2>&1};
+	};
+	if ($@) {
+		ndie "Could not call pg_controldata: $@\n";
+	}
+
+	if ($res !~ /Time of latest checkpoint:\s*(.+)/) {
+		ndie "Call to pg_controldata $dir failed";
+	}
+	my $last = $1;
+
+	## Convert to number of seconds
+	use Date::Parse;
+	my $dt = str2time($last);
+	if ($dt !~ /^\d+$/) {
+		ndie qq{Unable to parse pg_controldata output: "$last"\n};
+	}
+	my $diff = $db->{perf} = time - $dt;
+
+	my $msg = sprintf "Last checkpoint was $diff %s ago",
+		$diff == 1 ? 'second' : 'seconds';
+
+	if ($MRTG) {
+		do_mrtg({one => $diff, msg => $msg});
+	}
+
+	if (length $critical and $diff >= $critical) {
+		add_critical $msg;
+		return;
+	}
+
+	if (length $warning and $diff >= $warning) {
+		add_warning $msg;
+		return;
+	}
+
+	add_ok $msg;
+
+	return;
+
+} ## end of check_checkpoint
+
+
 sub show_dbstats {
 
 	## Returns values from the pg_stat_database view
@@ -3749,7 +3828,7 @@ sub show_dbstats {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This documents describes check_postgres.pl version 2.5.4
+This documents describes check_postgres.pl version 2.6.0
 
 =head1 SYNOPSIS
 
@@ -4139,6 +4218,19 @@ For MRTG output, the first line gives the highest number of wasted bytes for the
 second line gives the highest number of wasted bytes for the indexes. The fourth line gives the database 
 name, table name, and index name information. If you want to output the bloat ratio instead (how many 
 times larger the relation is compared to how large it should be), just pass in C<--mrtg=ratio>.
+
+=head2 B<checkpoint>
+
+(C<symlink: check_postgres_checkpoint>) Determines how long since the last checkpoint has 
+been run. This must run on the same server as the database that is being checked. The 
+data directory must be set, either by the environment variable C<PGDATA>, or passing 
+the C<--datadir> argument. It returns the number of seconds since the last checkpoint 
+was run, as determined by parsing the call to C<pg_controldata>. Because of this, the 
+pg_controldata executable must be available in the current path.
+
+At least one warning or critical argument must be set.
+
+For MRTG or simple output, returns the number of seconds.
 
 =head2 B<connection>
 
@@ -4979,6 +5071,10 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.5.4> (January 7, 2009)
 
+  Add the pitr_lag check.
+
+=item B<Version 2.5.4> (January 7, 2009)
+
   Better checking of $opt{dbservice} structure (Cédric Villemain)
   Fix time display in timesync action output (Selena Deckelmann)
   Fix documentation typos (Josh Tolley)
@@ -5305,7 +5401,7 @@ Some example Nagios configuration settings using this script:
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2007-2008 Greg Sabino Mullane <greg@endpoint.com>.
+Copyright (c) 2007-2009 Greg Sabino Mullane <greg@endpoint.com>.
 
 Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions are met:

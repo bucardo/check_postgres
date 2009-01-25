@@ -4,7 +4,9 @@ verbose = 8
 severity = 1
 
 [Documentation::PodSpelling]
-stop_words = Mullane Nagios Slony nols salesrep psql dbname postgres USERNAME usernames dbuser pgpass nagios stderr showperf symlinked timesync criticals quirm lancre exabytes sami includeuser excludeuser flagg tardis WAL tablespaces tablespace perflimit burrick mallory grimm oskar ExclusiveLock garrett artemus queryname speedtest checksum checksums morpork klatch pluto faceoff slon greg watson franklin wilkins scott Sabino Seklecki dbpass autovacuum Astill refactoring NAGIOS localhost cronjob symlink symlinks backends snazzo logfile syslog parens plugin Cwd Ioannis Tambouras schemas SQL MRTG mrtg uptime datallowconn dbhost dbport ok contrib pageslots robert dylan emma fsm minvalue nextval dbstats del ret upd
+stop_words = Mullane Nagios Slony nols salesrep psql dbname postgres USERNAME usernames dbuser pgpass nagios stderr showperf symlinked timesync criticals quirm lancre exabytes sami includeuser excludeuser flagg tardis WAL tablespaces tablespace perflimit burrick mallory grimm oskar ExclusiveLock garrett artemus queryname speedtest checksum checksums morpork klatch pluto faceoff slon greg watson franklin wilkins scott Sabino Seklecki dbpass autovacuum Astill refactoring NAGIOS localhost cronjob symlink symlinks backends snazzo logfile syslog parens plugin Cwd Ioannis Tambouras schemas SQL MRTG mrtg uptime datallowconn dbhost dbport ok contrib pageslots robert dylan emma fsm minvalue nextval dbstats del ret upd Bucardo noidle bucardo
+
+
 
 ## Severity 5:
 [-Subroutines::ProhibitNestedSubs]
@@ -62,10 +64,11 @@ stop_words = Mullane Nagios Slony nols salesrep psql dbname postgres USERNAME us
 ## Severity 1:
 [-BuiltinFunctions::ProhibitReverseSortBlock]
 [-CodeLayout::ProhibitParensWithBuiltins]
+[-CodeLayout::ProhibitQuotedWordLists]
+[-CodeLayout::RequireASCII]
 [-CodeLayout::RequireTidyCode]
 [-Documentation::RequirePodAtEnd]
 [-InputOutput::RequireCheckedSyscalls]
 [-RegularExpressions::ProhibitEnumeratedClasses]
 [-RegularExpressions::ProhibitEscapedMetacharacters]
 [-RegularExpressions::ProhibitUnusualDelimiters]
-

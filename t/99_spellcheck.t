@@ -132,6 +132,7 @@ __DATA__
 
 ## Common:
 
+bucardo
 DBI
 DSN
 Mullane
@@ -165,6 +166,7 @@ lang
 li
 listinfo
 moz
+Postgres
 pre
 px
 ul
@@ -181,6 +183,7 @@ autovac
 autovacuum
 AUTOvacuum
 backends
+Bucardo
 burrick
 checksum
 checksums
@@ -226,6 +229,7 @@ MRTG
 nagios
 NAGIOS
 nextval
+noidle
 nols
 ok
 oskar
@@ -233,6 +237,7 @@ pageslots
 perflimit
 pgpass
 pluto
+Postgres
 prepend
 psql
 PSQL
