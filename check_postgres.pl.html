@@ -39,6 +39,7 @@
 		<li><a href="#autovac_freeze"><strong>autovac_freeze</strong></a></li>
 		<li><a href="#backends"><strong>backends</strong></a></li>
 		<li><a href="#bloat"><strong>bloat</strong></a></li>
+		<li><a href="#checkpoint"><strong>checkpoint</strong></a></li>
 		<li><a href="#connection"><strong>connection</strong></a></li>
 		<li><a href="#custom_query"><strong>custom_query</strong></a></li>
 		<li><a href="#database_size"><strong>database_size</strong></a></li>
@@ -92,7 +93,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This documents describes check_postgres.pl version 2.5.4</p>
+This documents describes check_postgres.pl version 2.6.0</p>
 <p>
 </p>
 <hr />
@@ -479,6 +480,17 @@ should give a rough idea of how bloated things are.</p>
 second line gives the highest number of wasted bytes for the indexes. The fourth line gives the database 
 name, table name, and index name information. If you want to output the bloat ratio instead (how many 
 times larger the relation is compared to how large it should be), just pass in <code>--mrtg=ratio</code>.</p>
+<p>
+</p>
+<h2><a name="checkpoint"><strong>checkpoint</strong></a></h2>
+<p>(<code>symlink: check_postgres_checkpoint</code>) Determines how long since the last checkpoint has 
+been run. This must run on the same server as the database that is being checked. The 
+data directory must be set, either by the environment variable <code>PGDATA</code>, or passing 
+the <code>--datadir</code> argument. It returns the number of seconds since the last checkpoint 
+was run, as determined by parsing the call to <code>pg_controldata</code>. Because of this, the 
+pg_controldata executable must be available in the current path.</p>
+<p>At least one warning or critical argument must be set.</p>
+<p>For MRTG or simple output, returns the number of seconds.</p>
 <p>
 </p>
 <h2><a name="connection"><strong>connection</strong></a></h2>
@@ -1218,6 +1230,12 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 
 <dd>
 <pre>
+  Add the pitr_lag check.</pre>
+</dd>
+<dt><strong><strong>Version 2.5.4</strong> (January 7, 2009)</strong></dt>
+
+<dd>
+<pre>
   Better checking of $opt{dbservice} structure (Cédric Villemain)
   Fix time display in timesync action output (Selena Deckelmann)
   Fix documentation typos (Josh Tolley)</pre>
@@ -1658,7 +1676,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 </p>
 <hr />
 <h1><a name="license_and_copyright">LICENSE AND COPYRIGHT</a></h1>
-<p>Copyright (c) 2007-2008 Greg Sabino Mullane &lt;<a href="mailto:greg@endpoint.com">greg@endpoint.com</a>&gt;.</p>
+<p>Copyright (c) 2007-2009 Greg Sabino Mullane &lt;<a href="mailto:greg@endpoint.com">greg@endpoint.com</a>&gt;.</p>
 <p>Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions are met:</p>
 <pre>
