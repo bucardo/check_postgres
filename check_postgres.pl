@@ -3708,7 +3708,7 @@ sub check_sequence {
 
 sub check_checkpoint {
 
-	## Checks how long in seconds since the last checkpoint
+	## Checks how long in seconds since the last checkpoint on a WAL slave
 	## Supports: Nagios, MRTG
 	## Warning and critical are seconds
 	## Requires $ENV{PGATA} or --datadir
@@ -4222,8 +4222,10 @@ times larger the relation is compared to how large it should be), just pass in C
 =head2 B<checkpoint>
 
 (C<symlink: check_postgres_checkpoint>) Determines how long since the last checkpoint has 
-been run. This must run on the same server as the database that is being checked. The 
-data directory must be set, either by the environment variable C<PGDATA>, or passing 
+been run. This must run on the same server as the database that is being checked. This check is 
+meant to run on a "warm standby" server that is actively processing shipped WAL files, and is meant 
+to check that your warm standby is truly 'warm'. The data directory must be set, either by the 
+environment variable C<PGDATA>, or passing 
 the C<--datadir> argument. It returns the number of seconds since the last checkpoint 
 was run, as determined by parsing the call to C<pg_controldata>. Because of this, the 
 pg_controldata executable must be available in the current path.
