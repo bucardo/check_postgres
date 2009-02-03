@@ -4524,7 +4524,7 @@ C<check_postgres_last_autoanalyze>)
 Checks how long it has been since vacuum (or analyze) was last run on each 
 table in one or more databases. Use of these actions requires that the target 
 database is version 8.3 or greater, or that the version is 8.2 and the 
-configuration variable B<stats_rows_level> is enabled. Tables can be filtered with the 
+configuration variable B<stats_row_level> is enabled. Tables can be filtered with the 
 I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details.
 Tables can also be filtered by their owner by use of the 
