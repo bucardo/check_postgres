@@ -9,6 +9,7 @@ check_postgres.pl.html: check_postgres.pl
 	perl -pi -e "s~<title>\S+(.+)~<title>check_postgres.pl\\1</TITLE>~" check_postgres.pl.html
 	perl -pi -e "s~.*</title>~~" check_postgres.pl.html
 	perl -pi -e "s~</TITLE>~</title>~" check_postgres.pl.html
+	perl -pi -e "s~\`\`(.+?)''~&quot;\\1&quot;~g" check_postgres.pl.html
 	@ rm -f pod2htmd.tmp pod2htmi.tmp
 
 index.html: check_postgres.pl
