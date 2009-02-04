@@ -2,8 +2,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>check_postgres.pl - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</title>
-
+</title>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 
 </head>
@@ -92,8 +91,8 @@
 </p>
 <hr />
 <h1><a name="name">NAME</a></h1>
-<p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This document describes check_postgres.pl version 2.6.1</p>
+<p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
+<p>This documents describes check_postgres.pl version 2.7.0</p>
 <p>
 </p>
 <hr />
@@ -196,32 +195,35 @@ other actions, using --simple is enough to make Cacti happy.</p>
 </p>
 <hr />
 <h1><a name="database_connection_options">DATABASE CONNECTION OPTIONS</a></h1>
-<p>All actions accept a common set of database options. At least one is required.</p>
+<p>All actions accept a common set of database options.</p>
 <dl>
 <dt><strong><a name="item__2dh_name_or__2d_2dhost_3dname"><strong>-H NAME</strong> or <strong>--host=NAME</strong></a></strong></dt>
 
 <dd>
 <p>Connect to the host indicated by NAME. Can be a comma-separated list of names. Multiple host arguments 
-are allowed. If no host is given, defaults to a local Unix socket. You may also use &quot;--dbhost&quot;.</p>
+are allowed. If no host is given, defaults to the <code>PGHOST</code> environment variable or no host at all 
+(which indicates using a local Unix socket). You may also use &quot;--dbhost&quot;.</p>
 </dd>
 <dt><strong><a name="item__2dp_port_or__2d_2dport_3dport"><strong>-p PORT</strong> or <strong>--port=PORT</strong></a></strong></dt>
 
 <dd>
 <p>Connects using the specified PORT number. Can be a comma-separated list of port numbers, and multiple 
-port arguments are allowed. If no port number is given, the default is 5432. You may also use &quot;--dbport&quot;</p>
+port arguments are allowed. If no port number is given, defaults to the <code>PGPORT</code> environment variable. If 
+that is not set, it defaults to 5432. You may also use &quot;--dbport&quot;</p>
 </dd>
 <dt><strong><a name="item__2ddb_name_or__2d_2ddbname_3dname"><strong>-db NAME</strong> or <strong>--dbname=NAME</strong></a></strong></dt>
 
 <dd>
 <p>Specifies which database to connect to. Can be a comma-separated list of names, and multiple dbname 
-arguments are allowed. If no dbname option is provided, defaults to 'postgres' if psql 
-is version 8 or greater, and 'template1' otherwise.</p>
+arguments are allowed. If no dbname option is provided, defaults to the <code>PGDATABASE</code> environment variable. 
+If that is not set, it defaults to 'postgres' if psql is version 8 or greater, and 'template1' otherwise.</p>
 </dd>
 <dt><strong><a name="item__2du_username_or__2d_2ddbuser_3dusername"><strong>-u USERNAME</strong> or <strong>--dbuser=USERNAME</strong></a></strong></dt>
 
 <dd>
 <p>The name of the database user to connect as. Can be a comma-separated list of usernames, and multiple 
-dbuser arguments are allowed. If this is not provided, the default is 'postgres'.</p>
+dbuser arguments are allowed. If this is not provided, it defaults to the <code>PGUSER</code> environment variable, otherwise 
+it defaults to 'postgres'.</p>
 </dd>
 <dt><strong><a name="item__2d_2ddbpass_3dpassword"><strong>--dbpass=PASSWORD</strong></a></strong></dt>
 
@@ -758,7 +760,7 @@ and relation as the fourth line.</p>
 Checks how long it has been since vacuum (or analyze) was last run on each 
 table in one or more databases. Use of these actions requires that the target 
 database is version 8.3 or greater, or that the version is 8.2 and the 
-configuration variable <strong>stats_row_level</strong> is enabled. Tables can be filtered with the 
+configuration variable <strong>stats_row_level</strong> has been enabled. Tables can be filtered with the 
 <em>--include</em> and <em>--exclude</em> options. See the <a href="#basic_filtering">BASIC FILTERING</a> section 
 for more details.
 Tables can also be filtered by their owner by use of the 
@@ -773,6 +775,9 @@ are giving you problems, make sure that they have dead rows to vacuum,
 or just exclude them from the test.</p>
 <p>The schema named 'information_schema' is excluded from this test, as the only tables 
 it contains are small and do not change.</p>
+<p>Note that the non-'auto' versions will also check on the auto versions as well. In other words, 
+using last_vacuum will report on the last vacuum, whether it was a normal vacuum, or 
+one run by the autovacuum daemon.</p>
 <p>Example 1: Warn if any table has not been vacuumed in 3 days, and give a 
 critical at a week, for host wormwood</p>
 <pre>
@@ -1230,13 +1235,20 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="item_0"><strong>Version 2.7.0</strong> (?? 2009)</a></strong></dt>
+
+<dd>
+<pre>
+  Do not require a connection argument, but use defaults and ENV variables when 
+    possible: PGHOST, PGPORT, PGUSER, PGDATABASE.</pre>
+</dd>
 <dt><strong><a name="item_1"><strong>Version 2.6.1</strong> (February 4, 2009)</a></strong></dt>
 
 <dd>
 <pre>
   Only require Date::Parse to be loaded if using the checkpoint action.</pre>
 </dd>
-<dt><strong><a name="item_0"><strong>Version 2.6.0</strong> (January 26, 2009)</a></strong></dt>
+<dt><strong><strong>Version 2.6.0</strong> (January 26, 2009)</strong></dt>
 
 <dd>
 <pre>
