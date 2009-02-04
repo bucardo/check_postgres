@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.6.0';
+our $VERSION = '2.6.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -3834,7 +3834,7 @@ sub show_dbstats {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This documents describes check_postgres.pl version 2.6.0
+This documents describes check_postgres.pl version 2.6.1
 
 =head1 SYNOPSIS
 
@@ -4237,6 +4237,8 @@ was run, as determined by parsing the call to C<pg_controldata>. Because of this
 pg_controldata executable must be available in the current path.
 
 At least one warning or critical argument must be set.
+
+This action requires the Date::Parse module.
 
 For MRTG or simple output, returns the number of seconds.
 
@@ -5049,6 +5051,8 @@ Access to a working version of psql, and the following very standard Perl module
 
 The L</settings_checksum> action requires the B<Digest::MD5> module.
 
+The L</checkpoint> action requires the B<Date::Parse> module.
+
 Some actions require access to external programs. If psql is not explicitly 
 specified, the command B<C<which>> is used to find it. The program B<C</bin/df>> 
 is needed by the L</disk_space> action.
@@ -5077,9 +5081,13 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.5.4> (January 7, 2009)
+=item B<Version 2.6.1> (February 4, 2009)
 
-  Add the pitr_lag check.
+  Only require Date::Parse to be loaded if using the checkpoint action.
+
+=item B<Version 2.6.0> (January 26, 2009)
+
+  Add the 'checkpoint' action.
 
 =item B<Version 2.5.4> (January 7, 2009)
 
