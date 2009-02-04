@@ -3749,7 +3749,13 @@ sub check_checkpoint {
 	my $last = $1;
 
 	## Convert to number of seconds
-	use Date::Parse;
+	eval {
+		require Date::Parse;
+		import Date::Parse;
+	};
+	if ($@) {
+		ndie "Must install the Perl module 'Date::Parse' to use the checkpoint action";
+	}
 	my $dt = str2time($last);
 	if ($dt !~ /^\d+$/) {
 		ndie qq{Unable to parse pg_controldata output: "$last"\n};
