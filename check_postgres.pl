@@ -5086,7 +5086,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.7.0> (?? 2009)
+=item B<Version 2.7.0> (February 4, 2009)
 
   Do not require a connection argument, but use defaults and ENV variables when 
     possible: PGHOST, PGPORT, PGUSER, PGDATABASE.
