@@ -4532,7 +4532,7 @@ C<check_postgres_last_autoanalyze>)
 Checks how long it has been since vacuum (or analyze) was last run on each 
 table in one or more databases. Use of these actions requires that the target 
 database is version 8.3 or greater, or that the version is 8.2 and the 
-configuration variable B<stats_row_level> is enabled. Tables can be filtered with the 
+configuration variable B<stats_row_level> has been enabled. Tables can be filtered with the 
 I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details.
 Tables can also be filtered by their owner by use of the 
@@ -4549,6 +4549,10 @@ or just exclude them from the test.
 
 The schema named 'information_schema' is excluded from this test, as the only tables 
 it contains are small and do not change.
+
+Note that the non-'auto' versions will also check on the auto versions as well. In other words, 
+using last_vacuum will report on the last vacuum, whether it was a normal vacuum, or 
+one run by the autovacuum daemon.
 
 Example 1: Warn if any table has not been vacuumed in 3 days, and give a 
 critical at a week, for host wormwood
