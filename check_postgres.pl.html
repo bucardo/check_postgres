@@ -93,7 +93,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This documents describes check_postgres.pl version 2.6.0</p>
+This documents describes check_postgres.pl version 2.6.1</p>
 <p>
 </p>
 <hr />
@@ -484,12 +484,15 @@ times larger the relation is compared to how large it should be), just pass in <
 </p>
 <h2><a name="checkpoint"><strong>checkpoint</strong></a></h2>
 <p>(<code>symlink: check_postgres_checkpoint</code>) Determines how long since the last checkpoint has 
-been run. This must run on the same server as the database that is being checked. The 
-data directory must be set, either by the environment variable <code>PGDATA</code>, or passing 
+been run. This must run on the same server as the database that is being checked. This check is 
+meant to run on a ``warm standby'' server that is actively processing shipped WAL files, and is meant 
+to check that your warm standby is truly 'warm'. The data directory must be set, either by the 
+environment variable <code>PGDATA</code>, or passing 
 the <code>--datadir</code> argument. It returns the number of seconds since the last checkpoint 
 was run, as determined by parsing the call to <code>pg_controldata</code>. Because of this, the 
 pg_controldata executable must be available in the current path.</p>
 <p>At least one warning or critical argument must be set.</p>
+<p>This action requires the Date::Parse module.</p>
 <p>For MRTG or simple output, returns the number of seconds.</p>
 <p>
 </p>
@@ -755,7 +758,7 @@ and relation as the fourth line.</p>
 Checks how long it has been since vacuum (or analyze) was last run on each 
 table in one or more databases. Use of these actions requires that the target 
 database is version 8.3 or greater, or that the version is 8.2 and the 
-configuration variable <strong>stats_rows_level</strong> is enabled. Tables can be filtered with the 
+configuration variable <strong>stats_row_level</strong> is enabled. Tables can be filtered with the 
 <em>--include</em> and <em>--exclude</em> options. See the <a href="#basic_filtering">BASIC FILTERING</a> section 
 for more details.
 Tables can also be filtered by their owner by use of the 
@@ -1200,6 +1203,7 @@ instead of symlinks, so that the plugin only gets compiled one time.</p>
 
 </dl>
 <p>The <a href="#settings_checksum">settings_checksum</a> action requires the <strong>Digest::MD5</strong> module.</p>
+<p>The <a href="#checkpoint">checkpoint</a> action requires the <strong>Date::Parse</strong> module.</p>
 <p>Some actions require access to external programs. If psql is not explicitly 
 specified, the command <strong><code>which</code></strong> is used to find it. The program <strong><code>/bin/df</code></strong> 
 is needed by the <a href="#disk_space">disk_space</a> action.</p>
@@ -1226,13 +1230,19 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
-<dt><strong><a name="item_4"><strong>Version 2.5.4</strong> (January 7, 2009)</a></strong></dt>
+<dt><strong><a name="item_1"><strong>Version 2.6.1</strong> (February 4, 2009)</a></strong></dt>
 
 <dd>
 <pre>
-  Add the pitr_lag check.</pre>
+  Only require Date::Parse to be loaded if using the checkpoint action.</pre>
 </dd>
-<dt><strong><strong>Version 2.5.4</strong> (January 7, 2009)</strong></dt>
+<dt><strong><a name="item_0"><strong>Version 2.6.0</strong> (January 26, 2009)</a></strong></dt>
+
+<dd>
+<pre>
+  Add the 'checkpoint' action.</pre>
+</dd>
+<dt><strong><a name="item_4"><strong>Version 2.5.4</strong> (January 7, 2009)</a></strong></dt>
 
 <dd>
 <pre>
@@ -1252,7 +1262,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
   Minor documentation tweak.</pre>
 </dd>
-<dt><strong><a name="item_1"><strong>Version 2.5.1</strong> (December 11, 2008)</a></strong></dt>
+<dt><strong><strong>Version 2.5.1</strong> (December 11, 2008)</strong></dt>
 
 <dd>
 <pre>
@@ -1261,7 +1271,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
   Fix small undefined warning when not using --dbservice.</pre>
 </dd>
-<dt><strong><a name="item_0"><strong>Version 2.5.0</strong> (December 4, 2008)</a></strong></dt>
+<dt><strong><strong>Version 2.5.0</strong> (December 4, 2008)</strong></dt>
 
 <dd>
 <pre>
