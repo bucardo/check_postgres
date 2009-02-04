@@ -3834,7 +3834,7 @@ sub show_dbstats {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This documents describes check_postgres.pl version 2.6.1
+This document describes check_postgres.pl version 2.6.1
 
 =head1 SYNOPSIS
 
