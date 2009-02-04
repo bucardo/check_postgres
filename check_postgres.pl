@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.6.1';
+our $VERSION = '2.7.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -922,11 +922,11 @@ sub run_command {
 	## Default connection options
 	my $conn =
 		{
-		 host   =>    ['<none>'],
-		 port   =>    [$opt{defaultport}],
-		 dbname =>    [$opt{defaultdb}],
-		 dbuser =>    [$opt{defaultuser}],
-		 dbpass =>    [''],
+		 host   =>    [$ENV{PGHOST}     || '<none>'],
+		 port   =>    [$ENV{PGPORT}     || $opt{defaultport}],
+		 dbname =>    [$ENV{PGDATABASE} || $opt{defaultdb}],
+		 dbuser =>    [$ENV{PGUSER}     || $opt{defaultuser}],
+		 dbpass =>    [$ENV{PGPASSWORD} || ''],
 		 dbservice => [''],
 		 };
 
@@ -970,16 +970,12 @@ sub run_command {
 			$group{$vname} = $conn->{$vname};
 		}
 
-		if (!$foundgroup) { ## Nothing new, so we bail
-			last GROUP;
-		}
 		$gbin++;
 
 		## Now break the newly created group into individual targets
 		my $tbin = 0;
 	  TARGET: {
 			my $foundtarget = 0;
-			## We know th
 			my %temptarget;
 			for my $g (keys %group) {
 				if (defined $group{$g}->[$tbin]) {
@@ -999,6 +995,7 @@ sub run_command {
 			redo;
 		} ## end TARGET
 
+		last GROUP if ! $foundgroup;
 		redo;
 	} ## end GROUP
 
@@ -3834,7 +3831,8 @@ sub show_dbstats {
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
-This document describes check_postgres.pl version 2.6.1
+
+This documents describes check_postgres.pl version 2.7.0
 
 =head1 SYNOPSIS
 
@@ -3935,30 +3933,33 @@ other actions, using --simple is enough to make Cacti happy.
 
 =head1 DATABASE CONNECTION OPTIONS
 
-All actions accept a common set of database options. At least one is required.
+All actions accept a common set of database options.
 
 =over 4
 
 =item B<-H NAME> or B<--host=NAME>
 
 Connect to the host indicated by NAME. Can be a comma-separated list of names. Multiple host arguments 
-are allowed. If no host is given, defaults to a local Unix socket. You may also use "--dbhost".
+are allowed. If no host is given, defaults to the C<PGHOST> environment variable or no host at all 
+(which indicates using a local Unix socket). You may also use "--dbhost".
 
 =item B<-p PORT> or B<--port=PORT>
 
 Connects using the specified PORT number. Can be a comma-separated list of port numbers, and multiple 
-port arguments are allowed. If no port number is given, the default is 5432. You may also use "--dbport"
+port arguments are allowed. If no port number is given, defaults to the C<PGPORT> environment variable. If 
+that is not set, it defaults to 5432. You may also use "--dbport"
 
 =item B<-db NAME> or B<--dbname=NAME>
 
 Specifies which database to connect to. Can be a comma-separated list of names, and multiple dbname 
-arguments are allowed. If no dbname option is provided, defaults to 'postgres' if psql 
-is version 8 or greater, and 'template1' otherwise.
+arguments are allowed. If no dbname option is provided, defaults to the C<PGDATABASE> environment variable. 
+If that is not set, it defaults to 'postgres' if psql is version 8 or greater, and 'template1' otherwise.
 
 =item B<-u USERNAME> or B<--dbuser=USERNAME>
 
 The name of the database user to connect as. Can be a comma-separated list of usernames, and multiple 
-dbuser arguments are allowed. If this is not provided, the default is 'postgres'.
+dbuser arguments are allowed. If this is not provided, it defaults to the C<PGUSER> environment variable, otherwise 
+it defaults to 'postgres'.
 
 =item B<--dbpass=PASSWORD>
 
@@ -5084,6 +5085,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.7.0> (?? 2009)
+
+  Do not require a connection argument, but use defaults and ENV variables when 
+    possible: PGHOST, PGPORT, PGUSER, PGDATABASE.
 
 =item B<Version 2.6.1> (February 4, 2009)
 
