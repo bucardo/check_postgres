@@ -354,6 +354,7 @@ our %template =
 	 'T-BAD-QUERY'       => 'Invalid query returned:',
 	 );
 
+
 sub add_response {
 	my ($type,$msg) = @_;
 
@@ -371,6 +372,7 @@ sub add_response {
 	push @{$type->{$header}} => [$msg,$perf];
 }
 
+
 sub add_unknown {
 	my $msg = shift || $db->{error};
 	$msg =~ s/[\r\n]\s*/\\n /g;
@@ -386,6 +388,7 @@ sub add_warning {
 sub add_ok {
 	add_response \%ok, shift;
 }
+
 
 sub do_mrtg {
 	## Hashref of info to pass out for MRTG or stat
@@ -419,12 +422,14 @@ sub do_mrtg {
 	exit 0;
 }
 
+
 sub bad_mrtg {
 	my $msg = shift;
 	$ERROR and ndie $ERROR;
 	warn "Action $action failed: $msg\n";
 	exit 3;
 }
+
 
 sub do_mrtg_stats {
 
@@ -2502,6 +2507,7 @@ sub check_relation_size {
 
 } ## end of check_relations_size
 
+
 sub check_table_size {
 	return check_relation_size('table');
 }
@@ -2900,7 +2906,6 @@ sub check_logfile {
 	return;
 
 } ## end of check_logfile
-
 
 
 sub check_query_runtime {
@@ -3702,6 +3707,7 @@ sub check_sequence {
 	return;
 
 } ## end of check_sequence
+
 
 sub check_checkpoint {
 
