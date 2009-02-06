@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.7.0';
+our $VERSION = '2.7.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -106,14 +106,14 @@ die $USAGE unless
 			   'excludeuser=s@',
 
 			   'host|dbhost|H=s@',
-			   'port|dbport=s@',
+			   'port|dbport|p=s@',
 			   'dbname|db=s@',
 			   'dbuser|u=s@',
 			   'dbpass=s@',
 			   'dbservice=s@',
 
 			   'host2|dbhost2|H2=s@',
-			   'port2|dbport2=s@',
+			   'port2|dbport2|p2=s@',
 			   'dbname2|db2=s@',
 			   'dbuser2|u2=s@',
 			   'dbpass2=s@',
@@ -3832,7 +3832,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.7.0
+This documents describes check_postgres.pl version 2.7.1
 
 =head1 SYNOPSIS
 
@@ -5085,6 +5085,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.7.1> (February 6, 2009)
+
+  Allow the -p argument for port to work again.
 
 =item B<Version 2.7.0> (February 4, 2009)
 
