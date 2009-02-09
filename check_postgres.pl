@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.7.1';
+our $VERSION = '2.7.2';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -3840,7 +3840,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.7.1
+This documents describes check_postgres.pl version 2.7.2
 
 =head1 SYNOPSIS
 
@@ -5093,6 +5093,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.7.2> (February 9, 2009)
+
+  Fix to prevent multiple groupings if db arguments given.
 
 =item B<Version 2.7.1> (February 6, 2009)
 
