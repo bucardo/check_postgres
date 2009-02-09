@@ -975,6 +975,8 @@ sub run_command {
 			$group{$vname} = $conn->{$vname};
 		}
 
+		last GROUP if ! $foundgroup and @target;
+
 		$gbin++;
 
 		## Now break the newly created group into individual targets
@@ -997,11 +999,11 @@ sub run_command {
 			push @target, \%temptarget;
 
 			$tbin++;
-			redo;
+			redo TARGET;
 		} ## end TARGET
 
 		last GROUP if ! $foundgroup;
-		redo;
+		redo GROUP;
 	} ## end GROUP
 
 	if (! @target) {
