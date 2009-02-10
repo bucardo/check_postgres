@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.7.2';
+our $VERSION = '2.7.3';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -3640,11 +3640,46 @@ sub check_sequence {
 	(my $c = $critical) =~ s/\D//;
 
 	## Gather up all sequence names
-	my $SQL = q{SELECT nspname, relname, quote_ident(nspname)||'.'||quote_ident(relname)}.
-		q{ FROM pg_class JOIN pg_namespace n ON (relnamespace = n.oid) }.
-		q{ WHERE relkind = 'S' ORDER BY pg_class.oid DESC};
+	my $SQL = q{SELECT DISTINCT ON (nspname, seqname) }.
+		q{nspname, seqname, quote_ident(nspname) || '.' || quote_ident(seqname), typname }.
+		# sequences by column dependency
+		q{FROM (SELECT depnsp.nspname, dep.relname as seqname, typname }.
+		q{FROM pg_depend }.
+		q{JOIN pg_class on classid = pg_class.oid }.
+		q{JOIN pg_class dep on dep.oid = objid }.
+		q{JOIN pg_namespace depnsp on depnsp.oid= dep.relnamespace }.
+		q{JOIN pg_class refclass on refclass.oid = refclassid }.
+		q{JOIN pg_class ref on ref.oid = refobjid }.
+		q{JOIN pg_namespace refnsp on refnsp.oid = ref.relnamespace }.
+		q{JOIN pg_attribute refattr ON (refobjid, refobjsubid) = (refattr.attrelid, refattr.attnum) }.
+		q{JOIN pg_type ON refattr.atttypid = pg_type.oid }.
+		q{WHERE pg_class.relname = 'pg_class'  }.
+		q{AND refclass.relname = 'pg_class' }.
+		q{AND dep.relkind in ('S') }.
+		q{AND ref.relkind in ('r') }.
+		q{AND typname IN ('int4', 'int8') }.
+		q{UNION ALL }.
+		# sequences by parsing DEFAULT constraints
+		q{SELECT nspname, seq.relname, typname }.
+		q{FROM pg_attrdef }.
+		q{JOIN pg_attribute ON (attrelid, attnum) = (adrelid, adnum) }.
+		q{JOIN pg_type on pg_type.oid = atttypid }.
+		q{JOIN pg_class rel ON rel.oid = attrelid }.
+		q{JOIN pg_class seq ON seq.relname = regexp_replace(adsrc, $re$^nextval\('(.+?)'::regclass\)$$re$, $$\1$$) }. ## no critic
+		q{AND seq.relnamespace = rel.relnamespace }.
+		q{JOIN pg_namespace nsp ON nsp.oid = seq.relnamespace }.
+		q{WHERE adsrc ~ 'nextval' AND seq.relkind = 'S' AND typname IN ('int4', 'int8') }.
+		q{UNION ALL }.
+		# all sequences, to catch those whose associations are not obviously recorded in pg_catalog
+		q{SELECT nspname, relname, CAST('int8' AS TEXT) }.
+		q{FROM pg_class }.
+		q{JOIN pg_namespace nsp ON nsp.oid = relnamespace }.
+		q{WHERE relkind = 'S') AS seqs }.
+		q{ORDER BY nspname, seqname, typname};
 
 	my $info = run_command($SQL, {regex => qr{\w}, emptyok => 1} );
+	my $MAXINT4 = 2147483647;
+	my $MAXINT8 = 9223372036854775807;
 
 	for $db (@{$info->{db}}) {
 		my (@crit,@warn,@ok);
@@ -3652,12 +3687,14 @@ sub check_sequence {
 		my %seqinfo;
 		my %seqperf;
 		my $multidb = @{$info->{db}} > 1 ? "$db->{dbname}." : '';
-	  SLURP: while ($db->{slurp} =~ /\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gsm) {
-			my ($schema, $seq, $seqname) = ($1,$2,$3);
+	  SLURP: while ($db->{slurp} =~ /\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gsm) {
+			my ($schema, $seq, $seqname, $typename) = ($1,$2,$3,$4);
 			next if skip_item($seq);
+			my $maxValue = ($typename eq 'int4') ? $MAXINT4 : $MAXINT8;
 			$SQL = q{SELECT last_value, slots, used, ROUND(used/slots*100) AS percent, slots - used AS numleft FROM }.
-				q{ (SELECT last_value, CEIL((max_value-min_value::numeric+1)/increment_by::NUMERIC) AS slots,}.
+				qq{ (SELECT last_value, CEIL((LEAST(max_value, $maxValue)-min_value::numeric+1)/increment_by::NUMERIC) AS slots,}.
 				qq{ CEIL((last_value-min_value::numeric+1)/increment_by::NUMERIC) AS used FROM $seqname) foo};
+
 			my $seqinfo = run_command($SQL, { target => $db });
 			if (!defined $seqinfo->{db}[0] or $seqinfo->{db}[0]{slurp} !~ /(\d+)\D+(\d+)\D+(\d+)\D+(\d+)\D+(\d+)/) {
 				ndie "Could not determine information about sequence $seqname";
@@ -3840,7 +3877,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.7.2
+This documents describes check_postgres.pl version 2.7.3
 
 =head1 SYNOPSIS
 
@@ -5093,6 +5130,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.7.3> (February 10, 2009)
+
+  Make the sequence action check if sequence being used for a int4 column and
+  react appropriately. (Michael Glaesemann)
 
 =item B<Version 2.7.2> (February 9, 2009)
 
