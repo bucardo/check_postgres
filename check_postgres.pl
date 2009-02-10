@@ -3657,7 +3657,7 @@ sub check_sequence {
 		q{AND refclass.relname = 'pg_class' }.
 		q{AND dep.relkind in ('S') }.
 		q{AND ref.relkind in ('r') }.
-		q{AND typname IN ('int4', 'int8') }.
+		q{AND typname IN ('int2', 'int4', 'int8') }.
 		q{UNION ALL }.
 		# sequences by parsing DEFAULT constraints
 		q{SELECT nspname, seq.relname, typname }.
@@ -3668,7 +3668,7 @@ sub check_sequence {
 		q{JOIN pg_class seq ON seq.relname = regexp_replace(adsrc, $re$^nextval\('(.+?)'::regclass\)$$re$, $$\1$$) }. ## no critic
 		q{AND seq.relnamespace = rel.relnamespace }.
 		q{JOIN pg_namespace nsp ON nsp.oid = seq.relnamespace }.
-		q{WHERE adsrc ~ 'nextval' AND seq.relkind = 'S' AND typname IN ('int4', 'int8') }.
+		q{WHERE adsrc ~ 'nextval' AND seq.relkind = 'S' AND typname IN ('int2', 'int4', 'int8') }.
 		q{UNION ALL }.
 		# all sequences, to catch those whose associations are not obviously recorded in pg_catalog
 		q{SELECT nspname, relname, CAST('int8' AS TEXT) }.
@@ -3678,6 +3678,7 @@ sub check_sequence {
 		q{ORDER BY nspname, seqname, typname};
 
 	my $info = run_command($SQL, {regex => qr{\w}, emptyok => 1} );
+	my $MAXINT2 = 32767;
 	my $MAXINT4 = 2147483647;
 	my $MAXINT8 = 9223372036854775807;
 
@@ -3690,8 +3691,9 @@ sub check_sequence {
 	  SLURP: while ($db->{slurp} =~ /\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gsm) {
 			my ($schema, $seq, $seqname, $typename) = ($1,$2,$3,$4);
 			next if skip_item($seq);
-			my $maxValue = ($typename eq 'int4') ? $MAXINT4 : $MAXINT8;
-			$SQL = q{SELECT last_value, slots, used, ROUND(used/slots*100) AS percent, slots - used AS numleft FROM }.
+			my $maxValue = $typename eq 'int2' ? $MAXINT2 : $typename eq 'int4' ? $MAXINT4 : $MAXINT8;
+			$SQL = q{SELECT last_value, slots, used, ROUND(used/slots*100) AS percent, }.
+				q{CASE WHEN slots < used THEN 0 ELSE slots - used END AS numleft FROM }.
 				qq{ (SELECT last_value, CEIL((LEAST(max_value, $maxValue)-min_value::numeric+1)/increment_by::NUMERIC) AS slots,}.
 				qq{ CEIL((last_value-min_value::numeric+1)/increment_by::NUMERIC) AS used FROM $seqname) foo};
 
