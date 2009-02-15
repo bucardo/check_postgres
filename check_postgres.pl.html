@@ -43,6 +43,7 @@
 		<li><a href="#custom_query"><strong>custom_query</strong></a></li>
 		<li><a href="#database_size"><strong>database_size</strong></a></li>
 		<li><a href="#dbstats"><strong>dbstats</strong></a></li>
+		<li><a href="#disabled_triggers"><strong>disabled_triggers</strong></a></li>
 		<li><a href="#disk_space"><strong>disk_space</strong></a></li>
 		<li><a href="#fsm_pages"><strong>fsm_pages</strong></a></li>
 		<li><a href="#fsm_relations"><strong>fsm_relations</strong></a></li>
@@ -92,7 +93,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.7.3</p>
+<p>This documents describes check_postgres.pl version 2.8.0</p>
 <p>
 </p>
 <hr />
@@ -228,7 +229,7 @@ it defaults to 'postgres'.</p>
 <dt><strong><a name="item__2d_2ddbpass_3dpassword"><strong>--dbpass=PASSWORD</strong></a></strong></dt>
 
 <dd>
-<p>Provides the password to connect to the database with. Use of this option is highly discouraged. 
+<p>Provides the password to connect to the database with. Use of this option is highly discouraged.
 Instead, one should use a .pgpass file.</p>
 </dd>
 <dt><strong><a name="item__2d_2ddbservice_3dname"><strong>--dbservice=NAME</strong></a></strong></dt>
@@ -642,6 +643,19 @@ not available in those versions.</p>
 <p>Example 1: Grab the stats for a database named &quot;products&quot; on host &quot;willow&quot;:</p>
 <pre>
   check_postgres_dbstats --dbhost willow --dbname products</pre>
+<p>
+</p>
+<h2><a name="disabled_triggers"><strong>disabled_triggers</strong></a></h2>
+<p>(<code>symlink: check_postgres_disabled_triggers</code>) Checks on the number of disabled triggers inside the database.
+The <em>--warning</em> and <em>--critical</em> options are the number of such triggers found, and both 
+default to &quot;1&quot;, as in normal usage having disabled triggers is a dangerous event. If the 
+database being checked is 8.3 or higher, the check is for the number of triggers that are 
+in a 'disabled' status (as opposed to being 'always' or 'replica'). The output will show 
+the name of the table and the name of the trigger for each disabled trigger.</p>
+<p>Example 1: Make sure that there are no disabled triggers</p>
+<pre>
+  check_postgres_disabled_triggers</pre>
+<p>For MRTG output, returns the number of disabled triggers on the first line.</p>
 <p>
 </p>
 <h2><a name="disk_space"><strong>disk_space</strong></a></h2>
@@ -1235,6 +1249,13 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="item_0"><strong>Version 2.8.0</strong> (February ??, 2009)</a></strong></dt>
+
+<dd>
+<pre>
+  Add the 'disabled_triggers' check.
+  Added basic internationalization support.</pre>
+</dd>
 <dt><strong><a name="item_3"><strong>Version 2.7.3</strong> (February 10, 2009)</a></strong></dt>
 
 <dd>
@@ -1254,7 +1275,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
   Allow the -p argument for port to work again.</pre>
 </dd>
-<dt><strong><a name="item_0"><strong>Version 2.7.0</strong> (February 4, 2009)</a></strong></dt>
+<dt><strong><strong>Version 2.7.0</strong> (February 4, 2009)</strong></dt>
 
 <dd>
 <pre>

@@ -65,7 +65,7 @@ our $YELLNAME = 1;
 
 ## Nothing below this line should need to be changed for normal usage.
 ## If you do find yourself needing to change something,
-## please email the author as it probably indicates something 
+## please email the author as it probably indicates something
 ## that could be made into a command-line option or moved above.
 
 ## Messages are stored in these until the final output via finishup()
@@ -239,6 +239,43 @@ for (sort keys %$action_info) {
 	$action_usage .= sprintf " %-*s - %s\n", 2+$longname, $_, $action_info->{$_}[1];
 }
 
+## Standard messages. Translations always welcome
+
+our %msg = (
+	'en' => {
+		'T-EXCLUDE-DB'       => 'No matching databases found due to exclusion/inclusion options',
+		'T-EXCLUDE-FS'       => 'No matching file systems found due to exclusion/inclusion options',
+		'T-EXCLUDE-REL'      => 'No matching relations found due to exclusion/inclusion options',
+		'T-EXCLUDE-SET'      => 'No matching settings found due to exclusion/inclusion options',
+		'T-EXCLUDE-TABLE'    => 'No matching tables found due to exclusion/inclusion options',
+		'T-EXCLUDE-USEROK'   => 'No matching entries found due to user exclusion/inclusion options',
+		'T-BAD-QUERY'        => 'Invalid query returned:',
+		'invalid-psql'       => 'Invalid psql argument: must be full path to a file named psql',
+		'no-find-psql'       => 'Cannot find given psql executable: $1',
+		'no-time-hires'      => q{Cannot find Time::HiRes, needed if 'showtime' is true},
+		'no-psql'            => q{Could not find a suitable psql executable},
+		'no-psql-executable' => q{The file "$1" does not appear to be executable},
+		'no-psql-version'    => q{Could not determine psql version},
+		'create-symlink'     => q{Created "$1"},
+		'symlink-exists'     => q{Not creating "$1": $2 file already exists},
+		'symlink-done'       => qq{Not creating "\$1": \$2 already linked to "\$3"\n},
+		'symlink-fail'       => qq{Could not symlink \$1 to \$2: \$3\n},
+		'no-target-database' => q{No target databases could be found},
+	},
+	'de' => {
+		'T-BAD-QUERY'       => 'Invalid query returned:',
+	},
+	'es' => {
+		'T-BAD-QUERY'       => 'Invalid query returned:',
+	},
+	'fr' => {
+		'T-BAD-QUERY'       => 'Invalid query returned:',
+	},
+	);
+
+my $lang = $ENV{LC_ALL} || $ENV{LC_MESSAGES} || $ENV{LANG} || 'en';
+$lang = substr($lang,0,2);
+
 if ($opt{help}) {
 	print qq{Usage: $ME2 <options>
 Run various tests against one or more Postgres databases.
@@ -304,7 +341,7 @@ if ($opt{showtime}) {
 		import Time::HiRes qw/gettimeofday tv_interval sleep/;
 	};
 	if ($@) {
-		die qq{Cannot find Time::HiRes, needed if 'showtime' is true\n};
+		die msg('no-time-hires');
 	}
 }
 
@@ -317,6 +354,32 @@ sub ndie {
 	exit 3;
 }
 
+sub msg {
+
+	my $name = shift || '?';
+
+	my $msg = '';
+
+	if (exists $msg{$lang}{$name}) {
+		$msg = $msg{$lang}{$name};
+	}
+	elsif (exists $msg{'en'}{$name}) {
+		$msg = $msg{'en'}{$name};
+	}
+	else {
+		return "Invalid message: $name";
+	}
+
+	my $x=1;
+	{
+		last unless $msg =~ s/\$$x/$_[$x-1]/ge;
+		$x++;
+		redo;
+	}
+	return $msg;
+
+} ## end of msg
+
 ## Everything from here on out needs psql, so find and verify a working version:
 if ($NO_PSQL_OPTION) {
 	delete $opt{PSQL};
@@ -325,36 +388,22 @@ if ($NO_PSQL_OPTION) {
 if (! defined $PSQL or ! length $PSQL) {
 	if (exists $opt{PSQL}) {
 		$PSQL = $opt{PSQL};
-		$PSQL =~ m{^/[\w\d\/]*psql$} or ndie qq{Invalid psql argument: must be full path to a file named psql\n};
-		-e $PSQL or ndie qq{Cannot find given psql executable: $PSQL\n};
+		$PSQL =~ m{^/[\w\d\/]*psql$} or ndie msg('invalid-psql');
+		-e $PSQL or ndie msg('no-find-psql', $PSQL);
 	}
 	else {
 		chomp($PSQL = qx{which psql});
-		$PSQL or ndie qq{Could not find a suitable psql executable\n};
+		$PSQL or ndie msg('no-psql');
 	}
 }
--x $PSQL or ndie qq{The file "$PSQL" does not appear to be executable\n};
+-x $PSQL or ndie msg('no-psql-executable', $PSQL);
 $res = qx{$PSQL --version};
-$res =~ /^psql \(PostgreSQL\) (\d+\.\d+)/ or ndie qq{Could not determine psql version\n};
+$res =~ /^psql \(PostgreSQL\) (\d+\.\d+)/ or ndie msg('no-psql-version');
 our $psql_version = $1;
 
 $VERBOSE >= 1 and warn qq{psql=$PSQL version=$psql_version\n};
 
 $opt{defaultdb} = $psql_version >= 7.4 ? 'postgres' : 'template1';
-
-## Standard messages. Use these whenever possible when building actions.
-
-our %template =
-	(
-	 'T-EXCLUDE-DB'      => 'No matching databases found due to exclusion/inclusion options',
-	 'T-EXCLUDE-FS'      => 'No matching file systems found due to exclusion/inclusion options',
-	 'T-EXCLUDE-REL'     => 'No matching relations found due to exclusion/inclusion options',
-	 'T-EXCLUDE-SET'     => 'No matching settings found due to exclusion/inclusion options',
-	 'T-EXCLUDE-TABLE'   => 'No matching tables found due to exclusion/inclusion options',
-	 'T-EXCLUDE-USEROK'  => 'No matching entries found due to user exclusion/inclusion options',
-	 'T-BAD-QUERY'       => 'Invalid query returned:',
-	 );
-
 
 sub add_response {
 	my ($type,$msg) = @_;
@@ -369,7 +418,7 @@ sub add_response {
 	if ($db->{perf}) {
 		$perf .= " $db->{perf}";
 	}
-	$msg =~ s/(T-[\w\-]+)/$template{$1}/g;
+	$msg =~ s/(T-[\w\-]+)/msg($1)/ge;
 	push @{$type->{$header}} => [$msg,$perf];
 }
 
@@ -765,22 +814,22 @@ sub build_symlinks {
 		if (-l $file) {
 			if (!$force) {
 				my $source = readlink $file;
-				print qq{Not creating "$file":$space already linked to "$source"\n};
+				print msg('symlink-done', $file, $space, $source);
 				next;
 			}
 			print qq{Unlinking "$file":$space };
 			unlink $file or die qq{Failed to unlink "$file": $!\n};
 		}
 		elsif (-e $file) {
-			print qq{Not creating "$file":$space file already exists\n};
+			print msg('symlink-exists', $file, $space);
 			next;
 		}
 
 		if (symlink $0, $file) {
-			print qq{Created "$file"\n};
+			print msg('create-symlink', $file);
 		}
 		else {
-			print qq{Could not symlink $file to $ME: $!\n};
+			print msg('symlink-fail', $file, $ME, $!);
 		}
 	}
 
@@ -1011,7 +1060,7 @@ sub run_command {
 	} ## end GROUP
 
 	if (! @target) {
-		ndie qq{No target databases found\n};
+		ndie msg('no-target-database');
 	}
 
 	## Create a temp file to store our results
@@ -5238,6 +5287,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.8.0> (February ??, 2009)
 
   Add the 'disabled_triggers' check.
+  Added basic internationalization support.
 
 =item B<Version 2.7.3> (February 10, 2009)
 
