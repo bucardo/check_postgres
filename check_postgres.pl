@@ -28,7 +28,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.7.3';
+our $VERSION = '2.8.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -203,6 +203,7 @@ our $action_info = {
  custom_query        => [0, 'Run a custom query.'],
  database_size       => [0, 'Report if a database is too big.'],
  dbstats             => [1, 'Returns stats from pg_stat_database: Cacti output only'],
+ disabled_triggers   => [0, 'Check if any triggers are disabled'],
  disk_space          => [1, 'Checks space of local disks Postgres is using.'],
  fsm_pages           => [1, 'Checks percentage of pages used in free space map.'],
  fsm_relations       => [1, 'Checks percentage of relations used in free space map.'],
@@ -743,6 +744,9 @@ show_dbstats() if $action eq 'dbstats';
 ## Check how long since the last checkpoint
 check_checkpoint() if $action eq 'checkpoint';
 
+## Check how long since the last checkpoint
+check_disabled_triggers() if $action eq 'disabled_triggers';
+
 finishup();
 
 exit 0;
@@ -1057,8 +1061,33 @@ sub run_command {
 		## If we've got different SQL, use this first run to simply grab the version
 		## Then we'll use that info to pick the real query
 		if ($arg->{version}) {
-			$arg->{oldstring} = $string;
-			$string = 'SELECT version()';
+			if (!$db->{version}) {
+				$arg->{versiononly} = 1;
+				$arg->{oldstring} = $string;
+				$string = 'SELECT version()';
+			}
+			else {
+				$string = $arg->{oldstring} || $arg->{string};
+				for my $row (@{$arg->{version}}) {
+					if ($row !~ s/^([<>]?)(\d+\.\d+)\s+//) {
+						ndie "Invalid version string: $row";
+					}
+					my ($mod,$ver) = ($1||'',$2);
+					if ($mod eq '>' and $db->{version} > $ver) {
+						$string = $row;
+						last;
+					}
+					if ($mod eq '<' and $db->{version} < $ver) {
+						$string = $row;
+						last;
+					}
+					if ($mod eq '' and $db->{version} eq $ver) {
+						$string = $row;
+					}
+				}
+				delete $arg->{version};
+				$info->{command} = $string;
+			}
 		}
 
 		push @args, '-c', $string;
@@ -1132,6 +1161,23 @@ sub run_command {
 			## Allow an empty query (no matching rows) if requested
 			if ($arg->{emptyok} and $db->{slurp} =~ /^\s*$/o) {
 			}
+
+			## If we just want a version, grab it and redo
+			if ($arg->{versiononly}) {
+				if ($db->{error}) {
+					ndie $db->{error};
+				}
+				if ($db->{slurp} !~ /PostgreSQL (\d+\.\d+)/) {
+					ndie qq{Could not determine version of Postgres from: $db->{slurp}};
+				}
+				$db->{version} = $1;
+				$db->{ok} = 0;
+				delete $arg->{versiononly};
+				## Remove this from the returned hash
+				pop @{$info->{db}};
+				redo;
+			}
+
 			## If we were provided with a regex, check and bail if it fails
 			elsif ($arg->{regex}) {
 				if ($db->{slurp} !~ $arg->{regex}) {
@@ -1145,22 +1191,6 @@ sub run_command {
 				}
 			}
 
-		}
-
-		## If we are running different queries based on the version, 
-		## find the version we are using, replace the string as needed, 
-		## then re-run the command to this connection.
-		if ($arg->{version}) {
-			if ($db->{error}) {
-				ndie $db->{error};
-			}
-			if ($db->{slurp} !~ /PostgreSQL (\d+\.\d+)/) {
-				ndie qq{Could not determine version of Postgres!\n};
-			}
-			$db->{version} = $1;
-			$string = $arg->{version}{$db->{version}} || $arg->{oldstring};
-			delete $arg->{version};
-			redo;
 		}
 
 
@@ -1193,7 +1223,9 @@ sub verify_version {
 	## Check if the backend can handle the current action
 	my $limit = $testaction{lc $action} || '';
 
-	return if ! $limit;
+	my $versiononly = shift || 0;
+
+	return if ! $limit and ! $versiononly;
 
 	## We almost always need the version, so just grab it for any limitation
 	$SQL = q{SELECT setting FROM pg_settings WHERE name = 'server_version'};
@@ -1210,6 +1242,10 @@ sub verify_version {
 		die "Could not determine version while running $SQL\n";
 	}
 	my ($sver,$smaj,$smin) = ($1,$2,$3);
+
+	if ($versiononly) {
+		return $sver;
+	}
 
 	if ($limit =~ /VERSION: ((\d+)\.(\d+))/) {
 		my ($rver,$rmaj,$rmin) = ($1,$2,$3);
@@ -3830,6 +3866,57 @@ sub check_checkpoint {
 } ## end of check_checkpoint
 
 
+sub check_disabled_triggers {
+
+	## Checks how many disabled triggers are in the database
+	## Supports: Nagios, MRTG
+	## Warning and critical are integers, defaults to 1
+
+	my ($warning, $critical) = validate_range
+		({
+		  type              => 'positive integer',
+		  default_warning   => 1,
+		  default_critical  => 1,
+		  forcemrtg         => 1,
+	  });
+
+	$SQL = q{SELECT tgrelid::regclass, tgname, tgenabled FROM pg_trigger WHERE tgenabled IS TRUE ORDER BY tgname};
+	my $SQL83 = q{SELECT tgrelid::regclass, tgname, tgenabled FROM pg_trigger WHERE tgenabled = 'D' ORDER BY tgname};
+
+	my $info = run_command($SQL, { version => [ ">8.2 $SQL83" ] } );
+
+	my $count = 0;
+	my $dislis = '';
+	for (@{$info->{db}}) {
+		$db = $_;
+		while ($db->{slurp} =~ / (.+?)\s+\| (.+?)\s+\| (\w+)/gsm) {
+			my ($table,$trigger,$setting) = ($1,$2,$3);
+			$count++;
+			$dislis .= " $table=>$trigger";
+		}
+		if ($MRTG) {
+			do_mrtg({one => $count});
+			return;
+		}
+	}
+
+	my $msg = "Disabled triggers: $count$dislis";
+
+	if ($critical and $count >= $critical) {
+		add_critical $msg;
+	}
+	elsif ($warning and $count >= $warning) {
+		add_warning $msg;
+	}
+	else {
+		add_ok $msg;
+	}
+
+	return;
+
+} ## end of check_disabled_triggers
+
+
 sub show_dbstats {
 
 	## Returns values from the pg_stat_database view
@@ -3842,10 +3929,10 @@ sub show_dbstats {
 	  });
 
 	my $SQL = q{SELECT datname,numbackends,xact_commit,xact_rollback,blks_read,blks_hit};
-	$psql_version >= 8.3 and $SQL .= q{,tup_returned,tup_fetched,tup_inserted,tup_updated,tup_deleted};
 	$SQL .= q{ FROM pg_catalog.pg_stat_database};
+	(my $SQL2 = $SQL) =~ s/blks_hit/blks_hit,tup_returned,tup_fetched,tup_inserted,tup_updated,tup_deleted/;
 
-	my $info = run_command($SQL, {regex => qr{\w}} );
+	my $info = run_command($SQL, {regex => qr{\w}, version => [ ">8.2 $SQL2" ] } );
 
 	for $db (@{$info->{db}}) {
 	  SLURP: for my $row (split /\n/ => $db->{slurp}) {
@@ -3879,7 +3966,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.7.3
+This documents describes check_postgres.pl version 2.8.0
 
 =head1 SYNOPSIS
 
@@ -4010,7 +4097,7 @@ it defaults to 'postgres'.
 
 =item B<--dbpass=PASSWORD>
 
-Provides the password to connect to the database with. Use of this option is highly discouraged. 
+Provides the password to connect to the database with. Use of this option is highly discouraged.
 Instead, one should use a .pgpass file.
 
 =item B<--dbservice=NAME>
@@ -4446,6 +4533,21 @@ not available in those versions.
 Example 1: Grab the stats for a database named "products" on host "willow":
 
   check_postgres_dbstats --dbhost willow --dbname products
+
+=head2 B<disabled_triggers>
+
+(C<symlink: check_postgres_disabled_triggers>) Checks on the number of disabled triggers inside the database.
+The I<--warning> and I<--critical> options are the number of such triggers found, and both 
+default to "1", as in normal usage having disabled triggers is a dangerous event. If the 
+database being checked is 8.3 or higher, the check is for the number of triggers that are 
+in a 'disabled' status (as opposed to being 'always' or 'replica'). The output will show 
+the name of the table and the name of the trigger for each disabled trigger.
+
+Example 1: Make sure that there are no disabled triggers
+
+  check_postgres_disabled_triggers
+
+For MRTG output, returns the number of disabled triggers on the first line.
 
 =head2 B<disk_space>
 
@@ -5132,6 +5234,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.8.0> (February ??, 2009)
+
+  Add the 'disabled_triggers' check.
 
 =item B<Version 2.7.3> (February 10, 2009)
 
