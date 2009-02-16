@@ -242,36 +242,53 @@ for (sort keys %$action_info) {
 ## Standard messages. Translations always welcome
 
 our %msg = (
-	'en' => {
-		'T-EXCLUDE-DB'       => 'No matching databases found due to exclusion/inclusion options',
-		'T-EXCLUDE-FS'       => 'No matching file systems found due to exclusion/inclusion options',
-		'T-EXCLUDE-REL'      => 'No matching relations found due to exclusion/inclusion options',
-		'T-EXCLUDE-SET'      => 'No matching settings found due to exclusion/inclusion options',
-		'T-EXCLUDE-TABLE'    => 'No matching tables found due to exclusion/inclusion options',
-		'T-EXCLUDE-USEROK'   => 'No matching entries found due to user exclusion/inclusion options',
-		'T-BAD-QUERY'        => 'Invalid query returned:',
-		'invalid-psql'       => 'Invalid psql argument: must be full path to a file named psql',
-		'no-find-psql'       => 'Cannot find given psql executable: $1',
-		'no-time-hires'      => q{Cannot find Time::HiRes, needed if 'showtime' is true},
-		'no-psql'            => q{Could not find a suitable psql executable},
-		'no-psql-executable' => q{The file "$1" does not appear to be executable},
-		'no-psql-version'    => q{Could not determine psql version},
-		'create-symlink'     => q{Created "$1"},
-		'symlink-exists'     => q{Not creating "$1": $2 file already exists},
-		'symlink-done'       => qq{Not creating "\$1": \$2 already linked to "\$3"\n},
-		'symlink-fail'       => qq{Could not symlink \$1 to \$2: \$3\n},
-		'no-target-database' => q{No target databases could be found},
-	},
-	'de' => {
-		'T-BAD-QUERY'       => 'Invalid query returned:',
-	},
-	'es' => {
-		'T-BAD-QUERY'       => 'Invalid query returned:',
-	},
-	'fr' => {
-		'T-BAD-QUERY'       => 'Invalid query returned:',
-	},
-	);
+'en' => {
+	'T-EXCLUDE-DB'       => q{No matching databases found due to exclusion/inclusion options},
+	'T-EXCLUDE-FS'       => q{No matching file systems found due to exclusion/inclusion options},
+	'T-EXCLUDE-REL'      => q{No matching relations found due to exclusion/inclusion options},
+	'T-EXCLUDE-SET'      => q{No matching settings found due to exclusion/inclusion options},
+	'T-EXCLUDE-TABLE'    => q{No matching tables found due to exclusion/inclusion options},
+	'T-EXCLUDE-USEROK'   => q{No matching entries found due to user exclusion/inclusion options},
+	'T-BAD-QUERY'        => q{Invalid query returned:},
+	'invalid-psql'       => q{Invalid psql argument: must be full path to a file named psql},
+	'no-find-psql'       => q{Cannot find given psql executable: $1},
+	'no-time-hires'      => q{Cannot find Time::HiRes, needed if 'showtime' is true},
+	'no-psql'            => q{Could not find a suitable psql executable},
+	'no-psql-executable' => q{The file "$1" does not appear to be executable},
+	'no-psql-version'    => q{Could not determine psql version},
+	'create-symlink'     => q{Created "$1"},
+	'symlink-exists'     => q{Not creating "$1": $2 file already exists},
+	'symlink-done'       => qq{Not creating "\$1": \$2 already linked to "\$3"\n},
+	'symlink-fail'       => qq{Could not symlink \$1 to \$2: \$3\n},
+	'no-target-database' => q{No target databases could be found},
+},
+'de' => {
+	'T-BAD-QUERY'        => q{Invalid query returned:},
+},
+'es' => {
+	'T-BAD-QUERY'        => q{Invalid query returned:},
+},
+'fr' => {
+	'T-EXCLUDE-DB'       => q{Aucune base de données trouvée à cause des options d'exclusion/inclusion},
+	'T-EXCLUDE-FS'       => q{Aucun système de fichier trouvé à cause des options d'exclusion/inclusion},
+	'T-EXCLUDE-REL'      => q{Aucune relation trouvée à cause des options d'exclusion/inclusion},
+	'T-EXCLUDE-SET'      => q{Aucun paramètre trouvé à cause des options d'exclusion/inclusion},
+	'T-EXCLUDE-TABLE'    => q{Aucune table trouvée à cause des options d'exclusion/inclusion},
+	'T-EXCLUDE-USEROK'   => q{Aucune entrée trouvée à cause options d'exclusion/inclusion},
+	'T-BAD-QUERY'        => q{Une requête invalide a renvoyé :},
+	'invalid-psql'       => q{Argument psql invalide : doit correspondre au chemin complet vers le fichier nommé psql},
+	'no-find-psql'       => q{N'a pas pu trouver l'exécutable psql : $1},
+	'no-time-hires'      => q{N'a pas trouvé le module Time::HiRes, nécessaire quand 'showtime' est activé},
+	'no-psql'            => q{N'a pas trouvé l'exécutable psql},
+	'no-psql-executable' => q{Le fichier "$1" ne semble pas être exécutable},
+	'no-psql-version'    => q{N'a pas pu déterminer la version de psql},
+	'create-symlink'     => q{Création de "$1"},
+	'symlink-exists'     => q{Création impossible de "$1": le fichier $2 existe déjà},
+	'symlink-done'       => qq{Création impossible de "\$1": \$2 est déjà lié à "\$3"\n},
+	'symlink-fail'       => qq{N'a pas pu supprimer le lien symbolique \$1 vers \$2 : \$3\n},
+	'no-target-database' => q{Aucune base de données cible trouvée},
+},
+);
 
 my $lang = $ENV{LC_ALL} || $ENV{LC_MESSAGES} || $ENV{LANG} || 'en';
 $lang = substr($lang,0,2);
