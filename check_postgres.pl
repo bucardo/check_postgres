@@ -17,6 +17,7 @@ package check_postgres;
 use 5.006001;
 use strict;
 use warnings;
+use utf8;
 use Getopt::Long qw/GetOptions/;
 Getopt::Long::Configure(qw/no_ignore_case/);
 use File::Basename qw/basename/;
@@ -243,13 +244,13 @@ for (sort keys %$action_info) {
 
 our %msg = (
 'en' => {
-	'T-EXCLUDE-DB'       => q{No matching databases found due to exclusion/inclusion options},
-	'T-EXCLUDE-FS'       => q{No matching file systems found due to exclusion/inclusion options},
-	'T-EXCLUDE-REL'      => q{No matching relations found due to exclusion/inclusion options},
-	'T-EXCLUDE-SET'      => q{No matching settings found due to exclusion/inclusion options},
-	'T-EXCLUDE-TABLE'    => q{No matching tables found due to exclusion/inclusion options},
-	'T-EXCLUDE-USEROK'   => q{No matching entries found due to user exclusion/inclusion options},
-	'T-BAD-QUERY'        => q{Invalid query returned:},
+	'no-match-db'        => q{No matching databases found due to exclusion/inclusion options},
+	'no-match-fs'        => q{No matching file systems found due to exclusion/inclusion options},
+	'no-match-rel'       => q{No matching relations found due to exclusion/inclusion options},
+	'no-match-set'       => q{No matching settings found due to exclusion/inclusion options},
+	'no-match-table'     => q{No matching tables found due to exclusion/inclusion options},
+	'no-match-user'      => q{No matching entries found due to user exclusion/inclusion options},
+	'invalid-query'      => q{Invalid query returned: $1},
 	'invalid-psql'       => q{Invalid psql argument: must be full path to a file named psql},
 	'no-find-psql'       => q{Cannot find given psql executable: $1},
 	'no-time-hires'      => q{Cannot find Time::HiRes, needed if 'showtime' is true},
@@ -262,21 +263,19 @@ our %msg = (
 	'symlink-fail'       => qq{Could not symlink \$1 to \$2: \$3\n},
 	'no-target-database' => q{No target databases could be found},
 	'psql-no-opt'        => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
-},
-'de' => {
-	'T-BAD-QUERY'        => q{Invalid query returned:},
-},
-'es' => {
-	'T-BAD-QUERY'        => q{Invalid query returned:},
+	'minimum-bloat'      => q{no relations meet the minimum bloat criteria},
+	'bloat-table'        => q{table $1.$2 rows:$3 pages:$3 shouldbe:$4 ($5X) wasted size:$6 ($7)},
+	'bloat-index'     	 => q{index $1 rows:$2 pages:$3 shouldbe:$4 ($5X) wasted bytes:$6 ($7)},
+	'unknown-error'      => q{unknown error},
 },
 'fr' => {
-	'T-EXCLUDE-DB'       => q{Aucune base de données trouvée à cause des options d'exclusion/inclusion},
-	'T-EXCLUDE-FS'       => q{Aucun système de fichier trouvé à cause des options d'exclusion/inclusion},
-	'T-EXCLUDE-REL'      => q{Aucune relation trouvée à cause des options d'exclusion/inclusion},
-	'T-EXCLUDE-SET'      => q{Aucun paramètre trouvé à cause des options d'exclusion/inclusion},
-	'T-EXCLUDE-TABLE'    => q{Aucune table trouvée à cause des options d'exclusion/inclusion},
-	'T-EXCLUDE-USEROK'   => q{Aucune entrée trouvée à cause options d'exclusion/inclusion},
-	'T-BAD-QUERY'        => q{Une requête invalide a renvoyé :},
+	'no-match-db'        => q{Aucune base de données trouvée à cause des options d'exclusion/inclusion},
+	'no-match-fs'        => q{Aucun système de fichier trouvé à cause des options d'exclusion/inclusion},
+	'no-match-rel'       => q{Aucune relation trouvée à cause des options d'exclusion/inclusion},
+	'no-match-set'       => q{Aucun paramètre trouvé à cause des options d'exclusion/inclusion},
+	'no-match-table'     => q{Aucune table trouvée à cause des options d'exclusion/inclusion},
+	'no-match-user'      => q{Aucune entrée trouvée à cause options d'exclusion/inclusion},
+	'invalid-query'      => q{Une requête invalide a renvoyé : $1},
 	'invalid-psql'       => q{Argument psql invalide : doit correspondre au chemin complet vers le fichier nommé psql},
 	'no-find-psql'       => q{N'a pas pu trouver l'exécutable psql : $1},
 	'no-time-hires'      => q{N'a pas trouvé le module Time::HiRes, nécessaire quand 'showtime' est activé},
@@ -288,6 +287,12 @@ our %msg = (
 	'symlink-done'       => qq{Création impossible de "\$1": \$2 est déjà lié à "\$3"\n},
 	'symlink-fail'       => qq{N'a pas pu supprimer le lien symbolique \$1 vers \$2 : \$3\n},
 	'no-target-database' => q{Aucune base de données cible trouvée},
+},
+'de' => {
+	'invalid-query'      => q{Invalid query returned: $1},
+},
+'es' => {
+	'invalid-query'      => q{Invalid query returned: $1},
 },
 );
 
@@ -1252,7 +1257,7 @@ sub run_command {
 					## Check if problem is due to backend being too old for this check
 					verify_version();
 
-					add_unknown qq{T-BAD-QUERY $db->{slurp}};
+					add_unknown msg('invalid-query', $db->{slurp});
 					## Remove it from the returned hash
 					pop @{$info->{db}};
 				}
@@ -1801,7 +1806,7 @@ sub check_backends {
 			next;
 		}
 		if (!$total) {
-			add_unknown 'T-EXCLUDE-DB';
+			add_unknown msg('no-match-db');
 			next;
 		}
 		my $percent = (int $total / $limit*100) || 1;
@@ -1939,12 +1944,12 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 	my %seenit;
 	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /\w+\s+\|/o) {
-			add_ok q{no relations meet the minimum bloat criteria} unless $MRTG;
+			add_ok msg('minimum-bloat') unless $MRTG;
 			next;
 		}
 		## Not a 'regex' to run_command as we need to check the above first.
 		if ($db->{slurp} !~ /\d+\s*\| \d+/) {
-			add_unknown qq{T-BAD-QUERY $db->{slurp}} unless $MRTG;
+			add_unknown msg('invalid-query', $db->{slurp}) unless $MRTG;
 			next;
 		}
 
@@ -1963,8 +1968,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 			## Do the table first if we haven't seen it
 			if (! $seenit{"$schema.$table"}++) {
 				$db->{perf} .= " $schema.$table=$wb";
-				my $msg = qq{table $schema.$table rows:$tups pages:$pages shouldbe:$otta (${bloat}X)};
-				$msg .= qq{ wasted size:$wb ($ws)};
+				my $msg = msg('bloat-table', $schema, $table, $tups, $pages, $otta, $bloat, $wb, $ws);
 				my $ok = 1;
 				my $perbloat = $bloat * 100;
 
@@ -2005,8 +2009,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 			## Now the index, if it exists
 			if ($index ne '?') {
 				$db->{perf} .= " $index=$iwb" if $iwb;
-				my $msg = qq{index $index rows:$irows pages:$ipages shouldbe:$iotta (${ibloat}X)};
-				$msg .= qq{ wasted bytes:$iwb ($iws)};
+				my $msg = msg('bloat-index', $index, $irows, $ipages, $iotta, $ibloat, $iwb, $iws);
 				my $ok = 1;
 				my $iperbloat = $ibloat * 100;
 
@@ -2046,7 +2049,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 			}
 		}
 		if ($max == -1) {
-			add_unknown 'T-EXCLUDE-REL';
+			add_unknown msg('no-match-rel');
 		}
 		elsif ($max != -1) {
 			add_ok $maxmsg;
@@ -2054,7 +2057,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 	}
 
 	if ($MRTG) {
-		keys %stats or bad_mrtg('unknown error');
+		keys %stats or bad_mrtg(msg('unknown error'));
 		## We are going to report the highest wasted bytes for table and index
 		my ($one,$two,$msg) = ('','');
 		## Can also sort by ratio
@@ -2092,7 +2095,7 @@ sub check_connection {
 	## Parse it out and return our information
 	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /PostgreSQL (\S+)/o) { ## no critic (ProhibitUnusedCapture)
-			add_unknown "T-BAD-QUERY $db->{slurp}";
+			add_unknown msg('invalid-query', $db->{slurp});
 			next;
 		}
 		add_ok "version $1";
@@ -2152,10 +2155,10 @@ sub check_database_size {
 		}
 		if ($max < 0) {
 			if ($USERWHERECLAUSE) {
-				add_ok 'T-EXCLUDE-USEROK';
+				add_ok msg('no-match-user');
 			}
 			else {
-				add_unknown 'T-EXCLUDE-DB';
+				add_unknown msg('no-match-db');
 			}
 			next;
 		}
@@ -2338,7 +2341,7 @@ sub check_disk_space {
 		next if $MRTG;
 
 		if (!$gotone) {
-			add_unknown 'T-EXCLUDE-FS';
+			add_unknown msg('no-match-fs');
 		}
 	}
 
@@ -2504,7 +2507,7 @@ sub check_wal_files {
 	my $found = 0;
 	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /(\d+)/) {
-			add_unknown qq{T-BAD-QUERY $db->{slurp}};
+			add_unknown msg('invalid-query', $db->{slurp});
 			next;
 		}
 		$found = 1;
@@ -2567,12 +2570,12 @@ sub check_relation_size {
 
 		$found = 1;
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
-			add_ok 'T-EXCLUDE-USEROK';
+			add_ok msg('no-match-user');
 			next;
 		}
 
 		if ($db->{slurp} !~ /\d+\s+\|\s+\d+/) {
-			add_unknown "T-BAD-QUERY $db->{slurp}";
+			add_unknown msg('invalid-query', $db->{slurp});
 			next;
 		}
 
@@ -2584,7 +2587,7 @@ sub check_relation_size {
 			($max=$size, $pmax=$psize, $kmax=$kind, $nmax=$name, $smax=$schema) if $size > $max;
 		}
 		if ($max < 0) {
-			add_unknown 'T-EXCLUDE-REL';
+			add_unknown msg('no-match-rel');
 			next;
 		}
 		if ($MRTG) {
@@ -2669,7 +2672,7 @@ sub check_last_vacuum_analyze {
 	for $db (@{$info->{db}}) {
 
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
-			add_ok 'T-EXCLUDE-USEROK';
+			add_ok msg('no-match-user');
 			next;
 		}
 
@@ -2697,7 +2700,7 @@ sub check_last_vacuum_analyze {
 			next;
 		}
 		if ($maxtime == -2) {
-			add_unknown 'T-EXCLUDE-TABLE';
+			add_unknown msg('no-match-table');
 		}
 		elsif ($maxtime == -1) {
 			add_unknown sprintf "No matching tables have ever been $type%s",
@@ -2753,7 +2756,7 @@ sub check_listener {
 
 	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /(\d+)/) {
-			add_unknown "T-BAD_QUERY $db->{slurp}";
+			add_unknown msg('invalid-query', $db->{slurp});
 			next;
 		}
 		my $count = $1;
@@ -2824,7 +2827,7 @@ sub check_locks {
 		}
 
 		if (!$gotone) {
-			add_unknown 'T-EXCLUDE-DB';
+			add_unknown msg('no-match-db');
 		}
 
 		## If not specific errors, just use the total
@@ -2905,7 +2908,7 @@ sub check_logfile {
 
 	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /^\s*(\w+)\n\s*(.+?)\n\s*(.+?)\n\s*(\w*)\n\s*(\w*)/sm) {
-			add_unknown "T-BAD-QUERY $db->{slurp}";
+			add_unknown msg('invalid-query', $db->{slurp});
 			next;
 		}
 		my ($dest,$dir,$file,$redirect,$facility) = ($1,$2,$3,$4,$5||'?');
@@ -3041,7 +3044,7 @@ sub check_query_runtime {
 	for $db (@{$info->{db}}) {
 
 		if ($db->{slurp} !~ /Total runtime: (\d+\.\d+) ms\s*$/s) {
-			add_unknown "T-BAD-QUERY $db->{slurp}";
+			add_unknown msg('invalid-query', $db->{slurp});
 			next;
 		}
 		my $totalseconds = $1 / 1000.0;
@@ -3106,7 +3109,7 @@ sub check_query_time {
 	for $db (@{$info->{db}}) {
 
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
-			add_ok 'T-EXCLUDE-USEROK';
+			add_ok msg('no-match-user');
 			next;
 		}
 
@@ -3170,7 +3173,7 @@ sub check_txn_time {
 		}
 
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
-			add_ok 'T-EXCLUDE-USEROK';
+			add_ok msg('no-match-user');
 			next;
 		}
 		$found = 1;
@@ -3241,7 +3244,7 @@ sub check_txn_idle {
 		my $max = -1;
 
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
-			add_ok 'T-EXCLUDE-USEROK';
+			add_ok msg('no-match-user');
 			next;
 		}
 
@@ -3330,7 +3333,7 @@ sub check_settings_checksum {
 			$newstring .= "$line\n";
 		}
 		if (! length $newstring) {
-			add_unknown 'T-EXCLUDE-SET';
+			add_unknown msg('no-match-set');
 		}
 
 		my $checksum = Digest::MD5::md5_hex($newstring);
@@ -3379,7 +3382,7 @@ sub check_timesync {
 
 	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /(\d+) \| (.+)/) {
-			add_unknown "T-BAD-QUERY $db->{slurp}";
+			add_unknown msg('invalid-query', $db->{slurp});
 			next;
 		}
 		my ($pgepoch,$pgpretty) = ($1,$2);
@@ -3486,8 +3489,7 @@ sub check_version {
 
 	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /PostgreSQL ((\d+\.\d+)(\w+|\.\d+))/o) {
-			add_unknown "T-BAD-QUERY $db->{slurp}";
-			warn "FOO?\n";
+			add_unknown msg('invalid-query', $db->{slurp});
 			next;
 		}
 		my ($full,$version,$revision) = ($1,$2,$3||'?');
