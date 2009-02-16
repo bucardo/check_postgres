@@ -69,12 +69,120 @@ our $YELLNAME = 1;
 ## please email the author as it probably indicates something
 ## that could be made into a command-line option or moved above.
 
+## Messages. Translations always welcome
+our %msg = (
+'en' => {
+	'usage'              => qq{\nUsage: \$1 <options>\n Try "\$1 --help" for a complete list of options\n\n},
+	'unknown-error'      => q{unknown error},
+	'invalid-query'      => q{Invalid query returned: $1},
+	'no-time-hires'      => q{Cannot find Time::HiRes, needed if 'showtime' is true},
+	'opt-output-invalid' => q{Invalid output: must be 'nagios' or 'mrtg' or 'simple' or 'cacti'},
+	'opt-psql-restrict'  => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
+	'opt-psql-badpath'   => q{Invalid psql argument: must be full path to a file named psql},
+	'opt-psql-noexist'   => q{Cannot find given psql executable: $1},
+	'opt-psql-nofind'    => q{Could not find a suitable psql executable},
+	'opt-psql-noexec'    => q{The file "$1" does not appear to be executable},
+	'opt-psql-nover'     => q{Could not determine psql version},
+	'mrtg-fail'          => q{Action $1 failed: $2},
+	'testmode-start'     => q{BEGIN TEST MODE},
+	'testmode-fail'      => q{Connection failed: $1 $2},
+	'testmode-ok'        => q{Connection ok: $1},
+	'testmode-nover'     => q{Could not find version for $1},
+	'testmode-norun'     => q{Cannot run "$1" on $2: version must be >= $3, but is $4},
+	'testmode-noset'     => q{Cannot run "$1" on $2: $3 is not set to on},
+	'testmode-end'       => q{END OF TEST MODE},
+	'symlink-create'     => q{Created "$1"},
+	'symlink-done'       => q{Not creating "$1": $2 already linked to "$3"},
+	'symlink-exists'     => q{Not creating "$1": $2 file already exists},
+	'symlink-fail1'      => q{Failed to unlink "$1": $2},
+	'symlink-fail2'      => q{Could not symlink $1 to $2: $3},
+	'symlink-name'       => q{This command will not work unless the program has the word "postgres" in it},
+	'symlink-unlink'     => q{Unlinking "$1":$2 },
+	'time-second'        => q{second},
+	'time-seconds'       => q{seconds},
+	'time-minute'        => q{minute},
+    'time-minutes'       => q{minutes},
+	'time-hour'          => q{hour},
+	'time-hours'         => q{hours},
+	'time-day'           => q{day},
+	'time-days'          => q{days},
+	'time-week'          => q{week},
+	'time-weeks'         => q{weeks},
+	'time-month'         => q{month},
+	'time-monthss'       => q{months},
+	'time-year'          => q{year},
+	'time-years'         => q{years},
+	'no-match-db'        => q{No matching databases found due to exclusion/inclusion options},
+	'no-match-fs'        => q{No matching file systems found due to exclusion/inclusion options},
+	'no-match-rel'       => q{No matching relations found due to exclusion/inclusion options},
+	'no-match-set'       => q{No matching settings found due to exclusion/inclusion options},
+	'no-match-table'     => q{No matching tables found due to exclusion/inclusion options},
+	'no-match-user'      => q{No matching entries found due to user exclusion/inclusion options},
+	'runcommand-err'     => q{Unknown error inside of the "run_command" function},
+	'runcommand-nodb'    => q{No target databases could be found},
+	'runcommand-nodupe'  => q{Could not dupe STDERR},
+	'runcommand-noerr'   => q{Could not open STDERR?!},
+	'runcoomand-nosys'   => q{System call failed with a $1},
+	'runcommand-pgpass'  => q{Created temporary pgpass file $1},
+	'runcommand-timeout' => q{Command timed out! Consider boosting --timeout higher than $1},
+
+	'file-noclose'       => q{Could not close $1: $2},
+
+	'die-action-version' => q{Cannot run "$1": server version must be >= $2, but is $3},
+	'die-badversion'     => q{Invalid version string: $1},
+	'die-nosetting'      => q{Could not fetch setting '$1'},
+	'die-noset'          => q{Cannot run "$1" $2 is not set to on},
+	'die-badtime'        => q{Value for '$1' must be a valid time. Examples: -$2 1s  -$2 "10 minutes"},
+
+	'bloat-nomin'        => q{no relations meet the minimum bloat criteria},
+	'bloat-table'        => q{table $1.$2 rows:$3 pages:$3 shouldbe:$4 ($5X) wasted size:$6 ($7)},
+	'bloat-index'     	 => q{index $1 rows:$2 pages:$3 shouldbe:$4 ($5X) wasted bytes:$6 ($7)},
+},
+'fr' => {
+	'invalid-query'      => q{Une requête invalide a renvoyé : $1},
+	'no-time-hires'      => q{N'a pas trouvé le module Time::HiRes, nécessaire quand 'showtime' est activé},
+	'opt-psql-badpath'   => q{Argument psql invalide : doit correspondre au chemin complet vers le fichier nommé psql},
+	'opt-psql-noexist'   => q{N'a pas pu trouver l'exécutable psql : $1},
+	'opt-psql-nofind'    => q{N'a pas trouvé l'exécutable psql},
+	'opt-psql-noexec'    => q{Le fichier "$1" ne semble pas être exécutable},
+	'opt-psql-nover '    => q{N'a pas pu déterminer la version de psql},
+	'no-match-db'        => q{Aucune base de données trouvée à cause des options d'exclusion/inclusion},
+	'no-match-fs'        => q{Aucun système de fichier trouvé à cause des options d'exclusion/inclusion},
+	'no-match-rel'       => q{Aucune relation trouvée à cause des options d'exclusion/inclusion},
+	'no-match-set'       => q{Aucun paramètre trouvé à cause des options d'exclusion/inclusion},
+	'no-match-table'     => q{Aucune table trouvée à cause des options d'exclusion/inclusion},
+	'no-match-user'      => q{Aucune entrée trouvée à cause options d'exclusion/inclusion},
+
+	'symlink-create'     => q{Création de "$1"},
+	'symlink-done'       => q{Création impossible de "$1": $2 est déjà lié à "$3"},
+	'symlink-exists'     => q{Création impossible de "$1": le fichier $2 existe déjà},
+	'symlink-fail1'      => q{Failed to unlink "$1": $2},
+	'symlink-fail2'      => q{N'a pas pu supprimer le lien symbolique $1 vers $2 : $3},
+	'symlink-name'       => q{This command will not work unless the program has the word "postgres" in it},
+	'symlink-unlink'     => q{Unlinking "$1":$2 },
+	'time-second'        => q{seconde},
+	'time-seconds'       => q{secondes},
+	'time-minute'        => q{minute},
+	'time-minutes'       => q{minutes},
+	'runcommand-nodb'    => q{Aucune base de données cible trouvée},
+},
+'de' => {
+	'invalid-query'      => q{Invalid query returned: $1},
+},
+'es' => {
+	'invalid-query'      => q{Invalid query returned: $1},
+},
+);
+
+our $lang = $ENV{LC_ALL} || $ENV{LC_MESSAGES} || $ENV{LANG} || 'en';
+$lang = substr($lang,0,2);
+
 ## Messages are stored in these until the final output via finishup()
 our (%ok, %warning, %critical, %unknown);
 
 our $ME = basename($0);
 our $ME2 = 'check_postgres.pl';
-our $USAGE = qq{\nUsage: $ME <options>\n Try "$ME --help" for a complete list of options\n\n};
+our $USAGE = msg('usage', $ME);
 
 ## Global error string, mostly used for MRTG error handling
 our $ERROR = '';
@@ -173,7 +281,7 @@ if ($OUTPUT =~ /(nagios|mrtg|simple|cacti)/io) {
 }
 ## Check for a valid output setting
 if ($OUTPUT ne 'nagios' and $OUTPUT ne 'mrtg' and $OUTPUT ne 'simple' and $OUTPUT ne 'cacti') {
-	die qq{Invalid output: must be 'nagios' or 'mrtg' or 'simple' or 'cacti'\n};
+	die msgn('opt-output-invalid');
 }
 
 our $MRTG = ($OUTPUT eq 'mrtg' or $OUTPUT eq 'simple') ? 1 : 0;
@@ -231,6 +339,7 @@ our $action_info = {
  wal_files           => [1, 'Check the number of WAL files in the pg_xlog directory'],
 };
 
+## XXX Need to i18n the above
 our $action_usage = '';
 our $longname = 1;
 for (keys %$action_info) {
@@ -240,64 +349,6 @@ for (sort keys %$action_info) {
 	$action_usage .= sprintf " %-*s - %s\n", 2+$longname, $_, $action_info->{$_}[1];
 }
 
-## Standard messages. Translations always welcome
-
-our %msg = (
-'en' => {
-	'no-match-db'        => q{No matching databases found due to exclusion/inclusion options},
-	'no-match-fs'        => q{No matching file systems found due to exclusion/inclusion options},
-	'no-match-rel'       => q{No matching relations found due to exclusion/inclusion options},
-	'no-match-set'       => q{No matching settings found due to exclusion/inclusion options},
-	'no-match-table'     => q{No matching tables found due to exclusion/inclusion options},
-	'no-match-user'      => q{No matching entries found due to user exclusion/inclusion options},
-	'invalid-query'      => q{Invalid query returned: $1},
-	'invalid-psql'       => q{Invalid psql argument: must be full path to a file named psql},
-	'no-find-psql'       => q{Cannot find given psql executable: $1},
-	'no-time-hires'      => q{Cannot find Time::HiRes, needed if 'showtime' is true},
-	'no-psql'            => q{Could not find a suitable psql executable},
-	'no-psql-executable' => q{The file "$1" does not appear to be executable},
-	'no-psql-version'    => q{Could not determine psql version},
-	'create-symlink'     => q{Created "$1"},
-	'symlink-exists'     => q{Not creating "$1": $2 file already exists},
-	'symlink-done'       => qq{Not creating "\$1": \$2 already linked to "\$3"\n},
-	'symlink-fail'       => qq{Could not symlink \$1 to \$2: \$3\n},
-	'no-target-database' => q{No target databases could be found},
-	'psql-no-opt'        => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
-	'minimum-bloat'      => q{no relations meet the minimum bloat criteria},
-	'bloat-table'        => q{table $1.$2 rows:$3 pages:$3 shouldbe:$4 ($5X) wasted size:$6 ($7)},
-	'bloat-index'     	 => q{index $1 rows:$2 pages:$3 shouldbe:$4 ($5X) wasted bytes:$6 ($7)},
-	'unknown-error'      => q{unknown error},
-},
-'fr' => {
-	'no-match-db'        => q{Aucune base de données trouvée à cause des options d'exclusion/inclusion},
-	'no-match-fs'        => q{Aucun système de fichier trouvé à cause des options d'exclusion/inclusion},
-	'no-match-rel'       => q{Aucune relation trouvée à cause des options d'exclusion/inclusion},
-	'no-match-set'       => q{Aucun paramètre trouvé à cause des options d'exclusion/inclusion},
-	'no-match-table'     => q{Aucune table trouvée à cause des options d'exclusion/inclusion},
-	'no-match-user'      => q{Aucune entrée trouvée à cause options d'exclusion/inclusion},
-	'invalid-query'      => q{Une requête invalide a renvoyé : $1},
-	'invalid-psql'       => q{Argument psql invalide : doit correspondre au chemin complet vers le fichier nommé psql},
-	'no-find-psql'       => q{N'a pas pu trouver l'exécutable psql : $1},
-	'no-time-hires'      => q{N'a pas trouvé le module Time::HiRes, nécessaire quand 'showtime' est activé},
-	'no-psql'            => q{N'a pas trouvé l'exécutable psql},
-	'no-psql-executable' => q{Le fichier "$1" ne semble pas être exécutable},
-	'no-psql-version'    => q{N'a pas pu déterminer la version de psql},
-	'create-symlink'     => q{Création de "$1"},
-	'symlink-exists'     => q{Création impossible de "$1": le fichier $2 existe déjà},
-	'symlink-done'       => qq{Création impossible de "\$1": \$2 est déjà lié à "\$3"\n},
-	'symlink-fail'       => qq{N'a pas pu supprimer le lien symbolique \$1 vers \$2 : \$3\n},
-	'no-target-database' => q{Aucune base de données cible trouvée},
-},
-'de' => {
-	'invalid-query'      => q{Invalid query returned: $1},
-},
-'es' => {
-	'invalid-query'      => q{Invalid query returned: $1},
-},
-);
-
-my $lang = $ENV{LC_ALL} || $ENV{LC_MESSAGES} || $ENV{LANG} || 'en';
-$lang = substr($lang,0,2);
 
 if ($opt{help}) {
 	print qq{Usage: $ME2 <options>
@@ -403,25 +454,29 @@ sub msg {
 
 } ## end of msg
 
+sub msgn {
+	return msg(@_) . "\n";
+}
+
 ## Everything from here on out needs psql, so find and verify a working version:
 if ($NO_PSQL_OPTION) {
-	delete $opt{PSQL} and ndie msg('psql-no-opt');
+	delete $opt{PSQL} and ndie msg('opt-psql-restrict');
 }
 
 if (! defined $PSQL or ! length $PSQL) {
 	if (exists $opt{PSQL}) {
 		$PSQL = $opt{PSQL};
-		$PSQL =~ m{^/[\w\d\/]*psql$} or ndie msg('invalid-psql');
-		-e $PSQL or ndie msg('no-find-psql', $PSQL);
+		$PSQL =~ m{^/[\w\d\/]*psql$} or ndie msg('opt-psql-badpath');
+		-e $PSQL or ndie msg('opt-psql-noexist', $PSQL);
 	}
 	else {
 		chomp($PSQL = qx{which psql});
-		$PSQL or ndie msg('no-psql');
+		$PSQL or ndie msg('opt-psql-nofind');
 	}
 }
--x $PSQL or ndie msg('no-psql-executable', $PSQL);
+-x $PSQL or ndie msg('opt-psql-noexec', $PSQL);
 $res = qx{$PSQL --version};
-$res =~ /^psql \(PostgreSQL\) (\d+\.\d+)/ or ndie msg('no-psql-version');
+$res =~ /^psql \(PostgreSQL\) (\d+\.\d+)/ or ndie msg('opt-psql-nover');
 our $psql_version = $1;
 
 $VERBOSE >= 1 and warn qq{psql=$PSQL version=$psql_version\n};
@@ -441,7 +496,6 @@ sub add_response {
 	if ($db->{perf}) {
 		$perf .= " $db->{perf}";
 	}
-	$msg =~ s/(T-[\w\-]+)/msg($1)/ge;
 	push @{$type->{$header}} => [$msg,$perf];
 }
 
@@ -499,7 +553,7 @@ sub do_mrtg {
 sub bad_mrtg {
 	my $msg = shift;
 	$ERROR and ndie $ERROR;
-	warn "Action $action failed: $msg\n";
+	warn msgn('mrtg-fail', $action, $msg);
 	exit 3;
 }
 
@@ -621,16 +675,16 @@ our %testaction = (
 				  fsm_relations    => 'VERSION: 8.2',
 );
 if ($opt{test}) {
-	print "BEGIN TEST MODE\n";
+	print msgn('testmode-start');
 	my $info = run_command('SELECT name, setting FROM pg_settings');
 	my %set; ## port, host, name, user
 	for my $db (@{$info->{db}}) {
 		if (exists $db->{fail}) {
 			(my $err = $db->{error}) =~ s/\s*\n\s*/ \| /g;
-			print "Connection failed: $db->{pname} $err\n";
+			print msgn('testmode-fail', $db->{pname}, $err);
 			next;
 		}
-		print "Connection ok: $db->{pname}\n";
+		print msgn('testmode-ok', $db->{pname});
 		for (split /\n/ => $db->{slurp}) {
 			while (/(\S+)\s*\|\s*(.+)\s*/sg) { ## no critic (ProhibitUnusedCapture)
 				$set{$db->{pname}}{$1} = $2;
@@ -646,12 +700,12 @@ if ($opt{test}) {
 			for my $db (@{$info->{db}}) {
 				next unless exists $db->{ok};
 				if ($set{$db->{pname}}{server_version} !~ /((\d+)\.(\d+))/) {
-					print "Could not find version for $db->{pname}\n";
+					print msgn('testmode-nover', $db->{pname});
 					next;
 				}
 				my ($sver,$smaj,$smin) = ($1,$2,$3);
 				if ($smaj < $rmaj or ($smaj==$rmaj and $smin < $rmin)) {
-					print qq{Cannot run "$ac" on $db->{pname}: version must be >= $rver, but is $sver\n};
+					print msgn('testmode-norun', $ac, $db->{pname}, $rver, $sver);
 				}
 				$db->{version} = $sver;
 			}
@@ -668,12 +722,12 @@ if ($opt{test}) {
 				}
 				my $val = $set{$db->{pname}}{$setting};
 				if ($val ne 'on') {
-					print qq{Cannot run "$ac" on $db->{pname}: $setting is not set to on\n};
+					print msgn('testmode-noset', $ac, $db->{pname}, $setting);
 				}
 			}
 		}
 	}
-	print "END OF TEST MODE\n";
+	print msgn('testmode-end');
 	exit 0;
 }
 
@@ -828,7 +882,7 @@ sub build_symlinks {
 
 	## Create symlinks to most actions
 	$ME =~ /postgres/
-		or die qq{This command will not work unless the program has the word "postgres" in it\n};
+		or die msgn('symlinks-name');
 
 	my $force = $action =~ /force/ ? 1 : 0;
 	for my $action (sort keys %$action_info) {
@@ -837,22 +891,22 @@ sub build_symlinks {
 		if (-l $file) {
 			if (!$force) {
 				my $source = readlink $file;
-				print msg('symlink-done', $file, $space, $source);
+				print msgn('symlink-done', $file, $space, $source);
 				next;
 			}
-			print qq{Unlinking "$file":$space };
-			unlink $file or die qq{Failed to unlink "$file": $!\n};
+			print msg('symlink-unlink', $file, $space);
+			unlink $file or die msgn('symlink-fail1', $file, $!);
 		}
 		elsif (-e $file) {
-			print msg('symlink-exists', $file, $space);
+			print msgn('symlink-exists', $file, $space);
 			next;
 		}
 
 		if (symlink $0, $file) {
-			print msg('create-symlink', $file);
+			print msgn('symlink-create', $file);
 		}
 		else {
-			print msg('symlink-fail', $file, $ME, $!);
+			print msgn('symlink-fail2', $file, $ME, $!);
 		}
 	}
 
@@ -898,15 +952,15 @@ sub pretty_time {
 
 	## Just seconds (< 2:00)
 	if ($sec < 120 or $tweak =~ /s/) {
-		return sprintf "$sec %s", $sec==1 ? 'second' : 'seconds';
+		return sprintf "$sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
 	}
 
 	## Minutes and seconds (< 60:00)
 	if ($sec < 60*60 or $tweak =~ /m/) {
 		my $min = int $sec / 60;
 		$sec %= 60;
-		my $ret = sprintf "$min %s", $min==1 ? 'minute' : 'minutes';
-		$sec and $tweak !~ /S/ and $ret .= sprintf " $sec %s", $sec==1 ? 'second' : 'seconds';
+		my $ret = sprintf "$min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
+		$sec and $tweak !~ /S/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
 		return $ret;
 	}
 
@@ -916,9 +970,9 @@ sub pretty_time {
 		$sec -= ($hour*60*60);
 		my $min = int $sec / 60;
 		$sec -= ($min*60);
-		my $ret = sprintf "$hour %s", $hour==1 ? 'hour' : 'hours';
-		$min and $tweak !~ /M/ and $ret .= sprintf " $min %s", $min==1 ? 'minute' : 'minutes';
-		$sec and $tweak !~ /[SM]/ and $ret .= sprintf " $sec %s", $sec==1 ? 'second' : 'seconds';
+		my $ret = sprintf "$hour %s", $hour==1 ? msg('time-hour') : msg('time-hours');
+		$min and $tweak !~ /M/ and $ret .= sprintf " $min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
+		$sec and $tweak !~ /[SM]/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
 		return $ret;
 	}
 
@@ -930,10 +984,10 @@ sub pretty_time {
 		$sec -= ($our*60*60);
 		my $min = int $sec / 60;
 		$sec -= ($min*60);
-		my $ret = sprintf "$day %s", $day==1 ? 'day' : 'days';
-		$our and $tweak !~ /H/     and $ret .= sprintf " $our %s", $our==1 ? 'hour'   : 'hours';
-		$min and $tweak !~ /[HM]/  and $ret .= sprintf " $min %s", $min==1 ? 'minute' : 'minutes';
-		$sec and $tweak !~ /[HMS]/ and $ret .= sprintf " $sec %s", $sec==1 ? 'second' : 'seconds';
+		my $ret = sprintf "$day %s", $day==1 ? msg('time-day') : msg('time-days');
+		$our and $tweak !~ /H/     and $ret .= sprintf " $our %s", $our==1 ? msg('time-hour')   : msg('time-hours');
+		$min and $tweak !~ /[HM]/  and $ret .= sprintf " $min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
+		$sec and $tweak !~ /[HMS]/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
 		return $ret;
 	}
 
@@ -946,11 +1000,11 @@ sub pretty_time {
 	$sec -= ($our*60*60);
 	my $min = int $sec / 60;
 	$sec -= ($min*60);
-	my $ret = sprintf "$week %s", $week==1 ? 'week' : 'weeks';
-	$day and $tweak !~ /D/      and $ret .= sprintf " $day %s", $day==1 ? 'day'    : 'days';
-	$our and $tweak !~ /[DH]/   and $ret .= sprintf " $our %s", $our==1 ? 'hour'   : 'hours';
-	$min and $tweak !~ /[DHM]/  and $ret .= sprintf " $min %s", $min==1 ? 'minute' : 'minutes';
-	$sec and $tweak !~ /[DHMS]/ and $ret .= sprintf " $sec %s", $sec==1 ? 'second' : 'seconds';
+	my $ret = sprintf "$week %s", $week==1 ? msg('time-week') : msg('time-weeks');
+	$day and $tweak !~ /D/      and $ret .= sprintf " $day %s", $day==1 ? msg('time-day')    : msg('time-days');
+	$our and $tweak !~ /[DH]/   and $ret .= sprintf " $our %s", $our==1 ? msg('time-hour')   : msg('time-hours');
+	$min and $tweak !~ /[DHM]/  and $ret .= sprintf " $min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
+	$sec and $tweak !~ /[DHMS]/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
 	return $ret;
 
 } ## end of pretty_time
@@ -1083,7 +1137,7 @@ sub run_command {
 	} ## end GROUP
 
 	if (! @target) {
-		ndie msg('no-target-database');
+		ndie msg('runcommand-nodb');
 	}
 
 	## Create a temp file to store our results
@@ -1121,11 +1175,11 @@ sub run_command {
 		if (defined $db->{dbpass} and length $db->{dbpass}) {
 			## Make a custom PGPASSFILE. Far better to simply use your own .pgpass of course
 			($passfh,$passfile) = tempfile('check_postgres.XXXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
-			$VERBOSE >= 3 and warn "Created temporary pgpass file $passfile\n";
+			$VERBOSE >= 3 and warn msgn('runcommand-pgpass', $passfile);
 			$ENV{PGPASSFILE} = $passfile;
 			printf $passfh "%s:%s:%s:%s:%s\n",
 				$db->{host} eq '<none>' ? '*' : $db->{host}, $db->{port}, $db->{dbname}, $db->{dbuser}, $db->{dbpass};
-			close $passfh or ndie qq{Could not close $passfile: $!\n};
+			close $passfh or ndie msgn('file-noclose', $passfile, $!);
 		}
 
 		push @args, '-o', $tempfile;
@@ -1142,7 +1196,7 @@ sub run_command {
 				$string = $arg->{oldstring} || $arg->{string};
 				for my $row (@{$arg->{version}}) {
 					if ($row !~ s/^([<>]?)(\d+\.\d+)\s+//) {
-						ndie "Invalid version string: $row";
+						ndie msg('die-badversion', $row);
 					}
 					my ($mod,$ver) = ($1||'',$2);
 					if ($mod eq '>' and $db->{version} > $ver) {
@@ -1171,22 +1225,22 @@ sub run_command {
 		alarm 0;
 
 		my $start = $opt{showtime} ? [gettimeofday()] : 0;
-		open my $oldstderr, '>&', \*STDERR or ndie "Could not dupe STDERR\n";
-		open STDERR, '>', $errorfile or ndie qq{Could not open STDERR?!\n};
+		open my $oldstderr, '>&', \*STDERR or ndie msgn('runcommand-nodupe');
+		open STDERR, '>', $errorfile or ndie msgn('runcommand-noerr');
 		eval {
 			alarm $timeout;
 			$res = system $PSQL => @args;
 		};
 		my $err = $@;
 		alarm 0;
-		open STDERR, '>&', $oldstderr or ndie "Could not recreate STDERR\n";
-		close $oldstderr or ndie qq{Could not close STDERR copy: $!\n};
+		open STDERR, '>&', $oldstderr or ndie msgn('runcommand-noerr');
+		close $oldstderr or ndie msgn('file-noclose', 'STDERR copy', $!);
 		if ($err) {
 			if ($err =~ /Timed out/) {
-				ndie qq{Command timed out! Consider boosting --timeout higher than $timeout\n};
+				ndie msg('runcommand-timeout', $timeout);
 			}
 			else {
-				ndie q{Unknown error inside of the "run_command" function};
+				ndie msg('runcommand-err');
 			}
 		}
 
@@ -1194,7 +1248,7 @@ sub run_command {
 
 		if ($res) {
 			$db->{fail} = $res;
-			$VERBOSE >= 3 and !$arg->{failok} and warn qq{System call failed with a $res\n};
+			$VERBOSE >= 3 and !$arg->{failok} and warn msgn('runcommand-nosys', $res);
 			seek $errfh, 0, 0;
 			{
 				local $/;
@@ -1240,7 +1294,7 @@ sub run_command {
 					ndie $db->{error};
 				}
 				if ($db->{slurp} !~ /PostgreSQL (\d+\.\d+)/) {
-					ndie qq{Could not determine version of Postgres from: $db->{slurp}};
+					ndie msgn('die-badversion', $db->{slurp});
 				}
 				$db->{version} = $1;
 				$db->{ok} = 0;
@@ -1268,8 +1322,8 @@ sub run_command {
 
 	} ## end each database
 
-	close $errfh or ndie qq{Could not close $errorfile: $!\n};
-	close $tempfh or ndie qq{Could not close $tempfile: $!\n};
+	close $errfh or ndie msgn('file-noclose', $errorfile, $!);
+	close $tempfh or ndie msgn('file-noclose', $tempfile, $!);
 
 	eval { File::Temp::cleanup(); };
 
@@ -1311,7 +1365,7 @@ sub verify_version {
 	}
 
 	if (!defined $info->{db}[0] or $info->{db}[0]{slurp} !~ /((\d+)\.(\d+))/) {
-		die "Could not determine version while running $SQL\n";
+		ndie msgn('die-badversion', $SQL);
 	}
 	my ($sver,$smaj,$smin) = ($1,$2,$3);
 
@@ -1322,7 +1376,7 @@ sub verify_version {
 	if ($limit =~ /VERSION: ((\d+)\.(\d+))/) {
 		my ($rver,$rmaj,$rmin) = ($1,$2,$3);
 		if ($smaj < $rmaj or ($smaj==$rmaj and $smin < $rmin)) {
-			die qq{Cannot run "$action": server version must be >= $rver, but is $sver\n};
+			ndie msgn('die-action-version', $action, $rver, $sver);
 		}
 	}
 
@@ -1337,11 +1391,11 @@ sub verify_version {
 		$SQL = qq{SELECT setting FROM pg_settings WHERE name = '$setting'};
 		my $info = run_command($SQL);
 		if (!defined $info->{db}[0]) {
-			die "Could not fetch setting '$setting'\n";
+			ndie msgn('die-nosetting', $setting);
 		}
 		my $val = $info->{db}[0]{slurp};
 		if ($val !~ /^on\b/) {
-			die qq{Cannot run "$action": $setting is not set to on\n};
+			ndie msgn('die-noset', $action, $setting);
 		}
 	}
 
@@ -1371,7 +1425,7 @@ sub size_in_seconds {
 	return '' if ! length $string;
 	if ($string !~ $timere) {
 		my $l = substr($type,0,1);
-		ndie qq{Value for '$type' must be a valid time. Examples: -$l 1s  -$l "10 minutes"\n};
+		ndie msgn('die-badtime', $type, $l);
 	}
 	my ($val,$unit) = ($1,lc substr($2||'s',0,1));
 	my $tempval = sprintf '%.9f', $val * ($unit eq 's' ? 1 : $unit eq 'm' ? 60 : $unit eq 'h' ? 3600 : 86600);
@@ -1944,7 +1998,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 	my %seenit;
 	for $db (@{$info->{db}}) {
 		if ($db->{slurp} !~ /\w+\s+\|/o) {
-			add_ok msg('minimum-bloat') unless $MRTG;
+			add_ok msg('bloat-nomin') unless $MRTG;
 			next;
 		}
 		## Not a 'regex' to run_command as we need to check the above first.
