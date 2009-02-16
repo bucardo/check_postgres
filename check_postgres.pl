@@ -261,6 +261,7 @@ our %msg = (
 	'symlink-done'       => qq{Not creating "\$1": \$2 already linked to "\$3"\n},
 	'symlink-fail'       => qq{Could not symlink \$1 to \$2: \$3\n},
 	'no-target-database' => q{No target databases could be found},
+	'psql-no-opt'        => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
 },
 'de' => {
 	'T-BAD-QUERY'        => q{Invalid query returned:},
@@ -399,7 +400,7 @@ sub msg {
 
 ## Everything from here on out needs psql, so find and verify a working version:
 if ($NO_PSQL_OPTION) {
-	delete $opt{PSQL};
+	delete $opt{PSQL} and ndie msg('psql-no-opt');
 }
 
 if (! defined $PSQL or ! length $PSQL) {
