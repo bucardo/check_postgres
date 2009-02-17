@@ -72,25 +72,68 @@ our $YELLNAME = 1;
 ## Messages. Translations always welcome
 our %msg = (
 'en' => {
-	'usage'              => qq{\nUsage: \$1 <options>\n Try "\$1 --help" for a complete list of options\n\n},
-	'unknown-error'      => q{unknown error},
+	'backends-users'     => q{$1 for number of users must be a number or percentage},
+	'backends-nomax'     => q{Could not determine max_connections},
+	'backends-mrtg'      => q{DB=$1 Max connections=$2},
+	'backends-msg'   => q{$1 of $2 connections ($3%)},
+	'bloat-index'     	 => q{index $1 rows:$2 pages:$3 shouldbe:$4 ($5X) wasted bytes:$6 ($7)},
+	'bloat-nomin'        => q{no relations meet the minimum bloat criteria},
+	'bloat-table'        => q{table $1.$2 rows:$3 pages:$3 shouldbe:$4 ($5X) wasted size:$6 ($7)},
+	'die-action-version' => q{Cannot run "$1": server version must be >= $2, but is $3},
+	'die-badtime'        => q{Value for '$1' must be a valid time. Examples: -$2 1s  -$2 "10 minutes"},
+	'die-badversion'     => q{Invalid version string: $1},
+	'die-noset'          => q{Cannot run "$1" $2 is not set to on},
+	'die-nosetting'      => q{Could not fetch setting '$1'},
+	'file-noclose'       => q{Could not close $1: $2},
+	'invalid-option'     => q{Invalid option},
 	'invalid-query'      => q{Invalid query returned: $1},
+	'mrtg-fail'          => q{Action $1 failed: $2},
+	'no-match-db'        => q{No matching databases found due to exclusion/inclusion options},
+	'no-match-fs'        => q{No matching file systems found due to exclusion/inclusion options},
+	'no-match-rel'       => q{No matching relations found due to exclusion/inclusion options},
+	'no-match-set'       => q{No matching settings found due to exclusion/inclusion options},
+	'no-match-table'     => q{No matching tables found due to exclusion/inclusion options},
+	'no-match-user'      => q{No matching entries found due to user exclusion/inclusion options},
 	'no-time-hires'      => q{Cannot find Time::HiRes, needed if 'showtime' is true},
 	'opt-output-invalid' => q{Invalid output: must be 'nagios' or 'mrtg' or 'simple' or 'cacti'},
-	'opt-psql-restrict'  => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
 	'opt-psql-badpath'   => q{Invalid psql argument: must be full path to a file named psql},
+	'opt-psql-noexec'    => q{The file "$1" does not appear to be executable},
 	'opt-psql-noexist'   => q{Cannot find given psql executable: $1},
 	'opt-psql-nofind'    => q{Could not find a suitable psql executable},
-	'opt-psql-noexec'    => q{The file "$1" does not appear to be executable},
 	'opt-psql-nover'     => q{Could not determine psql version},
-	'mrtg-fail'          => q{Action $1 failed: $2},
-	'testmode-start'     => q{BEGIN TEST MODE},
-	'testmode-fail'      => q{Connection failed: $1 $2},
-	'testmode-ok'        => q{Connection ok: $1},
-	'testmode-nover'     => q{Could not find version for $1},
-	'testmode-norun'     => q{Cannot run "$1" on $2: version must be >= $3, but is $4},
-	'testmode-noset'     => q{Cannot run "$1" on $2: $3 is not set to on},
-	'testmode-end'       => q{END OF TEST MODE},
+	'opt-psql-restrict'  => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
+	'range-badcs'        => q{Invalid '$1' option: must be a checksum},
+	'range-badlock'      => q{Invalid '$1' option: must be number of locks, or "type1=#;type2=#"},
+	'range-badpercent'   => q{Invalid '$1' option: must be a percentage},
+	'range-badpercsize'  => q{Invalid '$1' option: must be a size or a percentage},
+	'range-badsize'      => q{Invalid size for '$1' option},
+	'range-badtype'      => q{validate_range called with unknown type '$1'},
+	'range-badversion'   => q{Invalid string for '1' option: $2},
+	'range-cactionly'    => q{This action is for cacti use only and takes not warning or critical arguments},
+	'range-int'          => q{Invalid argument for '$1' option: must be an integer},
+	'range-int-pos'      => q{Invalid argument for '$1' option: must be a positive integer},
+	'range-neg-percent'  => q{Cannot specify a negative percent!},
+	'range-noopt-both'   => q{Must provide both 'warning' and 'critical' options},
+	'range-noopt-one'    => q{Must provide a 'warning' or 'critical' option},
+	'range-noopt-only'   => q{Can only provide 'warning' OR 'critical' option},
+	'range-noopt-orboth' => q{Must provide a 'warning' option, a 'critical' option, or both},
+	'range-noopt-size'   => q{Must provide a warning and/or critical size},
+	'range-nosize'       => q{Must provide a warning and/or critical size},
+	'range-notime'       => q{Must provide a warning and/or critical time},
+	'range-seconds'      => q{Invalid argument to '$1' option: must be number of seconds},
+	'range-version'      => q{must be in the format X.Y or X.Y.Z, where X is the major version number, }.
+		                    q{Y is the minor version number, and Z is the revision},
+	'range-warnbig'      => q{The 'warning' option cannot be greater than the 'critical' option},
+	'range-warnbigsize'  => q{The 'warning' option ($1 bytes) cannot be larger than the 'critical' option ($2 bytes)},
+	'range-warnbigtime'  => q{The 'warning' option ($1 s) cannot be larger than the 'critical' option ($2 s)},
+	'range-warnsmall'    => q{The 'warning' option cannot be less than the 'critical' option},
+	'runcommand-err'     => q{Unknown error inside of the "run_command" function},
+	'runcommand-nodb'    => q{No target databases could be found},
+	'runcommand-nodupe'  => q{Could not dupe STDERR},
+	'runcommand-noerr'   => q{Could not open STDERR?!},
+	'runcommand-pgpass'  => q{Created temporary pgpass file $1},
+	'runcommand-timeout' => q{Command timed out! Consider boosting --timeout higher than $1},
+	'runcoomand-nosys'   => q{System call failed with a $1},
 	'symlink-create'     => q{Created "$1"},
 	'symlink-done'       => q{Not creating "$1": $2 already linked to "$3"},
 	'symlink-exists'     => q{Not creating "$1": $2 file already exists},
@@ -98,45 +141,29 @@ our %msg = (
 	'symlink-fail2'      => q{Could not symlink $1 to $2: $3},
 	'symlink-name'       => q{This command will not work unless the program has the word "postgres" in it},
 	'symlink-unlink'     => q{Unlinking "$1":$2 },
-	'time-second'        => q{second},
-	'time-seconds'       => q{seconds},
-	'time-minute'        => q{minute},
-    'time-minutes'       => q{minutes},
-	'time-hour'          => q{hour},
-	'time-hours'         => q{hours},
+	'testmode-end'       => q{END OF TEST MODE},
+	'testmode-fail'      => q{Connection failed: $1 $2},
+	'testmode-norun'     => q{Cannot run "$1" on $2: version must be >= $3, but is $4},
+	'testmode-noset'     => q{Cannot run "$1" on $2: $3 is not set to on},
+	'testmode-nover'     => q{Could not find version for $1},
+	'testmode-ok'        => q{Connection ok: $1},
+	'testmode-start'     => q{BEGIN TEST MODE},
 	'time-day'           => q{day},
 	'time-days'          => q{days},
+	'time-hour'          => q{hour},
+	'time-hours'         => q{hours},
+	'time-minute'        => q{minute},
+    'time-minutes'       => q{minutes},
+	'time-month'         => q{month},
+	'time-months'       => q{months},
+	'time-second'        => q{second},
+	'time-seconds'       => q{seconds},
 	'time-week'          => q{week},
 	'time-weeks'         => q{weeks},
-	'time-month'         => q{month},
-	'time-monthss'       => q{months},
 	'time-year'          => q{year},
 	'time-years'         => q{years},
-	'no-match-db'        => q{No matching databases found due to exclusion/inclusion options},
-	'no-match-fs'        => q{No matching file systems found due to exclusion/inclusion options},
-	'no-match-rel'       => q{No matching relations found due to exclusion/inclusion options},
-	'no-match-set'       => q{No matching settings found due to exclusion/inclusion options},
-	'no-match-table'     => q{No matching tables found due to exclusion/inclusion options},
-	'no-match-user'      => q{No matching entries found due to user exclusion/inclusion options},
-	'runcommand-err'     => q{Unknown error inside of the "run_command" function},
-	'runcommand-nodb'    => q{No target databases could be found},
-	'runcommand-nodupe'  => q{Could not dupe STDERR},
-	'runcommand-noerr'   => q{Could not open STDERR?!},
-	'runcoomand-nosys'   => q{System call failed with a $1},
-	'runcommand-pgpass'  => q{Created temporary pgpass file $1},
-	'runcommand-timeout' => q{Command timed out! Consider boosting --timeout higher than $1},
-
-	'file-noclose'       => q{Could not close $1: $2},
-
-	'die-action-version' => q{Cannot run "$1": server version must be >= $2, but is $3},
-	'die-badversion'     => q{Invalid version string: $1},
-	'die-nosetting'      => q{Could not fetch setting '$1'},
-	'die-noset'          => q{Cannot run "$1" $2 is not set to on},
-	'die-badtime'        => q{Value for '$1' must be a valid time. Examples: -$2 1s  -$2 "10 minutes"},
-
-	'bloat-nomin'        => q{no relations meet the minimum bloat criteria},
-	'bloat-table'        => q{table $1.$2 rows:$3 pages:$3 shouldbe:$4 ($5X) wasted size:$6 ($7)},
-	'bloat-index'     	 => q{index $1 rows:$2 pages:$3 shouldbe:$4 ($5X) wasted bytes:$6 ($7)},
+	'unknown-error'      => q{Unknown error},
+	'usage'              => qq{\nUsage: \$1 <options>\n Try "\$1 --help" for a complete list of options\n\n},
 },
 'fr' => {
 	'invalid-query'      => q{Une requête invalide a renvoyé : $1},
@@ -562,7 +589,7 @@ sub do_mrtg_stats {
 
 	## Show the two highest items for mrtg stats hash
 
-	my $msg = shift || 'unknown error';
+	my $msg = shift || msg('unknown-error');
 
 	keys %stats or bad_mrtg($msg);
 	my ($one,$two) = ('','');
@@ -1179,7 +1206,7 @@ sub run_command {
 			$ENV{PGPASSFILE} = $passfile;
 			printf $passfh "%s:%s:%s:%s:%s\n",
 				$db->{host} eq '<none>' ? '*' : $db->{host}, $db->{port}, $db->{dbname}, $db->{dbuser}, $db->{dbpass};
-			close $passfh or ndie msgn('file-noclose', $passfile, $!);
+			close $passfh or ndie msg('file-noclose', $passfile, $!);
 		}
 
 		push @args, '-o', $tempfile;
@@ -1225,16 +1252,16 @@ sub run_command {
 		alarm 0;
 
 		my $start = $opt{showtime} ? [gettimeofday()] : 0;
-		open my $oldstderr, '>&', \*STDERR or ndie msgn('runcommand-nodupe');
-		open STDERR, '>', $errorfile or ndie msgn('runcommand-noerr');
+		open my $oldstderr, '>&', \*STDERR or ndie msg('runcommand-nodupe');
+		open STDERR, '>', $errorfile or ndie msg('runcommand-noerr');
 		eval {
 			alarm $timeout;
 			$res = system $PSQL => @args;
 		};
 		my $err = $@;
 		alarm 0;
-		open STDERR, '>&', $oldstderr or ndie msgn('runcommand-noerr');
-		close $oldstderr or ndie msgn('file-noclose', 'STDERR copy', $!);
+		open STDERR, '>&', $oldstderr or ndie msg('runcommand-noerr');
+		close $oldstderr or ndie msg('file-noclose', 'STDERR copy', $!);
 		if ($err) {
 			if ($err =~ /Timed out/) {
 				ndie msg('runcommand-timeout', $timeout);
@@ -1294,7 +1321,7 @@ sub run_command {
 					ndie $db->{error};
 				}
 				if ($db->{slurp} !~ /PostgreSQL (\d+\.\d+)/) {
-					ndie msgn('die-badversion', $db->{slurp});
+					ndie msg('die-badversion', $db->{slurp});
 				}
 				$db->{version} = $1;
 				$db->{ok} = 0;
@@ -1322,8 +1349,8 @@ sub run_command {
 
 	} ## end each database
 
-	close $errfh or ndie msgn('file-noclose', $errorfile, $!);
-	close $tempfh or ndie msgn('file-noclose', $tempfile, $!);
+	close $errfh or ndie msg('file-noclose', $errorfile, $!);
+	close $tempfh or ndie msg('file-noclose', $tempfile, $!);
 
 	eval { File::Temp::cleanup(); };
 
@@ -1365,7 +1392,7 @@ sub verify_version {
 	}
 
 	if (!defined $info->{db}[0] or $info->{db}[0]{slurp} !~ /((\d+)\.(\d+))/) {
-		ndie msgn('die-badversion', $SQL);
+		ndie msg('die-badversion', $SQL);
 	}
 	my ($sver,$smaj,$smin) = ($1,$2,$3);
 
@@ -1376,7 +1403,7 @@ sub verify_version {
 	if ($limit =~ /VERSION: ((\d+)\.(\d+))/) {
 		my ($rver,$rmaj,$rmin) = ($1,$2,$3);
 		if ($smaj < $rmaj or ($smaj==$rmaj and $smin < $rmin)) {
-			ndie msgn('die-action-version', $action, $rver, $sver);
+			ndie msg('die-action-version', $action, $rver, $sver);
 		}
 	}
 
@@ -1391,11 +1418,11 @@ sub verify_version {
 		$SQL = qq{SELECT setting FROM pg_settings WHERE name = '$setting'};
 		my $info = run_command($SQL);
 		if (!defined $info->{db}[0]) {
-			ndie msgn('die-nosetting', $setting);
+			ndie msg('die-nosetting', $setting);
 		}
 		my $val = $info->{db}[0]{slurp};
 		if ($val !~ /^on\b/) {
-			ndie msgn('die-noset', $action, $setting);
+			ndie msg('die-noset', $action, $setting);
 		}
 	}
 
@@ -1425,7 +1452,7 @@ sub size_in_seconds {
 	return '' if ! length $string;
 	if ($string !~ $timere) {
 		my $l = substr($type,0,1);
-		ndie msgn('die-badtime', $type, $l);
+		ndie msg('die-badtime', $type, $l);
 	}
 	my ($val,$unit) = ($1,lc substr($2||'s',0,1));
 	my $tempval = sprintf '%.9f', $val * ($unit eq 's' ? 1 : $unit eq 'm' ? 60 : $unit eq 'h' ? 3600 : 86600);
@@ -1524,17 +1551,17 @@ sub validate_range {
 	elsif ('seconds' eq $type) {
 		if (length $warning) {
 			if ($warning !~ $timesecre) {
-				ndie qq{Invalid argument to 'warning' option: must be number of seconds\n};
+				ndie msg('range-seconds', 'warning');
 			}
 			$warning = $1;
 		}
 		if (length $critical) {
 			if ($critical !~ $timesecre) {
-				ndie qq{Invalid argument to 'critical' option: must be number of seconds\n};
+				ndie msg('range-seconds', 'critical')
 			}
 			$critical = $1;
 			if (length $warning and $warning > $critical) {
-				ndie qq{The 'warning' option ($warning s) cannot be larger than the 'critical' option ($critical s)\n};
+				ndie msg('range-warnbigtime', $warning, $critical);
 			}
 		}
 	}
@@ -1542,81 +1569,78 @@ sub validate_range {
 		$critical = size_in_seconds($critical, 'critical');
 		$warning = size_in_seconds($warning, 'warning');
 		if (! length $critical and ! length $warning) {
-			ndie qq{Must provide a warning and/or critical time\n};
+			ndie msg('range-notime');
 		}
 		if (length $warning and length $critical and $warning > $critical) {
-			ndie qq{The 'warning' option ($warning s) cannot be larger than the 'critical' option ($critical s)\n};
+			ndie msg('range-warnbigtime', $warning, $critical);
 		}
 	}
 	elsif ('version' eq $type) {
-		my $msg = q{must be in the format X.Y or X.Y.Z, where X is the major version number, }
-			.q{Y is the minor version number, and Z is the revision};
+		my $msg = msg('range-version');
 		if (length $warning and $warning !~ /^\d+\.\d\.?[\d\w]*$/) {
-			ndie qq{Invalid string for 'warning' option: $msg};
+			ndie msg('range-badversion', 'warning', $msg);
 		}
 		if (length $critical and $critical !~ /^\d+\.\d\.?[\d\w]*$/) {
-			ndie qq{Invalid string for 'critical' option: $msg};
+			ndie msg('range-badversion', 'critical', $msg);
 		}
 		if (! length $critical and ! length $warning) {
-			ndie "Must provide a 'warning' option, a 'critical' option, or both\n";
+			ndie msg('range-noopt-orboth');
 		}
 	}
 	elsif ('size' eq $type) {
 		if (length $critical) {
 			if ($critical !~ $sizere) {
-				ndie "Invalid size for 'critical' option\n";
+				ndie msg('range-badsize', 'critical');
 			}
 			$critical = size_in_bytes($1,$2);
 		}
 		if (length $warning) {
 			if ($warning !~ $sizere) {
-				ndie "Invalid size for 'warning' option\n";
+				ndie msg('range-badsize', 'warning');
 			}
 			$warning = size_in_bytes($1,$2);
 			if (length $critical and $warning > $critical) {
-				ndie qq{The 'warning' option ($warning bytes) cannot be larger than the 'critical' option ($critical bytes)\n};
+				ndie msg('range-warnbigsize', $warning, $critical);
 			}
 		}
 		elsif (!length $critical) {
-			ndie qq{Must provide a warning and/or critical size\n};
+			ndie mgn('range-nosize');
 		}
 	}
 	elsif ($type =~ /integer/) {
 		$warning =~ s/_//g;
 		if (length $warning and $warning !~ /^\d+$/) {
-			ndie sprintf "Invalid argument for 'warning' option: must be %s integer\n",
-				$type =~ /positive/ ? 'a positive' : 'an';
+			ndie $type =~ /positive/ ? msg('range-int-pos', 'warning') : msg('range-int', 'warning');
 		}
 		$critical =~ s/_//g;
 		if (length $critical and $critical !~ /^\d+$/) {
-			ndie sprintf "Invalid argument for 'critical' option: must be %s integer\n",
-				$type =~ /positive/ ? 'a positive' : 'an';
+			ndie $type =~ /positive/ ? msg('range-int-pos', 'critical') : msg('range-int', 'critical');
 		}
 		if (length $warning and length $critical and $warning > $critical) {
 			return if $opt{reverse};
-			ndie qq{The 'warning' option cannot be greater than the 'critical' option\n};
+			ndie msg('range-warnbig');
 		}
 	}
 	elsif ('restringex' eq $type) {
 		if (! length $critical and ! length $warning) {
-			ndie qq{Must provide a 'warning' or 'critical' option\n};
+			ndie msg('range-noopt-one');
 		}
 		if (length $critical and length $warning) {
-			ndie qq{Can only provide 'warning' OR 'critical' option\n};
+			ndie msg('range-noopt-only');
 		}
 		my $string = length $critical ? $critical : $warning;
 		my $regex = ($string =~ s/^~//) ? '~' : '=';
-		$string =~ /^\w+$/ or die qq{Invalid option\n};
+		$string =~ /^\w+$/ or ndie msg('invalid-option');
 	}
 	elsif ('percent' eq $type) {
 		if (length $critical) {
 			if ($critical !~ /^\d+\%$/) {
-				ndie qq{Invalid 'critical' option: must be percentage\n};
+				ndie msg('range-badpercent', 'critical');
 			}
 		}
 		if (length $warning) {
 			if ($warning !~ /^\d+\%$/) {
-				ndie qq{Invalid 'warning' option: must be percentage\n};
+				ndie msg('range-badpercent', 'warning');
 			}
 		}
 	}
@@ -1626,7 +1650,7 @@ sub validate_range {
 				$critical = size_in_bytes($1,$2);
 			}
 			elsif ($critical !~ /^\d+\%$/) {
-				ndie qq{Invalid 'critical' option: must be size or percentage\n};
+				ndie msg('range-badpercsize', 'critical');
 			}
 		}
 		if (length $warning) {
@@ -1634,19 +1658,19 @@ sub validate_range {
 				$warning = size_in_bytes($1,$2);
 			}
 			elsif ($warning !~ /^\d+\%$/) {
-				ndie qq{Invalid 'warning' option: must be size or percentage\n};
+				ndie msg('range-badpercsize', 'warning');
 			}
 		}
 		elsif (! length $critical) {
-			ndie qq{Must provide a warning and/or critical size\n};
+			ndie msg('range-noopt-size');
 		}
 	}
 	elsif ('checksum' eq $type) {
 		if (length $critical and $critical !~ $checksumre and $critical ne '0') {
-			ndie qq{Invalid 'critical' option: must be a checksum\n};
+			ndie msg('range-badcs', 'critical');
 		}
 		if (length $warning and $warning !~ $checksumre) {
-			ndie qq{Invalid 'warning' option: must be a checksum\n};
+			ndie msg('range-badcs', 'warning');
 		}
 	}
 	elsif ('multival' eq $type) { ## Simple number, or foo=#;bar=#
@@ -1660,7 +1684,7 @@ sub validate_range {
 			$critical = \%err;
 		}
 		elsif (length $critical and $critical !~ /^\d+$/) {
-			ndie qq{Invalid 'critical' option: must be number of locks, or "type1=#;type2=#"\n};
+			ndie msg('range-badlock', 'critical');
 		}
 		my %warn;
 		while ($warning =~ /(\w+)\s*=\s*(\d+)/gi) {
@@ -1672,34 +1696,34 @@ sub validate_range {
 			$warning = \%warn;
 		}
 		elsif (length $warning and $warning !~ /^\d+$/) {
-			ndie qq{Invalid 'warning' option: must be number of locks, or "type1=#;type2=#"\n};
+			ndie msg('range-badlock', 'warning');
 		}
 	}
 	elsif ('cacti' eq $type) { ## Takes no args, just dumps data
 		if (length $warning or length $critical) {
-			die "This action is for cacti use only and takes not warning or critical arguments\n";
+			ndie msg('range-cacti-only');
 		}
 	}
 	else {
-		ndie qq{validate_range called with unknown type '$type'\n};
+		ndie msg('range-badtype', $type);
 	}
 
 	if ($arg->{both}) {
 		if (! length $warning or ! length $critical) {
-			ndie qq{Must provide both 'warning' and 'critical' options\n};
+			ndie msg('range-noopt-both');
 		}
 	}
 	if ($arg->{leastone}) {
 		if (! length $warning and ! length $critical) {
-			ndie qq{Must provide at least a 'warning' or 'critical' option\n};
+			ndie msg('range-noopt-one');
 		}
 	}
 	elsif ($arg->{onlyone}) {
 		if (length $warning and length $critical) {
-			ndie qq{Can only provide 'warning' OR 'critical' option\n};
+			ndie msg('range-noopt-only');
 		}
 		if (! length $warning and ! length $critical) {
-			ndie qq{Must provide either 'critical' or 'warning' option\n};
+			ndie msg('range-nopt-one');
 		}
 	}
 
@@ -1801,22 +1825,22 @@ sub check_backends {
 
 	my $validre = qr{^(\-?)(\d+)(\%?)$};
 	if ($warning !~ $validre) {
-		ndie "Warning for number of users must be a number or percentage\n";
+		ndie msg('backends-users', 'Warning');
 	}
 	my ($w1,$w2,$w3) = ($1,$2,$3);
 	if ($critical !~ $validre) {
-		ndie "Critical for number of users must be a number or percentage\n";
+		ndie msg('backends-users', 'Critical');
 	}
 	my ($e1,$e2,$e3) = ($1,$2,$3);
 
 	if ($w2 > $e2 and $w1 eq $e1 and $w3 eq $e3 and $w1 eq '') {
-		ndie qq{Makes no sense for warning to be greater than critical!\n};
+		ndie msg('range-warnbig');
 	}
 	if ($w2 < $e2 and $w1 eq $e1 and $w3 eq $e3 and $w1 eq '-') {
-		ndie qq{Makes no sense for warning to be less than critical!\n};
+		ndie msg('range-warnsmall');
 	}
 	if (($w1 and $w3) or ($e1 and $e3)) {
-		ndie qq{Cannot specify a negative percent!\n};
+		ndie msg('range-neg-percent');
 	}
 
 	my $MAXSQL = q{SELECT setting FROM pg_settings WHERE name = 'max_connections'};
@@ -1832,15 +1856,15 @@ sub check_backends {
 		$db = $info->{db}[0];
 		if ($db->{slurp} !~ /(\d+)/) {
 			undef %unknown;
-			add_unknown q{Could not determine max_connections};
+			add_unknown msg('backends-nomax');
 			return;
 		}
 		my $limit = $1;
 		if ($MRTG) {
-			do_mrtg({one => 1, msg => "DB=$db->{dbname} Max connections=$limit"});
+			do_mrtg({one => 1, msg => msg('backends_mrtg', $db->{dbname}, $limit)});
 		}
 		my $percent = (int 1/$limit*100) || 1;
-		add_ok qq{1 of $limit connections ($percent%)};
+		add_ok msg('backends-msg', 1, $limit, $percent);
 		return;
 	}
 
@@ -1856,7 +1880,7 @@ sub check_backends {
 		}
 		if ($MRTG) {
 			$stats{$db->{dbname}} = $total;
-			$statsmsg{$db->{dbname}} = "DB=$db->{dbname} Max connections=$limit";
+			$statsmsg{$db->{dbname}} = msg('backends-mrtg', $db->{dbname}, $limit);
 			next;
 		}
 		if (!$total) {
@@ -1864,7 +1888,7 @@ sub check_backends {
 			next;
 		}
 		my $percent = (int $total / $limit*100) || 1;
-		my $msg = qq{$total of $limit connections ($percent%)};
+		my $msg = msg('backends-msg', $total, $limit, $percent);
 		my $ok = 1;
 		if ($e1) { ## minus
 			$ok = 0 if $limit-$total >= $e2;
@@ -2111,7 +2135,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 	}
 
 	if ($MRTG) {
-		keys %stats or bad_mrtg(msg('unknown error'));
+		keys %stats or bad_mrtg(msg('unknown-error'));
 		## We are going to report the highest wasted bytes for table and index
 		my ($one,$two,$msg) = ('','');
 		## Can also sort by ratio
@@ -2400,7 +2424,7 @@ sub check_disk_space {
 	}
 
 	if ($MRTG) {
-		keys %stats or bad_mrtg('unknown error');
+		keys %stats or bad_mrtg(msg('unknown-error'));
 		## Get the highest by total size or percent (total, used, avail, percent)
 		## We default to 'available'
 		my $sortby = exists $opt{mrtg}
