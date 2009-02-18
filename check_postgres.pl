@@ -70,24 +70,65 @@ our $YELLNAME = 1;
 ## that could be made into a command-line option or moved above.
 
 ## Messages. Translations always welcome
+## Items without a leading tab still need translating
 ## no critic (RequireInterpolationOfMetachars)
 our %msg = (
 'en' => {
-	'backends-users'     => q{$1 for number of users must be a number or percentage},
-	'backends-nomax'     => q{Could not determine max_connections},
 	'backends-mrtg'      => q{DB=$1 Max connections=$2},
 	'backends-msg'       => q{$1 of $2 connections ($3%)},
+	'backends-nomax'     => q{Could not determine max_connections},
+	'backends-users'     => q{$1 for number of users must be a number or percentage},
 	'bloat-index'        => q{index $1 rows:$2 pages:$3 shouldbe:$4 ($5X) wasted bytes:$6 ($7)},
 	'bloat-nomin'        => q{no relations meet the minimum bloat criteria},
 	'bloat-table'        => q{table $1.$2 rows:$3 pages:$3 shouldbe:$4 ($5X) wasted size:$6 ($7)},
+	'checkpoint-baddir'  => q{Invalid data_directory: "$1"},
+	'checkpoint-nodir'   => q{Must supply a --datadir argument or set the PGDATA environment variable},
+	'checkpoint-nodp'    => q{Must install the Perl module Date::Parse to use the checkpoint action},
+	'checkpoint-noregex' => q{Call to pg_controldata $1 failed},
+	'checkpoint-nosys'   => q{Could not call pg_controldata: $1},
+	'checkpoint-ok'      => q{Last checkpoint was 1 second ago},
+	'checkpoint-ok2'     => q{Last checkpoint was 2 seconds ago},
+	'checkpoint-regex'   => q{Time of latest checkpoint:},
+	'checksum-badline'   => q{Invalid pg_setting line: $1},
+	'checksum-msg'       => q{checksum: $1},
+	'checksum-nomd'      => q{Must install the Perl module Digest::MD5 to use the checksum action},
+	'checksum-nomrtg'    => q{Must provide a checksum via the --mrtg option},
+	'checksum-noparse'   => q{Unable to parse pg_controldata output: "$1"},
+	'custom-invalid'     => q{Invalid format returned by custom query},
+	'custom-norows'      => q{No rows returned},
+	'custom-nostring'    => q{Must provide a query string},
+	'dbsize-version'     => q{Target database must be version 8.1 or higher to run the database_size action},
 	'die-action-version' => q{Cannot run "$1": server version must be >= $2, but is $3},
 	'die-badtime'        => q{Value for '$1' must be a valid time. Examples: -$2 1s  -$2 "10 minutes"},
 	'die-badversion'     => q{Invalid version string: $1},
 	'die-noset'          => q{Cannot run "$1" $2 is not set to on},
 	'die-nosetting'      => q{Could not fetch setting '$1'},
+	'diskspace-df'       => q{Could not find required executable /bin/df},
+	'diskspace-fail'     => q{Invalid result from command "$1": $1},
+	'diskspace-msg'      => q{FS $1 mounted on $2 is using $3 of $4 ($5%)},
+	'diskspace-nodata'   => q{Could not determine data_directory: are you connecting as a superuser?},
+	'diskspace-nodir'    => q{Could not find data directory "$1"},
 	'file-noclose'       => q{Could not close $1: $2},
+	'fsm-page-msg'       => q{fsm page slots used: $1 of $2 ($3%)},
+	'fsm-rel-msg'        => q{fsm relations used: $1 of $2 ($3%)},
 	'invalid-option'     => q{Invalid option},
 	'invalid-query'      => q{Invalid query returned: $1},
+	'listener-count'     => q{ listening=$1}, ## needs leading space
+	'listener-msg'       => q{listeners found: $1},
+	'locks-msg'          => q{total "$1" locks: $2},
+	'locks-msg2'         => q{total locks: $1},
+	'logfile-bad'        => q{Invalid logfile "$1"},
+	'logfile-debug'      => q{Dest is $1, dir is $2, file is $3, facility is $4},
+	'logfile-debug2'     => q{Final logfile: $1},
+	'logfile-dne'        => q{logfile $1 does not exist!},
+	'logfile-fail'       => q{fails logging to: $1},
+	'logfile-ok'         => q{logs to: $1},
+	'logfile-openfail'   => q{logfile "$1" failed to open: $2},
+	'logfile-opt-bad'    => q{Invalid logfile option},
+	'logfile-seekfail'   => q{Seek on $1 failed: $2},
+	'logfile-stderr'     => q{Logfile output has been redirected to stderr: please provide a filename},
+	'logfile-syslog'     => q{Database is using syslog, please specify path with --logfile option (fac=$1)},
+	'maxtime'            => q{ maxtime:$1}, ## leading space
 	'mrtg-fail'          => q{Action $1 failed: $2},
 	'no-match-db'        => q{No matching databases found due to exclusion/inclusion options},
 	'no-match-fs'        => q{No matching file systems found due to exclusion/inclusion options},
@@ -103,6 +144,8 @@ our %msg = (
 	'opt-psql-nofind'    => q{Could not find a suitable psql executable},
 	'opt-psql-nover'     => q{Could not determine psql version},
 	'opt-psql-restrict'  => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
+	'qtime-fail'         => q{Cannot run the txn_idle action unless stats_command_string is set to 'on'!},
+	'qtime-msg'          => q{longest query: $1s},
 	'range-badcs'        => q{Invalid '$1' option: must be a checksum},
 	'range-badlock'      => q{Invalid '$1' option: must be number of locks, or "type1=#;type2=#"},
 	'range-badpercent'   => q{Invalid '$1' option: must be a percentage},
@@ -114,6 +157,7 @@ our %msg = (
 	'range-int'          => q{Invalid argument for '$1' option: must be an integer},
 	'range-int-pos'      => q{Invalid argument for '$1' option: must be a positive integer},
 	'range-neg-percent'  => q{Cannot specify a negative percent!},
+	'range-none'         => q{No warning or critical options are needed},
 	'range-noopt-both'   => q{Must provide both 'warning' and 'critical' options},
 	'range-noopt-one'    => q{Must provide a 'warning' or 'critical' option},
 	'range-noopt-only'   => q{Can only provide 'warning' OR 'critical' option},
@@ -128,13 +172,35 @@ our %msg = (
 	'range-warnbigsize'  => q{The 'warning' option ($1 bytes) cannot be larger than the 'critical' option ($2 bytes)},
 	'range-warnbigtime'  => q{The 'warning' option ($1 s) cannot be larger than the 'critical' option ($2 s)},
 	'range-warnsmall'    => q{The 'warning' option cannot be less than the 'critical' option},
+	'relsize-msg-ind'    => q{largest index is "$1": $2},
+	'relsize-msg-reli'   => q{largest relation is index "$1": $2},
+	'relsize-msg-relt'   => q{largest relation is table "$1": $2},
+	'relsize-msg-tab'    => q{largest table is "$1": $2},
+	'rep-badarg'         => q{Invalid repinfo argument: expected 6 comma-separated values},
+	'rep-duh'            => q{Makes no sense to test replication with same values},
+	'rep-fail'           => q{Row not replicated to slave $1},
+	'rep-noarg'          => q{Need a repinfo argument},
+	'rep-norow'          => q{Replication source row not found: $1},
+	'rep-noslaves'       => q{No slaves found},
+	'rep-notsame'        => q{Cannot test replication: values are not the same},
+	'rep-ok'             => q{Row was replicated},
+	'rep-sourcefail'     => q{Source update failed},
+	'rep-timeout'        => q{Row was not replicated. Timeout: $1},
+	'rep-unknown'        => q{Replication check failed},
+	'rep-wrongvals'      => q{Cannot test replication: values are not the right ones ($1 not $2 nor $3)},
 	'runcommand-err'     => q{Unknown error inside of the "run_command" function},
 	'runcommand-nodb'    => q{No target databases could be found},
 	'runcommand-nodupe'  => q{Could not dupe STDERR},
 	'runcommand-noerr'   => q{Could not open STDERR?!},
+	'runcommand-nosys'   => q{System call failed with a $1},
 	'runcommand-pgpass'  => q{Created temporary pgpass file $1},
 	'runcommand-timeout' => q{Command timed out! Consider boosting --timeout higher than $1},
-	'runcommand-nosys'   => q{System call failed with a $1},
+	'runtime-badmrtg'    => q{invalid queryname?},
+	'runtime-badname'    => q{Invalid queryname option: must be a simple view name},
+	'runtime-msg'        => q{query runtime: $1 seconds},
+	'seq-die'            => q{Could not determine information about sequence $1},
+	'seq-msg'            => q{$1=$2% (calls left=$3)},
+	'seq-none'           => q{No sequences found},
 	'symlink-create'     => q{Created "$1"},
 	'symlink-done'       => q{Not creating "$1": $2 already linked to "$3"},
 	'symlink-exists'     => q{Not creating "$1": $2 file already exists},
@@ -154,33 +220,89 @@ our %msg = (
 	'time-hour'          => q{hour},
 	'time-hours'         => q{hours},
 	'time-minute'        => q{minute},
-    'time-minutes'       => q{minutes},
+	'time-minutes'       => q{minutes},
 	'time-month'         => q{month},
-	'time-months'       => q{months},
+	'time-months'        => q{months},
 	'time-second'        => q{second},
 	'time-seconds'       => q{seconds},
 	'time-week'          => q{week},
 	'time-weeks'         => q{weeks},
 	'time-year'          => q{year},
 	'time-years'         => q{years},
+	'timesync-diff'      => q{ diff:$1}, ## leading space
+	'timesync-msg'       => q{timediff=$1 DB=$2 Local=$3},
+	'trigger-msg'        => q{Disabled triggers: $1},
+	'txnidle-msg'        => q{longest idle in txn: $1s},
+	'txnidle-none'       => q{no idle in transaction},
+	'txntime-fail'       => q{Query failed},
+	'txntime-msg'        => q{longest txn: $1s},
+	'txntime-none'       => q{No transactions},
 	'unknown-error'      => q{Unknown error},
 	'usage'              => qq{\nUsage: \$1 <options>\n Try "\$1 --help" for a complete list of options\n\n},
+	'vac-msg'            => q{DB: $1 TABLE: $2},
+	'vac-nomatch-a'      => q{No matching tables have ever been analyzed},
+	'vac-nomatch-v'      => q{No matching tables have ever been vacuumed},
+	'version'            => q{version $1},
+	'version-fail'       => q{version $1, but expected $1},
+	'version-madmrtg'    => q{Invalid mrtg version argument},
+	'version-ok'         => q{version $1},
 },
 'fr' => {
-	'backends-users'     => q{$1 for number of users must be a number or percentage},
-	'backends-nomax'     => q{Could not determine max_connections},
-	'backends-mrtg'      => q{DB=$1 Max connections=$2},
-	'backends-msg'       => q{$1 of $2 connections ($3%)},
+'backends-mrtg'      => q{DB=$1 Max connections=$2},
+'backends-msg'       => q{$1 of $2 connections ($3%)},
+'backends-nomax'     => q{Could not determine max_connections},
+'backends-users'     => q{$1 for number of users must be a number or percentage},
 	'bloat-index'        => q{index $1 lignes:$2 pages:$3 devrait être:$4 ($5X) octets perdus:$6 ($7)},
 	'bloat-nomin'        => q{aucune relation n'atteint le critère minimum de fragmentation},
 	'bloat-table'        => q{table $1.$2 lignes:$3 pages:$3 devrait être:$4 ($5X) place perdue:$6 ($7)},
+'checkpoint-baddir'  => q{Invalid data_directory: "$1"},
+'checkpoint-nodir'   => q{Must supply a --datadir argument or set the PGDATA environment variable},
+'checkpoint-nodp'    => q{Must install the Perl module Date::Parse to use the checkpoint action},
+'checkpoint-noregex' => q{Call to pg_controldata $1 failed},
+'checkpoint-nosys'   => q{Could not call pg_controldata: $1},
+'checkpoint-ok'      => q{Last checkpoint was 1 second ago},
+'checkpoint-ok2'     => q{Last checkpoint was 2 seconds ago},
+	'checkpoint-regex'   => q{Heure du dernier point de contrôle :},
+'checksum-badline'   => q{Invalid pg_setting line: $1},
+'checksum-msg'       => q{checksum: $1},
+'checksum-nomd'      => q{Must install the Perl module Digest::MD5 to use the checksum action},
+'checksum-nomrtg'    => q{Must provide a checksum via the --mrtg option},
+'checksum-noparse'   => q{Unable to parse pg_controldata output: "$1"},
+'custom-invalid'     => q{Invalid format returned by custom query},
+'custom-norows'      => q{No rows returned},
+'custom-nostring'    => q{Must provide a query string},
+'dbsize-version'     => q{Target database must be version 8.1 or higher to run the database_size action},
 	'die-action-version' => q{Ne peut pas exécuter « $1 » : la version du serveur doit être supérieure ou égale à $2, alors qu'elle est $3},
 	'die-badtime'        => q{La valeur de « $1 » doit être une heure valide. Par exemple, -$2 1s  -$2 « 10 minutes »},
 	'die-badversion'     => q{Version invalide : $1},
 	'die-noset'          => q{Ne peut pas exécuter « $1 » $2 n'est pas activé},
 	'die-nosetting'      => q{N'a pas pu récupérer le paramètre « $1 »},
+'diskspace-df'       => q{Could not find required executable /bin/df},
+'diskspace-fail'     => q{Invalid result from command "$1": $1},
+'diskspace-msg'      => q{FS $1 mounted on $2 is using $3 of $4 ($5%)},
+'diskspace-nodata'   => q{Could not determine data_directory: are you connecting as a superuser?},
+'diskspace-nodir'    => q{Could not find data directory "$1"},
 	'file-noclose'       => q{N'a pas pu fermer $1 : $2},
+'fsm-page-msg'       => q{fsm page slots used: $1 of $2 ($3%)},
+'fsm-rel-msg'        => q{fsm relations used: $1 of $2 ($3%)},
+'invalid-option'     => q{Invalid option},
 	'invalid-query'      => q{Une requête invalide a renvoyé : $1},
+'listener-count'     => q{ listening=$1}, ## needs leading space
+'listener-msg'       => q{listeners found: $1},
+'locks-msg'          => q{total "$1" locks: $2},
+'locks-msg2'         => q{total locks: $1},
+'logfile-bad'        => q{Invalid logfile "$1"},
+'logfile-debug'      => q{Dest is $1, dir is $2, file is $3, facility is $4},
+'logfile-debug2'     => q{Final logfile: $1},
+'logfile-dne'        => q{logfile $1 does not exist!},
+'logfile-fail'       => q{fails logging to: $1},
+'logfile-ok'         => q{logs to: $1},
+'logfile-openfail'   => q{logfile "$1" failed to open: $2},
+'logfile-opt-bad'    => q{Invalid logfile option},
+'logfile-seekfail'   => q{Seek on $1 failed: $2},
+'logfile-stderr'     => q{Logfile output has been redirected to stderr: please provide a filename},
+'logfile-syslog'     => q{Database is using syslog, please specify path with --logfile option (fac=$1)},
+'maxtime'            => q{ maxtime:$1}, ## leading space
 	'mrtg-fail'          => q{Échec de l'action $1 : $2},
 	'no-match-db'        => q{Aucune base de données trouvée à cause des options d'exclusion/inclusion},
 	'no-match-fs'        => q{Aucun système de fichier trouvé à cause des options d'exclusion/inclusion},
@@ -189,45 +311,69 @@ our %msg = (
 	'no-match-table'     => q{Aucune table trouvée à cause des options d'exclusion/inclusion},
 	'no-match-user'      => q{Aucune entrée trouvée à cause options d'exclusion/inclusion},
 	'no-time-hires'      => q{N'a pas trouvé le module Time::HiRes, nécessaire quand « showtime » est activé},
-	'opt-output-invalid' => q{Mode de sortie invalide : doit être « nagios » ou « mrtg » ou « simple » ou encore « cacti »},
-	'opt-psql-badpath'   => q{Argument psql invalide : doit correspondre au chemin complet vers le fichier nommé psql},
-	'opt-psql-noexec'    => q{Le fichier « $1«  ne semble pas être exécutable},
-	'opt-psql-noexist'   => q{N'a pas pu trouver l'exécutable psql : $1},
-	'opt-psql-nofind'    => q{N'a pas trouvé l'exécutable psql},
-	'opt-psql-nover '    => q{N'a pas pu déterminer la version de psql},
-	'opt-psql-restrict'  => q{Ne peut pas utiliser l'option --PSQL quand NO_PSQL_OPTION est activé},
-	'range-badcs'        => q{Invalid '$1' option: must be a checksum},
-	'range-badlock'      => q{Invalid '$1' option: must be number of locks, or "type1=#;type2=#"},
-	'range-badpercent'   => q{Invalid '$1' option: must be a percentage},
-	'range-badpercsize'  => q{Invalid '$1' option: must be a size or a percentage},
-	'range-badsize'      => q{Invalid size for '$1' option},
-	'range-badtype'      => q{validate_range called with unknown type '$1'},
-	'range-badversion'   => q{Invalid string for '1' option: $2},
-	'range-cactionly'    => q{This action is for cacti use only and takes not warning or critical arguments},
-	'range-int'          => q{Invalid argument for '$1' option: must be an integer},
-	'range-int-pos'      => q{Invalid argument for '$1' option: must be a positive integer},
-	'range-neg-percent'  => q{Cannot specify a negative percent!},
-	'range-noopt-both'   => q{Must provide both 'warning' and 'critical' options},
-	'range-noopt-one'    => q{Must provide a 'warning' or 'critical' option},
-	'range-noopt-only'   => q{Can only provide 'warning' OR 'critical' option},
-	'range-noopt-orboth' => q{Must provide a 'warning' option, a 'critical' option, or both},
-	'range-noopt-size'   => q{Must provide a warning and/or critical size},
-	'range-nosize'       => q{Must provide a warning and/or critical size},
-	'range-notime'       => q{Must provide a warning and/or critical time},
-	'range-seconds'      => q{Invalid argument to '$1' option: must be number of seconds},
-	'range-version'      => q{must be in the format X.Y or X.Y.Z, where X is the major version number, }.
-		                    q{Y is the minor version number, and Z is the revision},
-	'range-warnbig'      => q{The 'warning' option cannot be greater than the 'critical' option},
-	'range-warnbigsize'  => q{The 'warning' option ($1 bytes) cannot be larger than the 'critical' option ($2 bytes)},
-	'range-warnbigtime'  => q{The 'warning' option ($1 s) cannot be larger than the 'critical' option ($2 s)},
-	'range-warnsmall'    => q{The 'warning' option cannot be less than the 'critical' option},
+'opt-output-invalid' => q{Invalid output: must be 'nagios' or 'mrtg' or 'simple' or 'cacti'},
+'opt-psql-badpath'   => q{Invalid psql argument: must be full path to a file named psql},
+'opt-psql-noexec'    => q{The file "$1" does not appear to be executable},
+'opt-psql-noexist'   => q{Cannot find given psql executable: $1},
+'opt-psql-nofind'    => q{Could not find a suitable psql executable},
+'opt-psql-nover'     => q{Could not determine psql version},
+'opt-psql-restrict'  => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
+'qtime-fail'         => q{Cannot run the txn_idle action unless stats_command_string is set to 'on'!},
+'qtime-msg'          => q{longest query: $1s},
+'range-badcs'        => q{Invalid '$1' option: must be a checksum},
+'range-badlock'      => q{Invalid '$1' option: must be number of locks, or "type1=#;type2=#"},
+'range-badpercent'   => q{Invalid '$1' option: must be a percentage},
+'range-badpercsize'  => q{Invalid '$1' option: must be a size or a percentage},
+'range-badsize'      => q{Invalid size for '$1' option},
+'range-badtype'      => q{validate_range called with unknown type '$1'},
+'range-badversion'   => q{Invalid string for '1' option: $2},
+'range-cactionly'    => q{This action is for cacti use only and takes not warning or critical arguments},
+'range-int'          => q{Invalid argument for '$1' option: must be an integer},
+'range-int-pos'      => q{Invalid argument for '$1' option: must be a positive integer},
+'range-neg-percent'  => q{Cannot specify a negative percent!},
+'range-noopt-both'   => q{Must provide both 'warning' and 'critical' options},
+'range-noopt-one'    => q{Must provide a 'warning' or 'critical' option},
+'range-noopt-only'   => q{Can only provide 'warning' OR 'critical' option},
+'range-noopt-orboth' => q{Must provide a 'warning' option, a 'critical' option, or both},
+'range-noopt-size'   => q{Must provide a warning and/or critical size},
+'range-nosize'       => q{Must provide a warning and/or critical size},
+'range-notime'       => q{Must provide a warning and/or critical time},
+'range-seconds'      => q{Invalid argument to '$1' option: must be number of seconds},
+'range-version'      => q{must be in the format X.Y or X.Y.Z, where X is the major version number, }.
+	                    q{Y is the minor version number, and Z is the revision},
+'range-warnbig'      => q{The 'warning' option cannot be greater than the 'critical' option},
+'range-warnbigsize'  => q{The 'warning' option ($1 bytes) cannot be larger than the 'critical' option ($2 bytes)},
+'range-warnbigtime'  => q{The 'warning' option ($1 s) cannot be larger than the 'critical' option ($2 s)},
+'range-warnsmall'    => q{The 'warning' option cannot be less than the 'critical' option},
+'relsize-msg-ind'    => q{largest index is "$1": $2},
+'relsize-msg-reli'   => q{largest relation is index "$1": $2},
+'relsize-msg-relt'   => q{largest relation is table "$1": $2},
+'relsize-msg-tab'    => q{largest table is "$1": $2},
+'rep-badarg'         => q{Invalid repinfo argument: expected 6 comma-separated values},
+'rep-duh'            => q{Makes no sense to test replication with same values},
+'rep-fail'           => q{Row not replicated to slave $1},
+'rep-noarg'          => q{Need a repinfo argument},
+'rep-norow'          => q{Replication source row not found: $1},
+'rep-noslaves'       => q{No slaves found},
+'rep-notsame'        => q{Cannot test replication: values are not the same},
+'rep-ok'             => q{Row was replicated},
+'rep-sourcefail'     => q{Source update failed},
+'rep-timeout'        => q{Row was not replicated. Timeout: $1},
+'rep-unknown'        => q{Replication check failed},
+'rep-wrongvals'      => q{Cannot test replication: values are not the right ones ($1 not $2 nor $3)},
 	'runcommand-err'     => q{Erreur inconnue de la fonction « run_command »},
 	'runcommand-nodb'    => q{Aucune base de données cible trouvée},
 	'runcommand-nodupe'  => q{N'a pas pu dupliqué STDERR},
 	'runcommand-noerr'   => q{N'a pas pu ouvrir STDERR},
+	'runcommand-nosys'   => q{Échec de l'appel système avec un $1},
 	'runcommand-pgpass'  => q{Création du fichier pgpass temporaire $1},
 	'runcommand-timeout' => q{Délai épuisée pour la commande ! Essayez d'augmenter --timeout à une valeur plus importante que $1},
-	'runcommand-nosys'   => q{Échec de l'appel système avec un $1},
+'runtime-badmrtg'    => q{invalid queryname?},
+'runtime-badname'    => q{Invalid queryname option: must be a simple view name},
+'runtime-msg'        => q{query runtime: $1 seconds},
+'seq-die'            => q{Could not determine information about sequence $1},
+'seq-msg'            => q{$1=$2% (calls left=$3)},
+'seq-none'           => q{No sequences found},
 	'symlink-create'     => q{Création de « $1 »},
 	'symlink-done'       => q{Création impossible de « $1 »: $2 est déjà lié à "$3"},
 	'symlink-exists'     => q{Création impossible de « $1 »: le fichier $2 existe déjà},
@@ -256,14 +402,44 @@ our %msg = (
 	'time-weeks'         => q{semaines},
 	'time-year'          => q{année},
 	'time-years'         => q{années},
+'timesync-diff'      => q{ diff:$1}, ## leading space
+'timesync-msg'       => q{timediff=$1 DB=$2 Local=$3},
+'trigger-msg'        => q{Disabled triggers: $1},
+'txnidle-msg'        => q{longest idle in txn: $1s},
+'txnidle-none'       => q{no idle in transaction},
+'txntime-fail'       => q{Query failed},
+'txntime-msg'        => q{longest txn: $1s},
+'txntime-none'       => q{No transactions},
 	'unknown-error'      => q{erreur inconnue},
 	'usage'              => qq{\nUsage: \$1 <options>\n Essayez « \$1 --help » pour liste complète des options\n\n},
+'vac-msg'            => q{DB: $1 TABLE: $2},
+'vac-nomatch-a'      => q{No matching tables have ever been analyzed},
+'vac-nomatch-v'      => q{No matching tables have ever been vacuumed},
+'version'            => q{version $1},
+'version-fail'       => q{version $1, but expected $1},
+'version-madmrtg'    => q{Invalid mrtg version argument},
+'version-ok'         => q{version $1},
 },
 'de' => {
-	'invalid-query'      => q{Invalid query returned: $1},
+	'checkpoint-regex'   => q{Zeit des letzten Checkpoints:},
 },
 'es' => {
-	'invalid-query'      => q{Invalid query returned: $1},
+	'checkpoint-regex'   => q{Instante de último checkpoint:},
+},
+'ru' => {
+	'checkpoint-regex'   => q{Время последней checkpoint:},
+},
+'it' => {
+	'checkpoint-regex'   => q{Orario ultimo checkpoint:},
+},
+'sv' => {
+	'checkpoint-regex'   => q{Tidpunkt för senaste kontrollpunkt:},
+},
+'tr' => {
+	'checkpoint-regex'   => q{En son checkpoint'in zamanı:},
+},
+'pl' => {
+	'checkpoint-regex'   => q{Czas najnowszego punktu kontrolnego:},
 },
 );
 ## use critic
@@ -1936,7 +2112,6 @@ sub check_backends {
 	}
 
 	for $db (@{$info->{db}}) {
-
 		my ($limit,$total) = 0;
 	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+)\s+\|\s+(\w+)\s*/gsm) {
 			$limit ||= $2;
@@ -2232,7 +2407,7 @@ sub check_connection {
 	## Suports: Nagios, MRTG
 
 	if ($opt{warning} or $opt{critical}) {
-		ndie qq{No warning or critical options are needed\n};
+		ndie msg('range-none');
 	}
 
 	my $info = run_command('SELECT version()');
@@ -2243,7 +2418,7 @@ sub check_connection {
 			add_unknown msg('invalid-query', $db->{slurp});
 			next;
 		}
-		add_ok "version $1";
+		add_ok msg('version', $1);
 	}
 
 	if ($MRTG) {
@@ -2328,7 +2503,7 @@ sub check_database_size {
 	if (!$found and keys %unknown) {
 		(my $first) = values %unknown;
 		if ($first->[0][0] =~ /pg_database_size/) {
-			ndie 'Target database must be version 8.1 or higher to run the database_size action';
+			ndie msg('dbsize-version');
 		}
 	}
 
@@ -2355,7 +2530,7 @@ sub check_disk_space {
 		  default_critical => '95%',
 		  });
 
-	-x '/bin/df' or ndie qq{Could not find required executable /bin/df\n};
+	-x '/bin/df' or ndie msg('diskspace-nodf');
 
 	## Figure out where everything is.
 	$SQL = q{SELECT 'S', name, setting FROM pg_settings WHERE name = 'data_directory' }
@@ -2374,14 +2549,14 @@ sub check_disk_space {
 			$i{$st}{$name} = $val;
 		}
 		if (! exists $i{S}{data_directory}) {
-			add_unknown 'Could not determine data_directory: are you connecting as a superuser?';
+			add_unknown msg('diskspace-nodata');
 			next;
 		}
 		my ($datadir,$logdir) = ($i{S}{data_directory},$i{S}{log_directory}||'');
 
 		if (!exists $dir{$datadir}) {
 			if (! -d $datadir) {
-				add_unknown qq{could not find data directory "$datadir"};
+				add_unknown msg('diskspace-nodir', $datadir);
 				$dir{$datadir} = -1;
 				next;
 			}
@@ -2427,7 +2602,7 @@ sub check_disk_space {
 			$res = qx{$COM};
 
 			if ($res !~ /^.+\n(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\%\s+(\S+)/) {
-				ndie qq{Invalid result from command "$COM": $res\n};
+				ndie msg('diskspace-fail', $COM, $res);
 			}
 			my ($fs,$total,$used,$avail,$percent,$mount) = ($1,$2*1024,$3*1024,$4*1024,$5,$6);
 
@@ -2447,7 +2622,7 @@ sub check_disk_space {
 			my $prettyused = pretty_size($used);
 			my $prettytotal = pretty_size($total);
 
-			my $msg = qq{FS $fs mounted on $mount is using $prettyused of $prettytotal ($percent%)};
+			my $msg = msg('', $fs, $mount, $prettyused, $prettytotal, $percent);
 
 			$db->{perf} = "$fs=$used";
 
@@ -2556,7 +2731,7 @@ sub check_fsm_pages {
 				return;
 			}
 
-			my $msg = "fsm page slots used: $pages of $max ($percent%)";
+			my $msg = msg('fsm-page-msg', $pages, $max, $percent);
 
 			if (length $critical and $percent >= $c) {
 				add_critical $msg;
@@ -2614,7 +2789,7 @@ sub check_fsm_relations {
 				return;
 			}
 
-			my $msg = "fsm relations used: $cur of $max ($percent%)";
+			my $msg = msg('fsm-rel-msg', $cur, $max, $percent);
 
 			if (length $critical and $percent >= $c) {
 				add_critical $msg;
@@ -2742,9 +2917,25 @@ sub check_relation_size {
 			next;
 		}
 
-		my $msg = sprintf qq{largest %s is %s"%s$nmax": $pmax},
-			$relkind, $relkind eq 'relation' ? ($kmax eq 'r' ? 'table ' : 'index ') : '',
-				$kmax eq 'r' ? "$smax." : '';
+		## $relkind: 'table','index', 'relkind'
+		## $kmax = kind
+		## $nmax
+		## pmax
+		my $msg;
+		if ($relkind eq 'relation') {
+			if ($kmax eq 'r') {
+				$msg = msg('relsize-msg-relt', "$smax.$nmax", $pmax);
+			}
+			else {
+				$msg = msg('relsize-msg-reli', $nmax, $pmax);
+			}
+		}
+		elsif ($relkind eq 'table') {
+			$msg = msg('relsize-msg-tab', "$smax.$nmax", $pmax);
+		}
+		else {
+			$msg = msg('relsize-msg-ind', $nmax, $pmax);
+		}
 		if (length $critical and $max >= $critical) {
 			add_critical $msg;
 		}
@@ -2841,15 +3032,14 @@ sub check_last_vacuum_analyze {
 		}
 		if ($MRTG) {
 			$stats{$db->{dbname}} = $mintime;
-			$statsmsg{$db->{dbname}} = "DB: $db->{dbname} TABLE: $minrel";
+			$statsmsg{$db->{dbname}} = msg('vac-msg', $db->{dbname}, $minrel);
 			next;
 		}
 		if ($maxtime == -2) {
 			add_unknown msg('no-match-table');
 		}
 		elsif ($maxtime == -1) {
-			add_unknown sprintf "No matching tables have ever been $type%s",
-				$type eq 'vacuum' ? 'ed' : 'd';
+			add_unknown $type eq 'vacuum' ? msg('vac-nomatch-v') : msg('vac-nomatch-a');
 		}
 		else {
 			my $showtime = pretty_time($maxtime, 'S');
@@ -2908,8 +3098,8 @@ sub check_listener {
 		if ($MRTG) {
 			do_mrtg({one => $count});
 		}
-		$db->{perf} .= " listening=$count";
-		my $msg = "listeners found: $count";
+		$db->{perf} .= msg('listener-count', $count);
+		my $msg = msg('listener-msg', $count);
 		if ($count >= 1) {
 			add_ok $msg;
 		}
@@ -2981,26 +3171,26 @@ sub check_locks {
 			for my $type (keys %lock) {
 				next if ! exists $critical->{$type};
 				if ($lock{$type} >= $critical->{$type}) {
-					add_critical qq{total "$type" locks: $lock{$type}};
+					add_critical msg('locks-msg', $type, $lock{$type});
 					$ok = 0;
 				}
 			}
 		}
 		elsif (length $critical and $lock{total} >= $critical) {
-			add_critical qq{total locks: $lock{total}};
+			add_critical msg('locks-msg2', $lock{total});
 			$ok = 0;
 		}
 		if (ref $warning) {
 			for my $type (keys %lock) {
 				next if ! exists $warning->{$type};
 				if ($lock{$type} >= $warning->{$type}) {
-					add_warning qq{total "$type" locks: $lock{$type}};
+					add_warning msg('locks-msg', $type, $lock{$type});
 					$ok = 0;
 				}
 			}
 		}
 		elsif (length $warning and $lock{total} >= $warning) {
-			add_warning qq{total locks: $lock{total}};
+			add_warning msg('locks-msg2', $lock{total});
 			$ok = 0;
 		}
 		if ($ok) {
@@ -3045,7 +3235,7 @@ sub check_logfile {
 
 	my $logfilere = qr{^[\w_\s\/%\-\.]+$};
 	if (exists $opt{logfile} and $opt{logfile} !~ $logfilere) {
-		ndie qq{Invalid logfile option\n};
+		ndie msg('logfile-opt-bad');
 	}
 
 	my $info = run_command($SQL);
@@ -3058,7 +3248,7 @@ sub check_logfile {
 		}
 		my ($dest,$dir,$file,$redirect,$facility) = ($1,$2,$3,$4,$5||'?');
 
-		$VERBOSE >=3 and warn "Dest is $dest, dir is $dir, file is $file, facility is $facility\n";
+		$VERBOSE >=3 and msg('logfile-debug', $dest, $dir, $file, $facility);
 		## Figure out what we think the log file will be
 		my $logfile ='';
 		if (exists $opt{logfile} and $opt{logfile} =~ /\w/) {
@@ -3075,11 +3265,11 @@ sub check_logfile {
 					}
 				}
 				if (!$logfile or ! -e $logfile) {
-					ndie "Database is using syslog, please specify path with --logfile option (fac=$facility)\n";
+					ndie msg('logfile-syslog', $facility);
 				}
 			} elsif ($dest eq 'stderr') {
 				if ($redirect ne 'yes') {
-					ndie qq{Logfile output has been redirected to stderr: please provide a filename\n};
+					ndie msg('logfile-stderr');
 				}
 			}
 		}
@@ -3089,7 +3279,7 @@ sub check_logfile {
 		my @t = localtime $^T;
 		my ($H,$d,$m,$Y) = (sprintf ('%02d',$t[2]),sprintf('%02d',$t[3]),sprintf('%02d',$t[4]+1),$t[5]+1900);
 		if ($logfile !~ $logfilere) {
-			ndie qq{Invalid logfile "$logfile"\n};
+			ndie msg('logfile-bad',$logfile);
 		}
 		$logfile =~ s/%%/~~/g;
 		$logfile =~ s/%Y/$Y/g;
@@ -3097,10 +3287,10 @@ sub check_logfile {
 		$logfile =~ s/%d/$d/g;
 		$logfile =~ s/%H/$H/g;
 
-		$VERBOSE >= 3 and warn "Final logfile: $logfile\n";
+		$VERBOSE >= 3 and warn msg('logfile-debug2', $logfile);
 
 		if (! -e $logfile) {
-			my $msg = "logfile $logfile does not exist!";
+			my $msg = msg('logfile-dne', $logfile);
 			$MRTG and ndie $msg;
 			if ($critwarn)  {
 				add_unknown $msg;
@@ -3112,10 +3302,10 @@ sub check_logfile {
 		}
 		my $logfh;
 		unless (open $logfh, '<', $logfile) {
-			add_unknown qq{logfile "$logfile" failed to open: $!\n};
+			add_unknown msg('logfile-openfail', $logfile, $!);
 			next;
 		}
-		seek($logfh, 0, 2) or ndie qq{Seek on $logfh failed: $!\n};
+		seek($logfh, 0, 2) or ndie msg('logfile-seekfail', $logfile, $!);
 
 		## Throw a custom error string
 		my $smallsearch = sprintf 'Random=%s', int rand(999999999999);
@@ -3123,7 +3313,7 @@ sub check_logfile {
 			scalar localtime;
 
 		## Cause an error on just this target
-		delete $db->{ok}; delete $db->{slurp}; delete $db->{totaltime};
+		delete @{$db}{qw(ok slurp totaltime)};
 		my $badinfo = run_command("SELECT $funky", {failok => 1, target => $db} );
 
 		my $MAXSLEEPTIME = 4;
@@ -3131,7 +3321,7 @@ sub check_logfile {
 		my $found = 0;
 	  LOGWAIT: {
 			sleep $SLEEP;
-			seek $logfh, 0, 1 or ndie qq{Seek on $logfh failed: $!\n};
+			seek $logfh, 0, 1 or ndie msg('logfile-seekfail', $logfile, $!);
 			while (<$logfh>) {
 				if (/$smallsearch/) { ## Some logs break things up, so we don't use funky
 					$found = 1;
@@ -3140,7 +3330,7 @@ sub check_logfile {
 			}
 			$MAXSLEEPTIME -= $SLEEP;
 			redo if $MAXSLEEPTIME > 0;
-			my $msg = "fails logging to: $logfile";
+			my $msg = msg('logfile-fail', $logfile);
 			$MRTG and do_mrtg({one => 0, msg => $msg});
 			if ($critwarn) {
 				add_critical $msg;
@@ -3149,11 +3339,11 @@ sub check_logfile {
 				add_warning $msg;
 			}
 		}
-		close $logfh or ndie qq{Could not close $logfh: $!\n};
+		close $logfh or ndie msg('file-noclose', $logfile, $!);
 
 		if ($found == 1) {
 			$MRTG and do_mrtg({one => 1});
-			add_ok qq{logs to: $logfile};
+			add_ok msg('logfile-ok', $logfile);
 		}
 	}
 	return;
@@ -3180,7 +3370,7 @@ sub check_query_runtime {
 	my $queryname = $opt{queryname} || '';
 
 	if ($queryname !~ /^[\w\_\.]+(?:\(\))?$/) {
-		ndie q{Invalid queryname option: must be a simple view name};
+		ndie msg('runtime-badname');
 	}
 
 	$SQL = "EXPLAIN ANALYZE SELECT COUNT(1) FROM $queryname";
@@ -3198,7 +3388,7 @@ sub check_query_runtime {
 			next;
 		}
 		$db->{perf} = " qtime=$totalseconds";
-		my $msg = qq{query runtime: $totalseconds seconds};
+		my $msg = msg('runtime-msg', $totalseconds);
 		if (length $critical and $totalseconds >= $critical) {
 			add_critical $msg;
 		}
@@ -3210,7 +3400,7 @@ sub check_query_runtime {
 		}
 	}
 
-	$MRTG and do_mrtg_stats('invalid queryname?');
+	$MRTG and do_mrtg_stats(msg('runtime-badmrtg'));
 
 	return;
 
@@ -3241,7 +3431,7 @@ sub check_query_time {
 	my $info = run_command($SQL);
 	for my $db (@{$info->{db}}) {
 		if ($db->{slurp} =~ /off/) {
-			ndie q{Cannot run the txn_idle action unless stats_command_string is set to 'on'!};
+			ndie msg('qtime-fail');
 		}
 	}
 
@@ -3269,9 +3459,9 @@ sub check_query_time {
 			$stats{$db->{dbname}} = $max;
 			next;
 		}
-		$db->{perf} .= " maxtime:$max";
+		$db->{perf} .= msg('maxtime', $max);
 
-		my $msg = qq{longest query: ${max}s};
+		my $msg = msg('qtime-msg', $max);
 		if (length $critical and $max >= $critical) {
 			add_critical $msg;
 		}
@@ -3314,7 +3504,7 @@ sub check_txn_time {
 	for $db (@{$info->{db}}) {
 
 		if (!exists $db->{ok}) {
-			ndie 'Query failed';
+			ndie msg('txntime-fail');
 		}
 
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
@@ -3337,13 +3527,13 @@ sub check_txn_time {
 				add_unknown 'T-EXCLUDE-DB';
 			}
 			else {
-				add_ok 'No transactions';
+				add_ok msg('tnxtime-none');
 			}
 			next;
 		}
-		$db->{perf} .= " maxtime:$max";
+		$db->{perf} .= msg('maxtime', $max);
 
-		my $msg = qq{longest txn: ${max}s};
+		my $msg = msg('tnxtime-msg', $max);
 		if (length $critical and $max >= $critical) {
 			add_critical $msg;
 		}
@@ -3398,7 +3588,7 @@ sub check_txn_idle {
 				$stats{$db->{dbname}} = 0;
 			}
 			else {
-				add_ok 'no idle in transaction';
+				add_ok msg('txnidle-none');
 			}
 			next;
 		}
@@ -3413,13 +3603,13 @@ sub check_txn_idle {
 			$stats{$db->{dbname}} = $max;
 			next;
 		}
-		$db->{perf} .= " maxtime:$max";
+		$db->{perf} .= msg('maxtime', $max);
 		if ($max < 0) {
 			add_unknown 'T-EXCLUDE-DB';
 			next;
 		}
 
-		my $msg = qq{longest idle in txn: ${max}s};
+		my $msg = msg('txnidle-msg', $max);
 		if (length $critical and $max >= $critical) {
 			add_critical $msg;
 		}
@@ -3460,7 +3650,7 @@ sub check_settings_checksum {
 		require Digest::MD5;
 	};
 	if ($@) {
-		ndie qq{Sorry, you must install the Perl module Digest::MD5 first\n};
+		ndie msg('checksum-nomd');
 	}
 
 	$SQL = 'SELECT name, setting FROM pg_settings ORDER BY name';
@@ -3472,7 +3662,7 @@ sub check_settings_checksum {
 
 		my $newstring = '';
 	  SLURP: for my $line (split /\n/ => $string) {
-			ndie q{Invalid pg_setting line} unless $line =~ /^\s*(\w+)/;
+			$line =~ /^\s*(\w+)/ or ndie msg('checksum-badline', $line);
 			my $name = $1;
 			next SLURP if skip_item($name);
 			$newstring .= "$line\n";
@@ -3483,9 +3673,9 @@ sub check_settings_checksum {
 
 		my $checksum = Digest::MD5::md5_hex($newstring);
 
-		my $msg = "checksum: $checksum";
+		my $msg = msg('checksum-msg', $checksum);
 		if ($MRTG) {
-			$opt{mrtg} or ndie qq{Must provide a checksum via the --mrtg option\n};
+			$opt{mrtg} or ndie msg('checksum-nomrtg');
 			do_mrtg({one => $opt{mrtg} eq $checksum ? 1 : 0, msg => $checksum});
 		}
 		if ($critical and $critical ne $checksum) {
@@ -3537,9 +3727,9 @@ sub check_timesync {
 			$stats{$db->{dbname}} = $diff;
 			next;
 		}
-		$db->{perf} = " diff:$diff";
+		$db->{perf} = msg('diff', $diff);
 		my $localpretty = sprintf '%d-%02d-%02d %02d:%02d:%02d', $l[5]+1900, $l[4]+1, $l[3],$l[2],$l[1],$l[0];
-		my $msg = qq{timediff=$diff DB=$pgpretty Local=$localpretty};
+		my $msg = msg('timesync-msg', $diff, $pgpretty, $localpretty);
 
 		if (length $critical and $diff >= $critical) {
 			add_critical $msg;
@@ -3616,7 +3806,7 @@ sub check_version {
 
 	if ($MRTG) {
 		if (!exists $opt{mrtg} or $opt{mrtg} !~ /^\d+\.\d+/) {
-			ndie "Invalid mrtg version argument\n";
+			ndie msg('version-badmrtg');
 		}
 		if ($opt{mrtg} =~ /^\d+\.\d+$/) {
 			$opt{critical} = $opt{mrtg};
@@ -3646,7 +3836,7 @@ sub check_version {
 			if (($critfull and $critical ne $full)
 				or (!$critfull and $critical ne $version)) {
 				$MRTG and do_mrtg({one => 0, msg => $full});
-				add_critical qq{version $full, but expected $critical};
+				add_critical msg('version-fail', $full, $critical);
 				$ok = 0;
 			}
 		}
@@ -3654,13 +3844,13 @@ sub check_version {
 			if (($warnfull and $warning ne $full)
 				or (!$warnfull and $warning ne $version)) {
 				$MRTG and do_mrtg({one => 0, msg => $full});
-				add_warning qq{version $full, but expected $warning};
+				add_warning msg('version-fail', $full, $warning);
 				$ok = 0;
 			}
 		}
 		if ($ok) {
 			$MRTG and do_mrtg({one => 1, msg => $full});
-			add_ok "version $full";
+			add_ok msg('version-ok', $full);
 		}
 	}
 
@@ -3680,7 +3870,7 @@ sub check_custom_query {
 
 	my ($warning, $critical) = validate_range({type => $valtype, leastone => 1});
 
-	my $query = $opt{query} or ndie q{Must provide a query string};
+	my $query = $opt{query} or ndie msg('custom-nostring');
 
 	my $reverse = $opt{reverse} || 0;
 
@@ -3690,7 +3880,7 @@ sub check_custom_query {
 
 		chomp $db->{slurp};
 		if (! length $db->{slurp}) {
-			add_unknown 'No rows returned';
+			add_unknown msg('custom-norows');
 			next;
 		}
 
@@ -3725,7 +3915,7 @@ sub check_custom_query {
 		} ## end each row returned
 
 		if (!$goodrow) {
-			add_unknown 'Invalid format returned by custom query';
+			add_unknown msg('custom-invalid');
 		}
 	}
 
@@ -3743,11 +3933,11 @@ sub check_replicate_row {
 	my ($warning, $critical) = validate_range({type => 'time', leastone => 1});
 
 	if (!$opt{repinfo}) {
-		die "Need a repinfo argument\n";
+		ndie msg('rep-noarg');
 	}
 	my @repinfo = split /,/ => ($opt{repinfo} || '');
 	if ($#repinfo != 5) {
-		die "Invalid repfino argument: expected 6 comma-separated values\n";
+		die msg('rep-badarg');
 	}
 	my ($table,$pk,$id,$col,$val1,$val2) = (@repinfo);
 
@@ -3757,7 +3947,7 @@ sub check_replicate_row {
 	$col   = qq{"$col"};
 
 	if ($val1 eq $val2) {
-	  ndie 'Makes no sense to test replication with same values';
+	  ndie msg('rep-duh');
 	}
 
 	$SQL = qq{UPDATE $table SET $col = 'X' WHERE $pk = '$id'};
@@ -3772,7 +3962,7 @@ sub check_replicate_row {
 	## Squirrel away the $db setting for later
 	my $sourcedb = $info1->{db}[0];
 	if (!defined $sourcedb) {
-		ndie "Replication source row not found: $table.$col";
+		ndie msg('rep-norow', "$table.$col");
 	}
 	(my $value1 = $info1->{db}[0]{slurp}) =~ s/^\s*(\S+)\s*$/$1/;
 
@@ -3782,12 +3972,12 @@ sub check_replicate_row {
 		$slave++;
 		(my $value2 = $d->{slurp}) =~ s/^\s*(\S+)\s*$/$1/;
 		if ($value1 ne $value2) {
-			ndie 'Cannot test replication: values are not the same';
+			ndie msg('rep-notsame');
 		}
 	}
 	my $numslaves = $slave;
 	if ($numslaves < 1) {
-		ndie 'No slaves found';
+		ndie msg('rep-noslaves');
 	}
 
 	my ($update,$newval);
@@ -3800,14 +3990,14 @@ sub check_replicate_row {
 		$newval = $val1;
 	}
 	else {
-		ndie "Cannot test replication: values are not the right ones ($value1 not $val1 nor $val2)";
+		ndie msg('rep-wrongvals', $value1, $val1, $val2);
 	}
 
 	$info1 = run_command($update, { failok => 1 } );
 
 	## Make sure the update worked
 	if (! defined $info1->{db}[0]) {
-		ndie 'Source update failed';
+		ndie msg('rep-sourcefail');
 	}
 
 	my $err = $info1->{db}[0]{error} || '';
@@ -3840,16 +4030,16 @@ sub check_replicate_row {
 			}
 			if ($MRTG) {
 				if ($time > $MRTG) {
-					ndie "Row was not replicated. Timeout: $time";
+					ndie msg('rep-timeout', $time);
 				}
 				next;
 			}
 			if ($warning and $time > $warning) {
-				add_warning "Row not replicated to slave $slave";
+				add_warning msg('rep-fail', $slave);
 				return;
 			}
 			elsif ($critical and $time > $critical) {
-				add_critical "Row not replicated to slave $slave";
+				add_critical mg('rep-fail', $slave);
 				return;
 			}
 		}
@@ -3857,15 +4047,15 @@ sub check_replicate_row {
 		my $k = keys %slave;
 		if (keys %slave >= $numslaves) {
 			$MRTG and do_mrtg({one => $time});
-			add_ok 'Row was replicated';
+			add_ok msg('rep-ok');
 			return;
 		}
 		sleep 1;
 		redo;
 	}
 
-	$MRTG and ndie "Row was not replicated. Timeout: $time";
-	add_unknown 'Replication check failed';
+	$MRTG and ndie msg('rep-timeout', $time);
+	add_unknown msg('rep-unknown');
 	return;
 
 } ## end of check_replicate_row
@@ -3949,10 +4139,10 @@ sub check_sequence {
 
 			my $seqinfo = run_command($SQL, { target => $db });
 			if (!defined $seqinfo->{db}[0] or $seqinfo->{db}[0]{slurp} !~ /(\d+)\D+(\d+)\D+(\d+)\D+(\d+)\D+(\d+)/) {
-				ndie "Could not determine information about sequence $seqname";
+				ndie msg('seq-die', $seqname);
 			}
 			my ($last, $slots, $used, $percent, $left) = ($1,$2,$3,$4,$5);
-			my $msg = "$seqname=$percent\% (calls left=$left)";
+			my $msg = msg('seq-msg', $seqname, $percent, $left);
 			$seqperf{$percent}{$seqname} = [$left, " $multidb$seqname=$percent|$slots|$used|$left"];
 			if ($percent >= $maxp) {
 				$maxp = $percent;
@@ -3990,7 +4180,7 @@ sub check_sequence {
 				add_ok join ' ' => @{$seqinfo{$maxp}};
 			}
 			else {
-				add_ok 'No sequences found';
+				add_ok msg('seq-none');
 			}
 		}
 	}
@@ -4019,11 +4209,11 @@ sub check_checkpoint {
 	my $dir = $opt{datadir} || $ENV{PGDATA};
 
 	if (!defined $dir or ! length $dir) {
-		ndie "Must supply a --datadir argument or set the PGDATA environment variable\n";
+		ndie msg('checkpoint-nodir');
 	}
 
 	if (! -d $dir) {
-		ndie qq{Invalid data_directory: "$dir"\n};
+		ndie msg('checkpoint-baddir');
 	}
 
 	$db->{host} = '<none>';
@@ -4034,11 +4224,16 @@ sub check_checkpoint {
 		$res = qx{$COM 2>&1};
 	};
 	if ($@) {
-		ndie "Could not call pg_controldata: $@\n";
+		ndie msg('checkpoint-nosys', $@);
 	}
 
-	if ($res !~ /Time of latest checkpoint:\s*(.+)/) {
-		ndie "Call to pg_controldata $dir failed";
+	## See pgsql/src/bin/pg_controldata/po/*
+	my $regex = msg('checkpoint-regex');
+	if ($res !~ /$regex\s*(.+)/) {
+		## Just in case, check the English one as well
+		if ($res !~ /Time of latest checkpoint:\s*(.+)/) {
+			ndie msg('checkpoint-noregex', $dir);
+		}
 	}
 	my $last = $1;
 
@@ -4048,16 +4243,15 @@ sub check_checkpoint {
 		import Date::Parse;
 	};
 	if ($@) {
-		ndie "Must install the Perl module 'Date::Parse' to use the checkpoint action";
+		ndie msg('checkpoint-nodp');
 	}
 	my $dt = str2time($last);
 	if ($dt !~ /^\d+$/) {
-		ndie qq{Unable to parse pg_controldata output: "$last"\n};
+		ndie msg('checkpoint-noparse', $last);
 	}
 	my $diff = $db->{perf} = time - $dt;
 
-	my $msg = sprintf "Last checkpoint was $diff %s ago",
-		$diff == 1 ? 'second' : 'seconds';
+	my $msg = $diff==1 ? msg('checkpoint-ok') : msg('checkpoint-ok2');
 
 	if ($MRTG) {
 		do_mrtg({one => $diff, msg => $msg});
@@ -4114,7 +4308,7 @@ sub check_disabled_triggers {
 		}
 	}
 
-	my $msg = "Disabled triggers: $count$dislis";
+	my $msg = msg('trigger-msg', "$count$dislis");
 
 	if ($critical and $count >= $critical) {
 		add_critical $msg;
@@ -5452,7 +5646,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.8.0> (February ??, 2009)
 
   Add the 'disabled_triggers' check.
-  Added basic internationalization support.
+  Added internationalization support.
 
 =item B<Version 2.7.3> (February 10, 2009)
 
