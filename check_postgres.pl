@@ -77,6 +77,7 @@ our %msg = (
 	'backends-mrtg'      => q{DB=$1 Max connections=$2},
 	'backends-msg'       => q{$1 of $2 connections ($3%)},
 	'backends-nomax'     => q{Could not determine max_connections},
+	'backends-oknone'    => q{No connections},
 	'backends-users'     => q{$1 for number of users must be a number or percentage},
 	'bloat-index'        => q{index $1 rows:$2 pages:$3 shouldbe:$4 ($5X) wasted bytes:$6 ($7)},
 	'bloat-nomin'        => q{no relations meet the minimum bloat criteria},
@@ -251,6 +252,7 @@ our %msg = (
 'backends-mrtg'      => q{DB=$1 Max connections=$2},
 'backends-msg'       => q{$1 of $2 connections ($3%)},
 'backends-nomax'     => q{Could not determine max_connections},
+'backends-oknone'    => q{No connections},
 'backends-users'     => q{$1 for number of users must be a number or percentage},
 	'bloat-index'        => q{index $1 lignes:$2 pages:$3 devrait être:$4 ($5X) octets perdus:$6 ($7)},
 	'bloat-nomin'        => q{aucune relation n'atteint le critère minimum de fragmentation},
@@ -2112,8 +2114,10 @@ sub check_backends {
 	}
 
 	for $db (@{$info->{db}}) {
-		my ($limit,$total) = 0;
+		my ($limit,$total,$grandtotal) = (0,0,0);
+		warn $db->{slurp};
 	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+)\s+\|\s+(\w+)\s*/gsm) {
+			$grandtotal++;
 			$limit ||= $2;
 			my ($current,$dbname) = ($1,$3);
 			next SLURP if skip_item($dbname);
@@ -2126,7 +2130,14 @@ sub check_backends {
 			next;
 		}
 		if (!$total) {
-			add_unknown msg('no-match-db');
+			if ($grandtotal) {
+				## We assume that exclude/include rules are correct, and we simply had no entries 
+				## at all in the specific databases we wanted
+				add_ok msg('backends-oknone');
+			}
+			else {
+				add_unknown msg('no-match-db');
+			}
 			next;
 		}
 		my $percent = (int $total / $limit*100) || 1;
@@ -5495,6 +5506,10 @@ as a regular expression.
 To match a schema, end the search term with a single period. Leading tildes can 
 be used for schemas as well.
 
+Be careful when using filtering: an inclusion rule on the backends, for example, 
+may report no problems not only because the matching database had no backends, 
+but because you misspelled the name of the database!
+
 Examples:
 
 Only checks items named pg_class:
@@ -5647,6 +5662,9 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
   Add the 'disabled_triggers' check.
   Added internationalization support.
+  French translations (Guillaume Lelarge)
+  Make the backends search return ok if no matches due to inclusion rules,
+    per report by Guillaume Lelarge
 
 =item B<Version 2.7.3> (February 10, 2009)
 
