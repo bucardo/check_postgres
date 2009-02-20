@@ -718,7 +718,8 @@ sub msg {
 
 	my $x=1;
 	{
-		last unless $msg =~ s/\$$x/$_[$x-1]/ge;
+		my $val = $_[$x-1];
+		last unless $msg =~ s/\$$x/$val/g;
 		$x++;
 		redo;
 	}
@@ -2115,7 +2116,6 @@ sub check_backends {
 
 	for $db (@{$info->{db}}) {
 		my ($limit,$total,$grandtotal) = (0,0,0);
-		warn $db->{slurp};
 	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+)\s+\|\s+(\w+)\s*/gsm) {
 			$grandtotal++;
 			$limit ||= $2;
