@@ -2092,7 +2092,8 @@ sub check_backends {
 	my $MAXSQL = q{SELECT setting FROM pg_settings WHERE name = 'max_connections'};
 	my $NOIDLE = $noidle ? q{WHERE current_query <> '<IDLE>'} : '';
 	my $GROUPBY = q{GROUP BY 2,3};
-	$SQL = "SELECT COUNT(*), ($MAXSQL), datname FROM pg_stat_activity $NOIDLE $GROUPBY";
+	$SQL = "SELECT COUNT(datid), ($MAXSQL), d.datname FROM pg_database d ".
+		"LEFT JOIN pg_stat_activity s ON (s.datid = d.oid) $NOIDLE $GROUPBY ORDER BY datname";
 	my $info = run_command($SQL, {regex => qr[\s*\d+ \| \d+\s+\|] } );
 
 	## There may be no entries returned if we catch pg_stat_activity at the right
