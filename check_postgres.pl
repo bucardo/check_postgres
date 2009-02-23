@@ -1969,7 +1969,7 @@ sub validate_range {
 			ndie msg('range-noopt-only');
 		}
 		if (! length $warning and ! length $critical) {
-			ndie msg('range-nopt-one');
+			ndie msg('range-noopt-one');
 		}
 	}
 
