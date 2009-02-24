@@ -133,6 +133,7 @@ sub test_database_handle {
 	$dbh->do("CREATE USER readonly NOSUPERUSER NOCREATEDB");
 	$dbh->do("ALTER USER readonly SET default_transaction_read_only = 1");
 	$dbh->do("CREATE DATABASE beedeebeedee");
+	$dbh->do("CREATE DATABASE ardala");
 	$dbh->{AutoCommit} = 0;
 	$dbh->{RaiseError} = 1;
 
@@ -158,11 +159,17 @@ sub run {
 	my $action = shift or die "First arg must be the command\n";
 	my $extra = shift || '';
 
-	my $dbhost = $self->{dbhost};
-	my $dbuser = $self->{testuser};
-	my $dbname = $self->{dbname};
+	my $double = $action =~ s/DB2// ? 1 : 0;
+
+	my $dbhost = $self->{dbhost}   || die "No dbhost?";
+	my $dbuser = $self->{testuser} || die "No testuser?";
+	my $dbname = $self->{dbname}   || die "No dbname?";
 
 	my $com = "perl check_postgres.pl --action=$action --dbhost=$dbhost --dbname=$dbname --dbuser=$dbuser";
+
+	if ($double) {
+		$com .= " --dbhost2=$dbhost --dbname2=ardala --dbuser2=$dbuser";
+	}
 
 	$extra and $com .= " $extra";
 
@@ -193,7 +200,13 @@ sub get_dbh {
 sub get_fresh_dbh {
 
 	my $self = shift;
+	my $opt = shift || {};
+
 	my $superdsn = $self->{superdsn} || die;
+
+	if ($opt->{dbname}) {
+		$superdsn->[0] =~ s/dbname=\w+/dbname=$opt->{dbname}/;
+	}
 
 	my $dbh = DBI->connect(@$superdsn);
 
@@ -234,5 +247,16 @@ sub remove_fake_pg_table {
 
 } ## end of remove_fake_pg_table
 
+sub table_exists {
+
+	my ($self,$dbh,$table) = @_;
+
+	my $SQL = 'SELECT count(1) FROM pg_class WHERE relname = ?';
+	my $sth = $dbh->prepare($SQL);
+	$sth->execute($table);
+	my $count = $sth->fetchall_arrayref()->[0][0];
+	return $count;
+
+} ## end of table_exists
 
 1;
