@@ -760,6 +760,9 @@ sub add_response {
 	my ($type,$msg) = @_;
 
 	$db->{host} ||= '';
+	if (defined $opt{host2} and length $opt{host2}->[0]) {
+		$db->{host} .= " => $opt{host2}->[0]";
+	}
 	my $header = sprintf q{%s%s%s},
 		$action_info->{$action}[0] ? '' : (defined $db->{dbservice} and length $db->{dbservice}) ?
 			qq{service=$db->{dbservice} } : qq{DB "$db->{dbname}" },
@@ -5669,6 +5672,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   French translations (Guillaume Lelarge)
   Make the backends search return ok if no matches due to inclusion rules,
     per report by Guillaume Lelarge
+  Begin adding comprehensive unit tests.
 
 =item B<Version 2.7.3> (February 10, 2009)
 
