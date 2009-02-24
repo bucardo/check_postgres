@@ -700,7 +700,7 @@ sub ndie {
 	exit 3;
 }
 
-sub msg {
+sub msg { ## no critic
 
 	my $name = shift || '?';
 
@@ -759,6 +759,7 @@ $opt{defaultdb} = $psql_version >= 7.4 ? 'postgres' : 'template1';
 sub add_response {
 	my ($type,$msg) = @_;
 
+	$db->{host} ||= '';
 	my $header = sprintf q{%s%s%s},
 		$action_info->{$action}[0] ? '' : (defined $db->{dbservice} and length $db->{dbservice}) ?
 			qq{service=$db->{dbservice} } : qq{DB "$db->{dbname}" },
@@ -2069,19 +2070,26 @@ sub check_backends {
 	my $critical = $opt{critical} || '95%';
 	my $noidle   = $opt{noidle}   || 0;
 
-	my $validre = qr{^(\-?)(\d+)(\%?)$};
-	if ($warning !~ $validre) {
-		ndie msg('backends-users', 'Warning');
+	## If only critical was used, remove the default warning
+	if ($opt{critical} and !$opt{warning}) {
+		$warning = $critical;
 	}
-	my ($w1,$w2,$w3) = ($1,$2,$3);
+
+	my $validre = qr{^(\-?)(\d+)(\%?)$};
 	if ($critical !~ $validre) {
 		ndie msg('backends-users', 'Critical');
 	}
 	my ($e1,$e2,$e3) = ($1,$2,$3);
+	if ($warning !~ $validre) {
+		ndie msg('backends-users', 'Warning');
+	}
+	my ($w1,$w2,$w3) = ($1,$2,$3);
 
+	## If number is greater, al else is same, and not minus
 	if ($w2 > $e2 and $w1 eq $e1 and $w3 eq $e3 and $w1 eq '') {
 		ndie msg('range-warnbig');
 	}
+	## If number is less, all else is same, and minus
 	if ($w2 < $e2 and $w1 eq $e1 and $w3 eq $e3 and $w1 eq '-') {
 		ndie msg('range-warnsmall');
 	}
@@ -2101,14 +2109,14 @@ sub check_backends {
 	if (!defined $info->{db}[0]) {
 		$info = run_command($MAXSQL, {regex => qr[\d] } );
 		$db = $info->{db}[0];
-		if ($db->{slurp} !~ /(\d+)/) {
+		if (!defined $db->{slurp} or $db->{slurp} !~ /(\d+)/) {
 			undef %unknown;
 			add_unknown msg('backends-nomax');
 			return;
 		}
 		my $limit = $1;
 		if ($MRTG) {
-			do_mrtg({one => 1, msg => msg('backends_mrtg', $db->{dbname}, $limit)});
+			do_mrtg({one => 1, msg => msg('backends-mrtg', $db->{dbname}, $limit)});
 		}
 		my $percent = (int 1/$limit*100) || 1;
 		add_ok msg('backends-msg', 1, $limit, $percent);
@@ -2121,8 +2129,9 @@ sub check_backends {
 			$grandtotal++;
 			$limit ||= $2;
 			my ($current,$dbname) = ($1,$3);
-			next SLURP if skip_item($dbname);
+			## Always want perf to show all
 			$db->{perf} .= " $dbname=$current";
+			next SLURP if skip_item($dbname);
 			$total += $current;
 		}
 		if ($MRTG) {
@@ -2929,10 +2938,6 @@ sub check_relation_size {
 			next;
 		}
 
-		## $relkind: 'table','index', 'relkind'
-		## $kmax = kind
-		## $nmax
-		## pmax
 		my $msg;
 		if ($relkind eq 'relation') {
 			if ($kmax eq 'r') {
@@ -4241,7 +4246,7 @@ sub check_checkpoint {
 
 	## See pgsql/src/bin/pg_controldata/po/*
 	my $regex = msg('checkpoint-regex');
-	if ($res !~ /$regex\s*(.+)/) {
+	if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
 		## Just in case, check the English one as well
 		if ($res !~ /Time of latest checkpoint:\s*(.+)/) {
 			ndie msg('checkpoint-noregex', $dir);
