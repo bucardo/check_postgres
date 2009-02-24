@@ -1339,7 +1339,6 @@ sub run_command {
 		 dbservice => [''],
 		 };
 
-
 	## Don't set any default values if a service is being used
 	if (defined $opt{dbservice} and defined $opt{dbservice}->[0] and length $opt{dbservice}->[0]) {
 		$conn->{dbname} = [];
@@ -3947,14 +3946,18 @@ sub check_replicate_row {
 	## Supports: Nagios, MRTG
 	## Warning and critical are time to replicate to all slaves
 
-	my ($warning, $critical) = validate_range({type => 'time', leastone => 1});
+	my ($warning, $critical) = validate_range({type => 'time', leastone => 1, forcemrtg => 1});
+
+	if ($warning and $critical and $critical > $warning) {
+		ndie msg('range-warnsmall');
+	}
 
 	if (!$opt{repinfo}) {
 		ndie msg('rep-noarg');
 	}
 	my @repinfo = split /,/ => ($opt{repinfo} || '');
 	if ($#repinfo != 5) {
-		die msg('rep-badarg');
+		ndie msg('rep-badarg');
 	}
 	my ($table,$pk,$id,$col,$val1,$val2) = (@repinfo);
 
@@ -4029,7 +4032,6 @@ sub check_replicate_row {
 	## Loop until we get a match, check each in turn
 	my %slave;
 	my $time = 0;
-	$MRTG and $MRTG = 270; ## Ultimate timeout - 4 minutes 30 seconds
   LOOP: {
 		$info2 = run_command($select, { dbnumber => 2 } );
 		## Reset for final output
@@ -4045,18 +4047,14 @@ sub check_replicate_row {
 				$slave{$slave} = $time;
 				next;
 			}
-			if ($MRTG) {
-				if ($time > $MRTG) {
-					ndie msg('rep-timeout', $time);
-				}
-				next;
-			}
 			if ($warning and $time > $warning) {
+				$MRTG and do_mrtg({one => 0, msg => $time});
 				add_warning msg('rep-fail', $slave);
 				return;
 			}
 			elsif ($critical and $time > $critical) {
-				add_critical mg('rep-fail', $slave);
+				$MRTG and do_mrtg({one => 0, msg => $time});
+				add_critical msg('rep-fail', $slave);
 				return;
 			}
 		}
