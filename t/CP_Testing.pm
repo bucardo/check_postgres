@@ -1,0 +1,238 @@
+package CP_Testing;
+
+## Common methods used by the other tests for check_postgres.pl
+
+use strict;
+use warnings;
+use Data::Dumper;
+use Time::HiRes qw/sleep/;
+use Cwd;
+
+my $DEBUG = 0;
+
+use vars qw/$com $info $count/;
+
+sub new {
+	my $class = shift;
+	my $self = {
+		started  => time(),
+		dbdir    => 'test_database_check_postgres',
+		testuser => 'check_postgres_testing',
+	};
+	return bless $self => $class;
+}
+
+sub test_database_handle {
+
+	## Request for a database handle: create and startup DB as needed
+
+	my $self = shift;
+	my $arg = shift || {};
+
+	ref $arg eq 'HASH' or die qq{Must pass a hashref (or nothing) to test_database_handle\n};
+
+	## Create the test database directory if it does not exist
+	my $dbdir = $self->{dbdir};
+	if (! -d $dbdir) {
+
+		-e $dbdir and die qq{Oops: I cannot create "$dbdir", there is already a file there!\n};
+
+		Test::More::diag qq{Creating database in directory "$dbdir"\n};
+
+		mkdir $dbdir;
+
+		my $initdb = $ENV{PGINITDB} || 'initdb';
+
+		$com = qq{LC_ALL=en LANG=C $initdb --locale=C -E UTF8 -D $dbdir/data 2>&1};
+		eval {
+			$info = qx{$com};
+		};
+		if ($@) {
+			die qq{Failed to run "$com": error was $@\n};
+		}
+
+		## Modify the postgresql.conf
+		my $cfile = "$dbdir/data/postgresql.conf";
+		open my $cfh, '>>', $cfile or die qq{Could not open "$cfile": $!\n};
+		print $cfh qq{\n\n## check_postgres.pl testing parameters\n};
+		print $cfh qq{listen_addresses = ''\n};
+		print $cfh qq{max_connections = 10\n};
+		print $cfh "\n";
+		close $cfh or die qq{Could not close "$cfile": $!\n};
+
+		mkdir "$dbdir/data/socket";
+
+	}
+
+	## See if the database is already running.
+	my $needs_startup = 0;
+
+	my $pidfile = "$dbdir/data/postmaster.pid";
+	if (! -e $pidfile) {
+		$needs_startup = 1;
+	}
+	else {
+		open my $fh, '<', $pidfile or die qq{Could not open "$pidfile": $!\n};
+		<$fh> =~ /^(\d+)/ or die qq{Invalid information in file "$pidfile", expected a PID\n};
+		my $pid = $1;
+		close $fh or die qq{Could not open "$pidfile": $!\n};
+		## Send a signal to see if this PID is alive
+		$count = kill 0 => $pid;
+		if ($count == 0) {
+			Test::More::diag qq{Found a PID file, but no postmaster. Removing file "$pidfile"\n};
+			unlink $pidfile;
+			$needs_startup = 1;
+		}
+	}
+
+	if ($needs_startup) {
+
+		my $logfile = "$dbdir/pg.log";
+
+		unlink $logfile;
+
+		$com = "LC_ALL=en LANG=C pg_ctl -o '-k socket' -l $logfile -D $dbdir/data start";
+		eval {
+			$info = qx{$com};
+		};
+		if ($@) {
+			die qq{Failed to run "$com": got $!\n};
+		}
+
+		my $bail_out = 100;
+		my $found = 0;
+		open my $logfh, '<', $logfile or die qq{Could not open "$logfile": $!\n};
+	  SCAN: {
+			seek $logfh, 0, 0;
+			while (<$logfh>) {
+				if (/ready to accept connections/) {
+					last SCAN;
+				}
+			}
+			if (!$bail_out--) {
+				die qq{Gave up waiting for $logfile to say it was ready\n};
+			}
+			sleep 0.1;
+			redo;
+		}
+		close $logfh or die qq{Could not close "$logfile": $!\n};
+
+	} ## end of needs startup
+
+	my $here = cwd();
+	my $dsn = "dbi:Pg:host=$here/$dbdir/data/socket;dbname=postgres";
+	my @superdsn = ($dsn, '', '', {AutoCommit=>0,RaiseError=>1,PrintError=>0});
+	my $dbh = DBI->connect(@superdsn);
+	$dbh->ping() or die qq{Failed to ping!\n};
+
+	$dbh->{AutoCommit} = 1;
+	$dbh->{RaiseError} = 0;
+	my $dbuser = $self->{testuser};
+	$dbh->do("CREATE USER $dbuser SUPERUSER");
+	$dbh->do("CREATE USER sixpack NOSUPERUSER CREATEDB");
+	$dbh->do("CREATE USER readonly NOSUPERUSER NOCREATEDB");
+	$dbh->do("ALTER USER readonly SET default_transaction_read_only = 1");
+	$dbh->do("CREATE DATABASE beedeebeedee");
+	$dbh->{AutoCommit} = 0;
+	$dbh->{RaiseError} = 1;
+
+	$self->{dbhost} = "$here/$dbdir/data/socket";
+	$self->{dbname} = 'postgres';
+	$self->{dbh} = $dbh;
+	$self->{dsn} = $dsn;
+	$self->{superdsn} = \@superdsn;
+
+	## Sanity check
+	$dbh->do("ALTER USER $dbuser SET search_path = public");
+	$dbh->do("SET search_path = public");
+	$dbh->do("COMMIT");
+
+	return $dbh;
+
+} ## end of test_database_handle
+
+
+sub run {
+
+	my $self = shift;
+	my $action = shift or die "First arg must be the command\n";
+	my $extra = shift || '';
+
+	my $dbhost = $self->{dbhost};
+	my $dbuser = $self->{testuser};
+	my $dbname = $self->{dbname};
+
+	my $com = "perl check_postgres.pl --action=$action --dbhost=$dbhost --dbname=$dbname --dbuser=$dbuser";
+
+	$extra and $com .= " $extra";
+
+	$DEBUG and warn "DEBUG RUN: $com\n";
+
+	my $result;
+	eval {
+		$result = qx{$com 2>&1};
+	};
+	if ($@) {
+		return "TESTERROR: $@";
+	}
+
+	return $result;
+
+} ## end of run
+
+sub get_host {
+	my $self = shift;
+	return $self->{dbhost};
+}
+
+sub get_dbh {
+	my $self = shift;
+	return $self->{dbh} || die;
+}
+
+sub get_fresh_dbh {
+
+	my $self = shift;
+	my $superdsn = $self->{superdsn} || die;
+
+	my $dbh = DBI->connect(@$superdsn);
+
+	return $dbh;
+}
+
+sub create_fake_pg_table {
+
+	## Dangerous: do not try this at home!
+
+	my $self = shift;
+	my $name = shift;
+	my $dbh = $self->{dbh};
+	my $dbuser = $self->{testuser} || die;
+	{
+		local $dbh->{Warn};
+		$dbh->do("DROP TABLE IF EXISTS public.$name");
+	}
+	$dbh->do("CREATE TABLE public.$name AS SELECT * FROM $name LIMIT 0");
+	$dbh->do("ALTER USER $dbuser SET search_path = public, pg_catalog");
+	$dbh->commit();
+
+} ## end of create_fake_pg_table
+
+
+sub remove_fake_pg_table {
+
+	my $self = shift;
+	my $name = shift;
+	my $dbh = $self->{dbh};
+	my $dbuser = $self->{testuser} || die;
+	{
+		local $dbh->{Warn};
+		$dbh->do("DROP TABLE IF EXISTS public.$name");
+	}
+	$dbh->do("ALTER USER $dbuser SET search_path = public");
+	$dbh->commit();
+
+} ## end of remove_fake_pg_table
+
+
+1;

@@ -1120,6 +1120,9 @@ and/or as comma-separated lists. A leading tilde will match the following word
 as a regular expression.</p>
 <p>To match a schema, end the search term with a single period. Leading tildes can 
 be used for schemas as well.</p>
+<p>Be careful when using filtering: an inclusion rule on the backends, for example, 
+may report no problems not only because the matching database had no backends, 
+but because you misspelled the name of the database!</p>
 <p>Examples:</p>
 <p>Only checks items named pg_class:</p>
 <pre>
@@ -1253,8 +1256,11 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 
 <dd>
 <pre>
-  Add the 'disabled_triggers' check.
-  Added basic internationalization support.</pre>
+  Added the 'disabled_triggers' check.
+  Added internationalization support.
+  French translations (Guillaume Lelarge)
+  Make the backends search return ok if no matches due to inclusion rules,
+    per report by Guillaume Lelarge</pre>
 </dd>
 <dt><strong><a name="item_3"><strong>Version 2.7.3</strong> (February 10, 2009)</a></strong></dt>
 

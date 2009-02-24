@@ -132,11 +132,13 @@ __DATA__
 
 ## Common:
 
+backends
 bucardo
 DBI
 DSN
 Mullane
 Nagios
+PGP
 Sabino
 http
 login
@@ -226,6 +228,7 @@ minvalue
 morpork
 mrtg
 MRTG
+msg
 nagios
 NAGIOS
 nextval
@@ -276,3 +279,4 @@ wal
 WAL
 watson
 wilkins
+RequireInterpolationOfMetachars
