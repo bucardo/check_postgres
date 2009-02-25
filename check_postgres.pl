@@ -88,7 +88,7 @@ our %msg = (
 	'checkpoint-noregex' => q{Call to pg_controldata $1 failed},
 	'checkpoint-nosys'   => q{Could not call pg_controldata: $1},
 	'checkpoint-ok'      => q{Last checkpoint was 1 second ago},
-	'checkpoint-ok2'     => q{Last checkpoint was 2 seconds ago},
+	'checkpoint-ok2'     => q{Last checkpoint was $1 seconds ago},
 	'checkpoint-regex'   => q{Time of latest checkpoint:},
 	'checksum-badline'   => q{Invalid pg_setting line: $1},
 	'checksum-msg'       => q{checksum: $1},
@@ -263,7 +263,7 @@ our %msg = (
 	'checkpoint-noregex' => q{Échec de l'appel à pg_controldata $1},
 	'checkpoint-nosys'   => q{N'a pas pu appeler pg_controldata : $1},
 	'checkpoint-ok'      => q{Le dernier CHECKPOINT est survenu il y a une seconde},
-	'checkpoint-ok2'     => q{Le dernier CHECKPOINT est survenu il y a 2 secondes},
+	'checkpoint-ok2'     => q{Le dernier CHECKPOINT est survenu il y a $1 secondes},
 	'checkpoint-regex'   => q{Heure du dernier point de contrôle :},
 	'checksum-badline'   => q{Ligne pg_setting invalide : $1},
 	'checksum-msg'       => q{somme de contrôle : $1},
@@ -4218,8 +4218,7 @@ sub check_checkpoint {
 	my ($warning, $critical) = validate_range
 		({
 		  type              => 'time',
-		  default_warning   => '120',
-		  default_critical  => '600',
+		  leastone          => 1,
 		  forcemrtg         => 1,
 	  });
 
@@ -4231,7 +4230,7 @@ sub check_checkpoint {
 	}
 
 	if (! -d $dir) {
-		ndie msg('checkpoint-baddir');
+		ndie msg('checkpoint-baddir', $dir);
 	}
 
 	$db->{host} = '<none>';
@@ -4268,8 +4267,7 @@ sub check_checkpoint {
 		ndie msg('checkpoint-noparse', $last);
 	}
 	my $diff = $db->{perf} = time - $dt;
-
-	my $msg = $diff==1 ? msg('checkpoint-ok') : msg('checkpoint-ok2');
+	my $msg = $diff==1 ? msg('checkpoint-ok') : msg('checkpoint-ok2', $diff);
 
 	if ($MRTG) {
 		do_mrtg({one => $diff, msg => $msg});
