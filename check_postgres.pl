@@ -153,7 +153,7 @@ our %msg = (
 	'range-badpercsize'  => q{Invalid '$1' option: must be a size or a percentage},
 	'range-badsize'      => q{Invalid size for '$1' option},
 	'range-badtype'      => q{validate_range called with unknown type '$1'},
-	'range-badversion'   => q{Invalid string for '1' option: $2},
+	'range-badversion'   => q{Invalid string for '$1' option: $2},
 	'range-cactionly'    => q{This action is for cacti use only and takes not warning or critical arguments},
 	'range-int'          => q{Invalid argument for '$1' option: must be an integer},
 	'range-int-pos'      => q{Invalid argument for '$1' option: must be a positive integer},
@@ -244,8 +244,8 @@ our %msg = (
 	'vac-nomatch-a'      => q{No matching tables have ever been analyzed},
 	'vac-nomatch-v'      => q{No matching tables have ever been vacuumed},
 	'version'            => q{version $1},
-	'version-fail'       => q{version $1, but expected $1},
-	'version-madmrtg'    => q{Invalid mrtg version argument},
+	'version-fail'       => q{version $1, but expected $2},
+	'version-badmrtg'    => q{Invalid mrtg version argument},
 	'version-ok'         => q{version $1},
 },
 'fr' => {
@@ -280,7 +280,7 @@ our %msg = (
 	'die-noset'          => q{Ne peut pas exécuter « $1 » $2 n'est pas activé},
 	'die-nosetting'      => q{N'a pas pu récupérer le paramètre « $1 »},
 	'diskspace-df'       => q{N'a pas pu trouver l'exécutable /bin/df},
-	'diskspace-fail'     => q{Résultat invalide pour la commande « $1 » : $1},
+	'diskspace-fail'     => q{Résultat invalide pour la commande « $1 » : $2},
 	'diskspace-msg'      => q{Le système de fichiers $1 monté sur $2 utilise $3 sur $4 ($5%)},
 	'diskspace-nodata'   => q{N'a pas pu déterminer data_directory : êtes-vous connecté en tant que super-utilisateur ?},
 	'diskspace-nodir'    => q{N'a pas pu trouver le répertoire des données « $1 »},
@@ -328,7 +328,7 @@ our %msg = (
 	'range-badpercsize'  => q{Option « $1 » invalide : doit être une taille ou un pourcentage},
 	'range-badsize'      => q{Taille invalide pour l'option « $1 »},
 	'range-badtype'      => q{validate_range appelé avec un type inconnu « $1 »},
-	'range-badversion'   => q{Chaîne invalide pour l'option « 1 » : $2},
+	'range-badversion'   => q{Chaîne invalide pour l'option « $1 » : $2},
 	'range-cactionly'    => q{Cette action est pour cacti seulement et ne prend pas les arguments warning et critical},
 	'range-int'          => q{Argument invalide pour l'option « $1 » : doit être un entier},
 	'range-int-pos'      => q{Argument invalide pour l'option « $1 » : doit être un entier positif},
@@ -418,8 +418,8 @@ our %msg = (
 	'vac-nomatch-a'      => q{Aucune des tables correspondantes n'a eu d'opération ANALYZE},
 	'vac-nomatch-v'      => q{Aucune des tables correspondantes n'a eu d'opération VACUUM},
 	'version'            => q{version $1},
-	'version-fail'       => q{version $1, alors que la version attendue est $1},
-	'version-madmrtg'    => q{Argument invalide pour la version de mrtg},
+	'version-fail'       => q{version $1, alors que la version attendue est $2},
+	'version-badmrtg'    => q{Argument invalide pour la version de mrtg},
 	'version-ok'         => q{version $1},
 },
 'de' => {
@@ -1826,10 +1826,10 @@ sub validate_range {
 	}
 	elsif ('version' eq $type) {
 		my $msg = msg('range-version');
-		if (length $warning and $warning !~ /^\d+\.\d\.?[\d\w]*$/) {
+		if (length $warning and $warning !~ /^\d+\.\d+\.?[\d\w]*$/) {
 			ndie msg('range-badversion', 'warning', $msg);
 		}
-		if (length $critical and $critical !~ /^\d+\.\d\.?[\d\w]*$/) {
+		if (length $critical and $critical !~ /^\d+\.\d+\.?[\d\w]*$/) {
 			ndie msg('range-badversion', 'critical', $msg);
 		}
 		if (! length $critical and ! length $warning) {

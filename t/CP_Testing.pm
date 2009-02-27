@@ -218,8 +218,8 @@ sub create_fake_pg_table {
 	## Dangerous: do not try this at home!
 
 	my $self = shift;
-	my $name = shift;
-	my $dbh = $self->{dbh};
+	my $name = shift || die;
+	my $dbh = $self->{dbh} || die;
 	my $dbuser = $self->{testuser} || die;
 	{
 		local $dbh->{Warn};
@@ -235,8 +235,8 @@ sub create_fake_pg_table {
 sub remove_fake_pg_table {
 
 	my $self = shift;
-	my $name = shift;
-	my $dbh = $self->{dbh};
+	my $name = shift || die;
+	my $dbh = $self->{dbh} || die;
 	my $dbuser = $self->{testuser} || die;
 	{
 		local $dbh->{Warn};
@@ -258,5 +258,35 @@ sub table_exists {
 	return $count;
 
 } ## end of table_exists
+
+sub fake_version {
+
+	my $self = shift;
+	my $version = shift || '9.9';
+	my $dbh = $self->{dbh} || die;
+	my $dbuser = $self->{testuser} || die;
+
+	$dbh->do(qq{
+CREATE OR REPLACE FUNCTION public.version()
+RETURNS TEXT
+LANGUAGE SQL
+AS \$\$
+SELECT 'PostgreSQL $version on fakefunction for check_postgres.pl testing'::text;
+\$\$
+});
+	$dbh->do("ALTER USER $dbuser SET search_path = public, pg_catalog");
+	$dbh->commit();
+
+} ## end of fake version
+
+sub reset_path {
+
+	my $self = shift;
+	my $dbh = $self->{dbh} || die;
+	my $dbuser = $self->{testuser} || die;
+	$dbh->do("ALTER USER $dbuser SET search_path = public");
+	$dbh->commit();
+
+} ## end of reset_path
 
 1;
