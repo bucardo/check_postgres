@@ -4353,7 +4353,7 @@ sub show_dbstats {
 	  });
 
 	my $SQL = q{SELECT datname,numbackends,xact_commit,xact_rollback,blks_read,blks_hit};
-	$SQL .= q{ FROM pg_catalog.pg_stat_database};
+	$SQL .= q{ FROM pg_stat_database};
 	(my $SQL2 = $SQL) =~ s/blks_hit/blks_hit,tup_returned,tup_fetched,tup_inserted,tup_updated,tup_deleted/;
 
 	my $info = run_command($SQL, {regex => qr{\w}, version => [ ">8.2 $SQL2" ] } );
