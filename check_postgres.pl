@@ -3546,13 +3546,13 @@ sub check_txn_time {
 				add_unknown 'T-EXCLUDE-DB';
 			}
 			else {
-				add_ok msg('tnxtime-none');
+				add_ok msg('txntime-none');
 			}
 			next;
 		}
 		$db->{perf} .= msg('maxtime', $max);
 
-		my $msg = msg('tnxtime-msg', $max);
+		my $msg = msg('txntime-msg', $max);
 		if (length $critical and $max >= $critical) {
 			add_critical $msg;
 		}
