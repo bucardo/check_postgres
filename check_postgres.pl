@@ -5467,7 +5467,7 @@ out of space, at which point Postgres will shut down.
 
 Example 1: Check that the number of WAL files is 20 or less on host "pluto"
 
-  check_postgres_txn_wraparound --host=pluto --critical=20
+  check_postgres_wal_files --host=pluto --critical=20
 
 For MRTG output, reports the number of WAL files on line 1.
 
