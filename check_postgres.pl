@@ -4373,7 +4373,7 @@ sub show_dbstats {
 				}
 				next SLURP unless $keepit;
 			}
-			my $template = "backends:%d commits:%d rollbacks:%d read:%d hit:%d ret:%d fetch:%d ins:%d del:%d";
+			my $template = "backends:%d commits:%d rollbacks:%d read:%d hit:%d ret:%d fetch:%d ins:%d upd: %d del:%d";
 			my $msg = sprintf "$template", @stats, (0,0,0,0);
 			print "$msg dbname:$dbname\n";
 		}
@@ -5663,7 +5663,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.8.0> (February ??, 2009)
+=item B<Version 2.8.0> (March ??, 2009)
 
   Added the 'disabled_triggers' check.
   Added internationalization support.
@@ -5671,6 +5671,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Make the backends search return ok if no matches due to inclusion rules,
     per report by Guillaume Lelarge
   Begin adding comprehensive unit tests.
+  Fix missing 'upd' field in show_dbstats (Andras Fabian)
 
 =item B<Version 2.7.3> (February 10, 2009)
 
