@@ -4374,7 +4374,7 @@ sub show_dbstats {
 				next SLURP unless $keepit;
 			}
 			my $template = "backends:%d commits:%d rollbacks:%d read:%d hit:%d ret:%d fetch:%d ins:%d upd: %d del:%d";
-			my $msg = sprintf "$template", @stats, (0,0,0,0);
+			my $msg = sprintf "$template", @stats, (0,0,0,0,0);
 			print "$msg dbname:$dbname\n";
 		}
 	}
