@@ -922,7 +922,7 @@ sub finishup {
 
 
 ## For options that take a size e.g. --critical="10 GB"
-our $sizere = qr{^\s*(\d+\.?\d?)\s*([bkmgtpz])?\w*$}i; ## Don't care about the rest of the string
+our $sizere = qr{^\s*(\d+\.?\d?)\s*([bkmgtepz])?\w*$}i; ## Don't care about the rest of the string
 
 ## For options that take a time e.g. --critical="10 minutes" Fractions are allowed.
 our $timere = qr{^\s*(\d+(?:\.\d+)?)\s*(\w*)\s*$}i;
@@ -1853,7 +1853,7 @@ sub validate_range {
 			}
 		}
 		elsif (!length $critical) {
-			ndie mgn('range-nosize');
+			ndie msg('range-nosize');
 		}
 	}
 	elsif ($type =~ /integer/) {
@@ -4743,9 +4743,9 @@ The I<--include> and I<--exclude> options can be used to filter out which tables
 to look at. See the L</"BASIC FILTERING"> section for more details.
 
 The I<--warning> and I<--critical> options can be specified as sizes or percents.
-Valid size units are bytes, kilobytes, megabytes, gigabytes, terabytes, and exabytes. 
-You can abbreviate all of those with the first letter. Items without units are 
-assumed to be 'bytes'. The default values are '1 GB' and '5 GB'. The value 
+Valid size units are bytes, kilobytes, megabytes, gigabytes, terabytes, exabytes, 
+petabytes, and zettabytes. You can abbreviate all of those with the first letter. Items 
+without units are assumed to be 'bytes'. The default values are '1 GB' and '5 GB'. The value 
 represents the number of "wasted bytes", or the difference between what is actually 
 used by the table and index, and what we compute that it should be.
 
