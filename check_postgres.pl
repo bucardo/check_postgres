@@ -5671,13 +5671,15 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.8.0> (March ??, 2009)
 
-  Added the 'disabled_triggers' check.
-  Added internationalization support.
+  Added the 'disabled_triggers' check
+  Added internationalization support
   French translations (Guillaume Lelarge)
   Make the backends search return ok if no matches due to inclusion rules,
     per report by Guillaume Lelarge
-  Begin adding comprehensive unit tests.
+  Begin adding comprehensive unit tests
   Fix missing 'upd' field in show_dbstats (Andras Fabian)
+  Add in missing exabyte regex check (Selena Deckelmann)
+  Set stats to zero if we bail early due to USERWHERECLAUSE (Andras Fabian)
 
 =item B<Version 2.7.3> (February 10, 2009)
 
