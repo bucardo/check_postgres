@@ -2497,6 +2497,7 @@ sub check_database_size {
 			next;
 		}
 		if ($max < 0) {
+			$stats{$db->{dbname}} = 0;
 			if ($USERWHERECLAUSE) {
 				add_ok msg('no-match-user');
 			}
@@ -2913,6 +2914,7 @@ sub check_relation_size {
 
 		$found = 1;
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
+			$stats{$db->{dbname}} = 0;
 			add_ok msg('no-match-user');
 			next;
 		}
@@ -3027,6 +3029,7 @@ sub check_last_vacuum_analyze {
 	for $db (@{$info->{db}}) {
 
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
+			$stats{$db->{dbname}} = 0;
 			add_ok msg('no-match-user');
 			next;
 		}
@@ -3463,6 +3466,7 @@ sub check_query_time {
 	for $db (@{$info->{db}}) {
 
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
+			$stats{$db->{dbname}} = 0;
 			add_ok msg('no-match-user');
 			next;
 		}
@@ -3527,6 +3531,7 @@ sub check_txn_time {
 		}
 
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
+			$stats{$db->{dbname}} = 0;
 			add_ok msg('no-match-user');
 			next;
 		}
@@ -3598,6 +3603,7 @@ sub check_txn_idle {
 		my $max = -1;
 
 		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
+			$stats{$db->{dbname}} = 0;
 			add_ok msg('no-match-user');
 			next;
 		}
