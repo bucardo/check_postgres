@@ -3185,6 +3185,7 @@ sub check_locks {
 
 		if (!$gotone) {
 			add_unknown msg('no-match-db');
+			next;
 		}
 
 		## If not specific errors, just use the total
