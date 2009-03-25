@@ -5428,7 +5428,7 @@ The string returned shows the time difference as well as the time on each side w
 
 Example 1: Check that databases on hosts ankh, morpork, and klatch are no more than 3 seconds off from the local time:
 
-  check_postgres_timesync --host=ankh,morpork.klatch --critical=3
+  check_postgres_timesync --host=ankh,morpork,klatch --critical=3
 
 For MRTG output, returns one the first line the number of seconds difference between the local 
 time and the database time. The fourth line returns the name of the database.
