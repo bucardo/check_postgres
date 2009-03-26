@@ -129,7 +129,7 @@ our %msg = (
 	'logfile-seekfail'   => q{Seek on $1 failed: $2},
 	'logfile-stderr'     => q{Logfile output has been redirected to stderr: please provide a filename},
 	'logfile-syslog'     => q{Database is using syslog, please specify path with --logfile option (fac=$1)},
-	'maxtime'            => q{ maxtime:$1}, ## leading space
+	'maxtime'            => q{ maxtime=$1}, ## leading space
 	'mrtg-fail'          => q{Action $1 failed: $2},
 	'no-match-db'        => q{No matching databases found due to exclusion/inclusion options},
 	'no-match-fs'        => q{No matching file systems found due to exclusion/inclusion options},
@@ -304,7 +304,7 @@ our %msg = (
 	'logfile-seekfail'   => q{Échec de la recherche dans $1 : $2},
 	'logfile-stderr'     => q{La sortie des traces a été redirigés stderr : merci de fournir un nom de fichier},
 	'logfile-syslog'     => q{La base de données utiliser syslog, merci de spécifier le chemin avec l'option --logfile (fac=$1)},
-	'maxtime'            => q{ maxtime:$1}, ## leading space
+	'maxtime'            => q{ maxtime=$1}, ## leading space
 	'mrtg-fail'          => q{Échec de l'action $1 : $2},
 	'no-match-db'        => q{Aucune base de données trouvée à cause des options d'exclusion/inclusion},
 	'no-match-fs'        => q{Aucun système de fichier trouvé à cause des options d'exclusion/inclusion},
