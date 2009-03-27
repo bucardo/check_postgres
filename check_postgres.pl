@@ -4360,8 +4360,17 @@ sub show_dbstats {
 	  });
 
 	my $SQL = q{SELECT datname,numbackends,xact_commit,xact_rollback,blks_read,blks_hit};
+	if ($opt{dbname}) {
+	  $SQL .= q{,(SELECT SUM(idx_scan) FROM pg_stat_user_indexes) AS idx_scan};
+	  $SQL .= q{,COALESCE((SELECT SUM(idx_tup_read) FROM pg_stat_user_indexes),0) AS idx_tup_read};
+	  $SQL .= q{,COALESCE((SELECT SUM(idx_tup_fetch) FROM pg_stat_user_indexes),0) AS idx_tup_fetch};
+	  $SQL .= q{,COALESCE((SELECT SUM(idx_blks_read) FROM pg_statio_user_indexes),0) AS idx_blks_read};
+	  $SQL .= q{,COALESCE((SELECT SUM(idx_blks_hit) FROM pg_statio_user_indexes),0) AS idx_blks_hit};
+	  $SQL .= q{,COALESCE((SELECT SUM(seq_scan) FROM pg_stat_user_tables),0) AS seq_scan};
+	  $SQL .= q{,COALESCE((SELECT SUM(seq_tup_read) FROM pg_stat_user_tables),0) AS seq_tup_read};
+	}
 	$SQL .= q{ FROM pg_stat_database};
-	(my $SQL2 = $SQL) =~ s/blks_hit/blks_hit,tup_returned,tup_fetched,tup_inserted,tup_updated,tup_deleted/;
+	(my $SQL2 = $SQL) =~ s/AS seq_tup_read/AS seq_tup_read,tup_returned,tup_fetched,tup_inserted,tup_updated,tup_deleted/;
 
 	my $info = run_command($SQL, {regex => qr{\w}, version => [ ">8.2 $SQL2" ] } );
 
@@ -4380,8 +4389,8 @@ sub show_dbstats {
 				}
 				next SLURP unless $keepit;
 			}
-			my $template = "backends:%d commits:%d rollbacks:%d read:%d hit:%d ret:%d fetch:%d ins:%d upd: %d del:%d";
-			my $msg = sprintf "$template", @stats, (0,0,0,0,0);
+			my $template = "backends:%d commits:%d rollbacks:%d read:%d hit:%d idxscan:%d idxtupread:%d idxtupfetch:%d idxblksread:%d idxblkshit:%d seqscan:%d seqtupread:%d ret:%d fetch:%d ins:%d upd:%d del:%d";
+			my $msg = sprintf "$template", @stats, (0,0,0,0,0,0,0,0,0,0,0,0,0);
 			print "$msg dbname:$dbname\n";
 		}
 	}
@@ -4960,6 +4969,40 @@ The name of the database.
 
 Note that ret, fetch, ins, upd, and del items will always be 0 if Postgres is version 8.2 or lower, as those stats were 
 not available in those versions.
+
+If the dbname argument is given, seven additional items are returned:
+
+=over 4
+
+=item idx_scan
+
+Total number of user index scans.
+
+=item idx_tup_read
+
+Total number of user index entries returned.
+
+=item idx_tup_fetch
+
+Total number of rows fetched by simple user index scans.
+
+=item idx_blks_read
+
+Total number of disk blocks read for all user indexes.
+
+=item idx_blks_hit
+
+Total number of buffer hits for all user indexes.
+
+=item seq_scan
+
+Total number of sequential scans against all user tables.
+
+=item seq_tup_read
+
+Total number of tuples returned from all user tables.
+
+=back
 
 Example 1: Grab the stats for a database named "products" on host "willow":
 
@@ -5681,6 +5724,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Fix missing 'upd' field in show_dbstats (Andras Fabian)
   Add in missing exabyte regex check (Selena Deckelmann)
   Set stats to zero if we bail early due to USERWHERECLAUSE (Andras Fabian)
+  Add additional items to dbstats output (Andras Fabian)
 
 =item B<Version 2.7.3> (February 10, 2009)
 
