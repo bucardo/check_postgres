@@ -230,7 +230,7 @@ our %msg = (
 	'time-weeks'         => q{weeks},
 	'time-year'          => q{year},
 	'time-years'         => q{years},
-	'timesync-diff'      => q{ diff:$1}, ## leading space
+	'timesync-diff'      => q{ diff=$1}, ## leading space
 	'timesync-msg'       => q{timediff=$1 DB=$2 Local=$3},
 	'trigger-msg'        => q{Disabled triggers: $1},
 	'txnidle-msg'        => q{longest idle in txn: $1s},
@@ -404,7 +404,7 @@ our %msg = (
 	'time-weeks'         => q{semaines},
 	'time-year'          => q{année},
 	'time-years'         => q{années},
-	'timesync-diff'      => q{ diff:$1}, ## leading space
+	'timesync-diff'      => q{ diff=$1}, ## leading space
 	'timesync-msg'       => q{timediff=$1 Base de données=$2 Local=$3},
 	'trigger-msg'        => q{Triggers désactivés : $1},
 	'txnidle-msg'        => q{longest idle in txn: $1s},
