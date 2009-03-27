@@ -3787,36 +3787,36 @@ sub check_txn_wraparound {
 		  default_critical => 1_400_000_000,
 		  });
 
-	$SQL = q{SELECT datname, age(datfrozenxid) FROM pg_database WHERE datallowconn ORDER BY 2 desc, 1};
+	$SQL = q{SELECT datname, age(datfrozenxid) FROM pg_database WHERE datallowconn ORDER BY 1, 2};
 	my $info = run_command($SQL, { regex => qr[\w+\s+\|\s+\d+] } );
 
-	my ($max,$maxmsg) = (0,'?');
+	my ($mrtgmax,$mrtgmsg) = (0,'?');
 	for $db (@{$info->{db}}) {
-		while ($db->{slurp} =~ /(\S+)\s+\|\s+(\d+)/gsm) {
+		my ($max,$msg) = (0,'?');
+	  SLURP: while ($db->{slurp} =~ /(\S.+?)\s+\|\s+(\d+)/gsm) {
 			my ($dbname,$dbtxns) = ($1,$2);
-			my $msg = qq{$dbname: $dbtxns};
 			$db->{perf} .= " $dbname=$dbtxns";
-			$VERBOSE >= 3 and warn $msg;
-			if ($MRTG) {
-				if ($dbtxns > $max) {
-					$max = $dbtxns;
-					$maxmsg = "DB: $dbname";
+			next SLURP if skip_item($dbname);
+			if ($dbtxns > $max) {
+                $max = $dbtxns;
+                $msg = qq{$dbname: $dbtxns};
+				if ($dbtxns > $mrtgmax) {
+					$mrtgmax = $dbtxns;
+					$mrtgmsg = "DB: $dbname";
 				}
-				next;
-			}
-			if (length $critical and $dbtxns >= $critical) {
-				add_critical $msg;
-			}
-			elsif (length $warning and $dbtxns >= $warning) {
-				add_warning $msg;
-			}
-			else {
-				add_ok $msg;
-			}
+            }
+        }
+		if (length $critical and $max >= $critical) {
+			add_critical $msg;
+		}
+		elsif (length $warning and $max >= $warning) {
+			add_warning $msg;
+		}
+		else {
+			add_ok $msg;
 		}
 	}
-
-	$MRTG and do_mrtg({one => $max, msg => $maxmsg});
+	$MRTG and do_mrtg({one => $mrtgmax, msg => $mrtgmsg});
 
 	return;
 
@@ -5715,16 +5715,18 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.8.0> (March ??, 2009)
 
-  Added the 'disabled_triggers' check
-  Added internationalization support
+  Added internationalization support (Greg)
+  Added the 'disabled_triggers' check (Greg)
   French translations (Guillaume Lelarge)
   Make the backends search return ok if no matches due to inclusion rules,
-    per report by Guillaume Lelarge
-  Begin adding comprehensive unit tests
+    per report by Guillaume Lelarge (Greg)
+  Begin adding comprehensive unit tests (Greg)
   Fix missing 'upd' field in show_dbstats (Andras Fabian)
   Add in missing exabyte regex check (Selena Deckelmann)
   Set stats to zero if we bail early due to USERWHERECLAUSE (Andras Fabian)
   Add additional items to dbstats output (Andras Fabian)
+  For txn_wraparound: consistent ordering and fix duplicates in perf output (Andras Fabian)
+  Fix incorrect regex in txn_wraparound (Greg)
 
 =item B<Version 2.7.3> (February 10, 2009)
 
