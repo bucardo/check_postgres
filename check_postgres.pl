@@ -4498,11 +4498,11 @@ argument, for example:
 
   --output=simple,MB
 
-=head3 Simple output
+=head3 Cacti output
 
 The Cacti output consists of one or more items on the same line, with a simple name, a colon, and 
 then a number. At the moment, the only action with explicit Cacti output is 'dbstats', and using 
-the --output option is not needed in this case, Cacti is the only output for this action. For many 
+the --output option is not needed in this case, as Cacti is the only output for this action. For many 
 other actions, using --simple is enough to make Cacti happy.
 
 =head1 DATABASE CONNECTION OPTIONS
@@ -4538,7 +4538,7 @@ it defaults to 'postgres'.
 =item B<--dbpass=PASSWORD>
 
 Provides the password to connect to the database with. Use of this option is highly discouraged.
-Instead, one should use a .pgpass file.
+Instead, one should use a .pgpass or pg_service.conf file.
 
 =item B<--dbservice=NAME>
 
@@ -4722,7 +4722,7 @@ given. This choice does not use the B<max_connections> setting. Second, the
 percentage of available connections can be given. Third, a negative number can 
 be given which represents the number of connections left until B<max_connections> 
 is reached. The default values for I<--warning> and I<--critical> are '90%' and '95%'.
-You can also filter the databases by use of the <--include> and I<--exclude> options.
+You can also filter the databases by use of the I<--include> and I<--exclude> options.
 See the L</"BASIC FILTERING"> section for more details.
 
 To view only non-idle processes, you can use the I<--noidle> argument. Note that the 
@@ -5205,14 +5205,14 @@ Example 2: Give a critical if there are no active LISTEN requests matching 'grim
   check_postgres_listener --db oskar --critical=~grimm
 
 For MRTG output, returns a 1 or a 0 on the first, indicating success or failure. The name of the notice must 
-be provided via the <--mrtg> option.
+be provided via the I<--mrtg> option.
 
 =head2 B<locks>
 
 (C<symlink: check_postgres_locks>) Check the total number of locks on one or more databases. There is no 
 need to run this more than once per database cluster. Databases can be filtered 
 with the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
-for more details. 
+for more details.
 
 The I<--warning> and I<--critical> options can be specified as simple numbers, 
 which represent the total number of locks, or they can be broken down by type of lock. 

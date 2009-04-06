@@ -25,7 +25,7 @@
 			<li><a href="#nagios_output">Nagios output</a></li>
 			<li><a href="#mrtg_output">MRTG output</a></li>
 			<li><a href="#simple_output">Simple output</a></li>
-			<li><a href="#simple_output">Simple output</a></li>
+			<li><a href="#cacti_output">Cacti output</a></li>
 		</ul>
 
 	</ul>
@@ -190,7 +190,7 @@ argument, for example:</p>
 <h3><a name="simple_output">Simple output</a></h3>
 <p>The Cacti output consists of one or more items on the same line, with a simple name, a colon, and 
 then a number. At the moment, the only action with explicit Cacti output is 'dbstats', and using 
-the --output option is not needed in this case, Cacti is the only output for this action. For many 
+the --output option is not needed in this case, as Cacti is the only output for this action. For many 
 other actions, using --simple is enough to make Cacti happy.</p>
 <p>
 </p>
@@ -230,7 +230,7 @@ it defaults to 'postgres'.</p>
 
 <dd>
 <p>Provides the password to connect to the database with. Use of this option is highly discouraged.
-Instead, one should use a .pgpass file.</p>
+Instead, one should use a .pgpass of pg_service.conf file.</p>
 </dd>
 <dt><strong><a name="item__2d_2ddbservice_3dname"><strong>--dbservice=NAME</strong></a></strong></dt>
 
@@ -421,7 +421,7 @@ given. This choice does not use the <strong>max_connections</strong> setting. Se
 percentage of available connections can be given. Third, a negative number can 
 be given which represents the number of connections left until <strong>max_connections</strong> 
 is reached. The default values for <em>--warning</em> and <em>--critical</em> are '90%' and '95%'.
-You can also filter the databases by use of the &lt;--include&gt; and <em>--exclude</em> options.
+You can also filter the databases by use of the <em>--include</em> and <em>--exclude</em> options.
 See the <a href="#basic_filtering">BASIC FILTERING</a> section for more details.</p>
 <p>To view only non-idle processes, you can use the <em>--noidle</em> argument. Note that the 
 user you are connecting as must be a superuser for this to work properly.</p>
@@ -814,7 +814,7 @@ check.</p>
 <pre>
   check_postgres_listener --db oskar --critical=~grimm</pre>
 <p>For MRTG output, returns a 1 or a 0 on the first, indicating success or failure. The name of the notice must 
-be provided via the &lt;--mrtg&gt; option.</p>
+be provided via the <em>--mrtg</em> option.</p>
 <p>
 </p>
 <h2><a name="locks"><strong>locks</strong></a></h2>
