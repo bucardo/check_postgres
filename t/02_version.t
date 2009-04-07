@@ -6,12 +6,11 @@ use strict;
 use warnings;
 use Data::Dumper;
 use DBI;
-use Cwd;
 use Test::More tests => 28;
 use lib 't','.';
 use CP_Testing;
 
-use vars qw/$dbh $dbh2 $SQL $count $host $t $result $info/;
+use vars qw/$dbh $SQL $t/;
 
 my $cp = CP_Testing->new();
 

@@ -1,6 +1,6 @@
 #!perl
 
-## Simply test that the script compiles and gives a good version
+## Simply test that the script compiles and gives a valid version
 
 use strict;
 use warnings;

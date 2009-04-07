@@ -6,14 +6,13 @@ use strict;
 use warnings;
 use Data::Dumper;
 use DBI;
-use Cwd;
 use Test::More tests => 19;
 use lib 't','.';
 use CP_Testing;
 
-use vars qw/$dbh $dbh2 $SQL $count $host $t $result $info/;
+use vars qw/$dbh $dbh2 $SQL $t $result/;
 
-my $cp = CP_Testing->new();
+my $cp = CP_Testing->new( {default_action => 'replicate-row'} );
 
 $dbh = $cp->test_database_handle();
 $dbh2 = $cp->get_fresh_dbh({dbname=>'ardala'});
@@ -35,29 +34,29 @@ $dbh2->commit();
 my $S = q{Action 'replicate_rows'};
 
 $t=qq{$S fails when called with an invalid option};
-like ($cp->run('replicate-row', 'foobar=12'), qr{^\s*Usage:}, $t);
+like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
 
 $t=qq{$S fails when called without warning or critical};
-like ($cp->run('replicate-row', ''), qr{Must provide a warning and/or critical}, $t);
+like ($cp->run(''), qr{Must provide a warning and/or critical}, $t);
 
 $t=qq{$S fails when called with invalid warning};
-like ($cp->run('replicate-row', '-w foo'), qr{ERROR:.+'warning' must be a valid time}, $t);
+like ($cp->run('-w foo'), qr{ERROR:.+'warning' must be a valid time}, $t);
 
 $t=qq{$S fails when called with invalid critical};
-like ($cp->run('replicate-row', '-c foo'), qr{ERROR:.+'critical' must be a valid time}, $t);
+like ($cp->run('-c foo'), qr{ERROR:.+'critical' must be a valid time}, $t);
 
 $t=qq{$S fails when critical is greater than warning time};
-like ($cp->run('replicate-row', '-w 22 -c 44'), qr{ERROR:.+'warning' option cannot be less}, $t);
+like ($cp->run('-w 22 -c 44'), qr{ERROR:.+'warning' option cannot be less}, $t);
 
 $t=qq{$S fails when called with no repinfo argument};
-like ($cp->run('replicate-row', '-w 2'), qr{ERROR: Need a repinfo}, $t);
+like ($cp->run('-w 2'), qr{ERROR: Need a repinfo}, $t);
 
 $t=qq{$S fails when called with bad repinfo argument};
-like ($cp->run('replicate-row', '-w 2 -repinfo=abc'), qr{ERROR: Invalid repinfo}, $t);
+like ($cp->run('-w 2 -repinfo=abc'), qr{ERROR: Invalid repinfo}, $t);
 
 # table, pk, id, col, val1, val2
 $t=qq{$S fails when supplied values are equal};
-like ($cp->run('replicate-row', '-w 2 -repinfo=reptest,id,2,foo,yin,yin'), qr{ERROR: .+same values}, $t);
+like ($cp->run('-w 2 -repinfo=reptest,id,2,foo,yin,yin'), qr{ERROR: .+same values}, $t);
 
 $t=qq{$S fails when no matching source row is found};
 like ($cp->run('DB2replicate-row', '-w 2 -repinfo=reptest,id,4,foo,yin,yang'), qr{ERROR: .+not the right ones}, $t);

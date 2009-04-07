@@ -12,13 +12,19 @@ my $DEBUG = 0;
 
 use vars qw/$com $info $count/;
 
+my $fakeschema = 'cptest';
+
 sub new {
 	my $class = shift;
+	my $arg = shift || {};
 	my $self = {
 		started  => time(),
 		dbdir    => 'test_database_check_postgres',
 		testuser => 'check_postgres_testing',
 	};
+	if (exists $arg->{default_action}) {
+		$self->{action} = $arg->{default_action};
+	}
 	return bless $self => $class;
 }
 
@@ -143,6 +149,12 @@ sub test_database_handle {
 	$self->{dsn} = $dsn;
 	$self->{superdsn} = \@superdsn;
 
+	if (! exists $self->{keep_old_schema}) {
+		local $dbh->{Warn};
+		$dbh->do("DROP SCHEMA IF EXISTS $fakeschema CASCADE");
+	}
+
+
 	## Sanity check
 	$dbh->do("ALTER USER $dbuser SET search_path = public");
 	$dbh->do("SET search_path = public");
@@ -156,8 +168,9 @@ sub test_database_handle {
 sub run {
 
 	my $self = shift;
-	my $action = shift or die "First arg must be the command\n";
-	my $extra = shift || '';
+	my @arg = @_;
+	my $extra = pop @arg || '';
+	my $action = @arg ? $arg[0] : $self->{action} || die "First arg must be the command\n";
 
 	my $double = $action =~ s/DB2// ? 1 : 0;
 
@@ -219,14 +232,32 @@ sub create_fake_pg_table {
 
 	my $self = shift;
 	my $name = shift || die;
+	my $args = shift || '';
 	my $dbh = $self->{dbh} || die;
 	my $dbuser = $self->{testuser} || die;
-	{
+	if ($self->schema_exists($dbh,$fakeschema)) {
 		local $dbh->{Warn};
-		$dbh->do("DROP TABLE IF EXISTS public.$name");
+		$dbh->do("DROP TABLE IF EXISTS $fakeschema.$name");
 	}
-	$dbh->do("CREATE TABLE public.$name AS SELECT * FROM $name LIMIT 0");
-	$dbh->do("ALTER USER $dbuser SET search_path = public, pg_catalog");
+	else {
+		$dbh->do("CREATE SCHEMA $fakeschema");
+	}
+
+	my $funcargs = '';
+	if ($args) {
+		($funcargs = $args) =~ s/\w+/NULL/g;
+		$funcargs = qq{($funcargs)};
+	}
+
+	$dbh->do("CREATE TABLE $fakeschema.$name AS SELECT * FROM $name$funcargs LIMIT 0");
+
+	if ($args) {
+		local $dbh->{Warn};
+		$dbh->do("DROP FUNCTION IF EXISTS $fakeschema.$name($args)");
+		$dbh->do("CREATE FUNCTION $fakeschema.$name($args) RETURNS SETOF TEXT LANGUAGE SQL AS 'SELECT * FROM $fakeschema.$name; '");
+	}
+
+	$dbh->do("ALTER USER $dbuser SET search_path = $fakeschema, public, pg_catalog");
 	$dbh->commit();
 
 } ## end of create_fake_pg_table
@@ -236,16 +267,18 @@ sub remove_fake_pg_table {
 
 	my $self = shift;
 	my $name = shift || die;
+	(my $name2 = $name) =~ s/\(.+//;
 	my $dbh = $self->{dbh} || die;
 	my $dbuser = $self->{testuser} || die;
 	{
 		local $dbh->{Warn};
-		$dbh->do("DROP TABLE IF EXISTS public.$name");
+		$dbh->do("DROP TABLE IF EXISTS public.$name2");
 	}
 	$dbh->do("ALTER USER $dbuser SET search_path = public");
 	$dbh->commit();
 
 } ## end of remove_fake_pg_table
+
 
 sub table_exists {
 
@@ -259,6 +292,20 @@ sub table_exists {
 
 } ## end of table_exists
 
+
+sub schema_exists {
+
+	my ($self,$dbh,$schema) = @_;
+
+	my $SQL = 'SELECT count(1) FROM pg_namespace WHERE nspname = ?';
+	my $sth = $dbh->prepare($SQL);
+	$sth->execute($schema);
+	my $count = $sth->fetchall_arrayref()->[0][0];
+	return $count;
+
+} ## end of schema_exists
+
+
 sub fake_version {
 
 	my $self = shift;
@@ -266,15 +313,19 @@ sub fake_version {
 	my $dbh = $self->{dbh} || die;
 	my $dbuser = $self->{testuser} || die;
 
+	if (! $self->schema_exists($dbh, $fakeschema)) {
+		$dbh->do("CREATE SCHEMA $fakeschema");
+	}
+
 	$dbh->do(qq{
-CREATE OR REPLACE FUNCTION public.version()
+CREATE OR REPLACE FUNCTION $fakeschema.version()
 RETURNS TEXT
 LANGUAGE SQL
 AS \$\$
 SELECT 'PostgreSQL $version on fakefunction for check_postgres.pl testing'::text;
 \$\$
 });
-	$dbh->do("ALTER USER $dbuser SET search_path = public, pg_catalog");
+	$dbh->do("ALTER USER $dbuser SET search_path = $fakeschema, public, pg_catalog");
 	$dbh->commit();
 
 } ## end of fake version
