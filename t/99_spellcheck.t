@@ -132,19 +132,26 @@ __DATA__
 
 ## Common:
 
+arrayref
 backends
 bucardo
+dbh
 DBI
 DSN
 Mullane
 Nagios
 PGP
 Sabino
+SQL
 http
 login
 perl
 postgres
+selectall
+tuples
+wal
 www
+zettabytes
 
 ##99_spellcheck.t:
 
