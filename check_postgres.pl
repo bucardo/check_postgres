@@ -131,6 +131,14 @@ our %msg = (
 	'logfile-syslog'     => q{Database is using syslog, please specify path with --logfile option (fac=$1)},
 	'maxtime'            => q{ maxtime=$1}, ## leading space
 	'mrtg-fail'          => q{Action $1 failed: $2},
+	'new-cp-ok'          => q{Version $1 is the latest for check_postgres.pl},
+	'new-cp-unknown'     => q{Unable to determine the latest version of check_postgres.pl},
+	'new-cp-warn'        => q{Version $1 of check_postgres.pl exists (this is version $2)},
+	'new-pg-badver'      => q{Could not determine the Postgres revision (version was $1)},
+	'new-pg-badver2'     => q{Could not find revision information for Postgres version $1},
+	'new-pg-big'         => q{Please upgrade to version $1 of Postgres. You are running $2},
+	'new-pg-small'       => q{The latest version of Postgres is $1, but you are runnning $2?},
+	'new-pg-match'       => q{Postgres is at the latest revsion ($1)},
 	'no-match-db'        => q{No matching databases found due to exclusion/inclusion options},
 	'no-match-fs'        => q{No matching file systems found due to exclusion/inclusion options},
 	'no-match-rel'       => q{No matching relations found due to exclusion/inclusion options},
@@ -306,6 +314,14 @@ our %msg = (
 	'logfile-syslog'     => q{La base de données utiliser syslog, merci de spécifier le chemin avec l'option --logfile (fac=$1)},
 	'maxtime'            => q{ maxtime=$1}, ## leading space
 	'mrtg-fail'          => q{Échec de l'action $1 : $2},
+'new-cp-ok'          => q{Version $1 is the latest for check_postgres.pl},
+'new-cp-unknown'     => q{Unable to determine the latest version of check_postgres.pl},
+'new-cp-warn'        => q{Version $1 of check_postgres.pl exists (this is version $2)},
+'new-pg-badver'      => q{Could not determine the Postgres revision (version was $1)},
+'new-pg-badver2'     => q{Could not find revision information for Postgres version $1},
+'new-pg-big'         => q{Please upgrade to version $1 of Postgres. You are running $2},
+'new-pg-small'       => q{The latest version of Postgres is $1, but you are runnning $2?},
+'new-pg-match'       => q{Postgres is at the latest revsion ($1)},
 	'no-match-db'        => q{Aucune base de données trouvée à cause des options d'exclusion/inclusion},
 	'no-match-fs'        => q{Aucun système de fichier trouvé à cause des options d'exclusion/inclusion},
 	'no-match-rel'       => q{Aucune relation trouvée à cause des options d'exclusion/inclusion},
@@ -598,6 +614,8 @@ our $action_info = {
  listener            => [0, 'Checks for specific listeners.'],
  locks               => [0, 'Checks the number of locks.'],
  logfile             => [1, 'Checks that the logfile is being written to correctly.'],
+ new_version_cp      => [0, 'Checks if a newer version of check_postgres.pl is available.'],
+ new_version_pg      => [0, 'Checks if a newer version of Postgres is available.'],
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
  replicate_row       => [0, 'Verify a simple update gets replicated to another server.'],
@@ -749,8 +767,10 @@ if (! defined $PSQL or ! length $PSQL) {
 }
 -x $PSQL or ndie msg('opt-psql-noexec', $PSQL);
 $res = qx{$PSQL --version};
-$res =~ /^psql \(PostgreSQL\) (\d+\.\d+)/ or ndie msg('opt-psql-nover');
+$res =~ /^psql \(PostgreSQL\) (\d+\.\d+)(\S*)/ or ndie msg('opt-psql-nover');
 our $psql_version = $1;
+our $psql_revision = $2;
+$psql_revision =~ s/\D//g;
 
 $VERBOSE >= 1 and warn qq{psql=$PSQL version=$psql_version\n};
 
@@ -1147,8 +1167,14 @@ show_dbstats() if $action eq 'dbstats';
 ## Check how long since the last checkpoint
 check_checkpoint() if $action eq 'checkpoint';
 
-## Check how long since the last checkpoint
+## Check for disabled triggers
 check_disabled_triggers() if $action eq 'disabled_triggers';
+
+## Check for new versions of check_postgres.pl
+check_new_version_cp() if $action eq 'new_version_cp';
+
+## Check for new versions of Postgres
+check_new_version_pg() if $action eq 'new_version_pg';
 
 finishup();
 
@@ -4353,6 +4379,128 @@ sub check_disabled_triggers {
 } ## end of check_disabled_triggers
 
 
+sub check_new_version_cp {
+
+	## Check if a new version of check_postgres.pl is available
+	## You probably don't want to run this one every five minutes. :)
+
+	my $site = 'bucardo.org';
+	my $path = 'check_postgres/latest_version.txt';
+	my $url = "http://$site/$path";
+	my $newver = '';
+	my $versionre = qr{\d+\.\d+\.\d+};
+
+	my $timeout = 30;
+	my @get_methods = (
+		"GET -t $timeout",
+		"wget --quiet --timeout=$timeout -O -",
+		"curl --silent --max-time=$timeout",
+		"lynx --connect-timeout=$timeout --dump",
+		"links -dump",
+		);
+
+	for my $meth (@get_methods) {
+		eval {
+			my $COM = "$meth $url";
+			$VERBOSE >= 1 and warn "TRYING: $COM\n";
+			my $info = qx{$COM 2>/dev/null};
+			if ($info =~ /($versionre)/) {
+				$newver = $1;
+			}
+			$VERBOSE >=1 and warn "SET version to $newver\n";
+		};
+		last if length $newver;
+	}
+
+	if (! length $newver) {
+		printf "UNKNOWN: %s\n", msg('new-cp-fail');
+		exit 3;
+	}
+
+	if ($newver ne $VERSION) {
+		printf "WARNING: %s\n", msg('new-cp-warn', $newver, $VERSION);
+		exit 1;
+	}
+
+	printf "OK: %s\n", msg('new-cp-ok', $newver);
+	exit 0;
+
+} ## end of check_new_version_cp
+
+
+sub check_new_version_pg {
+
+	## Check if a new version of Postgres is available
+	## Note that we only check the revision
+	## This also depends highly on the web page at postgresql.org not changing format
+
+	my $site = 'www.postgresql.org';
+	my $url = "http://$site/";
+	my $versionre1 = qr{/docs/\d+\.\d+/static/release-(\d+)\-(\d+)\-(\d+)};
+	my $versionre2 = qr{/docs/\d+\.\d+/static/release\.html#RELEASE-(\d+)\-(\d+)\-(\d+)};
+
+	my $timeout = 30;
+	my @get_methods = (
+		"GET -t $timeout",
+		"wget --quiet --timeout=$timeout -O -",
+		"curl --silent --max-time=$timeout",
+		"lynx --connect-timeout=$timeout --dump",
+		"links -dump",
+		);
+
+	my %newver;
+	for my $meth (@get_methods) {
+		eval {
+			my $COM = "$meth $url";
+			$VERBOSE >= 1 and warn "TRYING: $COM\n";
+			my $info = qx{$COM 2>/dev/null};
+			while ($info =~ /$versionre1/g) {
+				my ($maj,$min,$rev) = ($1,$2,$3);
+				$newver{"$maj.$min"} = $rev;
+			}
+			while ($info =~ /$versionre2/g) {
+				my ($maj,$min,$rev) = ($1,$2,$3);
+				$newver{"$maj.$min"} = $rev;
+			}
+		};
+		last if %newver;
+	}
+
+	my $info = run_command('SELECT version()');
+
+	## Parse it out and return our information
+	for $db (@{$info->{db}}) {
+		if ($db->{slurp} !~ /PostgreSQL (\S+)/o) { ## no critic (ProhibitUnusedCapture)
+			add_unknown msg('invalid-query', $db->{slurp});
+			next;
+		}
+		my $currver = $1;
+		if ($currver !~ /(\d+\.\d+)\.(\d+)/) {
+			add_unknown msg('new-pg-badver', $currver);
+			next;
+		}
+		my ($ver,$rev) = ($1,$2);
+		if (! exists $newver{$ver}) {
+			add_unknown msg('new-pg-badver2', $ver);
+			next;
+		}
+		my $newrev = $newver{$ver};
+		if ($newrev > $rev) {
+			printf "WARNING: %s\n", msg('new-pg-big', "$ver.$newrev", $currver);
+			exit 1;
+		}
+		if ($newrev < $rev) {
+			printf "WARNING: %s\n", msg('new-pg-small', "$ver.$newrev", $currver);
+			exit 1;
+		}
+		add_ok msg('new-pg-match', $currver);
+	}
+
+	return;
+
+} ## end of check_new_version_pg
+
+
 sub show_dbstats {
 
 	## Returns values from the pg_stat_database view
@@ -5263,6 +5411,23 @@ Example 2: Same as above, but raise a warning, not a critical
 For MRTG output, returns a 1 or 0 on the first line, indicating success or failure. In case of a 
 failure, the fourth line will provide more detail on the failure encountered.
 
+=head2 B<new_version_cp>
+
+(C<symlink: check_postgres_new_version_cp>) Checks if a newer version of this program 
+(check_postgres.pl) is available, by grabbing the version from a small text file 
+on the main page of the home page for the project. Returns a warning if the returned 
+version does not match the one you are running. Recommended interval to check is 
+once a day.
+
+=head2 B<new_version_pg>
+
+(C<symlink: check_postgres_cp_new_version_pg>) Checks if a newer revision of Postgres 
+exists for each database connected to. Note that this only checks for revision, e.g. 
+going from 8.3.6 to 8.3.7. Revisions are always 100% binary compatible and involve no 
+dump and restore to upgrade. Revisions are made to address bugs, so upgrading as soon 
+as possible is always recommended. Returns a warning if you do not have the latest revision.
+It is recommended this check is run at least once a day.
+
 =head2 B<query_runtime>
 
 (C<symlink: check_postgres_query_runtime>) Checks how long a specific query takes to run, by executing a "EXPLAIN ANALYZE" 
@@ -5722,6 +5887,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
   Added internationalization support (Greg)
   Added the 'disabled_triggers' check (Greg)
+  Added the 'new_version_cp' and 'new_version_pg' checks (Greg)
   French translations (Guillaume Lelarge)
   Make the backends search return ok if no matches due to inclusion rules,
     per report by Guillaume Lelarge (Greg)
