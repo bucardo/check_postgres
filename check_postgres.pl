@@ -1663,7 +1663,7 @@ sub verify_version {
 	## We almost always need the version, so just grab it for any limitation
 	$SQL = q{SELECT setting FROM pg_settings WHERE name = 'server_version'};
 	my $oldslurp = $db->{slurp} || '';
-	my $info = run_command($SQL, {noverify => 1});
+	$info = run_command($SQL, {noverify => 1});
 	if (defined $info->{db}[0]
 		and exists $info->{db}[0]{error}
 		and defined $info->{db}[0]{error}
@@ -4078,7 +4078,7 @@ sub check_replicate_row {
 		## Reset for final output
 		$db = $sourcedb;
 
-		my $slave = 0;
+		$slave = 0;
 		for my $d (@{$info2->{db}}) {
 			$slave++;
 			next if exists $slave{$slave};
