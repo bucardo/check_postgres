@@ -1435,7 +1435,12 @@ sub run_command {
 		my @args = ('-q', '-t');
 		if (defined $db->{dbservice} and length $db->{dbservice}) { ## XX Check for simple names
 			$db->{pname} = "service=$db->{dbservice}";
-			push @args, qq{service=$db->{dbservice}};
+			if ($psql_version >= 8.3) {
+				push @args, qq{service=$db->{dbservice}};
+			}
+			else {
+				$ENV{PGSERVICE} = $db->{dbservice};
+			}
 		}
 		else {
 			$db->{pname} = "port=$db->{port} host=$db->{host} db=$db->{dbname} user=$db->{dbuser}";
@@ -5713,7 +5718,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.8.0> (March ??, 2009)
+=item B<Version 2.8.0> (April ??, 2009)
 
   Added internationalization support (Greg)
   Added the 'disabled_triggers' check (Greg)
@@ -5722,11 +5727,12 @@ Items not specifically attributed are by Greg Sabino Mullane.
     per report by Guillaume Lelarge (Greg)
   Begin adding comprehensive unit tests (Greg)
   Fix missing 'upd' field in show_dbstats (Andras Fabian)
+  Fix incorrect regex in txn_wraparound (Greg)
+  For txn_wraparound: consistent ordering and fix duplicates in perf output (Andras Fabian)
   Add in missing exabyte regex check (Selena Deckelmann)
   Set stats to zero if we bail early due to USERWHERECLAUSE (Andras Fabian)
   Add additional items to dbstats output (Andras Fabian)
-  For txn_wraparound: consistent ordering and fix duplicates in perf output (Andras Fabian)
-  Fix incorrect regex in txn_wraparound (Greg)
+  Fix --dbservice: check version and use ENV{PGSERVICE} for old versions (Cédric Villemain)
 
 =item B<Version 2.7.3> (February 10, 2009)
 
