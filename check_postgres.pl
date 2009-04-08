@@ -1663,7 +1663,7 @@ sub verify_version {
 	## We almost always need the version, so just grab it for any limitation
 	$SQL = q{SELECT setting FROM pg_settings WHERE name = 'server_version'};
 	my $oldslurp = $db->{slurp} || '';
-	$info = run_command($SQL, {noverify => 1});
+	my $info = run_command($SQL, {noverify => 1});
 	if (defined $info->{db}[0]
 		and exists $info->{db}[0]{error}
 		and defined $info->{db}[0]{error}
@@ -4434,10 +4434,8 @@ sub check_new_version_pg {
 	## Note that we only check the revision
 	## This also depends highly on the web page at postgresql.org not changing format
 
-	my $site = 'www.postgresql.org';
-	my $url = "http://$site/";
-	my $versionre1 = qr{/docs/\d+\.\d+/static/release-(\d+)\-(\d+)\-(\d+)};
-	my $versionre2 = qr{/docs/\d+\.\d+/static/release\.html#RELEASE-(\d+)\-(\d+)\-(\d+)};
+	my $url = 'http://www.postgresql.org/versions.rss';
+	my $versionre = qr{<title>(\d+)\.(\d+)\.(\d+)</title>};
 
 	my $timeout = 30;
 	my @get_methods = (
@@ -4454,11 +4452,7 @@ sub check_new_version_pg {
 			my $COM = "$meth $url";
 			$VERBOSE >= 1 and warn "TRYING: $COM\n";
 			my $info = qx{$COM 2>/dev/null};
-			while ($info =~ /$versionre1/g) {
-				my ($maj,$min,$rev) = ($1,$2,$3);
-				$newver{"$maj.$min"} = $rev;
-			}
-			while ($info =~ /$versionre2/g) {
+			while ($info =~ /$versionre/g) {
 				my ($maj,$min,$rev) = ($1,$2,$3);
 				$newver{"$maj.$min"} = $rev;
 			}
