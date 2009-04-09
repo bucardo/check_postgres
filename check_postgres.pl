@@ -64,6 +64,16 @@ our $FANCYNAME = 1;
 ## Change the service name to uppercase
 our $YELLNAME = 1;
 
+## Preferred order of ways to fetch pages for new_version checks
+our $get_method_timeout = 30;
+our @get_methods = (
+	"GET -t $get_method_timeout",
+	"wget --quiet --timeout=$get_method_timeout -O -",
+	"curl --silent --max-time=$get_method_timeout",
+	"lynx --connect-timeout=$get_method_timeout --dump",
+	'links -dump',
+);
+
 ## Nothing below this line should need to be changed for normal usage.
 ## If you do find yourself needing to change something,
 ## please email the author as it probably indicates something
@@ -129,7 +139,7 @@ our %msg = (
 	'logfile-seekfail'   => q{Seek on $1 failed: $2},
 	'logfile-stderr'     => q{Logfile output has been redirected to stderr: please provide a filename},
 	'logfile-syslog'     => q{Database is using syslog, please specify path with --logfile option (fac=$1)},
-	'maxtime'            => q{ maxtime=$1}, ## leading space
+	'maxtime'            => q{ maxtime=$1}, ## needs leading space
 	'mrtg-fail'          => q{Action $1 failed: $2},
 	'new-cp-ok'          => q{Version $1 is the latest for check_postgres.pl},
 	'new-cp-unknown'     => q{Unable to determine the latest version of check_postgres.pl},
@@ -238,7 +248,7 @@ our %msg = (
 	'time-weeks'         => q{weeks},
 	'time-year'          => q{year},
 	'time-years'         => q{years},
-	'timesync-diff'      => q{ diff=$1}, ## leading space
+	'timesync-diff'      => q{ diff=$1}, ## needs leading space
 	'timesync-msg'       => q{timediff=$1 DB=$2 Local=$3},
 	'trigger-msg'        => q{Disabled triggers: $1},
 	'txnidle-msg'        => q{longest idle in txn: $1s},
@@ -312,16 +322,16 @@ our %msg = (
 	'logfile-seekfail'   => q{Échec de la recherche dans $1 : $2},
 	'logfile-stderr'     => q{La sortie des traces a été redirigés stderr : merci de fournir un nom de fichier},
 	'logfile-syslog'     => q{La base de données utiliser syslog, merci de spécifier le chemin avec l'option --logfile (fac=$1)},
-	'maxtime'            => q{ maxtime=$1}, ## leading space
+	'maxtime'            => q{ maxtime=$1}, ## needs leading space
 	'mrtg-fail'          => q{Échec de l'action $1 : $2},
-'new-cp-ok'          => q{Version $1 is the latest for check_postgres.pl},
-'new-cp-unknown'     => q{Unable to determine the latest version of check_postgres.pl},
-'new-cp-warn'        => q{Version $1 of check_postgres.pl exists (this is version $2)},
-'new-pg-badver'      => q{Could not determine the Postgres revision (version was $1)},
-'new-pg-badver2'     => q{Could not find revision information for Postgres version $1},
-'new-pg-big'         => q{Please upgrade to version $1 of Postgres. You are running $2},
-'new-pg-small'       => q{The latest version of Postgres is $1, but you are runnning $2?},
-'new-pg-match'       => q{Postgres is at the latest revsion ($1)},
+	'new-cp-ok'          => q{La version $1 est la dernière pour check_postgres.pl},
+	'new-cp-unknown'     => q{Impossible de déterminer la dernière version de check_postgres.pl},
+	'new-cp-warn'        => q{La version $1 de check_postgres.pl existe (ceci est la version $2)},
+	'new-pg-badver'      => q{N'a pas pu déterminer la révision de Postgres (la version était $1)},
+	'new-pg-badver2'     => q{N'a pas pu trouver l'information de révision de Posrgres version $1},
+	'new-pg-big'         => q{Veuillez mettre à jour Postgres vers la version $1. Vous utilisez actuellement la version $2},
+	'new-pg-small'       => q{La dernière version de Postgres est la $1, mais vous utilisez actuellement la version $2?},
+	'new-pg-match'       => q{Postgres est à la dernière révision ($1)},
 	'no-match-db'        => q{Aucune base de données trouvée à cause des options d'exclusion/inclusion},
 	'no-match-fs'        => q{Aucun système de fichier trouvé à cause des options d'exclusion/inclusion},
 	'no-match-rel'       => q{Aucune relation trouvée à cause des options d'exclusion/inclusion},
@@ -420,7 +430,7 @@ our %msg = (
 	'time-weeks'         => q{semaines},
 	'time-year'          => q{année},
 	'time-years'         => q{années},
-	'timesync-diff'      => q{ diff=$1}, ## leading space
+	'timesync-diff'      => q{ diff=$1}, ## needs leading space
 	'timesync-msg'       => q{timediff=$1 Base de données=$2 Local=$3},
 	'trigger-msg'        => q{Triggers désactivés : $1},
 	'txnidle-msg'        => q{longest idle in txn: $1s},
@@ -1697,11 +1707,11 @@ sub verify_version {
 		}
 
 		$SQL = qq{SELECT setting FROM pg_settings WHERE name = '$setting'};
-		my $info = run_command($SQL);
-		if (!defined $info->{db}[0]) {
+		my $info2 = run_command($SQL);
+		if (!defined $info2->{db}[0]) {
 			ndie msg('die-nosetting', $setting);
 		}
-		my $val = $info->{db}[0]{slurp};
+		my $val = $info2->{db}[0]{slurp};
 		if ($val !~ /^on\b/) {
 			ndie msg('die-noset', $action, $setting);
 		}
@@ -4391,15 +4401,6 @@ sub check_new_version_cp {
 	my $newver = '';
 	my $versionre = qr{\d+\.\d+\.\d+};
 
-	my $timeout = 30;
-	my @get_methods = (
-		"GET -t $timeout",
-		"wget --quiet --timeout=$timeout -O -",
-		"curl --silent --max-time=$timeout",
-		"lynx --connect-timeout=$timeout --dump",
-		"links -dump",
-		);
-
 	for my $meth (@get_methods) {
 		eval {
 			my $COM = "$meth $url";
@@ -4437,15 +4438,6 @@ sub check_new_version_pg {
 
 	my $url = 'http://www.postgresql.org/versions.rss';
 	my $versionre = qr{<title>(\d+)\.(\d+)\.(\d+)</title>};
-
-	my $timeout = 30;
-	my @get_methods = (
-		"GET -t $timeout",
-		"wget --quiet --timeout=$timeout -O -",
-		"curl --silent --max-time=$timeout",
-		"lynx --connect-timeout=$timeout --dump",
-		"links -dump",
-		);
 
 	my %newver;
 	for my $meth (@get_methods) {
@@ -4537,7 +4529,7 @@ sub show_dbstats {
 				}
 				next SLURP unless $keepit;
 			}
-			my $template = "backends:%d commits:%d rollbacks:%d read:%d hit:%d idxscan:%d idxtupread:%d idxtupfetch:%d idxblksread:%d idxblkshit:%d seqscan:%d seqtupread:%d ret:%d fetch:%d ins:%d upd:%d del:%d";
+			my $template = 'backends:%d commits:%d rollbacks:%d read:%d hit:%d idxscan:%d idxtupread:%d idxtupfetch:%d idxblksread:%d idxblkshit:%d seqscan:%d seqtupread:%d ret:%d fetch:%d ins:%d upd:%d del:%d';
 			my $msg = sprintf "$template", @stats, (0,0,0,0,0,0,0,0,0,0,0,0,0);
 			print "$msg dbname:$dbname\n";
 		}
