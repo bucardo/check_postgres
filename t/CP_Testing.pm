@@ -126,7 +126,7 @@ sub test_database_handle {
 	} ## end of needs startup
 
 	my $here = cwd();
-	my $dsn = qq{dbi:Pg:host="$here/$dbdir/data/socket";dbname=postgres};
+	my $dsn = qq{dbi:Pg:host=$here/$dbdir/data/socket;dbname=postgres};
 	my @superdsn = ($dsn, '', '', {AutoCommit=>0,RaiseError=>1,PrintError=>0});
 	my $dbh = DBI->connect(@superdsn);
 	$dbh->ping() or die qq{Failed to ping!\n};
