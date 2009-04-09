@@ -97,7 +97,7 @@ sub test_database_handle {
 
 		unlink $logfile;
 
-		$com = "LC_ALL=en LANG=C pg_ctl -o '-k socket' -l $logfile -D $dbdir/data start";
+		$com = qq{LC_ALL=en LANG=C pg_ctl -o '-k socket' -l $logfile -D "$dbdir/data" start};
 		eval {
 			$info = qx{$com};
 		};
@@ -126,7 +126,7 @@ sub test_database_handle {
 	} ## end of needs startup
 
 	my $here = cwd();
-	my $dsn = qq{dbi:Pg:host="$here/$dbdir/data/socket;dbname=postgres"};
+	my $dsn = qq{dbi:Pg:host="$here/$dbdir/data/socket";dbname=postgres};
 	my @superdsn = ($dsn, '', '', {AutoCommit=>0,RaiseError=>1,PrintError=>0});
 	my $dbh = DBI->connect(@superdsn);
 	$dbh->ping() or die qq{Failed to ping!\n};
