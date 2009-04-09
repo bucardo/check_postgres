@@ -1593,6 +1593,7 @@ sub run_command {
 
 			## Allow an empty query (no matching rows) if requested
 			if ($arg->{emptyok} and $db->{slurp} =~ /^\s*$/o) {
+				$arg->{emptyok2} = 1;
 			}
 
 			## If we just want a version, grab it and redo
@@ -1612,7 +1613,7 @@ sub run_command {
 			}
 
 			## If we were provided with a regex, check and bail if it fails
-			elsif ($arg->{regex}) {
+			elsif ($arg->{regex} and ! $arg->{emptyok2}) {
 				if ($db->{slurp} !~ $arg->{regex}) {
 
 					## Check if problem is due to backend being too old for this check
