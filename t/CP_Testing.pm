@@ -205,6 +205,11 @@ sub get_host {
 	return $self->{dbhost};
 }
 
+sub get_dbname {
+	my $self = shift;
+	return $self->{dbname};
+}
+
 sub get_dbh {
 	my $self = shift;
 	return $self->{dbh} || die;
