@@ -5458,7 +5458,7 @@ Example 2: Using default values (2 and 5 minutes), check all databases except th
 
 Example 3: Warn if user 'don' has a query running over 20 seconds
 
-  check_postgres_query_time --port=5432 --inclucdeuser=don --warning=20s
+  check_postgres_query_time --port=5432 --includeuser=don --warning=20s
 
 For MRTG output, returns the length in seconds of the longest running query on the first line. The fourth 
 line gives the name of the database.
