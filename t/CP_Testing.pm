@@ -217,6 +217,11 @@ sub get_dbh {
 	return $self->{dbh} || die;
 }
 
+sub get_user {
+	my $self = shift;
+	return $self->{testuser} || die;
+}
+
 sub get_fresh_dbh {
 
 	my $self = shift;
@@ -346,5 +351,25 @@ sub reset_path {
 	$dbh->commit();
 
 } ## end of reset_path
+
+sub bad_fake_version {
+
+	my $self = shift;
+	my $version = shift || '9.9';
+	my $dbh = $self->{dbh} || die;
+	my $dbuser = $self->{testuser} || die;
+
+	$dbh->do(qq{
+CREATE OR REPLACE FUNCTION public.version()
+RETURNS TEXT
+LANGUAGE SQL
+AS \$\$
+SELECT 'Postgres $version on fakefunction for check_postgres.pl testing'::text;
+\$\$
+});
+	$dbh->do("ALTER USER $dbuser SET search_path = public, pg_catalog");
+	$dbh->commit();
+
+} ## end of bad_fake_version
 
 1;
