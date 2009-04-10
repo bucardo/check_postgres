@@ -1409,7 +1409,7 @@ sub run_command {
 			}
 			if (defined $opt{$v}->[$gbin]) {
 				my $new = $opt{$v}->[$gbin];
-				$new =~ s/\s+//g unless $vname eq 'dbservice';
+				$new =~ s/\s+//g unless $vname eq 'dbservice' or $vname eq 'host';
 				## Set this as the new default
 				$conn->{$vname} = [split /,/ => $new];
 				$foundgroup = 1;
