@@ -535,7 +535,6 @@ die $USAGE unless
 			   'valtype=s',   ## used by custom_query only
 			   'reverse',     ## used by custom_query only
 			   'repinfo=s',   ## used by replicate_row only
-			   'schema=s',    ## used by fsm_* checks only
 			   'noidle',      ## used by backends only
 			   'datadir=s',   ## used by checkpoint only
 			   )
@@ -2764,7 +2763,6 @@ sub check_fsm_pages {
 	## Supports: Nagios, MRTG
 	## Must run as superuser
 	## Requires pg_freespacemap contrib module
-	## Takes an optional --schema argument, defaults to 'public'
 	## Critical and warning are a percentage of max_fsm_pages
 	## Example: --critical=95
 
@@ -2775,15 +2773,13 @@ sub check_fsm_pages {
 		  default_critical  => '95%',
 		  });
 
-    my $schema = ($opt{schema}) ? $opt{schema} : 'public';
-
 	(my $w = $warning) =~ s/\D//;
 	(my $c = $critical) =~ s/\D//;
 	my $SQL = qq{SELECT pages, maxx, ROUND(100*(pages/maxx)) AS percent\n}.
 	 		  qq{FROM (SELECT (sumrequests+numrels)*chunkpages AS pages\n}.
 			  qq{ FROM (SELECT SUM(CASE WHEN avgrequest IS NULL THEN interestingpages/32 }.
 			  qq{ ELSE interestingpages/16 END) AS sumrequests,\n}.
-			  qq{ COUNT(relfilenode) AS numrels, 16 AS chunkpages FROM $schema.pg_freespacemap_relations) AS foo) AS foo2,\n}.
+			  qq{ COUNT(relfilenode) AS numrels, 16 AS chunkpages FROM pg_freespacemap_relations) AS foo) AS foo2,\n}.
 			  qq{ (SELECT setting::NUMERIC AS maxx FROM pg_settings WHERE name = 'max_fsm_pages') AS foo3};
 
 	my $info = run_command($SQL, {regex => qr[\d+] } );
@@ -2823,7 +2819,6 @@ sub check_fsm_relations {
 	## Supports: Nagios, MRTG
 	## Must run as superuser
 	## Requires pg_freespacemap contrib module
-	## Takes an optional --schema argument, defaults to 'public'
 	## Critical and warning are a percentage of max_fsm_relations
 	## Example: --critical=95
 
@@ -2834,14 +2829,12 @@ sub check_fsm_relations {
 		  default_critical  => '95%',
 		  });
 
-    my $schema = ($opt{schema}) ? $opt{schema} : 'public';
-
 	(my $w = $warning) =~ s/\D//;
 	(my $c = $critical) =~ s/\D//;
 
 	my $SQL = qq{SELECT maxx, cur, ROUND(100*(cur/maxx))\n}.
 			  qq{FROM (SELECT\n}.
-			  qq{ (SELECT COUNT(*) FROM $schema.pg_freespacemap_relations) AS cur,\n}.
+			  qq{ (SELECT COUNT(*) FROM pg_freespacemap_relations) AS cur,\n}.
 			  qq{ (SELECT setting::NUMERIC FROM pg_settings WHERE name='max_fsm_relations') AS maxx) x\n};
 
 	my $info = run_command($SQL, {regex => qr[\w+] } );
@@ -5215,9 +5208,7 @@ Example 1: Give a warning when our cluster has used up 76% of the free-space pag
 
   check_postgres_fsm_pages --dbname=robert --warning="76%"
 
-While you need to pass in the name of the database where pg_freespacemap is installed (and optionally a schema name if you have
-installed the module in a non-standard schema), you only need to run this check once per cluster. Also, checking this information
-does require obtaining special locks on the free-space-map, so it is recommend you do not run this check with short intervals.
+While you need to pass in the name of the database where pg_freespacemap is installed, you only need to run this check once per cluster. Also, checking this information does require obtaining special locks on the free-space-map, so it is recommend you do not run this check with short intervals.
 
 For MRTG output, returns the percent of free-space-map on the first line, and the number of pages currently used on 
 the second line.
@@ -5230,12 +5221,12 @@ installed. The I<--warning> and I<--critical> options should be expressed as per
 in the free-space-map is determined by looking in the pg_freespacemap_relations view. The default values are B<85%> for 
 the warning and B<95%> for the critical.
 
-Example 1: Give a warning when our cluster has used up 80% of the free-space relations, with pg_freespacemap installed in database dylan, in non-standard schema emma
+Example 1: Give a warning when our cluster has used up 80% of the free-space relations, with pg_freespacemap installed in database dylan
 
-  check_postgres_fsm_relations --dbname=dylan --warning="75%" --schema=emma
+  check_postgres_fsm_relations --dbname=dylan --warning="75%"
 
-While you need to pass in the name of the database where pg_freespacemap is installed (and optionally a schema name
-if you have installed the module in a non-standard schema), you only need to run this check once per cluster. Also,
+While you need to pass in the name of the database where pg_freespacemap is installed, you only need to run this check 
+once per cluster. Also,
 checking this information does require obtaining special locks on the free-space-map, so it is recommend you do not
 run this check with short intervals.
 
@@ -5885,6 +5876,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Add in missing exabyte regex check (Selena Deckelmann)
   Set stats to zero if we bail early due to USERWHERECLAUSE (Andras Fabian)
   Add additional items to dbstats output (Andras Fabian)
+  Remove --schema option from the fsm_ checks. (Greg Mullane and Robert Treat)
   Fix --dbservice: check version and use ENV{PGSERVICE} for old versions (Cédric Villemain)
 
 =item B<Version 2.7.3> (February 10, 2009)
