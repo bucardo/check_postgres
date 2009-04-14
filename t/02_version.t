@@ -102,10 +102,10 @@ $t=qq{$S gives correct output for MRTG output};
 like ($cp->run('--output=MRTG --mrtg=7.9.13'), qr{^0\n0\n\n7.8.12\n}, $t);
 
 $t=qq{$S gives correct output for MRTG output};
-like ($cp->run('--output=MRTG --mrtg=7.8'), qr{^1\n0\n\n7.8.12\n}, $t);
+is ($cp->run('--output=MRTG --mrtg=7.8'), qq{1\n0\n\n7.8.12\n}, $t);
 
 $t=qq{$S gives correct output for MRTG output};
-like ($cp->run('--output=MRTG --mrtg=7.8.12'), qr{^1\n0\n\n7.8.12\n}, $t);
+is ($cp->run('--output=MRTG --mrtg=7.8.12'), qq{1\n0\n\n7.8.12\n}, $t);
 
 $cp->reset_path();
 

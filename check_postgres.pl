@@ -2785,8 +2785,8 @@ sub check_fsm_pages {
 	my $info = run_command($SQL, {regex => qr[\d+] } );
 
 	for $db (@{$info->{db}}) {
-	  SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+)$/gsm) {
-			my ($pages,$max,$percent) = ($1,$2,$3);
+	  SLURP: while ($db->{slurp} =~ /\s*(\d*) \|\s+(\d+) \|\s+(\d*)$/gsm) {
+			my ($pages,$max,$percent) = ($1||0,$2,$3||0);
 
 			if ($MRTG) {
 				do_mrtg({one => $percent, two => $pages});

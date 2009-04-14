@@ -8,7 +8,7 @@ use Data::Dumper;
 use Time::HiRes qw/sleep/;
 use Cwd;
 
-my $DEBUG = 0;
+our $DEBUG = 0;
 
 use vars qw/$com $info $count/;
 
@@ -19,8 +19,8 @@ sub new {
 	my $arg = shift || {};
 	my $self = {
 		started  => time(),
-		dbdir    => 'test_database_check_postgres',
-		testuser => 'check_postgres_testing',
+		dbdir    => $arg->{dbdir}    || 'test_database_check_postgres',
+		testuser => $arg->{testuser} || 'check_postgres_testing',
 	};
 	if (exists $arg->{default_action}) {
 		$self->{action} = $arg->{default_action};
@@ -34,6 +34,7 @@ sub test_database_handle {
 
 	my $self = shift;
 	my $arg = shift || {};
+	$arg->{dbname} ||= 'postgres';
 
 	ref $arg eq 'HASH' or die qq{Must pass a hashref (or nothing) to test_database_handle\n};
 
@@ -129,7 +130,7 @@ sub test_database_handle {
 	my $dbhost = $self->{dbhost} = "$here/$dbdir/data/socket";
 	$dbhost =~ s/^ /\\ /;
 	$dbhost =~ s/([^\\]) /$1\\ /g;
-	$self->{dbname} = 'postgres';
+	$self->{dbname} ||= 'postgres';
 	my $dsn = qq{dbi:Pg:host=$dbhost;dbname=$self->{dbname}};
 	my @superdsn = ($dsn, '', '', {AutoCommit=>0,RaiseError=>1,PrintError=>0});
 	my $dbh = DBI->connect(@superdsn);
@@ -147,15 +148,30 @@ sub test_database_handle {
 	$dbh->{AutoCommit} = 0;
 	$dbh->{RaiseError} = 1;
 
-	$self->{dbh} = $dbh;
-	$self->{dsn} = $dsn;
-	$self->{superdsn} = \@superdsn;
-
 	if (! exists $self->{keep_old_schema}) {
 		local $dbh->{Warn};
 		$dbh->do("DROP SCHEMA IF EXISTS $fakeschema CASCADE");
 	}
 
+	if ($arg->{dbname} ne $self->{dbname}) {
+		my $tmp_dsn = $dsn;
+		$tmp_dsn =~ s/dbname=\w+/dbname=$arg->{dbname}/;
+		my $tmp_dbh;
+		eval { $tmp_dbh = DBI->connect($tmp_dsn, @superdsn[1..$#superdsn]) };
+		if ($@) {
+			local($dbh->{AutoCommit}) = 1;
+			$dbh->do("CREATE DATABASE " . $arg->{dbname});
+			eval { $tmp_dbh = DBI->connect($tmp_dsn, @superdsn[1..$#superdsn]) };
+			die $@ if $@;
+		}
+		$dbh->disconnect;
+		$dbh = $tmp_dbh;
+		$self->{dbname} = $arg->{dbname};
+	}
+
+	$self->{dbh} = $dbh;
+	$self->{dsn} = $dsn;
+	$self->{superdsn} = \@superdsn;
 
 	## Sanity check
 	$dbh->do("ALTER USER $dbuser SET search_path = public");
@@ -166,10 +182,18 @@ sub test_database_handle {
 
 } ## end of test_database_handle
 
+sub get_command {
+  return run('get_command', @_);
+}
 
 sub run {
 
 	my $self = shift;
+	my $get;
+	if ($self eq 'get_command') {
+		$get = $self;
+		$self = shift;
+	}
 	my @arg = @_;
 	my $extra = pop @arg || '';
 	my $action = @arg ? $arg[0] : $self->{action} || die "First arg must be the command\n";
@@ -190,6 +214,7 @@ sub run {
 
 	$DEBUG and warn "DEBUG RUN: $com\n";
 
+	return $com if $get;
 	my $result;
 	eval {
 		$result = qx{$com 2>&1};
@@ -201,6 +226,11 @@ sub run {
 	return $result;
 
 } ## end of run
+
+sub get_user {
+	my $self = shift;
+	return $self->{testuser};
+}
 
 sub get_host {
 	my $self = shift;
@@ -215,11 +245,6 @@ sub get_dbname {
 sub get_dbh {
 	my $self = shift;
 	return $self->{dbh} || die;
-}
-
-sub get_user {
-	my $self = shift;
-	return $self->{testuser} || die;
 }
 
 sub get_fresh_dbh {
@@ -273,6 +298,26 @@ sub create_fake_pg_table {
 	$dbh->commit();
 
 } ## end of create_fake_pg_table
+
+
+sub get_fake_schema {
+	return $fakeschema;
+}
+
+
+sub set_fake_schema {
+
+	my $self = shift;
+	my $dbh = $self->{dbh} || die;
+	my $dbuser = $self->{testuser} || die;
+	if (!$self->schema_exists($dbh,$fakeschema)) {
+		$dbh->do("CREATE SCHEMA $fakeschema");
+	}
+
+	$dbh->do("ALTER USER $dbuser SET search_path = $fakeschema, public, pg_catalog");
+	$dbh->commit();
+
+} ## end of set_fake_schema
 
 
 sub remove_fake_pg_table {
@@ -351,25 +396,5 @@ sub reset_path {
 	$dbh->commit();
 
 } ## end of reset_path
-
-sub bad_fake_version {
-
-	my $self = shift;
-	my $version = shift || '9.9';
-	my $dbh = $self->{dbh} || die;
-	my $dbuser = $self->{testuser} || die;
-
-	$dbh->do(qq{
-CREATE OR REPLACE FUNCTION public.version()
-RETURNS TEXT
-LANGUAGE SQL
-AS \$\$
-SELECT 'Postgres $version on fakefunction for check_postgres.pl testing'::text;
-\$\$
-});
-	$dbh->do("ALTER USER $dbuser SET search_path = public, pg_catalog");
-	$dbh->commit();
-
-} ## end of bad_fake_version
 
 1;
