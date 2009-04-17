@@ -746,6 +746,7 @@ sub msg { ## no critic
 	my $x=1;
 	{
 		my $val = $_[$x-1];
+		$val = '?' if ! defined $val;
 		last unless $msg =~ s/\$$x/$val/g;
 		$x++;
 		redo;
@@ -1741,11 +1742,18 @@ sub size_in_seconds {
 
 	return '' if ! length $string;
 	if ($string !~ $timere) {
-		my $l = substr($type,0,1);
-		ndie msg('die-badtime', $type, $l);
+		ndie msg('die-badtime', $type, substr($type,0,1));
 	}
 	my ($val,$unit) = ($1,lc substr($2||'s',0,1));
-	my $tempval = sprintf '%.9f', $val * ($unit eq 's' ? 1 : $unit eq 'm' ? 60 : $unit eq 'h' ? 3600 : 86600);
+	my $tempval = sprintf '%.9f', $val * (
+		$unit eq 's' ?        1 :
+		$unit eq 'm' ?       60 :
+        $unit eq 'h' ?     3600 :
+        $unit eq 'd' ?    86400 :
+        $unit eq 'w' ?   604800 :
+        $unit eq 'y' ? 31536000 :
+			ndie msg('die-badtime', $type, substr($type,0,1))
+    );
 	$tempval =~ s/0+$//;
 	$tempval = int $tempval if $tempval =~ /\.$/;
 	return $tempval;
