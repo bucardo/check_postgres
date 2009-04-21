@@ -3077,13 +3077,20 @@ sub check_last_vacuum_analyze {
 			next;
 		}
 
-		my $maxtime = -2;
+		## -1 means no tables found at all
+		## -2 means exclusion rules took effect
+		## -3 means no tables were ever vacuumed/analyzed
+		my $maxtime = -1;
 		my $maxptime = '?';
 		my ($minrel,$maxrel) = ('?','?'); ## no critic
 		my $mintime = 0; ## used for MRTG only
 		SLURP: while ($db->{slurp} =~ /(\S+)\s+\| (\S+)\s+\|\s+(\-?\d+) \| (.+)\s*$/gm) {
 			my ($schema,$name,$time,$ptime) = ($1,$2,$3,$4);
-			next SLURP if skip_item($name, $schema);
+			$maxtime = -3 if $maxtime == -1;
+			if (skip_item($name, $schema)) {
+				$maxtime = -2 if $maxtime < 1;
+				next SLURP;
+			}
 			$db->{perf} .= " $schema.$name=$time" if $time >= 0;
 			if ($time > $maxtime) {
 				$maxtime = $time;
@@ -3100,10 +3107,11 @@ sub check_last_vacuum_analyze {
 			$statsmsg{$db->{dbname}} = msg('vac-msg', $db->{dbname}, $minrel);
 			next;
 		}
+
 		if ($maxtime == -2) {
 			add_unknown msg('no-match-table');
 		}
-		elsif ($maxtime == -1) {
+		elsif ($maxtime < 0) {
 			add_unknown $type eq 'vacuum' ? msg('vac-nomatch-v') : msg('vac-nomatch-a');
 		}
 		else {
