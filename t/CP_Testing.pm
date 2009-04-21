@@ -64,6 +64,7 @@ sub test_database_handle {
 		print $cfh qq{\n\n## check_postgres.pl testing parameters\n};
 		print $cfh qq{listen_addresses = ''\n};
 		print $cfh qq{max_connections = 10\n};
+		print $cfh qq{autovacuum = off\n};
 		print $cfh "\n";
 		close $cfh or die qq{Could not close "$cfile": $!\n};
 
@@ -203,8 +204,10 @@ sub run {
 	my $dbhost = $self->{dbhost}   || die "No dbhost?";
 	my $dbuser = $self->{testuser} || die "No testuser?";
 	my $dbname = $self->{dbname}   || die "No dbname?";
-
-	my $com = qq{perl check_postgres.pl --action=$action --dbhost="$dbhost" --dbname=$dbname --dbuser=$dbuser};
+	my $com = qq{perl check_postgres.pl --action=$action --dbhost="$dbhost" --dbuser=$dbuser};
+	if ($extra !~ /dbname=/) {
+		$com .= " --dbname=$dbname";
+	}
 
 	if ($double) {
 		$com .= qq{ --dbhost2="$dbhost" --dbname2=ardala --dbuser2=$dbuser};
