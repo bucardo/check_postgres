@@ -30,10 +30,10 @@ like ($cp->run('--output=mrtg --mrtg=foobar'), qr{ERROR: Invalid mrtg}, $t);
 $t=qq{$S fails when called without warning or critical};
 like ($cp->run(''), qr{Must provide}, $t);
 
-$t=qq{$S fails when called without invalid warning};
+$t=qq{$S fails when called with invalid warning};
 like ($cp->run('-w foo'), qr{ERROR: Invalid string}, $t);
 
-$t=qq{$S fails when called without invalid critical};
+$t=qq{$S fails when called with invalid critical};
 like ($cp->run('-c foo'), qr{ERROR: Invalid string}, $t);
 
 $t=qq{$S gives correct output for warning on two-part version};
