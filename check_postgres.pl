@@ -163,6 +163,7 @@ our %msg = (
 	'opt-psql-nofind'    => q{Could not find a suitable psql executable},
 	'opt-psql-nover'     => q{Could not determine psql version},
 	'opt-psql-restrict'  => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
+    'preptxn-none'       => q{No prepared transactions found},
 	'qtime-fail'         => q{Cannot run the txn_idle action unless stats_command_string is set to 'on'!},
 	'qtime-msg'          => q{longest query: $1s},
 	'range-badcs'        => q{Invalid '$1' option: must be a checksum},
@@ -346,6 +347,7 @@ our %msg = (
 	'opt-psql-nofind'    => q{N'a pas pu trouver un psql exécutable},
 	'opt-psql-nover'     => q{N'a pas pu déterminer la version de psql},
 	'opt-psql-restrict'  => q{Ne peut pas utiliser l'option --PSQL si NO_PSQL_OPTION est activé},
+'preptxn-none'       => q{No prepared transactions found},
 	'qtime-fail'         => q{Ne peut pas exécuter l'action txn_idle si stats_command_string est désactivé !},
 	'qtime-msg'          => q{requête la plus longue : $1s},
 	'range-badcs'        => q{Option « $1 » invalide : doit être une somme de contrôle},
@@ -4514,19 +4516,21 @@ sub check_prepared_txns {
 		  default_critical  => '30',
 		  });
 
-	my $SQL = q{SELECT datname, ROUND(EXTRACT(epoch FROM now()-started)), started}.
-		q{ FROM pg_prepared_xact() AS (t xid, g text, started timestamptz, u oid, db oid)}.
-		q{ JOIN pg_database d ON (d.oid = db)}.
-		q{ ORDER BY started ASC};
+	my $SQL = q{SELECT database, ROUND(EXTRACT(epoch FROM now()-prepared)), prepared}.
+		q{ FROM pg_prepared_xacts ORDER BY prepared ASC};
 
-	my $info = run_command($SQL, {regex => qr[\w+] } );
+	my $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
 
+	my $msg = msg('prepared-txn-none');
+	my $found = 0;
 	for $db (@{$info->{db}}) {
 		my (@crit,@warn,@ok);
 		my ($maxage,$maxdb) = (0,''); ## used by MRTG only
 	  SLURP: while ($db->{slurp} =~ /\s*(.+?) \|\s+(\d+) \|\s+(.+?)$/gsm) {
 			my ($dbname,$age,$date) = ($1,$2,$3);
+			$found = 1 if ! $found;
 			next SLURP if skip_item($dbname);
+			$found = 2;
 			if ($MRTG) {
 				if ($age > $maxage) {
 					$maxdb = $dbname;
@@ -4538,7 +4542,7 @@ sub check_prepared_txns {
 				next;
 			}
 
-			my $msg = "$dbname=$date ($age)";
+			$msg = "$dbname=$date ($age)";
 			$db->{perf} .= " $msg";
 			if (length $critical and $age >= $critical) {
 				push @crit => $msg;
@@ -4553,7 +4557,13 @@ sub check_prepared_txns {
 		if ($MRTG) {
 			do_mrtg({one => $maxage, msg => $maxdb});
 		}
-		if (@crit) {
+		elsif (0 == $found) {
+			add_ok msg('preptxn-none');
+		}
+		elsif (1 == $found) {
+			add_unknown msg('no-match-db');
+		}
+		elsif (@crit) {
 			add_critical join ' ' => @crit;
 		}
 		elsif (@warn) {
@@ -4563,7 +4573,6 @@ sub check_prepared_txns {
 			add_ok join ' ' => @ok;
 		}
 	}
-
 
 	return;
 

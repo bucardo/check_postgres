@@ -64,6 +64,7 @@ sub test_database_handle {
 		print $cfh qq{\n\n## check_postgres.pl testing parameters\n};
 		print $cfh qq{listen_addresses = ''\n};
 		print $cfh qq{max_connections = 10\n};
+		print $cfh qq{max_prepared_transactions = 5\n};
 		print $cfh qq{autovacuum = off\n};
 		print $cfh "\n";
 		close $cfh or die qq{Could not close "$cfile": $!\n};
