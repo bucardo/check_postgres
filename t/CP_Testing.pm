@@ -34,7 +34,7 @@ sub test_database_handle {
 
 	my $self = shift;
 	my $arg = shift || {};
-	$arg->{dbname} ||= 'postgres';
+	$arg->{dbname} ||= $self->{dbname} || 'postgres';
 
 	ref $arg eq 'HASH' or die qq{Must pass a hashref (or nothing) to test_database_handle\n};
 
