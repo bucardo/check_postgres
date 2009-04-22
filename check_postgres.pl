@@ -625,6 +625,7 @@ our $action_info = {
  logfile             => [1, 'Checks that the logfile is being written to correctly.'],
  new_version_cp      => [0, 'Checks if a newer version of check_postgres.pl is available.'],
  new_version_pg      => [0, 'Checks if a newer version of Postgres is available.'],
+ prepared_txns       => [1, 'Checks number and age of prepared transactions.'],
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
  replicate_row       => [0, 'Verify a simple update gets replicated to another server.'],
@@ -1185,6 +1186,9 @@ check_new_version_cp() if $action eq 'new_version_cp';
 
 ## Check for new versions of Postgres
 check_new_version_pg() if $action eq 'new_version_pg';
+
+## Check for any prepared transactions
+check_prepared_txns() if $action eq 'prepared_txns';
 
 finishup();
 
@@ -4497,6 +4501,75 @@ sub check_new_version_pg {
 } ## end of check_new_version_pg
 
 
+sub check_prepared_txns {
+
+	## Checks age of prepared transactions
+	## Most installations probably want no prepared_transactions
+	## Supports: Nagios, MRTG
+
+	my ($warning, $critical) = validate_range
+		({
+		  type              => 'seconds',
+		  default_warning   => '1',
+		  default_critical  => '30',
+		  });
+
+	my $SQL = q{SELECT datname, ROUND(EXTRACT(epoch FROM now()-started)), started}.
+		q{ FROM pg_prepared_xact() AS (t xid, g text, started timestamptz, u oid, db oid)}.
+		q{ JOIN pg_database d ON (d.oid = db)}.
+		q{ ORDER BY started ASC};
+
+	my $info = run_command($SQL, {regex => qr[\w+] } );
+
+	for $db (@{$info->{db}}) {
+		my (@crit,@warn,@ok);
+		my ($maxage,$maxdb) = (0,''); ## used by MRTG only
+	  SLURP: while ($db->{slurp} =~ /\s*(.+?) \|\s+(\d+) \|\s+(.+?)$/gsm) {
+			my ($dbname,$age,$date) = ($1,$2,$3);
+			next SLURP if skip_item($dbname);
+			if ($MRTG) {
+				if ($age > $maxage) {
+					$maxdb = $dbname;
+					$maxage = $age;
+				}
+				elsif ($age == $maxage) {
+					$maxdb .= sprintf "%s$dbname", length $maxdb ? ' | ' : '';
+				}
+				next;
+			}
+
+			my $msg = "$dbname=$date ($age)";
+			$db->{perf} .= " $msg";
+			if (length $critical and $age >= $critical) {
+				push @crit => $msg;
+			}
+			elsif (length $warning and $age >= $warning) {
+				push @warn => $msg;
+			}
+			else {
+				push @ok => $msg;
+			}
+		}
+		if ($MRTG) {
+			do_mrtg({one => $maxage, msg => $maxdb});
+		}
+		if (@crit) {
+			add_critical join ' ' => @crit;
+		}
+		elsif (@warn) {
+			add_warning join ' ' => @warn;
+		}
+		else {
+			add_ok join ' ' => @ok;
+		}
+	}
+
+
+	return;
+
+} ## end of check_prepared_txns
+
+
 sub show_dbstats {
 
 	## Returns values from the pg_stat_database view
@@ -5422,6 +5495,27 @@ dump and restore to upgrade. Revisions are made to address bugs, so upgrading as
 as possible is always recommended. Returns a warning if you do not have the latest revision.
 It is recommended this check is run at least once a day.
 
+=head2 B<prepared_txns>
+
+(C<symlink: check_postgres_prepared_txns>) Check on the age of any existing prepared transactions. 
+Note that most people will NOT use prepared transactions, as they are part of two-part commit 
+and complicated to maintain. Thus, the default value for a warning is 1 second, to detect any 
+use of prepared transactions, which is probably a mistake on most systems. Warning and critical 
+as the number of seconds a prepared transaction has been open before an alert is given.
+
+Example 1: Give a warning on detecting any prepared transactions:
+
+  check_postgres_prepared_txns -w 0
+
+Example 2: Give a critical if any prepared transaction has been open longer than 10 seconds, but allow 
+up to 360 seconds for the database 'shrike':
+
+  check_postgres_listener --critical=10 --exclude=shrike
+  check_postgres_listener --critical=360 --include=shrike
+
+For MRTG output, returns the number of seconds the oldest transaction has been open as the first line, 
+and which database is came from as the final line.
+
 =head2 B<query_runtime>
 
 (C<symlink: check_postgres_query_runtime>) Checks how long a specific query takes to run, by executing a "EXPLAIN ANALYZE" 
@@ -5881,6 +5975,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
   Added internationalization support (Greg)
   Added the 'disabled_triggers' check (Greg)
+  Added the prepared_txns' check (Greg)
   Added the 'new_version_cp' and 'new_version_pg' checks (Greg)
   French translations (Guillaume Lelarge)
   Make the backends search return ok if no matches due to inclusion rules,
