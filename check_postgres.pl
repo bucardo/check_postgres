@@ -3019,7 +3019,7 @@ sub check_relation_size {
 
 	return;
 
-} ## end of check_relations_size
+} ## end of check_relation_size
 
 
 sub check_table_size {
