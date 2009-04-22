@@ -5499,9 +5499,10 @@ It is recommended this check is run at least once a day.
 
 (C<symlink: check_postgres_prepared_txns>) Check on the age of any existing prepared transactions. 
 Note that most people will NOT use prepared transactions, as they are part of two-part commit 
-and complicated to maintain. Thus, the default value for a warning is 1 second, to detect any 
-use of prepared transactions, which is probably a mistake on most systems. Warning and critical 
-as the number of seconds a prepared transaction has been open before an alert is given.
+and complicated to maintain. They should also not be confused with prepared STATEMENTS, which is 
+what most people think of when they hear prepare. The default value for a warning is 1 second, to 
+detect any use of prepared transactions, which is probably a mistake on most systems. Warning and 
+critical are the number of seconds a prepared transaction has been open before an alert is given.
 
 Example 1: Give a warning on detecting any prepared transactions:
 
