@@ -6,8 +6,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use DBI;
-use Test::More qw(no_plan);
-END { diag "don't forget to make a plan!" }
+use Test::More tests => 13;
 use lib 't','.';
 use CP_Testing;
 
@@ -73,3 +72,8 @@ $dbh->do(qq{ALTER TABLE "$testtbl" DISABLE TRIGGER "${testtrig_prefix}1"});
 $dbh->do(qq{ALTER TABLE "$testtbl" DISABLE TRIGGER "${testtrig_prefix}2"});
 $dbh->commit;
 like ($cp->run(qq{-c 2}), qr/$label CRITICAL:.*?Disabled triggers: 2 /, $t);
+
+$t .= ' (MRTG)';
+is ($cp->run(qq{-c 2 --output=mrtg}), qq{2\n0\n\n\n}, $t);
+
+exit;
