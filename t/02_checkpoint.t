@@ -49,7 +49,6 @@ $host =~ s/socket$//;
 like ($cp->run("-w 20 --datadir=$host"), qr{POSTGRES_CHECKPOINT OK}, $t);
 
 $t=qq{$S returns a warning when checkpoint older than warning option};
-diag "Sleeping for a bit to age the checkpoint time...\n";
 sleep 2;
 like ($cp->run("-w 1 --datadir=$host"), qr{WARNING:}, $t);
 
