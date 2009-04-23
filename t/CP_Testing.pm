@@ -152,13 +152,13 @@ sub test_database_handle {
 	$dbhost =~ s/([^\\]) /$1\\ /g;
 	$self->{dbname} ||= 'postgres';
 	my $dsn = qq{dbi:Pg:host=$dbhost;dbname=$self->{dbname}};
-	my @superdsn = ($dsn, '', '', {AutoCommit=>0,RaiseError=>1,PrintError=>0});
+	my $dbuser = $self->{testuser};
+	my @superdsn = ($dsn, $dbuser, '', {AutoCommit=>0,RaiseError=>1,PrintError=>0});
 	my $dbh = DBI->connect(@superdsn);
 	$dbh->ping() or die qq{Failed to ping!\n};
 
 	$dbh->{AutoCommit} = 1;
 	$dbh->{RaiseError} = 0;
-	my $dbuser = $self->{testuser};
 	$dbh->do("CREATE USER $dbuser SUPERUSER");
 	$dbh->do("CREATE USER sixpack NOSUPERUSER CREATEDB");
 	$dbh->do("CREATE USER readonly NOSUPERUSER NOCREATEDB");
