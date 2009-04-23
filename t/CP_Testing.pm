@@ -28,6 +28,24 @@ sub new {
 	return bless $self => $class;
 }
 
+sub cleanup {
+
+	my $self = shift;
+	my $dbdir = $self->{dbdir} or die;
+	my $pidfile = "$dbdir/data/postmaster.pid";
+	return if ! -e $pidfile;
+	open my $fh, '<', $pidfile or die qq{Could not open "$pidfile": $!\n};
+	<$fh> =~ /^(\d+)/ or die qq{File "$pidfile" did not start with a number!\n};
+	my $pid = $1;
+	close $fh or die qq{Could not close "$pidfile": $!\n};
+	kill 15 => $pid;
+	sleep 1;
+	if (kill 0 => $pid) {
+		kill 9 => $pid;
+	}
+	return;
+}
+
 sub test_database_handle {
 
 	## Request for a database handle: create and startup DB as needed
