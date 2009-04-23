@@ -147,8 +147,8 @@ our %msg = (
 	'new-pg-badver'      => q{Could not determine the Postgres revision (version was $1)},
 	'new-pg-badver2'     => q{Could not find revision information for Postgres version $1},
 	'new-pg-big'         => q{Please upgrade to version $1 of Postgres. You are running $2},
-	'new-pg-small'       => q{The latest version of Postgres is $1, but you are runnning $2?},
-	'new-pg-match'       => q{Postgres is at the latest revsion ($1)},
+	'new-pg-small'       => q{The latest version of Postgres is $1, but you are running $2?},
+	'new-pg-match'       => q{Postgres is at the latest revision ($1)},
 	'no-match-db'        => q{No matching databases found due to exclusion/inclusion options},
 	'no-match-fs'        => q{No matching file systems found due to exclusion/inclusion options},
 	'no-match-rel'       => q{No matching relations found due to exclusion/inclusion options},
@@ -4488,14 +4488,16 @@ sub check_new_version_pg {
 		}
 		my $newrev = $newver{$ver};
 		if ($newrev > $rev) {
-			printf "WARNING: %s\n", msg('new-pg-big', "$ver.$newrev", $currver);
-			exit 1;
+			my $msg = sprintf "WARNING: %s\n", msg('new-pg-big', "$ver.$newrev", $currver);
+			add_warning $msg;
 		}
-		if ($newrev < $rev) {
-			printf "WARNING: %s\n", msg('new-pg-small', "$ver.$newrev", $currver);
-			exit 1;
+		elsif ($newrev < $rev) {
+			my $msg = sprintf "WARNING: %s\n", msg('new-pg-small', "$ver.$newrev", $currver);
+			add_critical $msg;
 		}
-		add_ok msg('new-pg-match', $currver);
+		else {
+			add_ok msg('new-pg-match', $currver);
+		}
 	}
 
 	return;
