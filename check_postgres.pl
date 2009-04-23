@@ -484,6 +484,9 @@ our $ME = basename($0);
 our $ME2 = 'check_postgres.pl';
 our $USAGE = msg('usage', $ME);
 
+## This gets turned on for meta-commands which don't hit a Postgres database
+our $nohost = 0;
+
 ## Global error string, mostly used for MRTG error handling
 our $ERROR = '';
 
@@ -795,6 +798,10 @@ sub add_response {
 	$db->{host} ||= '';
 	if (defined $opt{host2} and length $opt{host2}->[0]) {
 		$db->{host} .= " => $opt{host2}->[0]";
+	}
+	if ($nohost) {
+		push @{$type->{''}} => [$msg,''];
+		return;
 	}
 	my $header = sprintf q{%s%s%s},
 		$action_info->{$action}[0] ? '' : (defined $db->{dbservice} and length $db->{dbservice}) ?
@@ -1183,14 +1190,19 @@ check_checkpoint() if $action eq 'checkpoint';
 ## Check for disabled triggers
 check_disabled_triggers() if $action eq 'disabled_triggers';
 
+## Check for any prepared transactions
+check_prepared_txns() if $action eq 'prepared_txns';
+
+##
+## Everything past here does not hit a Postgres database
+##
+$nohost = 1;
+
 ## Check for new versions of check_postgres.pl
 check_new_version_cp() if $action eq 'new_version_cp';
 
 ## Check for new versions of Postgres
 check_new_version_pg() if $action eq 'new_version_pg';
-
-## Check for any prepared transactions
-check_prepared_txns() if $action eq 'prepared_txns';
 
 finishup();
 
@@ -4430,17 +4442,14 @@ sub check_new_version_cp {
 	}
 
 	if (! length $newver) {
-		printf "UNKNOWN: %s\n", msg('new-cp-fail');
-		exit 3;
+		add_unknown msg('new-cp-fail');
 	}
-
-	if ($newver ne $VERSION) {
-		printf "WARNING: %s\n", msg('new-cp-warn', $newver, $VERSION);
-		exit 1;
+	elsif ($newver ne $VERSION) {
+		add_warning msg('new-cp-warn', $newver, $VERSION);
 	}
-
-	printf "OK: %s\n", msg('new-cp-ok', $newver);
-	exit 0;
+	else {
+		add_ok msg('new-cp-ok', $newver);
+	}
 
 } ## end of check_new_version_cp
 
@@ -4488,12 +4497,10 @@ sub check_new_version_pg {
 		}
 		my $newrev = $newver{$ver};
 		if ($newrev > $rev) {
-			my $msg = sprintf "WARNING: %s\n", msg('new-pg-big', "$ver.$newrev", $currver);
-			add_warning $msg;
+			add_warning msg('new-pg-big', "$ver.$newrev", $currver);
 		}
 		elsif ($newrev < $rev) {
-			my $msg = sprintf "WARNING: %s\n", msg('new-pg-small', "$ver.$newrev", $currver);
-			add_critical $msg;
+			add_critical msg('new-pg-small', "$ver.$newrev", $currver);
 		}
 		else {
 			add_ok msg('new-pg-match', $currver);
