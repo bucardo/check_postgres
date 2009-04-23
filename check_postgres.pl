@@ -1928,10 +1928,18 @@ sub validate_range {
 		if (length $warning and $warning !~ /^\d+$/) {
 			ndie $type =~ /positive/ ? msg('range-int-pos', 'warning') : msg('range-int', 'warning');
 		}
+        elsif (length $warning && $type =~ /positive/ && $warning <= 0) {
+            ndie msg('range-int-pos', 'warning');
+        }
+
 		$critical =~ s/_//g;
 		if (length $critical and $critical !~ /^\d+$/) {
 			ndie $type =~ /positive/ ? msg('range-int-pos', 'critical') : msg('range-int', 'critical');
 		}
+        elsif (length $critical && $type =~ /positive/ && $critical <= 0) {
+            ndie msg('range-int-pos', 'critical');
+        }
+
 		if (length $warning and length $critical and $warning > $critical) {
 			return if $opt{reverse};
 			ndie msg('range-warnbig');

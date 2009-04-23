@@ -166,6 +166,7 @@ sub test_database_handle {
 	$dbh->do("ALTER USER readonly SET default_transaction_read_only = 1");
 	$dbh->do("CREATE DATABASE beedeebeedee");
 	$dbh->do("CREATE DATABASE ardala");
+    $dbh->do("CREATE LANGUAGE plpgsql");
 	$dbh->{AutoCommit} = 0;
 	$dbh->{RaiseError} = 1;
 
