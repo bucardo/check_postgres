@@ -54,6 +54,7 @@ like ($cp->run(qq{-w 0 --includeuser=gandalf}), qr{No matching.*user}, $t);
 
 local $dbh->{Warn};
 local $dbh->{AutoCommit} = 1;
+$dbh->do('VACUUM');
 $dbh->do(qq{DROP TABLE IF EXISTS $testtbl});
 $dbh->do(qq{CREATE TABLE $testtbl AS SELECT 123::INTEGER AS a FROM generate_series(1,200000)});
 $dbh->commit();
