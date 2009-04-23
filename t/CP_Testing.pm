@@ -6,6 +6,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use Time::HiRes qw/sleep/;
+use DBI;
 use Cwd;
 
 our $DEBUG = 0;
@@ -430,6 +431,38 @@ SELECT 'Postgres $version on fakefunction for check_postgres.pl testing'::text;
 
 } ## end of bad fake version
 
+sub fake_self_version {
+
+	## Look out...
+
+	my $self = shift;
+	my $version = shift || '9.9';
+	my $file = 'check_postgres.pl';
+	open my $fh, '+<', $file or die qq{Could not open "$file": $!\n};
+	my $slurp;
+	{ local $/; $slurp = <$fh> }
+	$slurp =~ s/(our \$VERSION = '\d+\.\d+\.\d+';)/$1\n\$VERSION = '$version'; ## TESTING ONLY/;
+	seek $fh, 0, 0;
+	print $fh $slurp;
+	truncate $fh, tell($fh);
+	close $fh or die qq{Could not close "$file": $!\n};
+
+} ## end of fake_self_version
+
+sub restore_self_version {
+
+	my $self = shift;
+	my $file = 'check_postgres.pl';
+	open my $fh, '+<', $file or die qq{Could not open "$file": $!\n};
+	my $slurp;
+	{ local $/; $slurp = <$fh> }
+	$slurp =~ s/^\$VERSION = '\d+\.\d+\.\d+'.+?\n//gm;
+	seek $fh, 0, 0;
+	print $fh $slurp;
+	truncate $fh, tell($fh);
+	close $fh or die qq{Could not close "$file": $!\n};
+
+} ## end of restore_self_version
 
 sub reset_path {
 
