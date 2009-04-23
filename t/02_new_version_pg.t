@@ -9,13 +9,13 @@ use Test::More tests => 5;
 use lib 't','.';
 use CP_Testing;
 
-use vars qw/$dbh $SQL $t/;
+use vars qw/$dbh $t/;
 
 my $cp = CP_Testing->new( {default_action => 'new_version_pg'} );
 
 $dbh = $cp->test_database_handle();
 
-my $S = q{Action 'version'};
+my $S = q{Action 'new_version_pg'};
 my $label = 'POSTGRES_NEW_VERSION_PG';
 
 $t=qq{$S fails when called with an invalid option};
