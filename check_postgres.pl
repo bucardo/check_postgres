@@ -1744,12 +1744,13 @@ sub verify_version {
 sub size_in_bytes { ## no critic (RequireArgUnpacking)
 
 	## Given a number and a unit, return the number of bytes.
+	## Defaults to bytes
 
 	my ($val,$unit) = ($_[0],lc substr($_[1]||'s',0,1));
-	return $val * ($unit eq 's' ? 1 : $unit eq 'k' ? 1024 : $unit eq 'm' ? 1024**2 :
+	return $val * ($unit eq 'b' ? 1 : $unit eq 'k' ? 1024 : $unit eq 'm' ? 1024**2 :
 				   $unit eq 'g' ? 1024**3 : $unit eq 't' ? 1024**4 :
 				   $unit eq 'p' ? 1024**5 : $unit eq 'e' ? 1024**6 :
-				   $unit eq 'z' ? 1024**7 : 1024**8);
+				   $unit eq 'z' ? 1024**7 : 1);
 
 } ## end of size_in_bytes
 
@@ -5691,7 +5692,7 @@ first line. The fourth line gives the name of the database.
 
 (C<symlink: check_postgres_txn_idle>) Checks the length of "idle in transaction" queries on one or more databases. There is 
 no need to run this more than once on the same database cluster. Databases can be filtered 
-by using the I<--include> and I<--exclude> options. See the L<"BASIC FILTERING"> 
+by using the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> 
 section below for more details.
 
 The I<--warning> and I<--critical> options are given as units of time, and both must 
