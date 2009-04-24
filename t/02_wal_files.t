@@ -1,4 +1,4 @@
-1#!perl
+#!perl
 
 ## Test the "wal_files" action
 
