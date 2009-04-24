@@ -12,9 +12,6 @@ use CP_Testing;
 
 use vars qw/$dbh $result $t $host $dbname $testtbl $testtrig_prefix/;
 
-$testtbl = 'test_settings_checksum';
-$testtrig_prefix = 'test_settings_checksum_';
-
 my $cp = CP_Testing->new( {default_action => 'settings_checksum'} );
 
 $dbh = $cp->test_database_handle();
