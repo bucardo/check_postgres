@@ -1,11 +1,10 @@
-#!perl
+1#!perl
 
 ## Test the "wal_files" action
 
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 11;
 use lib 't','.';
 use CP_Testing;
