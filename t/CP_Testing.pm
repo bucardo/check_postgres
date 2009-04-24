@@ -119,7 +119,9 @@ sub test_database_handle {
 
 		unlink $logfile;
 
-		$com = qq{LC_ALL=en LANG=C pg_ctl -o '-k socket' -l $logfile -D "$dbdir/data" start};
+		my $pg_ctl = $ENV{PG_CTL} || 'pg_ctl';
+
+		$com = qq{LC_ALL=en LANG=C $pg_ctl -o '-k socket' -l $logfile -D "$dbdir/data" start};
 		eval {
 			$info = qx{$com};
 		};
@@ -155,7 +157,19 @@ sub test_database_handle {
 	my $dsn = qq{dbi:Pg:host=$dbhost;dbname=$self->{dbname}};
 	my $dbuser = $self->{testuser};
 	my @superdsn = ($dsn, $dbuser, '', {AutoCommit=>0,RaiseError=>1,PrintError=>0});
-	my $dbh = DBI->connect(@superdsn);
+	my $dbh;
+	eval {
+		$dbh = DBI->connect(@superdsn);
+	};
+	if ($@) {
+		if ($@ =~ /role .+ does not exist/) {
+			my @tempdsn = ($dsn, '', '', {AutoCommit=>1,RaiseError=>1,PrintError=>0});
+			my $tempdbh = DBI->connect(@tempdsn);
+			$tempdbh->do("CREATE USER $dbuser SUPERUSER");
+			$tempdbh->disconnect();
+			$dbh = DBI->connect(@superdsn);
+		}
+	}
 	$dbh->ping() or die qq{Failed to ping!\n};
 
 	$dbh->{AutoCommit} = 1;
