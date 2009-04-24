@@ -121,7 +121,9 @@ our %msg = (
 	'diskspace-nodir'    => q{Could not find data directory "$1"},
 	'file-noclose'       => q{Could not close $1: $2},
 	'fsm-page-msg'       => q{fsm page slots used: $1 of $2 ($3%)},
+	'fsm-page-highver'   => q{Cannot check on fsm_pages on servers version 8.4 or greater},
 	'fsm-rel-msg'        => q{fsm relations used: $1 of $2 ($3%)},
+	'fsm-rel-highver'    => q{Cannot check on fsm_relations on servers version 8.4 or greater},
 	'invalid-option'     => q{Invalid option},
 	'invalid-query'      => q{Invalid query returned: $1},
 	'listener-count'     => q{ listening=$1}, ## needs leading space
@@ -305,7 +307,9 @@ our %msg = (
 	'diskspace-nodir'    => q{N'a pas pu trouver le répertoire des données « $1 »},
 	'file-noclose'       => q{N'a pas pu fermer $1 : $2},
 	'fsm-page-msg'       => q{emplacements de pages utilisés par la FSM : $1 sur $2 ($3%)},
+'fsm-page-highver'   => q{Cannot check on fsm_pages on servers version 8.4 or greater},
 	'fsm-rel-msg'        => q{relations tracées par la FSM : $1 sur $2 ($3%)},
+'fsm-rel-highver'    => q{Cannot check on fsm_relations on servers version 8.4 or greater},
 	'invalid-option'     => q{Option invalide},
 	'invalid-query'      => q{Une requête invalide a renvoyé : $1},
 	'listener-count'     => q{ listening=$1}, ## needs leading space
@@ -988,8 +992,8 @@ our %testaction = (
 				  txn_idle         => 'ON: stats_command_string(<8.3) VERSION: 8.0',
 				  txn_time         => 'VERSION: 8.3',
 				  wal_files        => 'VERSION: 8.1',
-				  fsm_pages        => 'VERSION: 8.2',
-				  fsm_relations    => 'VERSION: 8.2',
+				  fsm_pages        => 'VERSION: 8.2 MAX: 8.3',
+				  fsm_relations    => 'VERSION: 8.2 MAX: 8.3',
 );
 if ($opt{test}) {
 	print msgn('testmode-start');
@@ -1025,6 +1029,21 @@ if ($opt{test}) {
 					print msgn('testmode-norun', $ac, $db->{pname}, $rver, $sver);
 				}
 				$db->{version} = $sver;
+			}
+		}
+
+		if ($limit =~ /MAX: ((\d+)\.(\d+))/) {
+			my ($rver,$rmaj,$rmin) = ($1,$2,$3);
+			for my $db (@{$info->{db}}) {
+				next unless exists $db->{ok};
+				if ($set{$db->{pname}}{server_version} !~ /((\d+)\.(\d+))/) {
+					print msgn('testmode-nover', $db->{pname});
+					next;
+				}
+				my ($sver,$smaj,$smin) = ($1,$2,$3);
+				if ($smaj > $rmaj) {
+					print msgn('testmode-norun', $ac, $db->{pname}, $rver, $sver);
+				}
 			}
 		}
 
@@ -2816,10 +2835,15 @@ sub check_fsm_pages {
 			  qq{ ELSE interestingpages/16 END) AS sumrequests,\n}.
 			  qq{ COUNT(relfilenode) AS numrels, 16 AS chunkpages FROM pg_freespacemap_relations) AS foo) AS foo2,\n}.
 			  q{ (SELECT setting::NUMERIC AS maxx FROM pg_settings WHERE name = 'max_fsm_pages') AS foo3};
+	my $SQLNOOP = qq{SELECT 'FAIL'};
 
-	my $info = run_command($SQL, {regex => qr[\d+] } );
+	my $info = run_command($SQL, { version => [ ">8.3 $SQLNOOP" ] } );
 
 	for $db (@{$info->{db}}) {
+		if ($db->{slurp} =~ /\s*FAIL/) {
+			add_unknown msg('fsm-page-highver');
+			return;
+		}
 	  SLURP: while ($db->{slurp} =~ /\s*(\d*) \|\s+(\d+) \|\s+(\d*)$/gsm) {
 			my ($pages,$max,$percent) = ($1||0,$2,$3||0);
 
@@ -2871,10 +2895,15 @@ sub check_fsm_relations {
 			  qq{FROM (SELECT\n}.
 			  qq{ (SELECT COUNT(*) FROM pg_freespacemap_relations) AS cur,\n}.
 			  qq{ (SELECT setting::NUMERIC FROM pg_settings WHERE name='max_fsm_relations') AS maxx) x\n};
+	my $SQLNOOP = qq{SELECT 'FAIL'};
 
-	my $info = run_command($SQL, {regex => qr[\w+] } );
+	my $info = run_command($SQL, { version => [ ">8.3 $SQLNOOP" ] } );
 
 	for $db (@{$info->{db}}) {
+		if ($db->{slurp} =~ /\s*FAIL/) {
+			add_unknown msg('fsm-rel-highver');
+			return;
+		}
 	  SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+)$/gsm) {
 			my ($max,$cur,$percent) = ($1,$2,$3);
 
@@ -6008,7 +6037,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
   French translations (Guillaume Lelarge)
   Make the backends search return ok if no matches due to inclusion rules,
     per report by Guillaume Lelarge (Greg)
-  Begin adding comprehensive unit tests (Greg)
+  Added comprehensive unit tests (Greg, Jeff Boes, Selena Decklemann)
+  Make fsm_pages and fsm_relatins handle 8.4 servers smoothly. (Greg)
   Fix missing 'upd' field in show_dbstats (Andras Fabian)
   Fix incorrect regex in txn_wraparound (Greg)
   For txn_wraparound: consistent ordering and fix duplicates in perf output (Andras Fabian)
