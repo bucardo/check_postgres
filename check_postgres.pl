@@ -2812,10 +2812,10 @@ sub check_fsm_pages {
 	(my $c = $critical) =~ s/\D//;
 	my $SQL = qq{SELECT pages, maxx, ROUND(100*(pages/maxx)) AS percent\n}.
 	 		  qq{FROM (SELECT (sumrequests+numrels)*chunkpages AS pages\n}.
-			  qq{ FROM (SELECT SUM(CASE WHEN avgrequest IS NULL THEN interestingpages/32 }.
+			  qq{ FROM (SELECT SUM(CASE WHEN avgrequest IS NULL THEN interestingpages/32\n }.
 			  qq{ ELSE interestingpages/16 END) AS sumrequests,\n}.
 			  qq{ COUNT(relfilenode) AS numrels, 16 AS chunkpages FROM pg_freespacemap_relations) AS foo) AS foo2,\n}.
-			  qq{ (SELECT setting::NUMERIC AS maxx FROM pg_settings WHERE name = 'max_fsm_pages') AS foo3};
+			  q{ (SELECT setting::NUMERIC AS maxx FROM pg_settings WHERE name = 'max_fsm_pages') AS foo3};
 
 	my $info = run_command($SQL, {regex => qr[\d+] } );
 
