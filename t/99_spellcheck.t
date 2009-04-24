@@ -136,6 +136,7 @@ arrayref
 Backends
 backends
 bucardo
+checksum
 cp
 dbh
 DBI
