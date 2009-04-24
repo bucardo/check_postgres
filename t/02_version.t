@@ -5,7 +5,6 @@
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 28;
 use lib 't','.';
 use CP_Testing;
