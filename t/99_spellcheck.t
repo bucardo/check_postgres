@@ -133,21 +133,30 @@ __DATA__
 ## Common:
 
 arrayref
+Backends
 backends
 bucardo
+cp
 dbh
 DBI
 DSN
+fsm
 Mullane
 Nagios
 PGP
 Sabino
 SQL
 http
+logfile
 login
 perl
 postgres
+runtime
 selectall
+stderr
+syslog
+txn
+txns
 tuples
 wal
 www
@@ -228,7 +237,6 @@ Ioannis
 klatch
 lancre
 localtime
-logfile
 Logfile
 mallory
 minvalue
@@ -276,7 +284,6 @@ tablespaces
 Tambouras
 tardis
 timesync
-txn
 upd
 uptime
 USERNAME
