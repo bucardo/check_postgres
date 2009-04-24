@@ -5,8 +5,6 @@
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
-use Cwd;
 use Test::More tests => 50;
 use lib 't','.';
 use CP_Testing;
@@ -23,7 +21,7 @@ $t=qq{$S returned expected text when no warning/critical size is provided};
 like ($cp->run(''), qr{^ERROR: Must provide a warning and/or critical size}, $t);
 
 for my $type (qw/b bs k kb kbs m mb mbs g gb gbs t tb tbs p pb pbs e eb ebs z zb zbs/) {
-	my $opt = "-w 10000$type";
+	my $opt = "-w 9999999$type";
 	$t=qq{$S returned expected text when warning level is specified in $type};
 	like ($cp->run($opt), qr{^POSTGRES_DATABASE_SIZE OK:}, $t);
 }
