@@ -5,7 +5,7 @@
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 50;
+use Test::More tests => 49;
 use lib 't','.';
 use CP_Testing;
 
@@ -55,10 +55,6 @@ $t=qq{$S fails when the warning or critical size is negative};
 like ($cp->run('-w -10'), qr{^ERROR: Invalid size}, $t);
 like ($cp->run('-c -20'), qr{^ERROR: Invalid size}, $t);
 
-## Not sure how to do this check in Windows
-$t=qq{$S with excludeuser option returns the expected result (uses user: $ENV{USER})};
-like ($cp->run("-w 10g --excludeuser $ENV{USER}"), qr{No matching entries found due to user exclusion}, $t);
-
 $t=qq{$S with includeuser option returns the expected result};
 $user = $cp->get_user();
 $dbh->{AutoCommit} = 1;
@@ -77,7 +73,7 @@ like ($cp->run('-w 1 -c 1'), qr{^POSTGRES_DATABASE_SIZE CRITICAL}, $t);
 like ($cp->run('--critical=1 --warning=0'), qr{^POSTGRES_DATABASE_SIZE CRITICAL}, $t);
 
 $t=qq{$S returns correct MRTG output when no rows found};
-like ($cp->run("--output=MRTG -w 10g --excludeuser $ENV{USER}"), qr{^-1}, $t);
+like ($cp->run("--output=MRTG -w 10g --includeuser nosuchuser"), qr{^-1}, $t);
 
 $t=qq{$S returns correct MRTG output when rows found};
 like ($cp->run('--output=MRTG -w 10g'), qr{\d+\n0\n\nDB: postgres\n}s, $t);

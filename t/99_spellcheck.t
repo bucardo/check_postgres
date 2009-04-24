@@ -133,6 +133,7 @@ __DATA__
 ## Common:
 
 arrayref
+autovac
 Backends
 backends
 bucardo

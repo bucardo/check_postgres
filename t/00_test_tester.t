@@ -38,10 +38,10 @@ for my $act (sort keys %action) {
 }
 
 if ($ok) {
-	pass "There is a test for every action\n";
+	pass 'There is a test for every action';
 }
 else {
-	fail "Did not find a test for every action\n";
+	fail 'Did not find a test for every action';
 }
 
 exit;
