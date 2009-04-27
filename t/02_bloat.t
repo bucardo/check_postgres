@@ -37,10 +37,10 @@ like ($cp->run('-w=10MB'), qr{^$label OK: DB "postgres"}, $t);
 
 for my $size (qw/bytes kilobytes megabytes gigabytes terabytes exabytes petabytes zettabytes/) {
 	$t=qq{$S returns ok for no bloat with a unit of $size};
-	like ($cp->run("-w=10000$size"), qr{^$label OK: DB "postgres"}, $t);
+	like ($cp->run("-w=100000$size"), qr{^$label OK: DB "postgres"}, $t);
 	my $short = substr($size, 0, 1);
 	$t=qq{$S returns ok for no bloat with a unit of $short};
-	like ($cp->run("-w=10000$short"), qr{^$label OK: DB "postgres"}, $t);
+	like ($cp->run("-w=100000$short"), qr{^$label OK: DB "postgres"}, $t);
 }
 
 $t=qq{$S returns correct message if no tables due to exclusion};
