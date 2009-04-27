@@ -93,6 +93,9 @@ our %msg = (
 	'bloat-nomin'        => q{no relations meet the minimum bloat criteria},
 	'bloat-table'        => q{table $1.$2 rows:$3 pages:$3 shouldbe:$4 ($5X) wasted size:$6 ($7)},
 	'checkpoint-baddir'  => q{Invalid data_directory: "$1"},
+	'checkpoint-baddir2' => q{pg_controldata could not read the given data directory: "$1"},
+	'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version},
+	'checkpoint-badver2' => q{Failed to run pg_controldata - is it the correct version?},
 	'checkpoint-nodir'   => q{Must supply a --datadir argument or set the PGDATA environment variable},
 	'checkpoint-nodp'    => q{Must install the Perl module Date::Parse to use the checkpoint action},
 	'checkpoint-noregex' => q{Call to pg_controldata $1 failed},
@@ -279,6 +282,9 @@ our %msg = (
 	'bloat-nomin'        => q{aucune relation n'atteint le critère minimum de fragmentation},
 	'bloat-table'        => q{table $1.$2 lignes:$3 pages:$3 devrait être:$4 ($5X) place perdue:$6 ($7)},
 	'checkpoint-baddir'  => q{data_directory invalide : "$1"},
+'checkpoint-baddir2' => q{pg_controldata could not read the given data directory: "$1"},
+'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version},
+'checkpoint-badver2' => q{Failed to run pg_controldata - is it the correct version?},
 	'checkpoint-nodir'   => q{Vous devez fournir un argument --datadir ou configurer la variable d'environnement PGDATA},
 	'checkpoint-nodp'    => q{Vous devez installer le module Perl Date::Parse pour utiliser l'action checkpoint},
 	'checkpoint-noregex' => q{Échec de l'appel à pg_controldata $1},
@@ -4360,6 +4366,18 @@ sub check_checkpoint {
 	};
 	if ($@) {
 		ndie msg('checkpoint-nosys', $@);
+	}
+
+	## If the path is echoed back, we most likely have an invalid data dir
+	if ($res =~ /$dir/) {
+		ndie msg('checkpoint-baddir2');
+	}
+
+	if ($res =~ /WARNING: Calculated CRC checksum/) {
+		ndie msg('checkpoint-badver');
+	}
+	if ($res !~ /^pg_control.+\d+/) {
+		ndie msg('checkpoint-badver2');
 	}
 
 	## See pgsql/src/bin/pg_controldata/po/*
