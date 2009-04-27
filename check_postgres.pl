@@ -2663,7 +2663,7 @@ sub check_disk_space {
 	my %seenfs;
 	for $db (@{$info->{db}}) {
 		my %i;
-		while ($db->{slurp} =~ /([ST])\s+\| (\w+)\s+\| (\S*)\s*/g) {
+		while ($db->{slurp} =~ /([ST])\s+\| (\w+)\s+\| (.*?)\n/g) {
 			my ($st,$name,$val) = ($1,$2,$3);
 			$i{$st}{$name} = $val;
 		}
@@ -2717,7 +2717,7 @@ sub check_disk_space {
 
 			$dir{$dir} = 1;
 
-			$COM = "/bin/df -kP $dir 2>&1";
+			$COM = qq{/bin/df -kP "$dir" 2>&1};
 			$res = qx{$COM};
 
 			if ($res !~ /^.+\n(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\%\s+(\S+)/) {
@@ -2741,7 +2741,7 @@ sub check_disk_space {
 			my $prettyused = pretty_size($used);
 			my $prettytotal = pretty_size($total);
 
-			my $msg = msg('', $fs, $mount, $prettyused, $prettytotal, $percent);
+			my $msg = msg('diskspace-msg', $fs, $mount, $prettyused, $prettytotal, $percent);
 
 			$db->{perf} = "$fs=$used";
 
