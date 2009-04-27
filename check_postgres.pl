@@ -175,7 +175,7 @@ our %msg = (
 	'range-badsize'      => q{Invalid size for '$1' option},
 	'range-badtype'      => q{validate_range called with unknown type '$1'},
 	'range-badversion'   => q{Invalid string for '$1' option: $2},
-	'range-cactionly'    => q{This action is for cacti use only and takes not warning or critical arguments},
+	'range-cactionly'    => q{This action is for cacti use only and takes no warning or critical arguments},
 	'range-int'          => q{Invalid argument for '$1' option: must be an integer},
 	'range-int-pos'      => q{Invalid argument for '$1' option: must be a positive integer},
 	'range-neg-percent'  => q{Cannot specify a negative percent!},
@@ -2045,7 +2045,7 @@ sub validate_range {
 	}
 	elsif ('cacti' eq $type) { ## Takes no args, just dumps data
 		if (length $warning or length $critical) {
-			ndie msg('range-cacti-only');
+			ndie msg('range-cactionly');
 		}
 	}
 	else {
@@ -4655,6 +4655,7 @@ sub show_dbstats {
 	for $db (@{$info->{db}}) {
 	  SLURP: for my $row (split /\n/ => $db->{slurp}) {
 			my @stats = split /\s*\|\s*/ => $row;
+            ((defined($_) and length($_)) or $_ = 0) for @stats;
 			(my $dbname = shift @stats) =~ s/^\s*//;
 			next SLURP if skip_item($dbname);
 			## If dbnames were specififed, use those for filtering as well

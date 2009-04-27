@@ -240,7 +240,9 @@ sub run {
 	my $dbuser = $self->{testuser} || die "No testuser?";
 	my $dbname = $self->{dbname}   || die "No dbname?";
 	my $com = qq{perl check_postgres.pl --action=$action --dbhost="$dbhost" --dbuser=$dbuser};
-	if ($extra !~ /dbname=/) {
+    if ($extra =~ s/--nodbname//) {
+    }
+	elsif ($extra !~ /dbname=/) {
 		$com .= " --dbname=$dbname";
 	}
 
