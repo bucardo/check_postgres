@@ -53,11 +53,7 @@ $t = qq{$S detects no matching tables due to unknown user};
 like ($cp->run(q{-w 1 --includeuser foo}), qr{$label OK:.*No matching entries found due to user exclusion/inclusion options}, $t);
 
 ## We need to remove all tables to make this work correctly
-local $dbh->{Warn} = 0;
-my @info = $dbh->tables('','public','','TABLE');
-for my $tab (@info) {
-	$dbh->do("DROP TABLE $tab CASCADE");
-}
+$cp->drop_all_tables();
 $dbh->do(qq{CREATE TABLE $testtbl (a integer)});
 
 $dbh->commit;

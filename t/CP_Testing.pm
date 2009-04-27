@@ -491,4 +491,17 @@ sub reset_path {
 
 } ## end of reset_path
 
+sub drop_all_tables {
+
+	my $self = shift;
+	my $dbh = $self->{dbh} || die;
+	local $dbh->{Warn} = 0;
+	my @info = $dbh->tables('','public','','TABLE');
+	for my $tab (@info) {
+		$dbh->do("DROP TABLE $tab CASCADE");
+	}
+	$dbh->commit();
+
+} ## end of drop_all_tables
+
 1;

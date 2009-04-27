@@ -140,6 +140,7 @@ bucardo
 checksum
 cp
 dbh
+dbstats
 DBI
 DSN
 fsm

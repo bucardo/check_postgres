@@ -6,8 +6,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use DBI;
-use Test::More qw(no_plan);
-END { diag "Don't forget to make a plan!" }
+use Test::More tests => 7;
 use lib 't','.';
 use CP_Testing;
 

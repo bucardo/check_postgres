@@ -4356,7 +4356,7 @@ sub check_checkpoint {
 	$db->{host} = '<none>';
 
 	## Run pg_controldata, grab the time
-	my $pgc 
+	my $pgc
 		= $ENV{PGCONTROLDATA} ? $ENV{PGCONTROLDATA}
 		: $ENV{PGBINDIR}      ? "$ENV{PGBINDIR}/pg_controldata"
 		:                       'pg_controldata';
@@ -5112,7 +5112,7 @@ the C<--datadir> argument. It returns the number of seconds since the last check
 was run, as determined by parsing the call to C<pg_controldata>. Because of this, the 
 pg_controldata executable must be available in the current path. Alternatively, you can 
 set the environment variable C<PGCONTROLDATA> to the exact location of the pg_controldata 
-excutable, or you can specify C<PGBINDIR> as the directory that it lives in.
+executable, or you can specify C<PGBINDIR> as the directory that it lives in.
 
 At least one warning or critical argument must be set.
 

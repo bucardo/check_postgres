@@ -41,7 +41,7 @@ $dbh->do("CREATE TEMP SEQUENCE ${seqname}2");
 $dbh->commit();
 
 $t=qq{$S fails when sequence not readable};
-like ($cp->run(''), qr{ERROR: Could not determine}, $t);
+like ($cp->run(''), qr{ERROR:\s*(?:Could not determine|cannot access temporary)}, $t);
 
 $dbh->do("CREATE SEQUENCE $seqname");
 $dbh->commit();

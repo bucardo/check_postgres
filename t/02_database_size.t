@@ -20,6 +20,8 @@ my $S = q{Action 'database_size'};
 $t=qq{$S returned expected text when no warning/critical size is provided};
 like ($cp->run(''), qr{^ERROR: Must provide a warning and/or critical size}, $t);
 
+$cp->drop_all_tables();
+
 for my $type (qw/b bs k kb kbs m mb mbs g gb gbs t tb tbs p pb pbs e eb ebs z zb zbs/) {
 	my $opt = "-w 9999999$type";
 	$t=qq{$S returned expected text when warning level is specified in $type};

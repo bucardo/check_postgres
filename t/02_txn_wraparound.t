@@ -54,12 +54,11 @@ for (-1, 0, 'a') {
 }
 
 $t = qq{$S sees impending wrap-around};
-like ($cp->run('-c ' . ($txn_measure / 2)), qr/$label CRITICAL/, $t);
+like ($cp->run('-c ' . int ($txn_measure / 2)), qr/$label CRITICAL/, $t);
 
 $t = qq{$S sees no impending wrap-around};
 like ($cp->run('-v -c ' . ($txn_measure * 2)), qr/$label OK/, $t);
 
 $t .= ' (mrtg)';
 like ($cp->run('-c 100000 --output=mrtg'), qr{\d+\n0\n\nDB: ardala}, $t);
-
 

@@ -34,6 +34,7 @@ my $schema = $cp->get_fake_schema();
 	local $dbh->{Warn};
 	$dbh->do("DROP TABLE IF EXISTS $schema.pg_freespacemap_pages");
 	$dbh->do("DROP TABLE IF EXISTS $schema.pg_freespacemap_relations");
+	$dbh->do('DROP FUNCTION IF EXISTS public.version()');
 }
 $dbh->do(qq{
 CREATE TABLE $schema.pg_freespacemap_pages (

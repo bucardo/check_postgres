@@ -39,7 +39,7 @@ like ($cp->run('-c 10 --datadir=foobar'), qr{ERROR: Invalid data_directory}, $t)
 
 my $host = $cp->get_host();
 $t=qq{$S fails when called against a non datadir datadir};
-like ($cp->run("-c 10 --datadir=$host"), qr{ERROR: Call to pg_controldata}, $t);
+like ($cp->run("-c 10 --datadir=$host"), qr{ERROR:.+could not read the given data directory}, $t);
 
 $t=qq{$S works when called for a recent checkpoint};
 my $dbh = $cp->get_dbh();
