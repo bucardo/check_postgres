@@ -4350,7 +4350,11 @@ sub check_checkpoint {
 	$db->{host} = '<none>';
 
 	## Run pg_controldata, grab the time
-	$COM = "pg_controldata $dir";
+	my $pgc 
+		= $ENV{PGCONTROLDATA} ? $ENV{PGCONTROLDATA}
+		: $ENV{PGBINDIR}      ? "$ENV{PGBINDIR}/pg_controldata"
+		:                       'pg_controldata';
+	$COM = "$pgc $dir";
 	eval {
 		$res = qx{$COM 2>&1};
 	};
@@ -5088,7 +5092,9 @@ to check that your warm standby is truly 'warm'. The data directory must be set,
 environment variable C<PGDATA>, or passing 
 the C<--datadir> argument. It returns the number of seconds since the last checkpoint 
 was run, as determined by parsing the call to C<pg_controldata>. Because of this, the 
-pg_controldata executable must be available in the current path.
+pg_controldata executable must be available in the current path. Alternatively, you can 
+set the environment variable C<PGCONTROLDATA> to the exact location of the pg_controldata 
+excutable, or you can specify C<PGBINDIR> as the directory that it lives in.
 
 At least one warning or critical argument must be set.
 
@@ -6041,12 +6047,14 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Added comprehensive unit tests (Greg, Jeff Boes, Selena Decklemann)
   Make fsm_pages and fsm_relatins handle 8.4 servers smoothly. (Greg)
   Fix missing 'upd' field in show_dbstats (Andras Fabian)
+  Allow ENV{PGCONTROLDATA} and ENV{PGBINDIR}. (Greg)
   Fix incorrect regex in txn_wraparound (Greg)
   For txn_wraparound: consistent ordering and fix duplicates in perf output (Andras Fabian)
   Add in missing exabyte regex check (Selena Deckelmann)
   Set stats to zero if we bail early due to USERWHERECLAUSE (Andras Fabian)
   Add additional items to dbstats output (Andras Fabian)
   Remove --schema option from the fsm_ checks. (Greg Mullane and Robert Treat)
+  Various fixes. (Jeff Boes)
   Fix --dbservice: check version and use ENV{PGSERVICE} for old versions (Cédric Villemain)
 
 =item B<Version 2.7.3> (February 10, 2009)
