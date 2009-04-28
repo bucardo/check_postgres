@@ -19,7 +19,7 @@ index.html: check_postgres.pl
 
 critic:
 
-	perlcritic check_postgres.pl
+	perlcritic --profile-strictness quiet check_postgres.pl
 
 
 test:

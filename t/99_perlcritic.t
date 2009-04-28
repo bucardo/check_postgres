@@ -30,7 +30,7 @@ else {
 ok(@testfiles, 'Found files in test directory');
 
 ## Check some non-test files
-my $critic = Perl::Critic->new(-severity => 1);
+my $critic = Perl::Critic->new(-severity => 1, '-profile-strictness' => 'quiet');
 
 for my $filename (qw{check_postgres.pl }) {
 
@@ -106,7 +106,7 @@ my $tm = join '|' => (qw/skip plan pass fail is ok diag BAIL_OUT/);
 my $testmoreok = qr{Subroutine "$tm" is neither};
 
 ## Create a new critic for the tests
-$critic = Perl::Critic->new(-severity => 1);
+$critic = Perl::Critic->new(-severity => 1, '-profile-strictness' => 'quiet');
 
 my $count = 1;
 for my $filename (sort @testfiles) {
