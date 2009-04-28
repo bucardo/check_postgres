@@ -1,5 +1,10 @@
+#!perl
+
+## Test the "version" action
+
+use strict;
+use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 20;
 use lib 't','.';
 use CP_Testing;

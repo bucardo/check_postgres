@@ -67,7 +67,10 @@ sub test_database_handle {
 
 		mkdir $dbdir;
 
-		my $initdb = $ENV{PGINITDB} || 'initdb';
+		my $initdb
+			= $ENV{PGINITDB} ? $ENV{PGINITDB}
+			: $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/initdb"
+			:                  'initdb';
 
 		$com = qq{LC_ALL=en LANG=C $initdb --locale=C -E UTF8 -D $dbdir/data 2>&1};
 		eval {
@@ -119,7 +122,10 @@ sub test_database_handle {
 
 		unlink $logfile;
 
-		my $pg_ctl = $ENV{PG_CTL} || 'pg_ctl';
+		my $pg_ctl
+			= $ENV{PG_CTL}   ? $ENV{PG_CTL}
+			: $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/pg_ctl"
+			:                  'pg_ctl';
 
 		$com = qq{LC_ALL=en LANG=C $pg_ctl -o '-k socket' -l $logfile -D "$dbdir/data" start};
 		eval {
