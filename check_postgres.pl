@@ -2842,7 +2842,7 @@ sub check_fsm_pages {
 			  qq{ ELSE interestingpages/16 END) AS sumrequests,\n}.
 			  qq{ COUNT(relfilenode) AS numrels, 16 AS chunkpages FROM pg_freespacemap_relations) AS foo) AS foo2,\n}.
 			  q{ (SELECT setting::NUMERIC AS maxx FROM pg_settings WHERE name = 'max_fsm_pages') AS foo3};
-	my $SQLNOOP = qq{SELECT 'FAIL'};
+	my $SQLNOOP = q{SELECT 'FAIL'};
 
 	my $info = run_command($SQL, { version => [ ">8.3 $SQLNOOP" ] } );
 
@@ -2902,7 +2902,7 @@ sub check_fsm_relations {
 			  qq{FROM (SELECT\n}.
 			  qq{ (SELECT COUNT(*) FROM pg_freespacemap_relations) AS cur,\n}.
 			  qq{ (SELECT setting::NUMERIC FROM pg_settings WHERE name='max_fsm_relations') AS maxx) x\n};
-	my $SQLNOOP = qq{SELECT 'FAIL'};
+	my $SQLNOOP = q{SELECT 'FAIL'};
 
 	my $info = run_command($SQL, { version => [ ">8.3 $SQLNOOP" ] } );
 
