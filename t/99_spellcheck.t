@@ -1,7 +1,7 @@
 #!perl
 
 ## Spellcheck as much as we can
-## Requires TEST_SPELL to be set
+## Requires ENV TEST_SPELL or TEST_EVERYTHING to be set
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ select(($|=1,select(STDERR),$|=1)[1]);
 
 my (@testfiles, $fh);
 
-if (!$ENV{TEST_SPELL}) {
+if (!$ENV{TEST_SPELL} and !$ENV{TEST_EVERYTHING}) {
 	plan skip_all => 'Set the environment variable TEST_SPELL to enable this test';
 }
 elsif (!eval { require Text::SpellChecker; 1 }) {

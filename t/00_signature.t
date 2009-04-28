@@ -1,6 +1,7 @@
 #!perl
 
 ## Test that our PGP signature file is valid
+## Requires ENV TEST_SIGNATURE or TEST_EVERYTHING to be set
 
 use 5.006;
 use strict;
@@ -10,7 +11,7 @@ select(($|=1,select(STDERR),$|=1)[1]);
 
 my $sigfile = 'check_postgres.pl.asc';
 
-if (!$ENV{TEST_SIGNATURE}) {
+if (!$ENV{TEST_SIGNATURE} and !$ENV{TEST_EVERYTHING}) {
 	plan skip_all => 'Set the environment variable TEST_SIGNATURE to enable this test';
 }
 plan tests => 1;

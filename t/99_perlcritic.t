@@ -2,7 +2,7 @@
 
 ## Run Perl::Critic against the source code and the tests
 ## This is highly customized, so take with a grain of salt
-## Requires TEST_CRITIC to be set
+## Requires ENV TEST_CRITIC or TEST_EVERYTHING to be set
 
 use strict;
 use warnings;
@@ -12,7 +12,7 @@ select(($|=1,select(STDERR),$|=1)[1]);
 
 my @testfiles;
 
-if (!$ENV{TEST_CRITIC}) {
+if (!$ENV{TEST_CRITIC} and !$ENV{TEST_EVERYTHING}) {
 	plan skip_all => 'Set the environment variable TEST_CRITIC to enable this test';
 }
 elsif (!eval { require Perl::Critic; 1 }) {
