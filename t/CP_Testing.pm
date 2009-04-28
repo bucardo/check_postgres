@@ -33,7 +33,7 @@ sub cleanup {
 
 	my $self = shift;
 	my $dbdir = $self->{dbdir} or die;
-	my $pidfile = "$dbdir/data/postmaster.pid";
+	my $pidfile = "$dbdir/data space/postmaster.pid";
 	return if ! -e $pidfile;
 	open my $fh, '<', $pidfile or die qq{Could not open "$pidfile": $!\n};
 	<$fh> =~ /^(\d+)/ or die qq{File "$pidfile" did not start with a number!\n};
@@ -72,7 +72,7 @@ sub test_database_handle {
 			: $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/initdb"
 			:                  'initdb';
 
-		$com = qq{LC_ALL=en LANG=C $initdb --locale=C -E UTF8 -D $dbdir/data 2>&1};
+		$com = qq{LC_ALL=en LANG=C $initdb --locale=C -E UTF8 -D "$dbdir/data space" 2>&1};
 		eval {
 			$info = qx{$com};
 		};
@@ -81,7 +81,7 @@ sub test_database_handle {
 		}
 
 		## Modify the postgresql.conf
-		my $cfile = "$dbdir/data/postgresql.conf";
+		my $cfile = "$dbdir/data space/postgresql.conf";
 		open my $cfh, '>>', $cfile or die qq{Could not open "$cfile": $!\n};
 		print $cfh qq{\n\n## check_postgres.pl testing parameters\n};
 		print $cfh qq{listen_addresses = ''\n};
@@ -91,14 +91,14 @@ sub test_database_handle {
 		print $cfh "\n";
 		close $cfh or die qq{Could not close "$cfile": $!\n};
 
-		mkdir "$dbdir/data/socket";
+		mkdir "$dbdir/data space/socket";
 
 	}
 
 	## See if the database is already running.
 	my $needs_startup = 0;
 
-	my $pidfile = "$dbdir/data/postmaster.pid";
+	my $pidfile = "$dbdir/data space/postmaster.pid";
 	if (! -e $pidfile) {
 		$needs_startup = 1;
 	}
@@ -127,7 +127,7 @@ sub test_database_handle {
 			: $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/pg_ctl"
 			:                  'pg_ctl';
 
-		$com = qq{LC_ALL=en LANG=C $pg_ctl -o '-k socket' -l $logfile -D "$dbdir/data" start};
+		$com = qq{LC_ALL=en LANG=C $pg_ctl -o '-k socket' -l $logfile -D "$dbdir/data space" start};
 		eval {
 			$info = qx{$com};
 		};
@@ -156,7 +156,7 @@ sub test_database_handle {
 	} ## end of needs startup
 
 	my $here = cwd();
-	my $dbhost = $self->{dbhost} = "$here/$dbdir/data/socket";
+	my $dbhost = $self->{dbhost} = "$here/$dbdir/data space/socket";
 	$dbhost =~ s/^ /\\ /;
 	$dbhost =~ s/([^\\]) /$1\\ /g;
 	$self->{dbname} ||= 'postgres';

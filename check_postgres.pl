@@ -4334,7 +4334,7 @@ sub check_checkpoint {
 	## Checks how long in seconds since the last checkpoint on a WAL slave
 	## Supports: Nagios, MRTG
 	## Warning and critical are seconds
-	## Requires $ENV{PGATA} or --datadir
+	## Requires $ENV{PGDATA} or --datadir
 
 	my ($warning, $critical) = validate_range
 		({
@@ -4361,7 +4361,7 @@ sub check_checkpoint {
 		= $ENV{PGCONTROLDATA} ? $ENV{PGCONTROLDATA}
 		: $ENV{PGBINDIR}      ? "$ENV{PGBINDIR}/pg_controldata"
 		:                       'pg_controldata';
-	$COM = "$pgc $dir";
+	$COM = qq{$pgc "$dir"};
 	eval {
 		$res = qx{$COM 2>&1};
 	};
