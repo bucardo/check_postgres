@@ -3519,7 +3519,7 @@ sub check_query_runtime {
 			add_unknown msg('invalid-query', $db->{slurp});
 			next;
 		}
-		my $totalseconds = $1 / 1000.0;
+		my $totalseconds = sprintf '%.2f', $1 / 1000.0;
 		if ($MRTG) {
 			$stats{$db->{dbname}} = $totalseconds;
 			next;
