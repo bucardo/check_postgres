@@ -91,13 +91,14 @@ our %msg = (
 	'backends-users'     => q{$1 for number of users must be a number or percentage},
 	'bloat-index'        => q{index $1 rows:$2 pages:$3 shouldbe:$4 ($5X) wasted bytes:$6 ($7)},
 	'bloat-nomin'        => q{no relations meet the minimum bloat criteria},
-	'bloat-table'        => q{table $1.$2 rows:$3 pages:$3 shouldbe:$4 ($5X) wasted size:$6 ($7)},
+	'bloat-table'        => q{table $1.$2 rows:$3 pages:$4 shouldbe:$5 ($6X) wasted size:$7 ($8)},
 	'checkpoint-baddir'  => q{Invalid data_directory: "$1"},
 	'checkpoint-baddir2' => q{pg_controldata could not read the given data directory: "$1"},
 	'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version},
 	'checkpoint-badver2' => q{Failed to run pg_controldata - is it the correct version?},
 	'checkpoint-nodir'   => q{Must supply a --datadir argument or set the PGDATA environment variable},
 	'checkpoint-nodp'    => q{Must install the Perl module Date::Parse to use the checkpoint action},
+	'checkpoint-noparse' => q{Unable to parse pg_controldata output: "$1"},
 	'checkpoint-noregex' => q{Call to pg_controldata $1 failed},
 	'checkpoint-nosys'   => q{Could not call pg_controldata: $1},
 	'checkpoint-ok'      => q{Last checkpoint was 1 second ago},
@@ -107,7 +108,6 @@ our %msg = (
 	'checksum-msg'       => q{checksum: $1},
 	'checksum-nomd'      => q{Must install the Perl module Digest::MD5 to use the checksum action},
 	'checksum-nomrtg'    => q{Must provide a checksum via the --mrtg option},
-	'checksum-noparse'   => q{Unable to parse pg_controldata output: "$1"},
 	'custom-invalid'     => q{Invalid format returned by custom query},
 	'custom-norows'      => q{No rows returned},
 	'custom-nostring'    => q{Must provide a query string},
@@ -117,7 +117,7 @@ our %msg = (
 	'die-badversion'     => q{Invalid version string: $1},
 	'die-noset'          => q{Cannot run "$1" $2 is not set to on},
 	'die-nosetting'      => q{Could not fetch setting '$1'},
-	'diskspace-df'       => q{Could not find required executable /bin/df},
+	'diskspace-nodf'     => q{Could not find required executable /bin/df},
 	'diskspace-fail'     => q{Invalid result from command "$1": $2},
 	'diskspace-msg'      => q{FS $1 mounted on $2 is using $3 of $4 ($5%)},
 	'diskspace-nodata'   => q{Could not determine data_directory: are you connecting as a superuser?},
@@ -146,8 +146,8 @@ our %msg = (
 	'logfile-syslog'     => q{Database is using syslog, please specify path with --logfile option (fac=$1)},
 	'maxtime'            => q{ maxtime=$1}, ## needs leading space
 	'mrtg-fail'          => q{Action $1 failed: $2},
+	'new-cp-fail'        => q{Unable to determine the current version of check_postgres.pl},
 	'new-cp-ok'          => q{Version $1 is the latest for check_postgres.pl},
-	'new-cp-unknown'     => q{Unable to determine the latest version of check_postgres.pl},
 	'new-cp-warn'        => q{Version $1 of check_postgres.pl exists (this is version $2)},
 	'new-pg-badver'      => q{Could not determine the Postgres revision (version was $1)},
 	'new-pg-badver2'     => q{Could not find revision information for Postgres version $1},
@@ -280,13 +280,14 @@ our %msg = (
 	'backends-users'     => q{$1 pour le nombre d'utilisateurs doit être un nombre ou un pourcentage},
 	'bloat-index'        => q{index $1 lignes:$2 pages:$3 devrait être:$4 ($5X) octets perdus:$6 ($7)},
 	'bloat-nomin'        => q{aucune relation n'atteint le critère minimum de fragmentation},
-	'bloat-table'        => q{table $1.$2 lignes:$3 pages:$3 devrait être:$4 ($5X) place perdue:$6 ($7)},
+	'bloat-table'        => q{table $1.$2 lignes:$3 pages:$4 devrait être:$5 ($6X) place perdue:$7 ($8)},
 	'checkpoint-baddir'  => q{data_directory invalide : "$1"},
 'checkpoint-baddir2' => q{pg_controldata could not read the given data directory: "$1"},
 'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version},
 'checkpoint-badver2' => q{Failed to run pg_controldata - is it the correct version?},
 	'checkpoint-nodir'   => q{Vous devez fournir un argument --datadir ou configurer la variable d'environnement PGDATA},
 	'checkpoint-nodp'    => q{Vous devez installer le module Perl Date::Parse pour utiliser l'action checkpoint},
+	'checkpoint-noparse' => q{Incapable d'analyser le résultat de la commande pg_controldata : "$1"},
 	'checkpoint-noregex' => q{Échec de l'appel à pg_controldata $1},
 	'checkpoint-nosys'   => q{N'a pas pu appeler pg_controldata : $1},
 	'checkpoint-ok'      => q{Le dernier CHECKPOINT est survenu il y a une seconde},
@@ -296,7 +297,6 @@ our %msg = (
 	'checksum-msg'       => q{somme de contrôle : $1},
 	'checksum-nomd'      => q{Vous devez installer le module Perl Digest::MD5 pour utiliser l'action checksum},
 	'checksum-nomrtg'    => q{Vous devez fournir une somme de contrôle avec l'option --mrtg},
-	'checksum-noparse'   => q{Incapable d'analyser le résultat de la commande pg_controldata : "$1"},
 	'custom-invalid'     => q{Format invalide renvoyé par la requête personnalisée},
 	'custom-norows'      => q{Aucune ligne renvoyée},
 	'custom-nostring'    => q{Vous devez fournir une requête},
@@ -306,7 +306,7 @@ our %msg = (
 	'die-badversion'     => q{Version invalide : $1},
 	'die-noset'          => q{Ne peut pas exécuter « $1 » $2 n'est pas activé},
 	'die-nosetting'      => q{N'a pas pu récupérer le paramètre « $1 »},
-	'diskspace-df'       => q{N'a pas pu trouver l'exécutable /bin/df},
+	'diskspace-nodf'     => q{N'a pas pu trouver l'exécutable /bin/df},
 	'diskspace-fail'     => q{Résultat invalide pour la commande « $1 » : $2},
 	'diskspace-msg'      => q{Le système de fichiers $1 monté sur $2 utilise $3 sur $4 ($5%)},
 	'diskspace-nodata'   => q{N'a pas pu déterminer data_directory : êtes-vous connecté en tant que super-utilisateur ?},
@@ -318,7 +318,7 @@ our %msg = (
 'fsm-rel-highver'    => q{Cannot check on fsm_relations on servers version 8.4 or greater},
 	'invalid-option'     => q{Option invalide},
 	'invalid-query'      => q{Une requête invalide a renvoyé : $1},
-	'listener-count'     => q{ listening=$1}, ## needs leading space
+'listener-count'     => q{ listening=$1}, ## needs leading space
 	'listener-msg'       => q{processus LISTEN trouvés : $1},
 	'locks-msg'          => q{total des verrous « $1 » : $2},
 	'locks-msg2'         => q{total des verrous : $1},
@@ -335,8 +335,8 @@ our %msg = (
 	'logfile-syslog'     => q{La base de données utiliser syslog, merci de spécifier le chemin avec l'option --logfile (fac=$1)},
 	'maxtime'            => q{ maxtime=$1}, ## needs leading space
 	'mrtg-fail'          => q{Échec de l'action $1 : $2},
+'new-cp-fail'        => q{Unable to determine the current version of check_postgres.pl},
 	'new-cp-ok'          => q{La version $1 est la dernière pour check_postgres.pl},
-	'new-cp-unknown'     => q{Impossible de déterminer la dernière version de check_postgres.pl},
 	'new-cp-warn'        => q{La version $1 de check_postgres.pl existe (ceci est la version $2)},
 	'new-pg-badver'      => q{N'a pas pu déterminer la révision de Postgres (la version était $1)},
 	'new-pg-badver2'     => q{N'a pas pu trouver l'information de révision de Posrgres version $1},
@@ -371,6 +371,7 @@ our %msg = (
 	'range-int'          => q{Argument invalide pour l'option « $1 » : doit être un entier},
 	'range-int-pos'      => q{Argument invalide pour l'option « $1 » : doit être un entier positif},
 	'range-neg-percent'  => q{Ne peut pas indiquer un pourcentage négatif !},
+'range-none'         => q{No warning or critical options are needed},
 	'range-noopt-both'   => q{Doit fournir les options warning et critical},
 	'range-noopt-one'    => q{Doit fournir une option warning ou critical},
 	'range-noopt-only'   => q{Peut seulement fournir une option warning ou critical},
@@ -435,7 +436,7 @@ our %msg = (
 	'time-minute'        => q{minute},
 	'time-minutes'       => q{minutes},
 	'time-month'         => q{mois},
-	'time-monthss'       => q{mois},
+	'time-months'        => q{mois},
 	'time-second'        => q{seconde},
 	'time-seconds'       => q{secondes},
 	'time-week'          => q{semaine},
@@ -445,7 +446,7 @@ our %msg = (
 	'timesync-diff'      => q{ diff=$1}, ## needs leading space
 	'timesync-msg'       => q{timediff=$1 Base de données=$2 Local=$3},
 	'trigger-msg'        => q{Triggers désactivés : $1},
-	'txnidle-msg'        => q{longest idle in txn: $1s},
+'txnidle-msg'        => q{longest idle in txn: $1s},
 	'txnidle-none'       => q{Aucun processus en attente dans une transaction},
 	'txntime-fail'       => q{Échec de la requête},
 	'txntime-msg'        => q{Transaction la plus longue : $1s},
@@ -1238,7 +1239,7 @@ sub build_symlinks {
 
 	## Create symlinks to most actions
 	$ME =~ /postgres/
-		or die msgn('symlinks-name');
+		or die msgn('symlink-name');
 
 	my $force = $action =~ /force/ ? 1 : 0;
 	for my $action (sort keys %$action_info) {
@@ -3866,7 +3867,7 @@ sub check_timesync {
 			$stats{$db->{dbname}} = $diff;
 			next;
 		}
-		$db->{perf} = msg('diff', $diff);
+		$db->{perf} = msg('timesync-diff', $diff);
 		my $localpretty = sprintf '%d-%02d-%02d %02d:%02d:%02d', $l[5]+1900, $l[4]+1, $l[3],$l[2],$l[1],$l[0];
 		my $msg = msg('timesync-msg', $diff, $pgpretty, $localpretty);
 
@@ -4370,7 +4371,7 @@ sub check_checkpoint {
 
 	## If the path is echoed back, we most likely have an invalid data dir
 	if ($res =~ /$dir/) {
-		ndie msg('checkpoint-baddir2');
+		ndie msg('checkpoint-baddir2', $dir);
 	}
 
 	if ($res =~ /WARNING: Calculated CRC checksum/) {
@@ -4590,7 +4591,7 @@ sub check_prepared_txns {
 
 	my $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
 
-	my $msg = msg('prepared-txn-none');
+	my $msg = msg('preptxn-none');
 	my $found = 0;
 	for $db (@{$info->{db}}) {
 		my (@crit,@warn,@ok);
