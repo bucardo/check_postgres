@@ -22,9 +22,9 @@ $dbname = $cp->get_dbname;
 $host = $cp->get_host();
 my $label = 'POSTGRES_QUERY_RUNTIME';
 
-local $dbh->{Warn} = 0;
-$dbh->do(qq{DROP TABLE IF EXISTS $testtbl CASCADE});
-$dbh->do(qq{DROP VIEW IF EXISTS $testview});
+$cp->drop_table_if_exists($testtbl);
+$cp->drop_view_if_exists($testview);
+
 $dbh->do(qq{CREATE TABLE "$testtbl" ("a" integer)}) or die $dbh->errstr;
 $dbh->commit;
 

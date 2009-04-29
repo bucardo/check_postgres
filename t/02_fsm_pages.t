@@ -30,12 +30,9 @@ like ($cp->run('--critical=50'), qr{ERROR:.+must be a percentage}, $t);
 ## Create a fake fsm 'view' for testing
 $cp->set_fake_schema();
 my $schema = $cp->get_fake_schema();
-{
-	local $dbh->{Warn};
-	$dbh->do("DROP TABLE IF EXISTS $schema.pg_freespacemap_pages");
-	$dbh->do("DROP TABLE IF EXISTS $schema.pg_freespacemap_relations");
-	$dbh->do('DROP FUNCTION IF EXISTS public.version()');
-}
+$cp->drop_table_if_exists($schema, 'pg_freespacemap_pages');
+$cp->drop_table_if_exists($schema, 'pg_freespacemap_relations');
+
 $dbh->do(qq{
 CREATE TABLE $schema.pg_freespacemap_pages (
   reltablespace oid,

@@ -50,7 +50,7 @@ like ($cp->run('-c 23%%'),     qr{^ERROR: No warning or critical}, $t);
 $t=qq{$S returns correct MRTG output when rows found};
 is ($cp->run('--output=MRTG'), qq{1\n0\n\n\n}, $t);
 
-$cp->bad_fake_version();
+$cp->fake_version('ABC');
 $t=qq{$S fails if there's a fake version function};
 like ($cp->run(), qr{^POSTGRES_CONNECTION UNKNOWN:}, $t);
 $cp->reset_path();

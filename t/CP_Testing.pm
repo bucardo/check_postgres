@@ -191,8 +191,12 @@ sub test_database_handle {
 	$dbh->{RaiseError} = 1;
 
 	if (! exists $self->{keep_old_schema}) {
-		local $dbh->{Warn};
-		$dbh->do("DROP SCHEMA IF EXISTS $fakeschema CASCADE");
+		my $SQL = "SELECT count(*) FROM pg_namespace WHERE nspname = " . $dbh->quote($fakeschema);
+		my $count = $dbh->selectall_arrayref($SQL)->[0][0];
+		if ($count) {
+			local $dbh->{Warn} = 0;
+			$dbh->do("DROP SCHEMA $fakeschema CASCADE");
+		}
 	}
 
 	if ($arg->{dbname} ne $self->{dbname}) {
@@ -319,8 +323,7 @@ sub create_fake_pg_table {
 	my $dbh = $self->{dbh} || die;
 	my $dbuser = $self->{testuser} || die;
 	if ($self->schema_exists($dbh,$fakeschema)) {
-		local $dbh->{Warn};
-		$dbh->do("DROP TABLE IF EXISTS $fakeschema.$name");
+		$self->drop_table_if_exists($fakeschema,$name);
 	}
 	else {
 		$dbh->do("CREATE SCHEMA $fakeschema");
@@ -336,7 +339,7 @@ sub create_fake_pg_table {
 
 	if ($args) {
 		local $dbh->{Warn};
-		$dbh->do("DROP FUNCTION IF EXISTS $fakeschema.$name($args)");
+		$self->drop_function_if_exists($fakeschema,$name,$args);
 		$dbh->do("CREATE FUNCTION $fakeschema.$name($args) RETURNS SETOF TEXT LANGUAGE SQL AS 'SELECT * FROM $fakeschema.$name; '");
 	}
 
@@ -366,23 +369,6 @@ sub set_fake_schema {
 } ## end of set_fake_schema
 
 
-sub remove_fake_pg_table {
-
-	my $self = shift;
-	my $name = shift || die;
-	(my $name2 = $name) =~ s/\(.+//;
-	my $dbh = $self->{dbh} || die;
-	my $dbuser = $self->{testuser} || die;
-	{
-		local $dbh->{Warn};
-		$dbh->do("DROP TABLE IF EXISTS public.$name2");
-	}
-	$dbh->do("ALTER USER $dbuser SET search_path = public");
-	$dbh->commit();
-
-} ## end of remove_fake_pg_table
-
-
 sub table_exists {
 
 	my ($self,$dbh,$table) = @_;
@@ -409,6 +395,101 @@ sub schema_exists {
 } ## end of schema_exists
 
 
+sub drop_schema_if_exists {
+
+	my ($self,$name) = @_;
+	my $dbh = $self->{dbh} || die;
+
+	if (! exists $self->{keep_old_schema}) {
+		my $SQL = "SELECT count(*) FROM pg_namespace WHERE nspname = " . $dbh->quote($name);
+		my $count = $dbh->selectall_arrayref($SQL)->[0][0];
+		if ($count) {
+			local $dbh->{Warn};
+			$dbh->do("DROP SCHEMA $name CASCADE");
+			$dbh->commit();
+		}
+	}
+	return;
+
+} ## end of drop_schema_if_exists
+
+
+sub drop_table_if_exists {
+
+	my ($self,$name,$name2) = @_;
+	my $dbh = $self->{dbh} || die;
+
+	my $schema = '';
+	if ($name2) {
+		$schema = $name;
+		$name = $name2;
+	}
+
+	my $safetable = $dbh->quote($name);
+	my $safeschema = $dbh->quote($schema);
+	my $SQL = $schema 
+		? q{SELECT count(*) FROM pg_class c JOIN pg_namespace n ON (n.oid = c.relnamespace) }.
+		  qq{WHERE relkind = 'r' AND nspname = $safeschema AND relname = $safetable}
+        : qq{SELECT count(*) FROM pg_class WHERE relkind='r' AND relname = $safetable};
+	my $count = $dbh->selectall_arrayref($SQL)->[0][0];
+	if ($count) {
+		local $dbh->{Warn};
+		$dbh->do("DROP TABLE $name CASCADE");
+		$dbh->commit();
+	}
+	return;
+
+} ## end of drop_table_if_exists
+
+
+sub drop_view_if_exists {
+
+	my ($self,$name) = @_;
+	my $dbh = $self->{dbh} || die;
+
+	my $SQL = q{SELECT count(*) FROM pg_class WHERE relkind='v' AND relname = } . $dbh->quote($name);
+	my $count = $dbh->selectall_arrayref($SQL)->[0][0];
+	if ($count) {
+		local $dbh->{Warn};
+		$dbh->do("DROP VIEW $name");
+		$dbh->commit();
+	}
+	return;
+
+} ## end of drop_view_if_exists
+
+
+sub drop_sequence_if_exists {
+
+	my ($self,$name) = @_;
+	my $dbh = $self->{dbh} || die;
+
+	my $SQL = q{SELECT count(*) FROM pg_class WHERE relkind = 'S' AND relname = } . $dbh->quote($name);
+	my $count = $dbh->selectall_arrayref($SQL)->[0][0];
+	if ($count) {
+		$dbh->do("DROP SEQUENCE $name");
+		$dbh->commit();
+	}
+
+} ## end of drop_sequence_if_exists
+
+
+sub drop_function_if_exists {
+
+	my ($self,$name,$args) = @_;
+	my $dbh = $self->{dbh} || die;
+
+	my $SQL = q{SELECT count(*) FROM pg_proc WHERE proname = }. $dbh->quote($name);
+	my $count = $dbh->selectall_arrayref($SQL)->[0][0];
+	if ($count) {
+		$dbh->do("DROP FUNCTION $name($args)");
+		$dbh->commit();
+	}
+	return;
+
+} ## end of drop_function_if_exists
+
+
 sub fake_version {
 
 	my $self = shift;
@@ -430,29 +511,10 @@ SELECT 'PostgreSQL $version on fakefunction for check_postgres.pl testing'::text
 });
 	$dbh->do("ALTER USER $dbuser SET search_path = $fakeschema, public, pg_catalog");
 	$dbh->commit();
+	return;
 
 } ## end of fake version
 
-
-sub bad_fake_version {
-
-	my $self = shift;
-	my $version = shift || '9.9';
-	my $dbh = $self->{dbh} || die;
-	my $dbuser = $self->{testuser} || die;
-
-	$dbh->do(qq{
-CREATE OR REPLACE FUNCTION public.version()
-RETURNS TEXT
-LANGUAGE SQL
-AS \$\$
-SELECT 'Postgres $version on fakefunction for check_postgres.pl testing'::text;
-\$\$
-});
-	$dbh->do("ALTER USER $dbuser SET search_path = public, pg_catalog");
-	$dbh->commit();
-
-} ## end of bad fake version
 
 sub fake_self_version {
 
@@ -471,6 +533,7 @@ sub fake_self_version {
 	close $fh or die qq{Could not close "$file": $!\n};
 
 } ## end of fake_self_version
+
 
 sub restore_self_version {
 

@@ -113,7 +113,8 @@ like ($cp->run('-c -7'), qr{^POSTGRES_BACKENDS CRITICAL}, $t);
 like ($cp->run('-c -8'), qr{^POSTGRES_BACKENDS OK}, $t);
 
 $t=qq{$S works when no items caught by pg_stat_activity};
-## This is tricky to test properly.
+
+$cp->drop_schema_if_exists($fakeschema);
 $cp->create_fake_pg_table('pg_stat_activity');
 like ($cp->run(), qr{^POSTGRES_BACKENDS OK: .+No connections}, $t);
 
@@ -150,5 +151,7 @@ like ($cp->run('--include=postgres --exclude=postgres'), qr{POSTGRES_BACKENDS OK
 
 $t=qq{$S returned correct performance data with include};
 like ($cp->run('--include=postgres'), qr{ \| time=(\d\.\d\d)  ardala=0 beedeebeedee=0 postgres=3}, $t);
+
+$cp->drop_schema_if_exists($fakeschema);
 
 exit;

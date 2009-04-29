@@ -27,6 +27,7 @@ like ($cp->run('--dbname=foo'), qr{database "foo" does not exist}, $t);
 $t=qq{$S fails when no matching databases found};
 like ($cp->run('--include=foo'), qr{No matching databases found}, $t);
 
+$cp->drop_schema_if_exists($fakeschema);
 $cp->create_fake_pg_table('pg_locks');
 $SQL = q{SELECT oid FROM pg_database WHERE datname = 'postgres'};
 my $dboid = $dbh->selectall_arrayref($SQL)->[0][0];
@@ -71,6 +72,6 @@ $t=qq{$S returns correct multiple item output};
 like ($cp->run('--warning="waiting=1;exclusive=2"'),
 	  qr{POSTGRES_LOCKS WARNING.*total "waiting" locks: 1 \* total "exclusive" locks: 2 }, $t);
 
-$cp->remove_fake_pg_table('pg_locks');
+$cp->drop_schema_if_exists($fakeschema);
 
 exit;

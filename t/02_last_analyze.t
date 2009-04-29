@@ -54,7 +54,7 @@ like ($cp->run(qq{-w 0 --includeuser=gandalf}), qr{No matching.*user}, $t);
 
 local $dbh->{Warn};
 $dbh->do('ANALYZE');
-$dbh->do(qq{DROP TABLE IF EXISTS $testtbl});
+$cp->drop_table_if_exists($testtbl);
 $dbh->do(qq{CREATE TABLE $testtbl AS SELECT 123::INTEGER AS a FROM generate_series(1,200000)});
 $dbh->commit();
 

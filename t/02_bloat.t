@@ -50,8 +50,7 @@ like ($cp->run("-w=1% --include=foobar"), qr{^$label UNKNOWN:.+No matching relat
 $t=qq{$S returns okay for fresh database with no bloat};
 like ($cp->run("-w=1m"), qr{^$label OK: DB "postgres"}, $t);
 
-local $dbh->{Warn} = 0;
-$dbh->do("DROP TABLE IF EXISTS $tname");
+$cp->drop_table_if_exists($tname);
 $dbh->do("CREATE TABLE $tname AS SELECT 123::int AS foo FROM generate_series(1,10000)");
 $dbh->do("UPDATE $tname SET foo = foo") for 1..1;
 $dbh->do('ANALYZE');

@@ -32,6 +32,7 @@ $t=qq{$S works as expected for criticals};
 like ($cp->run('--critical=30'), qr{POSTGRES_WAL_FILES OK}, $t);
 like ($cp->run('--critical=0'), qr{POSTGRES_WAL_FILES CRITICAL}, $t);
 
+$cp->drop_schema_if_exists($fakeschema);
 $cp->create_fake_pg_table('pg_ls_dir', 'text');
 
 like ($cp->run('--critical=1'), qr{POSTGRES_WAL_FILES OK}, $t);
@@ -48,6 +49,6 @@ is ($cp->run('--critical=1 --output=mrtg'), "99\n0\n\n\n", $t);
 $t=qq{$S returns correct MRTG information};
 is ($cp->run('--critical=101 --output=mrtg'), "99\n0\n\n\n", $t);
 
-$cp->remove_fake_pg_table('pg_ls_dir()');
+$cp->drop_schema_if_exists($fakeschema);
 
 exit;

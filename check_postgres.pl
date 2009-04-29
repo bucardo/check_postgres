@@ -2539,7 +2539,7 @@ sub check_connection {
 
 	## Parse it out and return our information
 	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /PostgreSQL (\S+)/o) { ## no critic (ProhibitUnusedCapture)
+		if ($db->{slurp} !~ /PostgreSQL (\d+\.\d+\S+)/o) { ## no critic (ProhibitUnusedCapture)
 			add_unknown msg('invalid-query', $db->{slurp});
 			next;
 		}

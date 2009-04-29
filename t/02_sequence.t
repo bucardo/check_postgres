@@ -28,11 +28,7 @@ $t=qq{$S fails when called with an invalid option};
 like ($cp->run('--critical=80'), qr{ERROR:.+must be a percentage}, $t);
 
 my $seqname = 'cp_test_sequence';
-{
-	local $dbh->{Warn};
-	$dbh->do("DROP SEQUENCE IF EXISTS $seqname");
-	$dbh->commit();
-}
+$cp->drop_sequence_if_exists($seqname);
 
 $t=qq{$S works when no sequences exist};
 like ($cp->run(''), qr{OK:.+No sequences found}, $t);
@@ -44,13 +40,7 @@ $t=qq{$S fails when sequence not readable};
 like ($cp->run(''), qr{ERROR:\s*(?:Could not determine|cannot access temporary)}, $t);
 
 $dbh->do("CREATE SEQUENCE $seqname");
-$dbh->commit();
-
-{
-	local $dbh->{Warn};
-	$dbh->do("DROP SEQUENCE IF EXISTS ${seqname}2");
-	$dbh->commit();
-}
+$cp->drop_sequence_if_exists($seqname.'2');
 
 $t=qq{$S returns correct information for a new sequence};
 like ($cp->run(''), qr{OK:.+public.cp_test_sequence=0% \(calls left=9223372036854775806\)}, $t);

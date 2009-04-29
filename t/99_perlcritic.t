@@ -111,8 +111,6 @@ $critic = Perl::Critic->new(-severity => 1, '-profile-strictness' => 'quiet');
 my $count = 1;
 for my $filename (sort @testfiles) {
 	-e $filename or die qq{Could not find "$filename"!};
-	pass('Skipping test files for now');
-	next;
 
 	my @vio = $critic->critique($filename);
 	my $vios = 0;

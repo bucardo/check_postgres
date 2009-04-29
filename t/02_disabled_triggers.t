@@ -52,12 +52,11 @@ for (-1, 0, 'a') {
 
 sub cleanup {
     $dbh->rollback;
-	local $dbh->{Warn} = 0;
-	$dbh->do(qq{DROP TABLE IF EXISTS "$testtbl"});
-    $dbh->do(qq{DROP FUNCTION IF EXISTS "${testtrig_prefix}func"()});
-    $dbh->commit;
+	$cp->drop_table_if_exists($testtbl);
+	$cp->drop_function_if_exists($testtrig_prefix.'func','');
 }
 END { cleanup(); }
+
 # Set up a test table with two triggers.
 cleanup();
 $dbh->do(qq{CREATE TABLE "$testtbl" (a integer)});
