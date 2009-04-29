@@ -3390,7 +3390,8 @@ sub check_logfile {
 		my $logfile ='';
 		if (exists $opt{logfile} and $opt{logfile} =~ /\w/) {
 			$logfile = $opt{logfile};
-		} else {
+		}
+		else {
 			if ($dest eq 'syslog') {
 				## We'll make a best effort to figure out where it is. Using the --logfile option is preferred.
 				$logfile = '/var/log/messages';
@@ -3404,7 +3405,8 @@ sub check_logfile {
 				if (!$logfile or ! -e $logfile) {
 					ndie msg('logfile-syslog', $facility);
 				}
-			} elsif ($dest eq 'stderr') {
+			}
+			elsif ($dest eq 'stderr') {
 				if ($redirect ne 'yes') {
 					ndie msg('logfile-stderr');
 				}
@@ -3444,14 +3446,15 @@ sub check_logfile {
 		}
 		seek($logfh, 0, 2) or ndie msg('logfile-seekfail', $logfile, $!);
 
-		## Throw a custom error string
-		my $smallsearch = sprintf 'Random=%s', int rand(999999999999);
-		my $funky = sprintf "$ME this_statement_will_fail DB=$db->{dbname} PID=$$ Time=%s $smallsearch",
+		## Throw a custom error string.
+		## We do the number first as old versions only show part of the string.
+		my $random_number = int rand(999999999999);
+		my $funky = sprintf "$random_number $ME this_statement_will_fail DB=$db->{dbname} PID=$$ Time=%s",
 			scalar localtime;
 
 		## Cause an error on just this target
 		delete @{$db}{qw(ok slurp totaltime)};
-		my $badinfo = run_command("SELECT $funky", {failok => 1, target => $db} );
+		my $badinfo = run_command("$funky", {failok => 1, target => $db} );
 
 		my $MAXSLEEPTIME = 4;
 		my $SLEEP = 1;
@@ -3460,7 +3463,7 @@ sub check_logfile {
 			sleep $SLEEP;
 			seek $logfh, 0, 1 or ndie msg('logfile-seekfail', $logfile, $!);
 			while (<$logfh>) {
-				if (/$smallsearch/) { ## Some logs break things up, so we don't use funky
+				if (/$random_number/) { ## Some logs break things up, so we don't use funky
 					$found = 1;
 					last LOGWAIT;
 				}
@@ -4441,7 +4444,7 @@ sub check_disabled_triggers {
 		  forcemrtg         => 1,
 	  });
 
-	$SQL = q{SELECT tgrelid::regclass, tgname, tgenabled FROM pg_trigger WHERE tgenabled IS TRUE ORDER BY tgname};
+	$SQL = q{SELECT tgrelid::regclass, tgname, tgenabled FROM pg_trigger WHERE tgenabled IS NOT TRUE ORDER BY tgname};
 	my $SQL83 = q{SELECT tgrelid::regclass, tgname, tgenabled FROM pg_trigger WHERE tgenabled = 'D' ORDER BY tgname};
 
 	my $info = run_command($SQL, { version => [ ">8.2 $SQL83" ] } );
