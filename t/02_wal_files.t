@@ -2,6 +2,7 @@
 
 ## Test the "wal_files" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -37,7 +38,7 @@ $cp->create_fake_pg_table('pg_ls_dir', 'text');
 
 like ($cp->run('--critical=1'), qr{POSTGRES_WAL_FILES OK}, $t);
 
-$dbh->do("INSERT INTO cptest.pg_ls_dir SELECT 'ABCDEF123456ABCDEF123456' FROM generate_series(1,99)");
+$dbh->do(q{INSERT INTO cptest.pg_ls_dir SELECT 'ABCDEF123456ABCDEF123456' FROM generate_series(1,99)});
 $dbh->commit();
 
 $t=qq{$S returns correct number of files};

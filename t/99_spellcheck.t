@@ -3,10 +3,10 @@
 ## Spellcheck as much as we can
 ## Requires ENV TEST_SPELL or TEST_EVERYTHING to be set
 
+use 5.006;
 use strict;
 use warnings;
 use Test::More;
-select(($|=1,select(STDERR),$|=1)[1]);
 
 my (@testfiles, $fh);
 
@@ -24,15 +24,15 @@ else {
 }
 
 my %okword;
-my $file = 'Common';
+my $filename = 'Common';
 while (<DATA>) {
 	if (/^## (.+):/) {
-		$file = $1;
+		$filename = $1;
 		next;
 	}
 	next if /^#/ or ! /\w/;
 	for (split) {
-		$okword{$file}{$_}++;
+		$okword{$filename}{$_}++;
 	}
 }
 

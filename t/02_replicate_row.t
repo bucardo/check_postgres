@@ -2,10 +2,10 @@
 
 ## Test the "replicate_row" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 19;
 use lib 't','.';
 use CP_Testing;
@@ -118,7 +118,7 @@ $dbh->commit();
 if (fork) {
 	$result = $cp->run('DB2replicate-row', '-c 10 -repinfo=reptest,id,1,foo,yin,yang');
 	like ($result, qr{^POSTGRES_REPLICATE_ROW OK:.+Row was replicated}, $t);
-	$result =~ /time=(\d+)/ or die "No time?";
+	$result =~ /time=(\d+)/ or die 'No time?';
 	my $time = $1;
 	cmp_ok ($time, '>=', 3, $t);
 }
@@ -148,7 +148,7 @@ $t=qq{$S works when rows match, with simple output};
 $dbh->commit();
 if (fork) {
 	$result = $cp->run('DB2replicate-row', '-c 10 --output=simple -repinfo=reptest,id,1,foo,yin,yang');
-	$result =~ /^(\d+)/ or die "No time?";
+	$result =~ /^(\d+)/ or die 'No time?';
 	my $time = $1;
 	cmp_ok ($time, '>=', 3, $t);
 }

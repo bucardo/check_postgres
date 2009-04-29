@@ -2,10 +2,10 @@
 
 ## Test the "last_analyze" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 14;
 use lib 't','.';
 use CP_Testing;
@@ -24,7 +24,7 @@ my $label = 'POSTGRES_LAST_ANALYZE';
 my $S = q{Action 'last_analyze'};
 
 $t = qq{$S self-identifies correctly};
-$result = $cp->run(qq{-w 0});
+$result = $cp->run(q{-w 0});
 like ($result, qr{^$label}, $t);
 
 $t = qq{$S identifies database};
@@ -50,9 +50,8 @@ for ('-1 second',
 }
 
 $t = qq{$S flags no-match-user};
-like ($cp->run(qq{-w 0 --includeuser=gandalf}), qr{No matching.*user}, $t);
+like ($cp->run(q{-w 0 --includeuser=gandalf}), qr{No matching.*user}, $t);
 
-local $dbh->{Warn};
 $dbh->do('ANALYZE');
 $cp->drop_table_if_exists($testtbl);
 $dbh->do(qq{CREATE TABLE $testtbl AS SELECT 123::INTEGER AS a FROM generate_series(1,200000)});
@@ -63,18 +62,18 @@ like ($cp->run("-w 0 --exclude=~.* --include=$testtbl"),
 	  qr{No matching tables found due to exclusion}, $t);
 
 $t = qq{$S sees a recent ANALYZE};
-$dbh->do(qq{SET default_statistics_target = 1000});
+$dbh->do(q{SET default_statistics_target = 1000});
 $dbh->do(q{ANALYZE});
 $dbh->commit();
 sleep 1;
 like ($cp->run("-w 0 --include=$testtbl"), qr{^$label OK}, $t);
 
 $t = qq{$S returns correct MRTG information (OK case)};
-like ($cp->run("--output=mrtg -w 0 --include=$testtbl"),
+like ($cp->run(qq{--output=mrtg -w 0 --include=$testtbl}),
   qr{^\d\n0\n\nDB: $dbname TABLE: public.$testtbl\n}, $t);
 
 $t = qq{$S returns correct MRTG information (fail case)};
-like($cp->run("--output=mrtg -w 0 --exclude=~.* --include=no_such_table"),
+like($cp->run(q{--output=mrtg -w 0 --exclude=~.* --include=no_such_table}),
   qr{0\n0\n\nDB: $dbname TABLE: \?\n}, $t);
 
 exit;

@@ -3,10 +3,10 @@
 ## Test the "logfile" action
 ## this does not test $S for syslog or stderr output
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 11;
 use lib 't','.';
 use CP_Testing;
@@ -44,7 +44,7 @@ $t = qq{$S returned expected text};
 like ($result, qr{\bOK\b}, $t);
 
 $t = qq{$S flagged missing logfile param};
-like ($cp->run(""), qr{^ERROR:.*redirected.*stderr}, $t);
+like ($cp->run(''), qr{^ERROR:.*redirected.*stderr}, $t);
 
 $t = qq{$S flagged erroneous logfile param};
 like ($result = $cp->run("--logfile $logfile" . 'x'), qr{^$label\b}, $t);

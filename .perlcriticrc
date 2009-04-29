@@ -23,6 +23,7 @@ stop_words = Mullane Nagios Slony nols salesrep psql dbname postgres USERNAME us
 [-Documentation::RequirePodAtEnd]
 [-Documentation::RequirePodSections]
 [-Documentation::RequirePODUseEncodingUTF8]
+[-Editor::RequireEmacsFileVariables]
 [-ErrorHandling::RequireCarping]
 [-ErrorHandling::RequireCheckingReturnValueOfEval]
 [-ErrorHandling::RequireUseOfExceptions]

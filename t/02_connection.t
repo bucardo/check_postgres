@@ -2,11 +2,10 @@
 
 ## Test the "connection" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
-use Cwd;
 use Test::More tests => 12;
 use lib 't','.';
 use CP_Testing;

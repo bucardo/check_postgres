@@ -2,10 +2,10 @@
 
 ## Test the "disk_space" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 7;
 use lib 't','.';
 use CP_Testing;

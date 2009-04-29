@@ -2,6 +2,7 @@
 
 ## Test the "version" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -106,8 +107,7 @@ is ($cp->run('--output=MRTG --mrtg=7.8'), qq{1\n0\n\n7.8.12\n}, $t);
 $t=qq{$S gives correct output for MRTG output};
 is ($cp->run('--output=MRTG --mrtg=7.8.12'), qq{1\n0\n\n7.8.12\n}, $t);
 
-local $dbh->{Warn} = 0;
-$dbh->do('DROP SCHEMA cptest CASCADE');
+$cp->drop_schema_if_exists($fakeschema);
 $cp->reset_path();
 
 exit;

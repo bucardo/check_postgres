@@ -4,11 +4,11 @@
 ## This is highly customized, so take with a grain of salt
 ## Requires ENV TEST_CRITIC or TEST_EVERYTHING to be set
 
+use 5.006;
 use strict;
 use warnings;
 use Test::More;
 use Data::Dumper;
-select(($|=1,select(STDERR),$|=1)[1]);
 
 my @testfiles;
 
@@ -50,13 +50,6 @@ for my $filename (qw{check_postgres.pl }) {
 		my $d = $v->description();
 		(my $policy = $v->policy()) =~ s/Perl::Critic::Policy:://;
 		my $source = $v->source();
-
-		next if $policy =~ /ProhibitInterpolationOfLiterals/; ## For now
-
-		## Allow skipping of items:
-		## next if $d =~ /Subroutine "looks_like_number" not exported/;
-		## next if $policy =~ /ProhibitCallsToUndeclaredSubs/;
-		##next if $policy =~ /ProhibitHardTabs/ and ($source =~ /sql = qq/i or $source =~ /qw[\(\/]/);
 
 		$vios++;
 		my $f = $v->filename();
@@ -123,6 +116,9 @@ for my $filename (sort @testfiles) {
 		## Skip common Test::More subroutines:
 		next if $d =~ $testmoreok;
 
+		## Specific 'test files' exceptions
+		next if $policy =~ /Modules::RequireVersionVar/o;
+
 		## Skip other specific items:
 		for my $k (sort keys %ok) {
 			next unless $f =~ /$k/;
@@ -131,16 +127,15 @@ for my $filename (sort @testfiles) {
 			}
 		}
 
-		## Skip included file package warning
-		next if $policy =~ /RequireExplicitPackage/ and $filename =~ /setup/;
-
 		$vios++;
 		my $l = $v->location();
 		my $line = $l->[0];
+		my $pbp = $v->explanation();
 		diag "\nFile: $f (line $line)\n";
 		diag "Vio: $d\n";
 		diag "Policy: $policy\n";
-		diag "Source: $source\n\n";
+		diag "Source: $source\n";
+		diag "PBP says: $pbp\n\n";
 	}
 	my $SPACE = ++$count < 9 ? ' ' : '';
 	if ($vios) {

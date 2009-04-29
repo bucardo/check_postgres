@@ -2,10 +2,10 @@
 
 ## Test the "locks" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 14;
 use lib 't','.';
 use CP_Testing;

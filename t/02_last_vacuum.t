@@ -2,10 +2,10 @@
 
 ## Test the "last_vacuum" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 14;
 use lib 't','.';
 use CP_Testing;
@@ -24,7 +24,7 @@ my $label = 'POSTGRES_LAST_VACUUM';
 my $S = q{Action 'last_vacuum'};
 
 $t = qq{$S self-identifies correctly};
-$result = $cp->run(qq{-w 0});
+$result = $cp->run(q{-w 0});
 like ($result, qr{^$label}, $t);
 
 $t = qq{$S identifies database};
@@ -50,10 +50,9 @@ for ('-1 second',
 }
 
 $t = qq{$S flags no-match-user};
-like ($cp->run(qq{-w 0 --includeuser=gandalf}), qr{No matching.*user}, $t);
+like ($cp->run(q{-w 0 --includeuser=gandalf}), qr{No matching.*user}, $t);
 
-local $dbh->{Warn};
-local $dbh->{AutoCommit} = 1;
+$dbh->{AutoCommit} = 1;
 $dbh->do('VACUUM');
 $cp->drop_table_if_exists($testtbl);
 $dbh->do(qq{CREATE TABLE $testtbl AS SELECT 123::INTEGER AS a FROM generate_series(1,200000)});
@@ -75,7 +74,7 @@ like ($cp->run("--output=mrtg -w 0 --exclude=~.* --include=$testtbl"),
 	  qr{\d+\n0\n\nDB: $dbname TABLE: public.$testtbl\n}, $t);
 
 $t = qq{$S returns correct MRTG information (fail case)};
-like ($cp->run("--output=mrtg -w 0 --exclude=~.* --include=no_such_table"),
+like ($cp->run('--output=mrtg -w 0 --exclude=~.* --include=no_such_table'),
 	  qr{0\n0\n\nDB: $dbname TABLE: \?\n}, $t);
 
 exit;

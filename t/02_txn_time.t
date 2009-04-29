@@ -2,10 +2,10 @@
 
 ## Test the "txn_time" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 14;
 use lib 't','.';
 use CP_Testing;
@@ -23,7 +23,7 @@ my $label = 'POSTGRES_TXN_TIME';
 my $S = q{Action 'txn_time'};
 
 $t = qq{$S self-identifies correctly};
-$result = $cp->run(qq{-w 0});
+$result = $cp->run(q{-w 0});
 like ($result, qr{^$label}, $t);
 
 $t = qq{$S identifies host};
@@ -46,29 +46,29 @@ for ('-1 second',
 }
 
 $t = qq{$S flags no-match-user};
-like ($cp->run(qq{-w 0 --includeuser=gandalf}), qr{No matching.*user}, $t);
+like ($cp->run(q{-w 0 --includeuser=gandalf}), qr{No matching.*user}, $t);
 
-if ($cp->run(qq{-w 0 --output=simple}) > 0) {
+if ($cp->run(q{-w 0 --output=simple}) > 0) {
     BAIL_OUT(qq{Cannot continue with "$S" test: txn_time count > 0\nIs someone else connected to your test database?});
 }
 
 $t = qq{$S finds no txn};
-like ($cp->run(qq{-w 0 --include=nosuchtablename}), qr/$label OK:.*No transactions/, $t);
+like ($cp->run(q{-w 0 --include=nosuchtablename}), qr/$label OK:.*No transactions/, $t);
 
 $t = qq{$S identifies no running txn};
 like ($result, qr{longest txn: 0s}, $t);
 
 $t .= ' (MRTG)';
-is ($cp->run(qq{--output=mrtg -w 0}), qq{0\n0\n\nDB: $dbname\n}, $t);
+is ($cp->run(q{--output=mrtg -w 0}), qq{0\n0\n\nDB: $dbname\n}, $t);
 
 $t = qq{$S identifies a one-second running txn};
 my $idle_dbh = $cp->test_database_handle();
 $idle_dbh->do('SELECT 1');
 sleep(1);
-like ($cp->run(qq{-w 0}), qr{longest txn: 1s}, $t);
+like ($cp->run(q{-w 0}), qr{longest txn: 1s}, $t);
 
 $t .= ' (MRTG)';
-like ($cp->run(qq{--output=mrtg -w 0}), qr{\d+\n0\n\nDB: $dbname\n}, $t);
+like ($cp->run(q{--output=mrtg -w 0}), qr{\d+\n0\n\nDB: $dbname\n}, $t);
 
 $idle_dbh->commit;
 

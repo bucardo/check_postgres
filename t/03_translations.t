@@ -2,6 +2,7 @@
 
 ## Run some sanity checks on the translations
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -58,7 +59,7 @@ for my $line (split /\n/ => $slurp) {
 	}
 }
 
-$t=qq{All msg() function calls are mapped to an 'en' string};
+$t=q{All msg() function calls are mapped to an 'en' string};
 my $ok = 1;
 for my $call (sort keys %call) {
 	if (!exists $msg{'en'}{$call}) {
@@ -69,7 +70,7 @@ for my $call (sort keys %call) {
 }
 $ok and pass $t;
 
-$t=qq{All msg() function calls are called with correct number of arguments};
+$t=q{All msg() function calls are called with correct number of arguments};
 $ok = 1;
 for my $call (sort keys %call) {
 	next if !exists $msg{'en'}{$call};
@@ -79,7 +80,7 @@ for my $call (sort keys %call) {
 		my $numargs = $l->{numargs};
 		for my $x (1..$numargs) {
 			if ($msg !~ /\$$x/) {
-				fail sprintf qq{Message '%s' called with %d %s as line %d, but no %s argument found in msg '%s'},
+				fail sprintf q{Message '%s' called with %d %s as line %d, but no %s argument found in msg '%s'},
 					$call, $numargs, 1==$numargs ? 'argument' : 'arguments', $line, '$'.$x, $msg;
 				$ok = 0;
 			}
@@ -93,7 +94,7 @@ for my $call (sort keys %call) {
 }
 $ok and pass $t;
 
-my %ok2notuse = map { $_, 1 }
+my %ok2notuse = map { $_ => 1 }
 	qw/time-week time-weeks time-month time-months time-year time-years/;
 
 my %ok2nottrans;
@@ -101,7 +102,7 @@ for my $msg (qw/timesync-diff time-minute time-minutes maxtime version version-o
 	$ok2nottrans{'fr'}{$msg} = 1;
 }
 
-$t=qq{All 'en' message strings are used somewhere in the code};
+$t=q{All 'en' message strings are used somewhere in the code};
 $ok = 1;
 for my $msg (sort keys %{$msg{'en'}}) {
 	if (!exists $call{$msg}) {
@@ -114,21 +115,21 @@ for my $msg (sort keys %{$msg{'en'}}) {
 $ok and pass $t;
 
 for my $l (sort keys %complete_langs) {
-	my $lang = $complete_langs{$l};
-	next if $lang eq 'English';
+	my $language = $complete_langs{$l};
+	next if $language eq 'English';
 
 	$ok = 1;
-	$t=qq{Language $lang contains all valid message strings};
+	$t=qq{Language $language contains all valid message strings};
 	for my $msg (sort keys %{$msg{'en'}}) {
 		if (! exists $msg{$l}{$msg}) {
-			fail qq{Message '$msg' does not appear in the $lang translations};
+			fail qq{Message '$msg' does not appear in the $language translations};
 			$ok = 0;
 		}
 	}
 	$ok and pass $t;
 
 	$ok = 1;
-	$t=qq{Language $lang contains no extra message strings};
+	$t=qq{Language $language contains no extra message strings};
 	for my $msg (sort keys %{$msg{$l}}) {
 		if (! exists $msg{'en'}{$msg}) {
 			fail qq{Message '$msg' does not appear in the 'en' messages!};
@@ -138,7 +139,7 @@ for my $l (sort keys %complete_langs) {
 	$ok and pass $t;
 
 	$ok = 1;
-	$t=qq{Language $lang messages have same number of args as 'en'};
+	$t=qq{Language $language messages have same number of args as 'en'};
 	for my $msg (sort keys %{$msg{'en'}}) {
 		next if ! exists $msg{$l}{$msg};
 		my $val = $msg{'en'}{$msg}->[1];
@@ -147,7 +148,7 @@ for my $l (sort keys %complete_langs) {
 		{
 			last if $val !~ /\$$x/;
 			if ($lval !~ /\$$x/) {
-				fail qq{Message '$msg' is missing \$$x argument for language $lang};
+				fail qq{Message '$msg' is missing \$$x argument for language $language};
 				$ok = 0;
 			}
 			$x++;
@@ -157,7 +158,7 @@ for my $l (sort keys %complete_langs) {
 	$ok and pass $t;
 
 	$ok = 1;
-	$t=qq{Language $lang messages appears to not be translated, but is not marked as such};
+	$t=qq{Language $language messages appears to not be translated, but is not marked as such};
 	for my $msg (sort keys %{$msg{'en'}}) {
 		next if ! exists $msg{$l}{$msg};
 		next if exists $ok2nottrans{$l}{$msg};
@@ -165,21 +166,21 @@ for my $l (sort keys %complete_langs) {
 		my $lval = $msg{$l}{$msg}->[1];
 		my $indent = $msg{$l}{$msg}->[0];
 		if ($val eq $lval and $indent) {
-			fail qq{Message '$msg' in language $lang appears to not be translated, but it not marked as such};
+			fail qq{Message '$msg' in language $language appears to not be translated, but it not marked as such};
 			$ok = 0;
 		}
 	}
 	$ok and pass $t;
 
 	$ok = 1;
-	$t=qq{Language $lang messages are marked as translated correctly};
+	$t=qq{Language $language messages are marked as translated correctly};
 	for my $msg (sort keys %{$msg{'en'}}) {
 		next if ! exists $msg{$l}{$msg};
 		my $val = $msg{'en'}{$msg}->[1];
 		my $lval = $msg{$l}{$msg}->[1];
 		my $indent = $msg{$l}{$msg}->[0];
 		if ($val ne $lval and !$indent) {
-			fail qq{Message '$msg' in language $lang appears to not be translated, but it not marked as such};
+			fail qq{Message '$msg' in language $language appears to not be translated, but it not marked as such};
 			$ok = 0;
 		}
 	}

@@ -2,10 +2,10 @@
 
 ## Test the "prepare_txns" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 10;
 use lib 't','.';
 use CP_Testing;
@@ -24,17 +24,17 @@ like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
 
 ## Clear any outstanding transactions
 $info = $dbh->selectall_arrayref('SELECT gid FROM pg_prepared_xacts');
-local $dbh->{AutoCommit} = 1;
+$dbh->{AutoCommit} = 1;
 for (@$info) {
 	my $gid = $_->[0];
 	$dbh->do("ROLLBACK PREPARED '$gid'");
 }
-local $dbh->{AutoCommit} = 0;
+$dbh->{AutoCommit} = 0;
 
 $t=qq{$S works when called without warning or critical};
 like ($cp->run(''), qr{^$label OK: .+No prepared transactions found}, $t);
 
-$dbh->do("PREPARE TRANSACTION '123'");
+$dbh->do(q{PREPARE TRANSACTION '123'});
 
 $t=qq{$S gives correct message when all databases excluded};
 like ($cp->run('--include=sbsp'), qr{^$label UNKNOWN: .+No matching databases found due to exclusion}, $t);
@@ -62,12 +62,12 @@ like ($cp->run('--output=MRTG'), qr{^\d\n0\n\npostgres\n$}, $t);
 
 ## Clear any outstanding transactions
 $info = $dbh->selectall_arrayref('SELECT gid FROM pg_prepared_xacts');
-local $dbh->{AutoCommit} = 1;
+$dbh->{AutoCommit} = 1;
 for (@$info) {
 	my $gid = $_->[0];
 	$dbh->do("ROLLBACK PREPARED '$gid'");
 }
-local $dbh->{AutoCommit} = 0;
+$dbh->{AutoCommit} = 0;
 
 exit;
 

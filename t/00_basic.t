@@ -2,13 +2,13 @@
 
 ## Simply test that the script compiles and gives a valid version
 
+use 5.006;
 use strict;
 use warnings;
 use Test::More tests => 2;
-select(($|=1,select(STDERR),$|=1)[1]);
 
 eval {
-	require 'check_postgres.pl';
+	require 'check_postgres.pl'; ## no critic (RequireBarewordIncludes)
 };
 like($@, qr{\-\-help}, 'check_postgres.pl compiles');
 

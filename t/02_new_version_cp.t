@@ -2,6 +2,7 @@
 
 ## Test the "new_version_cp" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;

@@ -2,6 +2,7 @@
 
 ## Test the "bloat" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -26,7 +27,7 @@ $t=qq{$S fails when called with an invalid option};
 like ($cp->run('-w=abc'), qr{must be a size or a percentage}, $t);
 like ($cp->run('-c=abc'), qr{must be a size or a percentage}, $t);
 
-local $dbh->{AutoCommit} = 1;
+$dbh->{AutoCommit} = 1;
 $dbh->do('VACUUM FULL');
 
 $t=qq{$S returns ok for no bloat};
@@ -44,11 +45,11 @@ for my $size (qw/bytes kilobytes megabytes gigabytes terabytes exabytes petabyte
 }
 
 $t=qq{$S returns correct message if no tables due to exclusion};
-like ($cp->run("-w=1% --include=foobar"), qr{^$label UNKNOWN:.+No matching relations found due to exclusion}, $t);
+like ($cp->run('-w=1% --include=foobar'), qr{^$label UNKNOWN:.+No matching relations found due to exclusion}, $t);
 
 ## Fresh database should have little bloat:
 $t=qq{$S returns okay for fresh database with no bloat};
-like ($cp->run("-w=1m"), qr{^$label OK: DB "postgres"}, $t);
+like ($cp->run('-w=1m'), qr{^$label OK: DB "postgres"}, $t);
 
 $cp->drop_table_if_exists($tname);
 $dbh->do("CREATE TABLE $tname AS SELECT 123::int AS foo FROM generate_series(1,10000)");

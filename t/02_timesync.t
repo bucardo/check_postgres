@@ -1,7 +1,8 @@
 #!perl
 
-## Test the "version" action
+## Test of the the "version" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -23,7 +24,7 @@ my $timepatt = qr{\d{4}-\d\d-\d\d \d\d:\d\d:\d\d};
 my $S = q{Action 'timesync'};
 
 $t = qq{$S self-identifies correctly};
-$result = $cp->run(qq{-w 100});
+$result = $cp->run(q{-w 100});
 like ($result, qr{^$label}, $t);
 
 $t = qq{$S identifies database};
@@ -68,11 +69,11 @@ for ('-1 second',
 }
 
 $t = qq{$S returns correct MRTG information (OK case)};
-like ($cp->run("--output=mrtg -w 1"),
+like ($cp->run(q{--output=mrtg -w 1}),
   qr{^\d+\n\d+\n\nDB: $dbname\n}, $t);
 
 $t = qq{$S returns correct MRTG information (fail case)};
-like($cp->run("--output=mrtg -w 1"),
+like($cp->run(q{--output=mrtg -w 1}),
   qr{^\d+\n\d+\n\nDB: $dbname\n}, $t);
 
 exit;

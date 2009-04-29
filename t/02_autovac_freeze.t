@@ -2,10 +2,10 @@
 
 ## Test the "autovac_freeze" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 8;
 use lib 't','.';
 use CP_Testing;
@@ -23,7 +23,7 @@ my $label = 'POSTGRES_AUTOVAC_FREEZE';
 my $S = q{Action 'autovac_freeze'};
 
 $t = qq{$S self-identifies correctly};
-$result = $cp->run(qq{-w 0%});
+$result = $cp->run(q{-w 0%});
 like ($result, qr{^$label}, $t);
 
 $t = qq{$S identifies host};

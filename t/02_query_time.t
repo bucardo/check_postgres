@@ -2,10 +2,10 @@
 
 ## Test the "query_time" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 13;
 use lib 't','.';
 use CP_Testing;
@@ -22,7 +22,7 @@ my $label = 'POSTGRES_QUERY_TIME';
 my $S = q{Action 'query_time'};
 
 $t = qq{$S self-identifies correctly};
-$result = $cp->run(qq{-w 0});
+$result = $cp->run(q{-w 0});
 like ($result, qr{^$label}, $t);
 
 $t = qq{$S identifies host};
@@ -59,6 +59,6 @@ if ($child == 0) {
 sleep 1;
 $dbh = $cp->test_database_handle();
 $t = qq{$S detects running query};
-like ($cp->run(qq{-w 1}), qr{$label WARNING:}, $t);
+like ($cp->run(q{-w 1}), qr{$label WARNING:}, $t);
 
 exit;

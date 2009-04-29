@@ -2,10 +2,10 @@
 
 ## Test the "checkpoint" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 13;
 use lib 't','.';
 use CP_Testing;

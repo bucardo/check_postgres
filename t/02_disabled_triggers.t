@@ -2,10 +2,10 @@
 
 ## Test the "disabled_triggers" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 13;
 use lib 't','.';
 use CP_Testing;
@@ -35,7 +35,7 @@ $t = qq{$S identifies host};
 like ($result, qr{host:$host}, $t);
 
 $t = qq{$S accepts valid -w input};
-like ($cp->run(qq{-w 1}), qr/$label OK/, $t);
+like ($cp->run(q{-w 1}), qr/$label OK/, $t);
 
 $t = qq{$S flags invalid -w input};
 for (-1, 0, 'a') {
@@ -43,7 +43,7 @@ for (-1, 0, 'a') {
 }
 
 $t = qq{$S accepts valid -c input};
-like ($cp->run(qq{-c 1}), qr/$label OK/, $t);
+like ($cp->run(q{-c 1}), qr/$label OK/, $t);
 
 $t = qq{$S flags invalid -c input};
 for (-1, 0, 'a') {
@@ -73,9 +73,9 @@ $t = qq{$S counts disabled triggers};
 $dbh->do(qq{ALTER TABLE "$testtbl" DISABLE TRIGGER "${testtrig_prefix}1"});
 $dbh->do(qq{ALTER TABLE "$testtbl" DISABLE TRIGGER "${testtrig_prefix}2"});
 $dbh->commit;
-like ($cp->run(qq{-c 2}), qr/$label CRITICAL:.*?Disabled triggers: 2 /, $t);
+like ($cp->run(q{-c 2}), qr/$label CRITICAL:.*?Disabled triggers: 2 /, $t);
 
 $t .= ' (MRTG)';
-is ($cp->run(qq{-c 2 --output=mrtg}), qq{2\n0\n\n\n}, $t);
+is ($cp->run(q{-c 2 --output=mrtg}), qq{2\n0\n\n\n}, $t);
 
 exit;

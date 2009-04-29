@@ -2,6 +2,7 @@
 
 ## Test the "new_version_pg" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;

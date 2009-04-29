@@ -7,7 +7,6 @@ use 5.006;
 use strict;
 use warnings;
 use Test::More;
-select(($|=1,select(STDERR),$|=1)[1]);
 
 my $sigfile = 'check_postgres.pl.asc';
 

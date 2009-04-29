@@ -2,6 +2,7 @@
 
 ## Test the "database_size" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -64,18 +65,18 @@ $dbh->do("CREATE DATABASE blargy WITH OWNER $user");
 $dbh->{AutoCommit} = 0;
 like ($cp->run("--includeuser $user -w 10g"), qr{^POSTGRES_DATABASE_SIZE OK:.+ blargy}, $t);
 $dbh->{AutoCommit} = 1;
-$dbh->do("DROP DATABASE blargy");
+$dbh->do('DROP DATABASE blargy');
 $dbh->{AutoCommit} = 0;
 
 $t=qq{$S with includeuser option returns nothing};
-like ($cp->run("--includeuser mycatbeda -w 10g"), qr{^POSTGRES_DATABASE_SIZE OK:.+ }, $t);
+like ($cp->run('--includeuser mycatbeda -w 10g'), qr{^POSTGRES_DATABASE_SIZE OK:.+ }, $t);
 
 $t=qq{$S has critical option trump the warning option};
 like ($cp->run('-w 1 -c 1'), qr{^POSTGRES_DATABASE_SIZE CRITICAL}, $t);
 like ($cp->run('--critical=1 --warning=0'), qr{^POSTGRES_DATABASE_SIZE CRITICAL}, $t);
 
 $t=qq{$S returns correct MRTG output when no rows found};
-like ($cp->run("--output=MRTG -w 10g --includeuser nosuchuser"), qr{^-1}, $t);
+like ($cp->run('--output=MRTG -w 10g --includeuser nosuchuser'), qr{^-1}, $t);
 
 $t=qq{$S returns correct MRTG output when rows found};
 like ($cp->run('--output=MRTG -w 10g'), qr{\d+\n0\n\nDB: postgres\n}s, $t);
@@ -99,6 +100,6 @@ $t=qq{$S returned correct performance data with include};
 like ($cp->run('-w 5g --include=postgres'), qr{ \| time=\d\.\d\d  postgres=\d+}, $t);
 
 $t=qq{$S with includeuser option returns nothing};
-like ($cp->run("--includeuser postgres --includeuser mycatbeda -w 10g"), qr{No matching entries found due to user exclusion}, $t);
+like ($cp->run('--includeuser postgres --includeuser mycatbeda -w 10g'), qr{No matching entries found due to user exclusion}, $t);
 
 exit;

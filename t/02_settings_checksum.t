@@ -2,10 +2,10 @@
 
 ## Test the "settings_checksum" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 8;
 use lib 't','.';
 use CP_Testing;

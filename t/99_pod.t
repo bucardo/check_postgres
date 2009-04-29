@@ -2,12 +2,10 @@
 
 ## Check our Pod, requires Test::Pod
 
+use 5.006;
 use strict;
 use warnings;
-use Test::More;
-select(($|=1,select(STDERR),$|=1)[1]);
-
-plan tests => 2;
+use Test::More tests => 2;
 
 my $PODVERSION = '0.95';
 eval {
@@ -36,9 +34,9 @@ SKIP: {
 
 	my $trusted_names  =
 		[
-		 qr{^CLONE$},
-		 qr{^driver$},
-		 qr{^constant$},
+		 qr{^CLONE$},    ## no critic (ProhibitFixedStringMatches)
+		 qr{^driver$},   ## no critic (ProhibitFixedStringMatches)
+		 qr{^constant$}, ## no critic (ProhibitFixedStringMatches)
 		];
 	pod_coverage_ok('check_postgres', {trustme => $trusted_names}, 'check_postgres.pl pod coverage okay');
 }

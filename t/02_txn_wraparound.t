@@ -2,10 +2,10 @@
 
 ## Test the "txn_wraparound" action
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 use Test::More tests => 14;
 use lib 't','.';
 use CP_Testing;
@@ -38,7 +38,7 @@ $t = qq{$S identifies host};
 like ($result, qr{host:$host}, $t);
 
 $t = qq{$S accepts valid -w input};
-like ($cp->run(qq{-w 1000000}), qr/$label OK/, $t);
+like ($cp->run(q{-w 1000000}), qr/$label OK/, $t);
 
 $t = qq{$S flags invalid -w input};
 for (-1, 0, 'a') {
@@ -46,7 +46,7 @@ for (-1, 0, 'a') {
 }
 
 $t = qq{$S accepts valid -c input};
-like ($cp->run(qq{-c 1000000}), qr/$label OK/, $t);
+like ($cp->run(q{-c 1000000}), qr/$label OK/, $t);
 
 $t = qq{$S flags invalid -c input};
 for (-1, 0, 'a') {
