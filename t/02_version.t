@@ -107,7 +107,7 @@ is ($cp->run('--output=MRTG --mrtg=7.8'), qq{1\n0\n\n7.8.12\n}, $t);
 $t=qq{$S gives correct output for MRTG output};
 is ($cp->run('--output=MRTG --mrtg=7.8.12'), qq{1\n0\n\n7.8.12\n}, $t);
 
-$cp->drop_schema_if_exists($fakeschema);
+$cp->drop_schema_if_exists();
 $cp->reset_path();
 
 exit;

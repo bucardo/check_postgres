@@ -2,6 +2,7 @@ package CP_Testing;
 
 ## Common methods used by the other tests for check_postgres.pl
 
+use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -88,6 +89,7 @@ sub test_database_handle {
 		print $cfh qq{max_connections = 10\n};
 		print $cfh qq{max_prepared_transactions = 5\n};
 		print $cfh qq{autovacuum = off\n};
+		print $cfh qq{stats_command_string = on\n};
 		print $cfh "\n";
 		close $cfh or die qq{Could not close "$cfile": $!\n};
 
@@ -141,7 +143,7 @@ sub test_database_handle {
 	  SCAN: {
 			seek $logfh, 0, 0;
 			while (<$logfh>) {
-				if (/ready to accept connections/) {
+				if (/ready to accept connections/ or /database system is ready/) {
 					last SCAN;
 				}
 			}
@@ -181,17 +183,18 @@ sub test_database_handle {
 	$dbh->{AutoCommit} = 1;
 	$dbh->{RaiseError} = 0;
 	$dbh->do("CREATE USER $dbuser SUPERUSER");
-	$dbh->do("CREATE USER sixpack NOSUPERUSER CREATEDB");
-	$dbh->do("CREATE USER readonly NOSUPERUSER NOCREATEDB");
-	$dbh->do("ALTER USER readonly SET default_transaction_read_only = 1");
-	$dbh->do("CREATE DATABASE beedeebeedee");
-	$dbh->do("CREATE DATABASE ardala");
-    $dbh->do("CREATE LANGUAGE plpgsql");
+	$dbh->do('CREATE USER sixpack NOSUPERUSER CREATEDB');
+	$dbh->do('CREATE USER readonly NOSUPERUSER NOCREATEDB');
+	$dbh->do('ALTER USER readonly SET default_transaction_read_only = 1');
+	$dbh->do('CREATE DATABASE beedeebeedee');
+	$dbh->do('CREATE DATABASE ardala');
+    $dbh->do('CREATE LANGUAGE plpgsql');
+    $dbh->do('CREATE LANGUAGE plperlu');
 	$dbh->{AutoCommit} = 0;
 	$dbh->{RaiseError} = 1;
 
 	if (! exists $self->{keep_old_schema}) {
-		my $SQL = "SELECT count(*) FROM pg_namespace WHERE nspname = " . $dbh->quote($fakeschema);
+		my $SQL = 'SELECT count(*) FROM pg_namespace WHERE nspname = ' . $dbh->quote($fakeschema);
 		my $count = $dbh->selectall_arrayref($SQL)->[0][0];
 		if ($count) {
 			local $dbh->{Warn} = 0;
@@ -206,7 +209,7 @@ sub test_database_handle {
 		eval { $tmp_dbh = DBI->connect($tmp_dsn, @superdsn[1..$#superdsn]) };
 		if ($@) {
 			local($dbh->{AutoCommit}) = 1;
-			$dbh->do("CREATE DATABASE " . $arg->{dbname});
+			$dbh->do('CREATE DATABASE ' . $arg->{dbname});
 			eval { $tmp_dbh = DBI->connect($tmp_dsn, @superdsn[1..$#superdsn]) };
 			die $@ if $@;
 		}
@@ -221,8 +224,8 @@ sub test_database_handle {
 
 	## Sanity check
 	$dbh->do("ALTER USER $dbuser SET search_path = public");
-	$dbh->do("SET search_path = public");
-	$dbh->do("COMMIT");
+	$dbh->do('SET search_path = public');
+	$dbh->do('COMMIT');
 
 	return $dbh;
 
@@ -246,9 +249,9 @@ sub run {
 
 	my $double = $action =~ s/DB2// ? 1 : 0;
 
-	my $dbhost = $self->{dbhost}   || die "No dbhost?";
-	my $dbuser = $self->{testuser} || die "No testuser?";
-	my $dbname = $self->{dbname}   || die "No dbname?";
+	my $dbhost = $self->{dbhost}   || die 'No dbhost?';
+	my $dbuser = $self->{testuser} || die 'No testuser?';
+	my $dbname = $self->{dbname}   || die 'No dbname?';
 	my $com = qq{perl check_postgres.pl --action=$action --dbhost="$dbhost" --dbuser=$dbuser};
     if ($extra =~ s/--nodbname//) {
     }
@@ -345,6 +348,7 @@ sub create_fake_pg_table {
 
 	$dbh->do("ALTER USER $dbuser SET search_path = $fakeschema, public, pg_catalog");
 	$dbh->commit();
+	return;
 
 } ## end of create_fake_pg_table
 
@@ -365,6 +369,7 @@ sub set_fake_schema {
 
 	$dbh->do("ALTER USER $dbuser SET search_path = $fakeschema, public, pg_catalog");
 	$dbh->commit();
+	return;
 
 } ## end of set_fake_schema
 
@@ -399,9 +404,10 @@ sub drop_schema_if_exists {
 
 	my ($self,$name) = @_;
 	my $dbh = $self->{dbh} || die;
+	$name ||= $fakeschema;
 
 	if (! exists $self->{keep_old_schema}) {
-		my $SQL = "SELECT count(*) FROM pg_namespace WHERE nspname = " . $dbh->quote($name);
+		my $SQL = 'SELECT count(*) FROM pg_namespace WHERE nspname = ' . $dbh->quote($name);
 		my $count = $dbh->selectall_arrayref($SQL)->[0][0];
 		if ($count) {
 			local $dbh->{Warn};
@@ -427,7 +433,7 @@ sub drop_table_if_exists {
 
 	my $safetable = $dbh->quote($name);
 	my $safeschema = $dbh->quote($schema);
-	my $SQL = $schema 
+	my $SQL = $schema
 		? q{SELECT count(*) FROM pg_class c JOIN pg_namespace n ON (n.oid = c.relnamespace) }.
 		  qq{WHERE relkind = 'r' AND nspname = $safeschema AND relname = $safetable}
         : qq{SELECT count(*) FROM pg_class WHERE relkind='r' AND relname = $safetable};
@@ -470,6 +476,7 @@ sub drop_sequence_if_exists {
 		$dbh->do("DROP SEQUENCE $name");
 		$dbh->commit();
 	}
+	return;
 
 } ## end of drop_sequence_if_exists
 
@@ -531,6 +538,7 @@ sub fake_self_version {
 	print $fh $slurp;
 	truncate $fh, tell($fh);
 	close $fh or die qq{Could not close "$file": $!\n};
+	return;
 
 } ## end of fake_self_version
 
@@ -547,6 +555,7 @@ sub restore_self_version {
 	print $fh $slurp;
 	truncate $fh, tell($fh);
 	close $fh or die qq{Could not close "$file": $!\n};
+	return;
 
 } ## end of restore_self_version
 
@@ -570,7 +579,25 @@ sub drop_all_tables {
 		$dbh->do("DROP TABLE $tab CASCADE");
 	}
 	$dbh->commit();
+	return;
 
 } ## end of drop_all_tables
+
+sub database_sleep {
+
+	my ($self,$dbh,$time) = @_;
+
+	my $ver = $dbh->{pg_server_version};
+
+	if ($ver < 80200) {
+		my $SQL = q{CREATE OR REPLACE FUNCTION pg_sleep(float) RETURNS VOID LANGUAGE plperlu AS 'select(undef,undef,undef,shift)'};
+		$dbh->do($SQL);
+		$dbh->commit();
+	}
+	$dbh->do(qq{SELECT pg_sleep($time)});
+	return;
+
+
+} ## end of database_sleep
 
 1;

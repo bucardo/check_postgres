@@ -19,9 +19,15 @@ my $cp = CP_Testing->new( {default_action => 'last_vacuum'} );
 $dbh = $cp->test_database_handle();
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
+my $ver = $dbh->{pg_server_version};
+
 my $label = 'POSTGRES_LAST_VACUUM';
 
 my $S = q{Action 'last_vacuum'};
+
+SKIP:
+{
+	$ver < 80200 and skip 'Cannot test autovac_freeze on old Postgres versions', 14;
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(q{-w 0});
@@ -76,5 +82,7 @@ like ($cp->run("--output=mrtg -w 0 --exclude=~.* --include=$testtbl"),
 $t = qq{$S returns correct MRTG information (fail case)};
 like ($cp->run('--output=mrtg -w 0 --exclude=~.* --include=no_such_table'),
 	  qr{0\n0\n\nDB: $dbname TABLE: \?\n}, $t);
+
+}
 
 exit;

@@ -34,7 +34,7 @@ like ($result, qr{^$label}, $t);
 $t = qq{$S identifies host};
 like ($result, qr{host:$host}, $t);
 
-$t = qq{$S correctly identified logfile};
+$t = qq{$S correctly identifies logfile};
 like ($result, qr{logs to: $logfile}, $t);
 
 $t = qq{$S correcly identifies host};

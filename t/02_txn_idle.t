@@ -30,19 +30,21 @@ $t = qq{$S identifies host};
 like ($result, qr{host:$host}, $t);
 
 $t = qq{$S accepts valid -w input};
-for my $name ('1 second',
+for my $arg (
+     '1 second',
      '1 minute',
      '1 hour',
      '1 day'
     ) {
-   like ($cp->run(qq{-w "$_"}), qr/^$label/, "$t ($name)");
+   like ($cp->run(qq{-w "$arg"}), qr{^$label}, "$t ($arg)");
 }
 
 $t = qq{$S rejects invalid -w input};
-for ('-1 second',
+for my $arg (
+     '-1 second',
      'abc'
     ) {
-   like ($cp->run(qq{-w "$_"}), qr/^ERROR:.*?must be a valid time/, $t . " ($_)");
+   like ($cp->run(qq{-w "$arg"}), qr{^ERROR:.*?must be a valid time}, "$t ($arg)");
 }
 
 $t = qq{$S flags no-match-user};

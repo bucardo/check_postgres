@@ -19,9 +19,15 @@ my $cp = CP_Testing->new( {default_action => 'last_analyze'} );
 $dbh = $cp->test_database_handle();
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
+my $ver = $dbh->{pg_server_version};
+
 my $label = 'POSTGRES_LAST_ANALYZE';
 
 my $S = q{Action 'last_analyze'};
+
+SKIP:
+{
+	$ver < 80200 and skip 'Cannot test autovac_freeze on old Postgres versions', 14;
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(q{-w 0});
@@ -75,5 +81,7 @@ like ($cp->run(qq{--output=mrtg -w 0 --include=$testtbl}),
 $t = qq{$S returns correct MRTG information (fail case)};
 like($cp->run(q{--output=mrtg -w 0 --exclude=~.* --include=no_such_table}),
   qr{0\n0\n\nDB: $dbname TABLE: \?\n}, $t);
+
+}
 
 exit;

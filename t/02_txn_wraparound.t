@@ -46,10 +46,10 @@ for my $arg (-1, 0, 'a') {
 }
 
 $t = qq{$S rejects warning values 2 billion or higher};
-like ($cp->run(qq{-w 2000000000}), qr{ERROR:.+less than 2 billion}, $t);
+like ($cp->run(q{-w 2000000000}), qr{ERROR:.+less than 2 billion}, $t);
 
 $t = qq{$S rejects critical values 2 billion or higher};
-like ($cp->run(qq{-c 2200000000}), qr{ERROR:.+less than 2 billion}, $t);
+like ($cp->run(q{-c 2200000000}), qr{ERROR:.+less than 2 billion}, $t);
 
 $t = qq{$S accepts valid -c input};
 like ($cp->run(q{-c 1400000000}), qr{$label OK}, $t);

@@ -18,9 +18,15 @@ $dbh = $cp->test_database_handle();
 $dbh->{AutoCommit} = 1;
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
+my $ver = $dbh->{pg_server_version};
+
 my $label = 'POSTGRES_AUTOVAC_FREEZE';
 
 my $S = q{Action 'autovac_freeze'};
+
+SKIP:
+{
+	$ver < 80200 and skip 'Cannot test autovac_freeze on old Postgres versions', 8;
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(q{-w 0%});
@@ -46,3 +52,7 @@ like ($cp->run('-w 99%'), qr{$label OK:.*ardala=\d+%.*?beedeebeedee=\d+%.*?postg
 
 $t=qq{$S produces MRTG output};
 like ($cp->run('--output=mrtg -w 99%'), qr{0\n\d+\n\nardala \| beedeebeedee \| postgres \| template1\n}, $t);
+
+}
+
+exit;

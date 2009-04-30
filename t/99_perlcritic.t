@@ -25,14 +25,14 @@ else {
 	opendir my $dir, 't' or die qq{Could not open directory 't': $!\n};
 	@testfiles = map { "t/$_" } grep { /^.+\.(t|pl)$/ } readdir $dir;
 	closedir $dir;
-	plan tests => 3+@testfiles;
+	plan tests => 4+@testfiles;
 }
 ok(@testfiles, 'Found files in test directory');
 
 ## Check some non-test files
 my $critic = Perl::Critic->new(-severity => 1, '-profile-strictness' => 'quiet');
 
-for my $filename (qw{check_postgres.pl }) {
+for my $filename (qw{check_postgres.pl t/CP_Testing.pm}) {
 
 	if ($ENV{TEST_CRITIC_SKIPNONTEST}) {
 		pass qq{Skipping non-test file "$filename"};

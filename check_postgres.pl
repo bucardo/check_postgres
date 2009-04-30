@@ -1760,7 +1760,7 @@ sub verify_version {
 			ndie msg('die-nosetting', $setting);
 		}
 		my $val = $info2->{db}[0]{slurp};
-		if ($val !~ /^on\b/) {
+		if ($val !~ /^\s*on\b/) {
 			ndie msg('die-noset', $action, $setting);
 		}
 	}

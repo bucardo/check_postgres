@@ -51,14 +51,18 @@ for ('-1 second',
 my $child = fork();
 if ($child == 0) {
     my $kiddbh = $cp->test_database_handle();
-    $kiddbh->do(q{SELECT pg_sleep(3)});
+	$cp->database_sleep($kiddbh, 3);
+	$kiddbh->rollback();
     $kiddbh->disconnect;
     exit;
 }
 
 sleep 1;
+$dbh->disconnect();
 $dbh = $cp->test_database_handle();
 $t = qq{$S detects running query};
 like ($cp->run(q{-w 1}), qr{$label WARNING:}, $t);
+$dbh->rollback();
+$dbh->disconnect();
 
 exit;
