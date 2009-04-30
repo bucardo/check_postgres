@@ -62,7 +62,6 @@ $dbh->{AutoCommit} = 1;
 $dbh->do('VACUUM');
 $cp->drop_table_if_exists($testtbl);
 $dbh->do(qq{CREATE TABLE $testtbl AS SELECT 123::INTEGER AS a FROM generate_series(1,200000)});
-$dbh->commit();
 
 like ($cp->run("-w 0 --exclude=~.* --include=$testtbl"),
 	  qr{No matching tables found due to exclusion}, $t);

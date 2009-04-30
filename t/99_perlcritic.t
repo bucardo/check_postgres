@@ -51,6 +51,11 @@ for my $filename (qw{check_postgres.pl t/CP_Testing.pm}) {
 		(my $policy = $v->policy()) =~ s/Perl::Critic::Policy:://;
 		my $source = $v->source();
 
+		if ($filename =~ /test/io) {
+			next VIO if $policy =~ /RequireArgUnpacking/o
+				or $policy =~ /RequireVersionVar/o;
+		}
+
 		$vios++;
 		my $f = $v->filename();
 		my $l = $v->location();

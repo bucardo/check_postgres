@@ -83,6 +83,6 @@ $t=qq{$S gives normal critical output};
 like ($cp->run('--critical=5%'), qr{^$label CRITICAL: .+fsm page slots used: 52288 of \d+}, $t);
 
 $t=qq{$S gives normal output for MRTG};
-is ($cp->run('--critical=5% --output=MRTG'), qq{34\n52288\n\n\n}, $t);
+is ($cp->run('--critical=5% --output=MRTG'), qq{52\n52288\n\n\n}, $t);
 
 exit;

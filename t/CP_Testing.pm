@@ -108,7 +108,6 @@ sub test_database_handle {
 		close $cfh or die qq{Could not close "$cfile": $!\n};
 
 		mkdir "$dbdir/data space/socket";
-
 	}
 
 	## See if the database is already running.
@@ -143,7 +142,17 @@ sub test_database_handle {
 			: $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/pg_ctl"
 			:                  'pg_ctl';
 
-		$com = qq{LC_ALL=en LANG=C $pg_ctl -o '-k socket' -l $logfile -D "$dbdir/data space" start};
+		if (qx{$pg_ctl --version} !~ /(\d+)\.(\d+)/) {
+			die qq{Could not determine the version of pg_ctl in use!\n};
+		}
+		my ($maj,$min) = ($1,$2);
+
+		my $sockdir = 'socket';
+		if ($maj < 8 or ($maj==8 and $min < 1)) {
+			$sockdir = qq{"$dbdir/data space/socket"};
+		}
+
+		$com = qq{LC_ALL=en LANG=C $pg_ctl -o '-k $sockdir' -l $logfile -D "$dbdir/data space" start};
 		eval {
 			$info = qx{$com};
 		};
@@ -168,6 +177,19 @@ sub test_database_handle {
 			redo;
 		}
 		close $logfh or die qq{Could not close "$logfile": $!\n};
+
+		if ($maj < 8 or ($maj==8 and $min < 1)) {
+			my $here = cwd();
+			my $host = "$here/$dbdir/data space/socket";
+			my $COM = qq{psql -d template1 -q -h "$host" -c "CREATE DATABASE postgres"};
+			system $COM;
+			my $newuser = $self->{testuser};
+			$COM = qq{psql -d template1 -q -h "$host" -c "CREATE USER $newuser"};
+			system $COM;
+			my $SQL = q{UPDATE pg_shadow SET usesuper='t' WHERE usename = 'check_postgres_testing'};
+			$COM = qq{psql -d template1 -q -h "$host" -c "$SQL"};
+			system $COM;
+		}
 
 	} ## end of needs startup
 
