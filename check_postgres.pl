@@ -3893,7 +3893,8 @@ sub check_txn_wraparound {
 
 	## Check how close to transaction wraparound we are on all databases
 	## Supports: Nagios, MRTG
-	## Warning and critical are the number of transactions left
+	## Warning and critical are the number of transactions performed
+	## Thus, anything *over* that number will trip the alert
 	## See: http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND
 	## It makes no sense to run this more than once on the same cluster
 
@@ -5823,11 +5824,10 @@ time and the database time. The fourth line returns the name of the database.
 =head2 B<txn_wraparound>
 
 (C<symlink: check_postgres_txn_wraparound>) Checks how close to transaction wraparound one or more databases are getting. 
-The I<--warning> and I<--critical> options indicate the number of transactions 
-left, and must be a positive integer. If either option is not given, the default 
-values of 1.3 and 1.4 billion are used. There is no need to run this command 
-more than once per database cluster. For a more detailed discussion of what this 
-number represents and what to do about it, please visit the page 
+The I<--warning> and I<--critical> options indicate the number of transactions done, and must be a positive integer. 
+If either option is not given, the default values of 1.3 and 1.4 billion are used. There is no need to run this command 
+more than once per database cluster. For a more detailed discussion of what this number represents and what to do about 
+it, please visit the page 
 L<http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND>
 
 The warning and critical values can have underscores in the number for legibility, as Perl does.
@@ -5836,11 +5836,11 @@ Example 1: Check the default values for the localhost database
 
   check_postgres_txn_wraparound --host=localhost
 
-Example 2: Check port 6000 and give a critical at 1.7 billion transactions left:
+Example 2: Check port 6000 and give a critical when 1.7 billion transactions are hit:
 
   check_postgres_txn_wraparound --port=6000 --critical=1_700_000_000
 
-For MRTG output, returns the highest number of transactions for all databases on line one, 
+For MRTG output, returns the highest number of transactions for all databases on line one,
 while line 4 indicates which database it is.
 
 =head2 B<wal_files>
