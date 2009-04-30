@@ -262,6 +262,8 @@ our %msg = (
 	'txntime-fail'       => q{Query failed},
 	'txntime-msg'        => q{longest txn: $1s},
 	'txntime-none'       => q{No transactions},
+	'txnwrap-wbig'       => q{The 'warning' value must be less than 2 billion},
+	'txnwrap-cbig'       => q{The 'critical' value must be less than 2 billion},
 	'unknown-error'      => q{Unknown error},
 	'usage'              => qq{\nUsage: \$1 <options>\n Try "\$1 --help" for a complete list of options\n\n},
 	'vac-msg'            => q{DB: $1 TABLE: $2},
@@ -451,6 +453,8 @@ our %msg = (
 	'txntime-fail'       => q{Échec de la requête},
 	'txntime-msg'        => q{Transaction la plus longue : $1s},
 	'txntime-none'       => q{Aucune transaction},
+'txnwrap-wbig'       => q{The 'warning' value must be less than 2 billion},
+'txnwrap-cbig'       => q{The 'critical' value must be less than 2 billion},
 	'unknown-error'      => q{erreur inconnue},
 	'usage'              => qq{\nUsage: \$1 <options>\n Essayez « \$1 --help » pour liste complète des options\n\n},
 	'vac-msg'            => q{Base de données : $1 Table : $2},
@@ -3904,6 +3908,13 @@ sub check_txn_wraparound {
 		  default_warning  => 1_300_000_000,
 		  default_critical => 1_400_000_000,
 		  });
+
+	if ($warning and $warning >= 2_000_000_000) {
+		ndie msg('txnwrap-wbig');
+	}
+	if ($critical and $critical >= 2_000_000_000) {
+		ndie msg('txnwrap-cbig');
+	}
 
 	$SQL = q{SELECT datname, age(datfrozenxid) FROM pg_database WHERE datallowconn ORDER BY 1, 2};
 	my $info = run_command($SQL, { regex => qr[\w+\s+\|\s+\d+] } );
