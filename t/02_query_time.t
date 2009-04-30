@@ -49,10 +49,10 @@ for ('-1 second',
 }
 
 my $ver = $dbh->{pg_server_version};
-if ($ver < 80100) {
+if ($ver < 80200) {
 
   SKIP: {
-		skip 'Cannot test query_time on Postgres 8.0 or lower', 1;
+		skip 'Cannot test query_time on Postgres 8.1 or lower', 1;
 	}
 
 	exit;
