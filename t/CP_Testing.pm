@@ -87,9 +87,23 @@ sub test_database_handle {
 		print $cfh qq{\n\n## check_postgres.pl testing parameters\n};
 		print $cfh qq{listen_addresses = ''\n};
 		print $cfh qq{max_connections = 10\n};
-		print $cfh qq{max_prepared_transactions = 5\n};
-		print $cfh qq{autovacuum = off\n};
-		print $cfh qq{stats_command_string = on\n};
+		print $cfh qq{max_fsm_pages = 99999\n};
+
+		## Grab the version for finicky items
+		if (qx{$initdb --version} !~ /(\d+)\.(\d+)/) {
+			die qq{Could not determine the version of initdb in use!\n};
+		}
+		my ($maj,$min) = ($1,$2);
+
+		if ($maj < 8 or ($maj==8 and $min <= 1)) {
+			print $cfh qq{stats_command_string = on\n};
+		}
+
+		if ($maj > 8 or ($maj==8 and $min >= 1)) {
+			print $cfh qq{autovacuum = off\n};
+			print $cfh qq{max_prepared_transactions = 5\n};
+		}
+
 		print $cfh "\n";
 		close $cfh or die qq{Could not close "$cfile": $!\n};
 
@@ -197,8 +211,9 @@ sub test_database_handle {
 		my $SQL = 'SELECT count(*) FROM pg_namespace WHERE nspname = ' . $dbh->quote($fakeschema);
 		my $count = $dbh->selectall_arrayref($SQL)->[0][0];
 		if ($count) {
-			local $dbh->{Warn} = 0;
+			$dbh->{Warn} = 0;
 			$dbh->do("DROP SCHEMA $fakeschema CASCADE");
+			$dbh->{Warn} = 1;
 		}
 	}
 
@@ -341,7 +356,6 @@ sub create_fake_pg_table {
 	$dbh->do("CREATE TABLE $fakeschema.$name AS SELECT * FROM $name$funcargs LIMIT 0");
 
 	if ($args) {
-		local $dbh->{Warn};
 		$self->drop_function_if_exists($fakeschema,$name,$args);
 		$dbh->do("CREATE FUNCTION $fakeschema.$name($args) RETURNS SETOF TEXT LANGUAGE SQL AS 'SELECT * FROM $fakeschema.$name; '");
 	}
@@ -410,8 +424,9 @@ sub drop_schema_if_exists {
 		my $SQL = 'SELECT count(*) FROM pg_namespace WHERE nspname = ' . $dbh->quote($name);
 		my $count = $dbh->selectall_arrayref($SQL)->[0][0];
 		if ($count) {
-			local $dbh->{Warn};
+			$dbh->{Warn} = 0;
 			$dbh->do("DROP SCHEMA $name CASCADE");
+			$dbh->{Warn} = 1;
 			$dbh->commit();
 		}
 	}
@@ -439,8 +454,9 @@ sub drop_table_if_exists {
         : qq{SELECT count(*) FROM pg_class WHERE relkind='r' AND relname = $safetable};
 	my $count = $dbh->selectall_arrayref($SQL)->[0][0];
 	if ($count) {
-		local $dbh->{Warn};
+		$dbh->{Warn} = 0;
 		$dbh->do("DROP TABLE $name CASCADE");
+		$dbh->{Warn} = 1;
 		$dbh->commit();
 	}
 	return;
@@ -456,8 +472,9 @@ sub drop_view_if_exists {
 	my $SQL = q{SELECT count(*) FROM pg_class WHERE relkind='v' AND relname = } . $dbh->quote($name);
 	my $count = $dbh->selectall_arrayref($SQL)->[0][0];
 	if ($count) {
-		local $dbh->{Warn};
+		$dbh->{Warn} = 0;
 		$dbh->do("DROP VIEW $name");
+		$dbh->{Warn} = 1;
 		$dbh->commit();
 	}
 	return;
@@ -573,11 +590,12 @@ sub drop_all_tables {
 
 	my $self = shift;
 	my $dbh = $self->{dbh} || die;
-	local $dbh->{Warn} = 0;
+	$dbh->{Warn} = 0;
 	my @info = $dbh->tables('','public','','TABLE');
 	for my $tab (@info) {
 		$dbh->do("DROP TABLE $tab CASCADE");
 	}
+	$dbh->{Warn} = 1;
 	$dbh->commit();
 	return;
 

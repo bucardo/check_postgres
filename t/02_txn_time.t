@@ -22,6 +22,14 @@ my $label = 'POSTGRES_TXN_TIME';
 
 my $S = q{Action 'txn_time'};
 
+my $ver = $dbh->{pg_server_version};
+if ($ver < 80300) {
+  SKIP: {
+		skip 'Cannot test txn_time on Postgres 8.2 or older', 14;
+	}
+	exit;
+}
+
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(q{-w 0});
 like ($result, qr{^$label}, $t);
