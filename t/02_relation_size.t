@@ -30,6 +30,19 @@ $t = qq{$S reports error when warning/critical invalid};
 is ($cp->run(q{-w -1}), qq{ERROR: Invalid size for 'warning' option\n}, $t);
 is ($cp->run(q{-c -1}), qq{ERROR: Invalid size for 'critical' option\n}, $t);
 
+my $ver = $dbh->{pg_server_version};
+if ($ver < 80100) {
+
+	$t=qq{$S gives an error when run against an old Postgres version};
+	like ($cp->run('--warning=99'), qr{ERROR.*server version must be >= 8.1}, $t);
+
+  SKIP: {
+		skip 'Cannot test relation_size completely on Postgres 8.0 or lower', 19;
+	}
+
+	exit;
+}
+
 $result = $cp->run(q{-w 1});
 
 $t = qq{$S self-identifies};

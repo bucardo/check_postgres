@@ -131,21 +131,21 @@ sub test_database_handle {
 		}
 	}
 
+	my $pg_ctl
+		= $ENV{PG_CTL}   ? $ENV{PG_CTL}
+		: $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/pg_ctl"
+		:                  'pg_ctl';
+
+	if (qx{$pg_ctl --version} !~ /(\d+)\.(\d+)/) {
+		die qq{Could not determine the version of pg_ctl in use!\n};
+	}
+	my ($maj,$min) = ($1,$2);
+
 	if ($needs_startup) {
 
 		my $logfile = "$dbdir/pg.log";
 
 		unlink $logfile;
-
-		my $pg_ctl
-			= $ENV{PG_CTL}   ? $ENV{PG_CTL}
-			: $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/pg_ctl"
-			:                  'pg_ctl';
-
-		if (qx{$pg_ctl --version} !~ /(\d+)\.(\d+)/) {
-			die qq{Could not determine the version of pg_ctl in use!\n};
-		}
-		my ($maj,$min) = ($1,$2);
 
 		my $sockdir = 'socket';
 		if ($maj < 8 or ($maj==8 and $min < 1)) {
@@ -187,7 +187,12 @@ sub test_database_handle {
 			$COM = qq{psql -d template1 -q -h "$host" -c "CREATE USER $newuser"};
 			system $COM;
 			my $SQL = q{UPDATE pg_shadow SET usesuper='t' WHERE usename = 'check_postgres_testing'};
-			$COM = qq{psql -d template1 -q -h "$host" -c "$SQL"};
+			$COM = qq{psql -d postgres -q -h "$host" -c "$SQL"};
+			system $COM;
+			my $createlang = $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/createlang" : 'pg_ctl';
+			$COM = qq{$createlang -d postgres -h "$host" plperlu};
+			system $COM;
+			$COM = qq{$createlang -d postgres -h "$host" plpgsql};
 			system $COM;
 		}
 
@@ -218,9 +223,16 @@ sub test_database_handle {
 
 	$dbh->{AutoCommit} = 1;
 	$dbh->{RaiseError} = 0;
-	$dbh->do("CREATE USER $dbuser SUPERUSER");
-	$dbh->do('CREATE USER sixpack NOSUPERUSER CREATEDB');
-	$dbh->do('CREATE USER readonly NOSUPERUSER NOCREATEDB');
+	if ($maj < 8 or ($maj==8 and $min < 1)) {
+		## Old school
+		$dbh->do('CREATE USER sixpack');
+		$dbh->do('CREATE USER readonly');
+	}
+	else {
+		$dbh->do("CREATE USER $dbuser SUPERUSER");
+		$dbh->do('CREATE USER sixpack NOSUPERUSER CREATEDB');
+		$dbh->do('CREATE USER readonly NOSUPERUSER NOCREATEDB');
+	}
 	$dbh->do('ALTER USER readonly SET default_transaction_read_only = 1');
 	$dbh->do('CREATE DATABASE beedeebeedee');
 	$dbh->do('CREATE DATABASE ardala');

@@ -24,6 +24,19 @@ my $label = 'POSTGRES_DISABLED_TRIGGERS';
 
 my $S = q{Action 'disabled_triggers'};
 
+my $ver = $dbh->{pg_server_version};
+if ($ver < 80100) {
+
+	$t=qq{$S gives an error when run against an old Postgres version};
+	like ($cp->run('--warning=99'), qr{ERROR.*server version must be >= 8.1}, $t);
+
+  SKIP: {
+		skip 'Cannot test disabled_triggers completely on Postgres 8.0 or lower', 12;
+	}
+
+	exit;
+}
+
 $t = qq{$S self-identifies correctly};
 $result = $cp->run();
 like ($result, qr{^$label}, $t);

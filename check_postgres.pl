@@ -990,21 +990,24 @@ our $checksumre = qr{^[a-f0-9]{32}$};
 
 ## If in test mode, verify that we can run each requested action
 our %testaction = (
-				  autovac_freeze   => 'VERSION: 8.2',
-				  last_vacuum      => 'ON: stats_row_level(<8.3) VERSION: 8.2',
-				  last_analyze     => 'ON: stats_row_level(<8.3) VERSION: 8.2',
-				  last_autovacuum  => 'ON: stats_row_level(<8.3) VERSION: 8.2',
-				  last_autoanalyze => 'ON: stats_row_level(<8.3) VERSION: 8.2',
-				  database_size    => 'VERSION: 8.1',
-				  relation_size    => 'VERSION: 8.1',
-				  table_size       => 'VERSION: 8.1',
-				  index_size       => 'VERSION: 8.1',
-				  query_time       => 'ON: stats_command_string(<8.3) VERSION: 8.0',
-				  txn_idle         => 'ON: stats_command_string(<8.3) VERSION: 8.0',
-				  txn_time         => 'VERSION: 8.3',
-				  wal_files        => 'VERSION: 8.1',
-				  fsm_pages        => 'VERSION: 8.2 MAX: 8.3',
-				  fsm_relations    => 'VERSION: 8.2 MAX: 8.3',
+				  autovac_freeze    => 'VERSION: 8.2',
+				  last_vacuum       => 'ON: stats_row_level(<8.3) VERSION: 8.2',
+				  last_analyze      => 'ON: stats_row_level(<8.3) VERSION: 8.2',
+				  last_autovacuum   => 'ON: stats_row_level(<8.3) VERSION: 8.2',
+				  last_autoanalyze  => 'ON: stats_row_level(<8.3) VERSION: 8.2',
+				  prepared_txns     => 'VERSION: 8.1',
+				  database_size     => 'VERSION: 8.1',
+				  disabled_triggers => 'VERSION: 8.1',
+				  relation_size     => 'VERSION: 8.1',
+				  sequence          => 'VERSION: 8.1',
+				  table_size        => 'VERSION: 8.1',
+				  index_size        => 'VERSION: 8.1',
+				  query_time        => 'ON: stats_command_string(<8.3) VERSION: 8.0',
+				  txn_idle          => 'ON: stats_command_string(<8.3) VERSION: 8.0',
+				  txn_time          => 'VERSION: 8.3',
+				  wal_files         => 'VERSION: 8.1',
+				  fsm_pages         => 'VERSION: 8.2 MAX: 8.3',
+				  fsm_relations     => 'VERSION: 8.2 MAX: 8.3',
 );
 if ($opt{test}) {
 	print msgn('testmode-start');
@@ -4458,13 +4461,18 @@ sub check_disabled_triggers {
 
 	$SQL = q{SELECT tgrelid::regclass, tgname, tgenabled FROM pg_trigger WHERE tgenabled IS NOT TRUE ORDER BY tgname};
 	my $SQL83 = q{SELECT tgrelid::regclass, tgname, tgenabled FROM pg_trigger WHERE tgenabled = 'D' ORDER BY tgname};
+	my $SQLOLD = q{SELECT 'FAIL'};
 
-	my $info = run_command($SQL, { version => [ ">8.2 $SQL83" ] } );
+	my $info = run_command($SQL, { version => [ ">8.2 $SQL83", "<8.1 $SQLOLD" ] } );
 
 	my $count = 0;
 	my $dislis = '';
 	for (@{$info->{db}}) {
 		$db = $_;
+
+		if ($db->{slurp} =~ /^\s*FAIL/) {
+			ndie msg('die-action-version', $action, '8.1', $db->{version});
+		}
 		while ($db->{slurp} =~ / (.+?)\s+\| (.+?)\s+\| (\w+)/gsm) {
 			my ($table,$trigger,$setting) = ($1,$2,$3);
 			$count++;

@@ -48,6 +48,16 @@ for ('-1 second',
    like ($cp->run(qq{-w "$_"}), qr/^ERROR: Value for 'warning' must be a valid time/, $t . " ($_)");
 }
 
+my $ver = $dbh->{pg_server_version};
+if ($ver < 80100) {
+
+  SKIP: {
+		skip 'Cannot test query_time on Postgres 8.0 or lower', 1;
+	}
+
+	exit;
+}
+
 my $child = fork();
 if ($child == 0) {
     my $kiddbh = $cp->test_database_handle();

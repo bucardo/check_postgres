@@ -41,7 +41,8 @@ like ($result, qr{^POSTGRES_BACKENDS OK: \(host:$host\)}, $t);
 
 $t=qq{$S returned correct connection count};
 SKIP: {
-	skip 'Cannot test backends completely with older version of Postgres', 3;
+
+	$goodver or skip 'Cannot test backends completely with older versions of Postgres', 3;
 
 	like ($result, qr{^POSTGRES_BACKENDS OK: \(host:$host\) 2 of 10 connections}, $t);
 
@@ -148,24 +149,33 @@ is ($cp->run('--output=MRTG'), qq{$num\n0\n\nDB=postgres Max connections=10\n}, 
 $t=qq{$S works when include forces no matches};
 like ($cp->run('--include=foobar'), qr{POSTGRES_BACKENDS OK: .+No connections}, $t);
 
-$t=qq{$S works when include has valid database};
-$num = $goodver ? 3 : 2;
-like ($cp->run('--include=postgres'), qr{POSTGRES_BACKENDS OK: .+$num of 10}, $t);
+SKIP: {
+
+	$goodver or skip 'Cannot test backends completely with older versions of Postgres', 1;
+
+	$t=qq{$S works when include has valid database};
+	like ($cp->run('--include=postgres'), qr{POSTGRES_BACKENDS OK: .+3 of 10}, $t);
+}
 
 $t=qq{$S works when exclude forces no matches};
 like ($cp->run('--exclude=postgres'), qr{POSTGRES_BACKENDS OK: .+No connections}, $t);
 
-$t=qq{$S works when exclude excludes nothing};
-like ($cp->run('--exclude=foobar'), qr{POSTGRES_BACKENDS OK: .+$num of 10}, $t);
+SKIP: {
 
-$t=qq{$S works when include and exclude make a match};
-like ($cp->run('--exclude=postgres --include=postgres'), qr{POSTGRES_BACKENDS OK: .+$num of 10}, $t);
+	$goodver or skip 'Cannot test backends completely with older versions of Postgres', 4;
 
-$t=qq{$S works when include and exclude make a match};
-like ($cp->run('--include=postgres --exclude=postgres'), qr{POSTGRES_BACKENDS OK: .+$num of 10}, $t);
+	$t=qq{$S works when exclude excludes nothing};
+	like ($cp->run('--exclude=foobar'), qr{POSTGRES_BACKENDS OK: .+3 of 10}, $t);
 
-$t=qq{$S returned correct performance data with include};
-like ($cp->run('--include=postgres'), qr{ \| time=(\d\.\d\d)  ardala=0 beedeebeedee=0 postgres=$num}, $t);
+	$t=qq{$S works when include and exclude make a match};
+	like ($cp->run('--exclude=postgres --include=postgres'), qr{POSTGRES_BACKENDS OK: .+3 of 10}, $t);
+
+	$t=qq{$S works when include and exclude make a match};
+	like ($cp->run('--include=postgres --exclude=postgres'), qr{POSTGRES_BACKENDS OK: .+3 of 10}, $t);
+
+	$t=qq{$S returned correct performance data with include};
+	like ($cp->run('--include=postgres'), qr{ \| time=(\d\.\d\d)  ardala=0 beedeebeedee=0 postgres=3}, $t);
+}
 
 $cp->drop_schema_if_exists();
 

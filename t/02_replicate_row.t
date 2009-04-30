@@ -24,7 +24,13 @@ if (! $cp->table_exists($dbh, 'reptest')) {
 if (! $cp->table_exists($dbh2, 'reptest')) {
 	$dbh2->do($SQL);
 }
-$SQL = q{TRUNCATE TABLE reptest; INSERT INTO reptest VALUES (1,'yin'), (2,'yang')};
+$SQL = q{TRUNCATE TABLE reptest};
+$dbh->do($SQL);
+$dbh2->do($SQL);
+$SQL = q{INSERT INTO reptest VALUES (1,'yin')};
+$dbh->do($SQL);
+$dbh2->do($SQL);
+$SQL = q{INSERT INTO reptest VALUES (2,'yang')};
 $dbh->do($SQL);
 $dbh2->do($SQL);
 

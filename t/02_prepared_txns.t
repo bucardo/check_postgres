@@ -22,6 +22,19 @@ my $label = 'POSTGRES_PREPARED_TXNS';
 $t=qq{$S fails when called with an invalid option};
 like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
 
+my $ver = $dbh->{pg_server_version};
+if ($ver < 80100) {
+
+	$t=qq{$S gives an error when run against an old Postgres version};
+	like ($cp->run('--warning=99'), qr{ERROR.*server version must be >= 8.1}, $t);
+
+  SKIP: {
+		skip 'Cannot test prepared_transacions completely on Postgres 8.0 or lower', 8;
+	}
+
+	exit;
+}
+
 ## Clear any outstanding transactions
 $info = $dbh->selectall_arrayref('SELECT gid FROM pg_prepared_xacts');
 $dbh->{AutoCommit} = 1;

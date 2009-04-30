@@ -29,6 +29,7 @@ like ($cp->run('-c=abc'), qr{must be a size or a percentage}, $t);
 
 $dbh->{AutoCommit} = 1;
 $dbh->do('VACUUM FULL');
+$dbh->{AutoCommit} = 0;
 
 $t=qq{$S returns ok for no bloat};
 like ($cp->run('-c=99GB'), qr{^$label OK: DB "postgres"}, $t);
@@ -38,10 +39,10 @@ like ($cp->run('-w=10MB'), qr{^$label OK: DB "postgres"}, $t);
 
 for my $size (qw/bytes kilobytes megabytes gigabytes terabytes exabytes petabytes zettabytes/) {
 	$t=qq{$S returns ok for no bloat with a unit of $size};
-	like ($cp->run("-w=100000$size"), qr{^$label OK: DB "postgres"}, $t);
+	like ($cp->run("-w=1000000$size"), qr{^$label OK: DB "postgres"}, $t);
 	my $short = substr($size, 0, 1);
 	$t=qq{$S returns ok for no bloat with a unit of $short};
-	like ($cp->run("-w=100000$short"), qr{^$label OK: DB "postgres"}, $t);
+	like ($cp->run("-w=1000000$short"), qr{^$label OK: DB "postgres"}, $t);
 }
 
 $t=qq{$S returns correct message if no tables due to exclusion};
@@ -55,6 +56,7 @@ $cp->drop_table_if_exists($tname);
 $dbh->do("CREATE TABLE $tname AS SELECT 123::int AS foo FROM generate_series(1,10000)");
 $dbh->do("UPDATE $tname SET foo = foo") for 1..1;
 $dbh->do('ANALYZE');
+$dbh->commit();
 
 $t=qq{$S returns warning for bloated table};
 like ($cp->run('-w 100000'), qr{^$label WARNING:.+$tname}, $t);
