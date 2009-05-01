@@ -1,0 +1,54 @@
+--- #YAML:1.0
+name                        : check_postgres.pl
+version                     : 2.8.0
+abstract                    : Postgres monitoring script
+author:              
+  - Greg Sabino Mullane <greg@endpoint.com>
+
+license                     : bsd
+distribution_type           : script
+dynamic_config              : 0
+
+requires:
+  perl                      : 5.006001
+build_requires:
+  Test::More                : 0.61
+recommends:
+  Cwd                       : 0
+  File::Temp                : 0
+  File::Comments            : 0
+  Module::Signature         : 0.50
+  Perl::Critic              : 0
+  Pod::Spell                : 0
+  Time::HiRes               : 0
+  Test::Pod                 : 0.95
+  Test::Pod::Coverage       : 0
+  Test::Warn                : 0.08
+  Test::YAML::Meta          : 0.03
+  Text::SpellChecker        : 0
+
+provides:
+  check_postgres:
+    file                    : check_postgres.pl
+    version                 : 2.8.0
+
+keywords:
+  - Postgres
+  - PostgreSQL
+  - Nagios
+  - monitoring
+  - MRTG
+  - bloat
+
+resources:
+  homepage                  : http://bucardo.org/check_postgres/
+  license                   : http://bucardo.org/check_postgres/
+  bugtracker                : http://bucardo.org/check_postgres/
+  MailingList               : https://mail.endcrypt.com/mailman/listinfo/check_postgres
+  Repository                : http://bucardo.org/check_postgres.git/
+
+meta-spec:
+  version                   : 1.4
+  url                       : http://module-build.sourceforge.net/META-spec-v1.4.html
+
+generated_by                : emacs

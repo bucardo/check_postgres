@@ -1,0 +1,69 @@
+This is check_postgres, a monitoring tool for Postgres.
+
+The most complete and up to date information about this script can be found at:
+
+http://bucardo.org/check_postgres/
+
+You should go check there right now to make sure you are installing 
+the latest version!
+
+This document will cover how to install the script.
+
+* Quick method:
+
+For the impatient Nagios admin, just copy the "check_postgres.pl" file 
+to your Nagios scripts directory, and perhaps symlink entries to that 
+file by:
+
+cd <the directory you just copied the file to>
+mkdir postgres
+cd postgres
+perl ../check_postgres.pl --symlinks
+
+Then join the announce mailing list (see below)
+
+
+* Complete method:
+
+The better way to install this script is via the standard Perl process:
+
+perl Makefile.PL
+make
+make test
+make install
+
+The last step usually needs to be done as the root user. You may want to 
+copy the script to a place that makes more sense for Nagios, if using it 
+for that purpose. See the "Quick" insructions above.
+
+For 'make test', please report any failing tests to check_postgres@bucardo.org. 
+The tests need to have some standard Postgres binaries available, such as 
+'initdb', 'psql', and 'pg_ctl'. If these are not in your path, or you want to 
+use specific ones, pleae set the environment variable PGBINDIR first.
+
+Once 'make install' has been done, you should have access to the complete 
+documentation by typing:
+
+man check_postgres
+
+The HTML version of the documentation is also available at:
+
+http://bucardo.org/check_postgres/check_postgres.pl.html
+
+* Mailing lists
+
+The final step should be to subscribe to the low volume check_postgres-announce 
+mailing list, so you learn of new versions and important changes. Information 
+on joining can be found at:
+
+https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
+
+General questions and development issues are discussed on the check_postgres list, 
+which we recommend people join as well:
+
+https://mail.endcrypt.com/mailman/listinfo/check_postgres
+
+Development happens via git. You can check out the repository by doing:
+
+git clone http://bucardo.org/check_postgres.git
+
