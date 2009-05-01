@@ -17,6 +17,9 @@ my $cp = CP_Testing->new( {default_action => 'replicate-row'} );
 $dbh = $cp->test_database_handle();
 $dbh2 = $cp->get_fresh_dbh({dbname=>'ardala'});
 
+my $S = q{Action 'replicate_rows'};
+my $label = 'POSTGRES_REPLICATE_ROW';
+
 $SQL = q{CREATE TABLE reptest(id INT, foo TEXT)};
 if (! $cp->table_exists($dbh, 'reptest')) {
 	$dbh->do($SQL);
@@ -36,8 +39,6 @@ $dbh2->do($SQL);
 
 $dbh->commit();
 $dbh2->commit();
-
-my $S = q{Action 'replicate_rows'};
 
 $t=qq{$S fails when called with an invalid option};
 like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
@@ -84,7 +85,7 @@ $dbh->do($SQL);
 $dbh2->do($SQL);
 $dbh->commit();
 $dbh2->commit();
-like ($cp->run('DB2replicate-row', '-w 1 -repinfo=reptest,id,1,foo,yin,yang'), qr{WARNING: .+not replicated}, $t);
+like ($cp->run('DB2replicate-row', '-w 1 -repinfo=reptest,id,1,foo,yin,yang'), qr{^$label WARNING: .+not replicated}, $t);
 
 $t=qq{$S reports error when we time out via critical};
 $SQL = q{UPDATE reptest SET foo = 'yang' WHERE id = 1};
@@ -92,7 +93,7 @@ $dbh->do($SQL);
 $dbh2->do($SQL);
 $dbh->commit();
 $dbh2->commit();
-like ($cp->run('DB2replicate-row', '-c 1 -repinfo=reptest,id,1,foo,yin,yang'), qr{CRITICAL: .+not replicated}, $t);
+like ($cp->run('DB2replicate-row', '-c 1 -repinfo=reptest,id,1,foo,yin,yang'), qr{^$label CRITICAL: .+not replicated}, $t);
 
 $t=qq{$S reports error when we time out via critical with MRTG};
 $SQL = q{UPDATE reptest SET foo = 'yang' WHERE id = 1};
@@ -109,7 +110,7 @@ $dbh2->{InactiveDestroy} = 1;
 ## Use fork to 'replicate' behind the back of the other process
 if (fork) {
 	like ($cp->run('DB2replicate-row', '-c 5 -repinfo=reptest,id,1,foo,yin,yang'),
-		  qr{^POSTGRES_REPLICATE_ROW OK:.+Row was replicated}, $t);
+		  qr{^$label OK:.+Row was replicated}, $t);
 }
 else {
 	sleep 1;
@@ -123,7 +124,7 @@ $t=qq{$S works when rows match, reports proper delay};
 $dbh->commit();
 if (fork) {
 	$result = $cp->run('DB2replicate-row', '-c 10 -repinfo=reptest,id,1,foo,yin,yang');
-	like ($result, qr{^POSTGRES_REPLICATE_ROW OK:.+Row was replicated}, $t);
+	like ($result, qr{^$label OK:.+Row was replicated}, $t);
 	$result =~ /time=(\d+)/ or die 'No time?';
 	my $time = $1;
 	cmp_ok ($time, '>=', 3, $t);

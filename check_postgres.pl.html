@@ -1127,20 +1127,19 @@ time and the database time. The fourth line returns the name of the database.</p
 </p>
 <h2><a name="txn_wraparound"><strong>txn_wraparound</strong></a></h2>
 <p>(<code>symlink: check_postgres_txn_wraparound</code>) Checks how close to transaction wraparound one or more databases are getting. 
-The <em>--warning</em> and <em>--critical</em> options indicate the number of transactions 
-left, and must be a positive integer. If either option is not given, the default 
-values of 1.3 and 1.4 billion are used. There is no need to run this command 
-more than once per database cluster. For a more detailed discussion of what this 
-number represents and what to do about it, please visit the page 
+The <em>--warning</em> and <em>--critical</em> options indicate the number of transactions done, and must be a positive integer. 
+If either option is not given, the default values of 1.3 and 1.4 billion are used. There is no need to run this command 
+more than once per database cluster. For a more detailed discussion of what this number represents and what to do about 
+it, please visit the page 
 <a href="http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND">http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND</a></p>
 <p>The warning and critical values can have underscores in the number for legibility, as Perl does.</p>
 <p>Example 1: Check the default values for the localhost database</p>
 <pre>
   check_postgres_txn_wraparound --host=localhost</pre>
-<p>Example 2: Check port 6000 and give a critical at 1.7 billion transactions left:</p>
+<p>Example 2: Check port 6000 and give a critical when 1.7 billion transactions are hit:</p>
 <pre>
   check_postgres_txn_wraparound --port=6000 --critical=1_700_000_000</pre>
-<p>For MRTG output, returns the highest number of transactions for all databases on line one, 
+<p>For MRTG output, returns the highest number of transactions for all databases on line one,
 while line 4 indicates which database it is.</p>
 <p>
 </p>

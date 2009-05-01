@@ -20,11 +20,12 @@ $host = $cp->get_host();
 $dbname = $cp->get_dbname();
 
 my $S = q{Action 'listener'};
+my $label = 'POSTGRES_LISTENER';
 
 $result = $cp->run('-w foo');
 
 $t = qq{$S returned expected text and warning};
-like ($result, qr{^POSTGRES_LISTENER WARNING:}, $t);
+like ($result, qr{^$label WARNING:}, $t);
 
 $t = qq{$S returned correct host name};
 like ($result, qr{\(host:$host\)}, $t);
@@ -39,7 +40,7 @@ $dbh->do(q{LISTEN "FOO"}) or die $dbh->errstr;
 $dbh->commit;
 
 $t = qq{$S returned critical as expected<};
-like ($cp->run('-c nomatch'), qr{^POSTGRES_LISTENER CRITICAL}, $t);
+like ($cp->run('-c nomatch'), qr{^$label CRITICAL}, $t);
 
 $t = qq{$S found one listener via explicit name};
 like ($cp->run('-w FOO'), qr{listeners found: 1\b}, $t);

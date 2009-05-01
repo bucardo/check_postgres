@@ -18,9 +18,9 @@ $dbh = $cp->test_database_handle();
 $dbh->{AutoCommit} = 1;
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
-my $label = 'POSTGRES_TXN_TIME';
 
 my $S = q{Action 'txn_time'};
+my $label = 'POSTGRES_TXN_TIME';
 
 my $ver = $dbh->{pg_server_version};
 if ($ver < 80300) {

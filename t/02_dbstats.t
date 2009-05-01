@@ -48,3 +48,4 @@ for (qw(backends commits rollbacks read hit idxscan idxtupread idxtupfetch idxbl
     like($result, qr{\b$_:\d+\b}, $t1 . $_);
 }
 
+exit;

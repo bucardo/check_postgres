@@ -68,7 +68,6 @@ if ($ver >= 80400) {
 	exit;
 }
 
-
 $t=qq{$S gives normal output for empty tables};
 like ($cp->run('--warning=10%'), qr{^$label OK: .+fsm page slots used: 0 of \d+}, $t);
 

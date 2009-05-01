@@ -17,9 +17,9 @@ my $cp = CP_Testing->new( {default_action => 'settings_checksum'} );
 $dbh = $cp->test_database_handle();
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
-my $label = 'POSTGRES_SETTINGS_CHECKSUM';
 
 my $S = q{Action 'settings_checksum'};
+my $label = 'POSTGRES_SETTINGS_CHECKSUM';
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run('--critical 0');
@@ -51,3 +51,5 @@ like ($cp->run('-c abcdabcdabcdabcdabcdabcdabcdabcd'),
 
 $t = qq{$S accepts matching checksum};
 like ($cp->run("-w $true_checksum"), qr/OK.*\Qchecksum: $true_checksum\E/, $t);
+
+exit;

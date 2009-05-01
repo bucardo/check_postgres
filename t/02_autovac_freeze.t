@@ -20,9 +20,8 @@ $dbname = $cp->get_dbname;
 $host = $cp->get_host();
 my $ver = $dbh->{pg_server_version};
 
-my $label = 'POSTGRES_AUTOVAC_FREEZE';
-
 my $S = q{Action 'autovac_freeze'};
+my $label = 'POSTGRES_AUTOVAC_FREEZE';
 
 SKIP:
 {

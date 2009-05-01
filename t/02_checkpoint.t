@@ -17,6 +17,7 @@ my $cp = CP_Testing->new( {default_action => 'checkpoint'} );
 $dbh = $cp->test_database_handle();
 
 my $S = q{Action 'checkpoint'};
+my $label = 'POSTGRES_CHECKPOINT';
 
 $t=qq{$S fails when called with an invalid option};
 like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
@@ -32,28 +33,28 @@ like ($cp->run('-c foo'), qr{ERROR: .+'critical'.+valid time}, $t);
 
 $t=qq{$S fails when called without a datadir option and PGDATA is not set};
 delete $ENV{PGDATA};
-like ($cp->run('-c 10'), qr{ERROR: Must supply a --datadir}, $t);
+like ($cp->run('-c 10'), qr{^ERROR: Must supply a --datadir}, $t);
 
 $t=qq{$S fails when called with an invalid datadir option and PGDATA is not set};
-like ($cp->run('-c 10 --datadir=foobar'), qr{ERROR: Invalid data_directory}, $t);
+like ($cp->run('-c 10 --datadir=foobar'), qr{^ERROR: Invalid data_directory}, $t);
 
 my $host = $cp->get_host();
 $t=qq{$S fails when called against a non datadir datadir};
-like ($cp->run(qq{-c 10 --datadir="$host"}), qr{ERROR:.+could not read the given data directory}, $t);
+like ($cp->run(qq{-c 10 --datadir="$host"}), qr{^ERROR:.+could not read the given data directory}, $t);
 
 $t=qq{$S works when called for a recent checkpoint};
 my $dbh = $cp->get_dbh();
 $dbh->do('CHECKPOINT');
 $dbh->commit();
 $host =~ s/socket$//;
-like ($cp->run(qq{-w 20 --datadir="$host"}), qr{POSTGRES_CHECKPOINT OK}, $t);
+like ($cp->run(qq{-w 20 --datadir="$host"}), qr{^$label OK}, $t);
 
 $t=qq{$S returns a warning when checkpoint older than warning option};
 sleep 2;
-like ($cp->run(qq{-w 1 --datadir="$host"}), qr{WARNING:}, $t);
+like ($cp->run(qq{-w 1 --datadir="$host"}), qr{^$label WARNING:}, $t);
 
 $t=qq{$S returns a critical when checkpoint older than critical option};
-like ($cp->run(qq{-c 1 --datadir="$host"}), qr{CRITICAL:}, $t);
+like ($cp->run(qq{-c 1 --datadir="$host"}), qr{^$label CRITICAL:}, $t);
 
 $t=qq{$S returns the correct number of seconds};
 like ($cp->run(qq{-c 1 --datadir="$host"}), qr{was \d seconds ago}, $t);

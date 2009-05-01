@@ -10,16 +10,16 @@ use Test::More tests => 23;
 use lib 't','.';
 use CP_Testing;
 
-use vars qw/$dbh $dbname $host $t $result $user $label/;
+use vars qw/$dbh $dbname $host $t $result $user/;
 
 my $cp = CP_Testing->new({default_action => 'relation_size'});
 $dbh = $cp->test_database_handle();
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
 $user = $cp->get_user();
-$label = q{POSTGRES_RELATION_SIZE};
 
 my $S = q{Action 'relation_size'};
+my $label = q{POSTGRES_RELATION_SIZE};
 
 my $testtbl = 'test_relation_size';
 

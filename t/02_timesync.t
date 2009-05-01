@@ -17,11 +17,11 @@ my $cp = CP_Testing->new( {default_action => 'timesync'} );
 $dbh = $cp->test_database_handle();
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
+
+my $S = q{Action 'timesync'};
 my $label = 'POSTGRES_TIMESYNC';
 
 my $timepatt = qr{\d{4}-\d\d-\d\d \d\d:\d\d:\d\d};
-
-my $S = q{Action 'timesync'};
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(q{-w 100});

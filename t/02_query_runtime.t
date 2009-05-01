@@ -20,6 +20,8 @@ my $cp = CP_Testing->new( {default_action => 'query_runtime'} );
 $dbh = $cp->test_database_handle();
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
+
+my $S = q{Action 'query_runtime'};
 my $label = 'POSTGRES_QUERY_RUNTIME';
 
 $cp->drop_table_if_exists($testtbl);
@@ -27,8 +29,6 @@ $cp->drop_view_if_exists($testview);
 
 $dbh->do(qq{CREATE TABLE "$testtbl" ("a" integer)}) or die $dbh->errstr;
 $dbh->commit;
-
-my $S = q{Action 'query_runtime'};
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(qq{-w 0 --queryname=$testtbl});

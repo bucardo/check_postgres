@@ -17,9 +17,9 @@ my $cp = CP_Testing->new( {default_action => 'query_time'} );
 $dbh = $cp->test_database_handle();
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
-my $label = 'POSTGRES_QUERY_TIME';
 
 my $S = q{Action 'query_time'};
+my $label = 'POSTGRES_QUERY_TIME';
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(q{-w 0});

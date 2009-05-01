@@ -21,9 +21,8 @@ $dbname = $cp->get_dbname;
 $host = $cp->get_host();
 my $ver = $dbh->{pg_server_version};
 
-my $label = 'POSTGRES_LAST_VACUUM';
-
 my $S = q{Action 'last_vacuum'};
+my $label = 'POSTGRES_LAST_VACUUM';
 
 SKIP:
 {
@@ -60,6 +59,7 @@ like ($cp->run(q{-w 0 --includeuser=gandalf}), qr{No matching.*user}, $t);
 
 $dbh->{AutoCommit} = 1;
 $dbh->do('VACUUM');
+$dbh->{AutoCommit} = 0;
 $cp->drop_table_if_exists($testtbl);
 $dbh->do(qq{CREATE TABLE $testtbl AS SELECT 123::INTEGER AS a FROM generate_series(1,200000)});
 
@@ -68,6 +68,7 @@ like ($cp->run("-w 0 --exclude=~.* --include=$testtbl"),
 
 $t = qq{$S sees a recent VACUUM};
 $dbh->do("DELETE FROM $testtbl");
+$dbh->{AutoCommit} = 1;
 $dbh->do('VACUUM');
 sleep 1;
 

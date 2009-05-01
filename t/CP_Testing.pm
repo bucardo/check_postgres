@@ -88,6 +88,8 @@ sub test_database_handle {
 		print $cfh qq{listen_addresses = ''\n};
 		print $cfh qq{max_connections = 10\n};
 		print $cfh qq{max_fsm_pages = 99999\n};
+		print $cfh qq{stats_block_level = on\n};
+		print $cfh qq{stats_row_level = on\n};
 
 		## Grab the version for finicky items
 		if (qx{$initdb --version} !~ /(\d+)\.(\d+)/) {

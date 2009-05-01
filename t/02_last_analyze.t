@@ -21,9 +21,8 @@ $dbname = $cp->get_dbname;
 $host = $cp->get_host();
 my $ver = $dbh->{pg_server_version};
 
-my $label = 'POSTGRES_LAST_ANALYZE';
-
 my $S = q{Action 'last_analyze'};
+my $label = 'POSTGRES_LAST_ANALYZE';
 
 SKIP:
 {
@@ -64,7 +63,7 @@ $dbh->do(qq{CREATE TABLE $testtbl AS SELECT 123::INTEGER AS a FROM generate_seri
 $dbh->commit();
 
 $t = qq{$S correctly finds no matching tables};
-like ($cp->run("-w 0 --exclude=~.* --include=$testtbl"),
+like ($cp->run("-w 0 --include=$testtbl"),
 	  qr{No matching tables found due to exclusion}, $t);
 
 $t = qq{$S sees a recent ANALYZE};

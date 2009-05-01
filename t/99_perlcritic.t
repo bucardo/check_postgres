@@ -153,3 +153,4 @@ for my $filename (sort @testfiles) {
 
 pass('Finished Perl::Critic testing');
 
+exit;

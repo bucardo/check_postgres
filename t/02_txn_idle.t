@@ -18,9 +18,9 @@ $dbh = $cp->test_database_handle();
 $dbh->{AutoCommit} = 1;
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
-my $label = 'POSTGRES_TXN_IDLE';
 
 my $S = q{Action 'txn_idle'};
+my $label = 'POSTGRES_TXN_IDLE';
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(q{-w 0});

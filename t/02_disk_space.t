@@ -18,9 +18,9 @@ $dbh = $cp->test_database_handle();
 $dbh->{AutoCommit} = 1;
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
-my $label = q{POSTGRES_DISK_SPACE};
 
 my $S = q{Action 'disk_space'};
+my $label = q{POSTGRES_DISK_SPACE};
 
 $t = qq{$S identifies self};
 $result = $cp->run('-w 999z');
@@ -43,3 +43,5 @@ like ($cp->run('-w 1b'), qr{$label WARNING:}, $t);
 
 $t = qq{$S reports MRTG output};
 like ($cp->run('--output=mrtg'), qr{\A\d+\n0\n\n/.*\n}, $t);
+
+exit;

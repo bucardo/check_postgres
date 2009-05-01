@@ -18,6 +18,7 @@ $dbh = $cp->test_database_handle();
 
 my $S = q{Action 'bloat'};
 my $label = 'POSTGRES_BLOAT';
+
 my $tname = 'cp_bloat_test';
 
 $t=qq{$S fails when called with an invalid option};

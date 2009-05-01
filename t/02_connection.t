@@ -23,9 +23,10 @@ $SQL = 'SELECT version()';
 $result = $cp->run();
 
 my $S = q{Action 'connection'};
+my $label = 'POSTGRES_CONNECTION';
 
 $t=qq{$S returned expected text and OK value};
-like ($result, qr{^POSTGRES_CONNECTION OK:}, $t);
+like ($result, qr{^$label OK:}, $t);
 
 $t=qq{$S returned correct performance data};
 like ($result, qr{ \| time=(?:\d\.\d\d)\s$}, $t);
@@ -51,7 +52,7 @@ is ($cp->run('--output=MRTG'), qq{1\n0\n\n\n}, $t);
 
 $cp->fake_version('ABC');
 $t=qq{$S fails if there's a fake version function};
-like ($cp->run(), qr{^POSTGRES_CONNECTION UNKNOWN:}, $t);
+like ($cp->run(), qr{^$label UNKNOWN:}, $t);
 $cp->reset_path();
 
 exit;

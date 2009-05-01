@@ -20,9 +20,9 @@ my $cp = CP_Testing->new( {default_action => 'txn_wraparound'} );
 $dbh = $cp->test_database_handle();
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
-my $label = 'POSTGRES_TXN_WRAPAROUND';
 
 my $S = q{Action 'txn_wraparound'};
+my $label = 'POSTGRES_TXN_WRAPAROUND';
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run();

@@ -19,9 +19,10 @@ $dbh = $cp->test_database_handle();
 
 $host = $cp->get_host();
 $dbname = $cp->get_dbname();
-my $label = 'POSTGRES_LOGFILE';
 
 my $S = q{Action 'logfile'};
+my $label = 'POSTGRES_LOGFILE';
+
 my $logfile = 'test_database_check_postgres/pg.log';
 
 my $cmd = $cp->get_command("--logfile=$logfile");

@@ -21,9 +21,9 @@ $dbh = $cp->test_database_handle();
 $dbh->{AutoCommit} = 1;
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
-my $label = 'POSTGRES_CUSTOM_QUERY';
 
 my $S = q{Action 'custom_query'};
+my $label = 'POSTGRES_CUSTOM_QUERY';
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(qq{-w 0 --query="$good_query"});

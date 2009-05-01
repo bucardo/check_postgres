@@ -20,9 +20,9 @@ my $cp = CP_Testing->new( {default_action => 'disabled_triggers'} );
 $dbh = $cp->test_database_handle();
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
-my $label = 'POSTGRES_DISABLED_TRIGGERS';
 
 my $S = q{Action 'disabled_triggers'};
+my $label = 'POSTGRES_DISABLED_TRIGGERS';
 
 my $ver = $dbh->{pg_server_version};
 if ($ver < 80100) {
