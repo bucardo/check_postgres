@@ -21,7 +21,6 @@ critic:
 
 	perlcritic --profile-strictness quiet check_postgres.pl
 
-
 test:
 
 	@ prove t/*.t
@@ -31,3 +30,7 @@ signature:
 	@ gpg --yes -ba check_postgres.pl
 	@ gpg --verify check_postgres.pl.asc
 
+clean:
+
+	@ (kill `head -1 test_database_check_postgres/data\ space/postmaster.pid | awk '{print $1}'`) 2>/dev/null
+	@ rm -fr test_database_check_postgres
