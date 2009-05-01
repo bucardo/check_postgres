@@ -88,8 +88,6 @@ sub test_database_handle {
 		print $cfh qq{listen_addresses = ''\n};
 		print $cfh qq{max_connections = 10\n};
 		print $cfh qq{max_fsm_pages = 99999\n};
-		print $cfh qq{stats_block_level = on\n};
-		print $cfh qq{stats_row_level = on\n};
 
 		## Grab the version for finicky items
 		if (qx{$initdb --version} !~ /(\d+)\.(\d+)/) {
@@ -97,13 +95,21 @@ sub test_database_handle {
 		}
 		my ($maj,$min) = ($1,$2);
 
+		## <= 8.0
 		if ($maj < 8 or ($maj==8 and $min <= 1)) {
 			print $cfh qq{stats_command_string = on\n};
 		}
 
+		## ## >= 8.1
 		if ($maj > 8 or ($maj==8 and $min >= 1)) {
 			print $cfh qq{autovacuum = off\n};
 			print $cfh qq{max_prepared_transactions = 5\n};
+		}
+
+		## ## <= 8.2
+		if ($maj < 8 or ($maj==8 and $min <= 2)) {
+			print $cfh qq{stats_block_level = on\n};
+			print $cfh qq{stats_row_level = on\n};
 		}
 
 		print $cfh "\n";
