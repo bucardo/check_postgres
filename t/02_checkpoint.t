@@ -38,7 +38,7 @@ like ($cp->run('-c 10'), qr{^ERROR: Must supply a --datadir}, $t);
 $t=qq{$S fails when called with an invalid datadir option and PGDATA is not set};
 like ($cp->run('-c 10 --datadir=foobar'), qr{^ERROR: Invalid data_directory}, $t);
 
-my $host = $cp->get_host();
+my $host = $cp->get_dbhost();
 $t=qq{$S fails when called against a non datadir datadir};
 like ($cp->run(qq{-c 10 --datadir="$host"}), qr{^ERROR:.+could not read the given data directory}, $t);
 

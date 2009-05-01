@@ -204,6 +204,18 @@ sub test_database_handle {
 	my $dbhost = $self->{dbhost} = "$here/$dbdir/data space/socket";
 	$dbhost =~ s/^ /\\ /;
 	$dbhost =~ s/([^\\]) /$1\\ /g;
+
+	## Workaround for bug where psql -h /some/long/path fails
+	if (length($dbhost) > 90) {
+		my $newname = '/tmp/cptesting_socket';
+		if (! -e $newname) {
+			warn "Creating new symlink socket at $newname\n";
+			(my $oldname = $dbhost) =~ s/\\//g;
+			symlink $oldname => $newname;
+		}
+		$dbhost = $self->{shorthost} = $newname;
+	}
+
 	$self->{dbname} ||= 'postgres';
 	my $dsn = qq{dbi:Pg:host=$dbhost;dbname=$self->{dbname}};
 	my $dbuser = $self->{testuser};
@@ -219,6 +231,9 @@ sub test_database_handle {
 			$tempdbh->do("CREATE USER $dbuser SUPERUSER");
 			$tempdbh->disconnect();
 			$dbh = DBI->connect(@superdsn);
+		}
+		else {
+			die "Could not connect: $@\n";
 		}
 	}
 	$dbh->ping() or die qq{Failed to ping!\n};
@@ -300,7 +315,7 @@ sub run {
 
 	my $double = $action =~ s/DB2// ? 1 : 0;
 
-	my $dbhost = $self->{dbhost}   || die 'No dbhost?';
+	my $dbhost = $self->{shorthost} || $self->{dbhost}   || die 'No dbhost?';
 	my $dbuser = $self->{testuser} || die 'No testuser?';
 	my $dbname = $self->{dbname}   || die 'No dbname?';
 	my $com = qq{perl check_postgres.pl --action=$action --dbhost="$dbhost" --dbuser=$dbuser};
@@ -336,9 +351,19 @@ sub get_user {
 	return $self->{testuser};
 }
 
-sub get_host {
+sub get_dbhost {
 	my $self = shift;
 	return $self->{dbhost};
+}
+
+sub get_host {
+	my $self = shift;
+	return $self->{shorthost} || $self->{dbhost};
+}
+
+sub get_shorthost {
+	my $self = shift;
+	return $self->{shorthost};
 }
 
 sub get_dbname {
