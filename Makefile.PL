@@ -53,7 +53,7 @@ my %opts =
 	 NO_META        => 1,
      NORECURS       => 1,
      MAN1PODS       => {},
-	 clean          => { FILES => 'test_database_check_postgres/', '/tmp/cptesting_socket' },
+	 clean          => { FILES => 'test_database_check_postgres/ /tmp/cptesting_socket' },
 );
 
 {
@@ -61,6 +61,9 @@ my %opts =
 	sub clean {
 		my $string = shift->SUPER::clean(@_);
 		$string =~ s{\t}{\tperl t/99_cleanup\.t\n\t};
+		$string .= qq{\nsignature_asc : \n};
+		$string .= qq{\t@ gpg --yes -ba check_postgres.pl\n};
+		$string .= qq{\t@ gpg --verify check_postgres.pl.asc\n};
 		return $string;
 	}
 }
