@@ -144,16 +144,15 @@ $cp->create_fake_pg_table('pg_settings');
 like ($cp->run(), qr{^$label UNKNOWN: .+max_connections}, $t);
 $cp->drop_schema_if_exists();
 
-$t=qq{$S returns correct MRTG output when rows found};
-$num = $goodver ? 3 : 2;
-is ($cp->run('--output=MRTG'), qq{$num\n0\n\nDB=postgres Max connections=10\n}, $t);
-
 $t=qq{$S works when include forces no matches};
 like ($cp->run('--include=foobar'), qr{^$label OK: .+No connections}, $t);
 
 SKIP: {
 
-	$goodver or skip 'Cannot test backends completely with older versions of Postgres', 1;
+	$goodver or skip 'Cannot test backends completely with older versions of Postgres', 2;
+
+	$t=qq{$S returns correct MRTG output when rows found};
+	is ($cp->run('--output=MRTG'), qq{3\n0\n\nDB=postgres Max connections=10\n}, $t);
 
 	$t=qq{$S works when include has valid database};
 	like ($cp->run('--include=postgres'), qr{^$label OK: .+3 of 10}, $t);

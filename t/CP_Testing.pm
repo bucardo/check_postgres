@@ -12,7 +12,7 @@ use Cwd;
 
 our $DEBUG = 0;
 
-use vars qw/$com $info $count/;
+use vars qw/$com $info $count $SQL $sth/;
 
 my $fakeschema = 'cptest';
 
@@ -93,21 +93,21 @@ sub test_database_handle {
 		if (qx{$initdb --version} !~ /(\d+)\.(\d+)/) {
 			die qq{Could not determine the version of initdb in use!\n};
 		}
-		my ($maj,$min) = ($1,$2);
+		my ($imaj,$imin) = ($1,$2);
 
 		## <= 8.0
-		if ($maj < 8 or ($maj==8 and $min <= 1)) {
+		if ($imaj < 8 or ($imaj==8 and $imin <= 1)) {
 			print $cfh qq{stats_command_string = on\n};
 		}
 
 		## ## >= 8.1
-		if ($maj > 8 or ($maj==8 and $min >= 1)) {
+		if ($imaj > 8 or ($imaj==8 and $imin >= 1)) {
 			print $cfh qq{autovacuum = off\n};
 			print $cfh qq{max_prepared_transactions = 5\n};
 		}
 
 		## ## <= 8.2
-		if ($maj < 8 or ($maj==8 and $min <= 2)) {
+		if ($imaj < 8 or ($imaj==8 and $imin <= 2)) {
 			print $cfh qq{stats_block_level = on\n};
 			print $cfh qq{stats_row_level = on\n};
 		}
@@ -149,6 +149,8 @@ sub test_database_handle {
 	}
 	my ($maj,$min) = ($1,$2);
 
+	my $here = cwd();
+
 	if ($needs_startup) {
 
 		my $logfile = "$dbdir/pg.log";
@@ -187,26 +189,40 @@ sub test_database_handle {
 		close $logfh or die qq{Could not close "$logfile": $!\n};
 
 		if ($maj < 8 or ($maj==8 and $min < 1)) {
-			my $here = cwd();
 			my $host = "$here/$dbdir/data space/socket";
-			my $COM = qq{psql -d template1 -q -h "$host" -c "CREATE DATABASE postgres"};
-			system $COM;
+			my $COM;
+
+			$SQL = q{SELECT * FROM pg_database WHERE datname = 'postgres'};
+			my $res = qx{psql -Ax -qt -d template1 -q -h "$host" -c "$SQL"};
+			if ($res !~ /postgres/) {
+				$COM = qq{psql -d template1 -q -h "$host" -c "CREATE DATABASE postgres"};
+				system $COM;
+			}
+
 			my $newuser = $self->{testuser};
-			$COM = qq{psql -d template1 -q -h "$host" -c "CREATE USER $newuser"};
-			system $COM;
-			my $SQL = q{UPDATE pg_shadow SET usesuper='t' WHERE usename = 'check_postgres_testing'};
-			$COM = qq{psql -d postgres -q -h "$host" -c "$SQL"};
-			system $COM;
-			my $createlang = $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/createlang" : 'pg_ctl';
-			$COM = qq{$createlang -d postgres -h "$host" plperlu};
-			system $COM;
-			$COM = qq{$createlang -d postgres -h "$host" plpgsql};
-			system $COM;
+			$SQL = qq{SELECT * FROM pg_user WHERE usename = '$newuser'};
+			$res = qx{psql -Ax -qt -d template1 -q -h "$host" -c "$SQL"};
+			if ($res !~ /$newuser/) {
+				$COM = qq{psql -d template1 -q -h "$host" -c "CREATE USER $newuser"};
+				system $COM;
+				$SQL = q{UPDATE pg_shadow SET usesuper='t' WHERE usename = 'check_postgres_testing'};
+				$COM = qq{psql -d postgres -q -h "$host" -c "$SQL"};
+				system $COM;
+			}
+
+			for my $lang (qw/plpgsql plperlu/) {
+				$SQL = qq{SELECT * FROM pg_language WHERE lanname = '$lang'};
+				$res = qx{psql -Ax -qt -d postgres -q -h "$host" -c "$SQL"};
+				if ($res !~ /$lang/) {
+					my $createlang = $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/createlang" : 'pg_ctl';
+					$COM = qq{$createlang -d postgres -h "$host" $lang};
+					system $COM;
+					}
+			}
 		}
 
 	} ## end of needs startup
 
-	my $here = cwd();
 	my $dbhost = $self->{dbhost} = "$here/$dbdir/data space/socket";
 	$dbhost =~ s/^ /\\ /;
 	$dbhost =~ s/([^\\]) /$1\\ /g;
@@ -265,7 +281,7 @@ sub test_database_handle {
 	$dbh->{RaiseError} = 1;
 
 	if (! exists $self->{keep_old_schema}) {
-		my $SQL = 'SELECT count(*) FROM pg_namespace WHERE nspname = ' . $dbh->quote($fakeschema);
+		$SQL = 'SELECT count(*) FROM pg_namespace WHERE nspname = ' . $dbh->quote($fakeschema);
 		my $count = $dbh->selectall_arrayref($SQL)->[0][0];
 		if ($count) {
 			$dbh->{Warn} = 0;
@@ -459,8 +475,8 @@ sub table_exists {
 
 	my ($self,$dbh,$table) = @_;
 
-	my $SQL = 'SELECT count(1) FROM pg_class WHERE relname = ?';
-	my $sth = $dbh->prepare($SQL);
+	$SQL = 'SELECT count(1) FROM pg_class WHERE relname = ?';
+	$sth = $dbh->prepare($SQL);
 	$sth->execute($table);
 	my $count = $sth->fetchall_arrayref()->[0][0];
 	return $count;
@@ -472,8 +488,8 @@ sub schema_exists {
 
 	my ($self,$dbh,$schema) = @_;
 
-	my $SQL = 'SELECT count(1) FROM pg_namespace WHERE nspname = ?';
-	my $sth = $dbh->prepare($SQL);
+	$SQL = 'SELECT count(1) FROM pg_namespace WHERE nspname = ?';
+	$sth = $dbh->prepare($SQL);
 	$sth->execute($schema);
 	my $count = $sth->fetchall_arrayref()->[0][0];
 	return $count;
@@ -488,7 +504,7 @@ sub drop_schema_if_exists {
 	$name ||= $fakeschema;
 
 	if (! exists $self->{keep_old_schema}) {
-		my $SQL = 'SELECT count(*) FROM pg_namespace WHERE nspname = ' . $dbh->quote($name);
+		$SQL = 'SELECT count(*) FROM pg_namespace WHERE nspname = ' . $dbh->quote($name);
 		my $count = $dbh->selectall_arrayref($SQL)->[0][0];
 		if ($count) {
 			$dbh->{Warn} = 0;
@@ -515,7 +531,7 @@ sub drop_table_if_exists {
 
 	my $safetable = $dbh->quote($name);
 	my $safeschema = $dbh->quote($schema);
-	my $SQL = $schema
+	$SQL = $schema
 		? q{SELECT count(*) FROM pg_class c JOIN pg_namespace n ON (n.oid = c.relnamespace) }.
 		  qq{WHERE relkind = 'r' AND nspname = $safeschema AND relname = $safetable}
         : qq{SELECT count(*) FROM pg_class WHERE relkind='r' AND relname = $safetable};
@@ -536,7 +552,7 @@ sub drop_view_if_exists {
 	my ($self,$name) = @_;
 	my $dbh = $self->{dbh} || die;
 
-	my $SQL = q{SELECT count(*) FROM pg_class WHERE relkind='v' AND relname = } . $dbh->quote($name);
+	$SQL = q{SELECT count(*) FROM pg_class WHERE relkind='v' AND relname = } . $dbh->quote($name);
 	my $count = $dbh->selectall_arrayref($SQL)->[0][0];
 	if ($count) {
 		$dbh->{Warn} = 0;
@@ -554,7 +570,7 @@ sub drop_sequence_if_exists {
 	my ($self,$name) = @_;
 	my $dbh = $self->{dbh} || die;
 
-	my $SQL = q{SELECT count(*) FROM pg_class WHERE relkind = 'S' AND relname = } . $dbh->quote($name);
+	$SQL = q{SELECT count(*) FROM pg_class WHERE relkind = 'S' AND relname = } . $dbh->quote($name);
 	my $count = $dbh->selectall_arrayref($SQL)->[0][0];
 	if ($count) {
 		$dbh->do("DROP SEQUENCE $name");
@@ -570,7 +586,7 @@ sub drop_function_if_exists {
 	my ($self,$name,$args) = @_;
 	my $dbh = $self->{dbh} || die;
 
-	my $SQL = q{SELECT count(*) FROM pg_proc WHERE proname = }. $dbh->quote($name);
+	$SQL = q{SELECT count(*) FROM pg_proc WHERE proname = }. $dbh->quote($name);
 	my $count = $dbh->selectall_arrayref($SQL)->[0][0];
 	if ($count) {
 		$dbh->do("DROP FUNCTION $name($args)");
@@ -675,7 +691,7 @@ sub database_sleep {
 	my $ver = $dbh->{pg_server_version};
 
 	if ($ver < 80200) {
-		my $SQL = q{CREATE OR REPLACE FUNCTION pg_sleep(float) RETURNS VOID LANGUAGE plperlu AS 'select(undef,undef,undef,shift)'};
+		$SQL = q{CREATE OR REPLACE FUNCTION pg_sleep(float) RETURNS VOID LANGUAGE plperlu AS 'select(undef,undef,undef,shift)'};
 		$dbh->do($SQL);
 		$dbh->commit();
 	}
