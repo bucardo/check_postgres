@@ -18,7 +18,7 @@ elsif (!eval { require Text::SpellChecker; 1 }) {
 }
 else {
 	opendir my $dir, 't' or die qq{Could not open directory 't': $!\n};
-	@testfiles = map { "t/$_" } grep { /^.+\.(t|pl)$/ } readdir $dir;
+	@testfiles = map { "t/$_" } grep { /^.+\.(t|pl|pm)$/ } readdir $dir;
 	closedir $dir or die qq{Could not closedir "$dir": $!\n};
 	plan tests => 3+@testfiles;
 }
@@ -84,7 +84,7 @@ for my $file (qw/index.html/) {
 ## Now the embedded POD
 SKIP: {
 	if (!eval { require Pod::Spell; 1 }) {
-		skip 'Need Pod::Spell to test the spelling of embedded POD', 2;
+		skip 'Need Pod::Spell to test the spelling of embedded POD', 1;
 	}
 
 	for my $file (qw{check_postgres.pl}) {
@@ -99,7 +99,7 @@ SKIP: {
 ## Now the comments
 SKIP: {
 	if (!eval { require File::Comments; 1 }) {
-		skip 'Need File::Comments to test the spelling inside comments', 4;
+		skip 'Need File::Comments to test the spelling inside comments', 1+@testfiles;
 	}
 	my $fc = File::Comments->new();
 
@@ -109,13 +109,12 @@ SKIP: {
 	}
 
 	for my $file (@testfiles, qw{check_postgres.pl}) {
-		## Tests as well?
 		if (! -e $file) {
 			fail(qq{Could not find the file "$file"!});
 		}
 		my $string = $fc->comments($file);
 		if (! $string) {
-			fail(qq{Could not get comments from file $file});
+			fail(qq{Could not get comments inside file $file});
 			next;
 		}
 		$string = join "\n" => @$string;
