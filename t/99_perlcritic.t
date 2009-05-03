@@ -25,7 +25,7 @@ else {
 	opendir my $dir, 't' or die qq{Could not open directory 't': $!\n};
 	@testfiles = map { "t/$_" } grep { /^.+\.(t|pl)$/ } readdir $dir;
 	closedir $dir;
-	plan tests => 4+@testfiles;
+	plan tests => 5+@testfiles;
 }
 ok(@testfiles, 'Found files in test directory');
 
