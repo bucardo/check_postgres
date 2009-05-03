@@ -6089,7 +6089,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Make fsm_pages and fsm_relatins handle 8.4 servers smoothly. (Greg)
   Fix missing 'upd' field in show_dbstats (Andras Fabian)
   Allow ENV{PGCONTROLDATA} and ENV{PGBINDIR}. (Greg)
-  Add various Perl module infratructure, including (e.g. Makefile.PL) (Greg)
+  Add various Perl module infrastructure (e.g. Makefile.PL) (Greg)
   Fix incorrect regex in txn_wraparound (Greg)
   For txn_wraparound: consistent ordering and fix duplicates in perf output (Andras Fabian)
   Add in missing exabyte regex check (Selena Deckelmann)

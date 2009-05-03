@@ -32,7 +32,7 @@ ok(@testfiles, 'Found files in test directory');
 ## Check some non-test files
 my $critic = Perl::Critic->new(-severity => 1, '-profile-strictness' => 'quiet');
 
-for my $filename (qw{check_postgres.pl t/CP_Testing.pm}) {
+for my $filename (qw{Makefile.PL check_postgres.pl t/CP_Testing.pm}) {
 
 	if ($ENV{TEST_CRITIC_SKIPNONTEST}) {
 		pass qq{Skipping non-test file "$filename"};
@@ -54,6 +54,12 @@ for my $filename (qw{check_postgres.pl t/CP_Testing.pm}) {
 		if ($filename =~ /test/io) {
 			next VIO if $policy =~ /RequireArgUnpacking/o
 				or $policy =~ /RequireVersionVar/o;
+		}
+
+		if ($filename =~ /Makefile/o) {
+			next VIO if $policy =~ /RequireVersionVar/o
+				or $policy =~ /ProhibitBooleanGrep/o
+				or $policy =~ /RequireInterpolationOfMetachars/o;
 		}
 
 		$vios++;
