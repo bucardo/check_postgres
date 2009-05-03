@@ -1,0 +1,74 @@
+This file contains message digests of all files listed in MANIFEST,
+signed via the Module::Signature module, version 0.55.
+
+To verify the content in this distribution, first make sure you have
+Module::Signature installed, then type:
+
+    % cpansign -v
+
+It will check each file's integrity, as well as the signature's
+validity.  If "==> Signature verified OK! <==" is not displayed,
+the distribution may already have been compromised, and you should
+not run its Makefile.PL or Build.PL.
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: RIPEMD160
+
+SHA1 0e4d64eb4cd2bb51385fe329bab2c56fd8f391bc .gitignore
+SHA1 2fcd86d852f0a68d0370b801535aa1292a24d2c9 .perlcriticrc
+SHA1 06d545aa374f8bcd9af25d514694c9726a5fadf9 MANIFEST
+SHA1 c19040a635d7bbe71fce69ebf4b2e71a971f4510 MANIFEST.SKIP
+SHA1 c7c7d89c214ecdb89d0fd110708125f8297e5b7a META.yml
+SHA1 3dd7da2436ba2ff3db2e10376a2e8372f10c1139 Makefile.PL
+SHA1 3599f8a4e214b7d9efdcb4904df5ea0ccdfbde12 README
+SHA1 ab9b8f4dd40d2147c1aa1e7596e0e0c5de0cb7ad check_postgres.pl
+SHA1 aa017b0386b5a358f5de3a98f1cde3f4fdca8418 check_postgres.pl.asc
+SHA1 eda0a0e142f2dd48c7d09f62dbca054a7f58c492 check_postgres.pl.html
+SHA1 cafb26e6fbe508b1f7e67fe09899887a56f1fd2c index.html
+SHA1 c3d239c75a507a0b4d5a245ea82fb2e7fe2869cd t/00_basic.t
+SHA1 dc767132e602a61990c69082f27650e533db53c1 t/00_signature.t
+SHA1 b3b833488dca6a766aa185c2457d361a978103cb t/00_test_tester.t
+SHA1 da2a58efa0652058e81fee150b6f5c7c0a973a73 t/02_autovac_freeze.t
+SHA1 5768ece10593e8a1de4d7ec54ce6588905eb4b9b t/02_backends.t
+SHA1 4e5630e7aa41398cd614dbdad79e3ae97109ff9b t/02_bloat.t
+SHA1 2df3cf128e367cb92fc74147e1b4fce405e17183 t/02_checkpoint.t
+SHA1 8194ea76cca596ea9605674df8c531c7ed751c4e t/02_connection.t
+SHA1 df14451d998ebfb27df20cc03881ac2460957594 t/02_custom_query.t
+SHA1 891aa165757d9d226254ad49cbd4b28642556907 t/02_database_size.t
+SHA1 4d5d6b521ae8ec45cb14feea155858379ec77028 t/02_dbstats.t
+SHA1 76db3c4a3824897daad19f333ccba0e5e3293000 t/02_disabled_triggers.t
+SHA1 ac8bdaf6c2c9865d5619a03d58414ddfa8480e7f t/02_disk_space.t
+SHA1 bdc9a849ced22eba077c289a8e0e784baa81dc20 t/02_fsm_pages.t
+SHA1 a3f7a47eb51ad2ac84ef25a2613cb71a3b8e76e1 t/02_fsm_relations.t
+SHA1 d01acd789e5207120255a69684e90d77d0469946 t/02_last_analyze.t
+SHA1 5a87c262a17e3a6681c32079723e51a59d8f95e6 t/02_last_vacuum.t
+SHA1 82faf8abcd0855361047154073f05111c9d0209f t/02_listener.t
+SHA1 ef95e89d40c052c240c77fbca654150480d61c08 t/02_locks.t
+SHA1 4e4658f1832bccbfcb6b431a43b3d6ce1c84f34d t/02_logfile.t
+SHA1 a087992993dd354783b86082307e2f63d2e3eb4f t/02_new_version_cp.t
+SHA1 b01d529b9e61fbeb63a3ea41e33c308fe2df2be8 t/02_new_version_pg.t
+SHA1 1faaad7c164d9588e77afd64b8e6c3bbbd243f6e t/02_prepared_txns.t
+SHA1 2706f51b92149330f123e174ad009ada0124a538 t/02_query_runtime.t
+SHA1 957728641da08e8b3b74653f96bcd55447afdd43 t/02_query_time.t
+SHA1 fc900d41c371685d074c7603430e9672dc0b20ef t/02_relation_size.t
+SHA1 e1943ee0a4c939c4ac0f1b660e2329c1d4c5bed3 t/02_replicate_row.t
+SHA1 41c9581ee4ce4d0e9710b5ae9020e22994eab5c5 t/02_sequence.t
+SHA1 f498f14c7b05792e18b99ef7d6c91592682d29b6 t/02_settings_checksum.t
+SHA1 4c14da6c23eb14e450bd7b0af722fdc0cb97aae7 t/02_timesync.t
+SHA1 da12da419f0adb356687ec1465ff7e32f2364c12 t/02_txn_idle.t
+SHA1 af3eb039379b29b9a88749f478299265a87fd084 t/02_txn_time.t
+SHA1 8574b2b90ee3afb4921e04adebf51d77859be732 t/02_txn_wraparound.t
+SHA1 19b3e87dc7f5b54cb3c0ca37088313898ea5855f t/02_version.t
+SHA1 6520340ebf8f945954f18f5ac8fb2f2844df3ff3 t/02_wal_files.t
+SHA1 e1f22073b630d4252f0c1f65fafcec2df02132a3 t/03_translations.t
+SHA1 089f28c3b740643f9a41c35305c8d322026184db t/99_cleanup.t
+SHA1 d33a42a227a68e3162274c52606f0a86e7a61a6a t/99_perlcritic.t
+SHA1 e662fbf8cac082700d67bae655be2ce905b9f3dd t/99_pod.t
+SHA1 4f3504238dd72d425f71fcc6bb54b21503d4edfa t/99_spellcheck.t
+SHA1 bd35dfe8ca36bbf5556840dd417a3f881a41616e t/CP_Testing.pm
+-----BEGIN PGP SIGNATURE-----
+
+iEYEAREDAAYFAkn92dIACgkQvJuQZxSWSshsUQCg7RqWT4hg7LeoQtmivDVYDWkE
+8iAAoKMTlb03t+/mZubAQttOAqqUc9jr
+=SqO/
+-----END PGP SIGNATURE-----
