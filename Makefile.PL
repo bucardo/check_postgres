@@ -64,8 +64,6 @@ my %opts =
 		$string .= qq{\nsignature_asc : \n};
 		$string .= qq{\t@ gpg --yes -ba check_postgres.pl\n};
 		$string .= qq{\t@ gpg --verify check_postgres.pl.asc\n};
-		$string .= qq{\nrelease : \n\t};
-		$string .= q{perl -pi -e "s/released on ([^\.]+)/released on `date +\"%B %-d, %Y\"`/" index.html};
 		$string .= qq{\n\nhtml : \n\t};
 		$string .= <<'EOM';
 	pod2html check_postgres.pl > check_postgres.pl.html
@@ -80,13 +78,6 @@ EOM
 		return $string;
 	}
 
-	sub manifypods {
-		my $string = shift->SUPER::manifypods(@_);
-		$string .= <<'EOM';
-	@ perl -pi -e "s/\d+\.\d+\.\d+/`grep describes check_postgres.pl | cut -d' ' -f6`/" index.html
-EOM
-		return $string;
-	}
 }
 
 my $output = WriteMakefile(%opts);
