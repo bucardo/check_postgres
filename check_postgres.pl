@@ -815,7 +815,7 @@ sub add_response {
 		$db->{host} .= " => $opt{host2}->[0]";
 	}
 	if ($nohost) {
-		push @{$type->{''}} => [$msg,''];
+		push @{$type->{''}} => [$msg, length $nohost > 1 ? $nohost : ''];
 		return;
 	}
 	my $header = sprintf q{%s%s%s},
@@ -4509,16 +4509,16 @@ sub check_new_version_cp {
 	my $site = 'bucardo.org';
 	my $path = 'check_postgres/latest_version.txt';
 	my $url = "http://$site/$path";
-	my $newver = '';
-	my $versionre = qr{\d+\.\d+\.\d+};
+	my ($newver,$maj,$rev,$message) = ('','','','');
+	my $versionre = qr{((\d+\.\d+)\.(\d+))\s+(.+)};
 
 	for my $meth (@get_methods) {
 		eval {
 			my $COM = "$meth $url";
 			$VERBOSE >= 1 and warn "TRYING: $COM\n";
 			my $info = qx{$COM 2>/dev/null};
-			if ($info =~ /($versionre)/) {
-				$newver = $1;
+			if ($info =~ $versionre) {
+				($newver,$maj,$rev,$message) = ($1,$2,$3,$4);
 			}
 			$VERBOSE >=1 and warn "SET version to $newver\n";
 		};
@@ -4527,13 +4527,28 @@ sub check_new_version_cp {
 
 	if (! length $newver) {
 		add_unknown msg('new-cp-fail');
+		return;
 	}
-	elsif ($newver ne $VERSION) {
+
+	if ($newver eq $VERSION) {
+		add_ok msg('new-cp-ok', $newver);
+		return;
+	}
+
+	if ($VERSION !~ /(\d+\.\d+)\.(\d+)/) {
+		add_unknown msg('new-cp-fail');
+		return;
+	}
+
+	$nohost = $message;
+	my ($cmaj,$crev) = ($1,$2);
+	if ($cmaj eq $maj) {
 		add_warning msg('new-cp-warn', $newver, $VERSION);
 	}
 	else {
-		add_ok msg('new-cp-ok', $newver);
+		add_critical msg('new-cp-warn', $newver, $VERSION);
 	}
+	return;
 
 } ## end of check_new_version_cp
 
@@ -6080,7 +6095,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
   Added internationalization support (Greg)
   Added the 'disabled_triggers' check (Greg)
-  Added the prepared_txns' check (Greg)
+  Added the 'prepared_txns' check (Greg)
   Added the 'new_version_cp' and 'new_version_pg' checks (Greg)
   French translations (Guillaume Lelarge)
   Make the backends search return ok if no matches due to inclusion rules,

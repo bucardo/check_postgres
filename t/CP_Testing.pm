@@ -637,6 +637,9 @@ sub fake_self_version {
 	open my $fh, '+<', $file or die qq{Could not open "$file": $!\n};
 	my $slurp;
 	{ local $/; $slurp = <$fh> }
+	## Remove any old versions
+	$slurp =~ s/^\$VERSION = '\d+\.\d+\.\d+'.+TESTING ONLY\n//gm;
+	## Put in out new version
 	$slurp =~ s/(our \$VERSION = '\d+\.\d+\.\d+';)/$1\n\$VERSION = '$version'; ## TESTING ONLY/;
 	seek $fh, 0, 0;
 	print $fh $slurp;
@@ -654,7 +657,7 @@ sub restore_self_version {
 	open my $fh, '+<', $file or die qq{Could not open "$file": $!\n};
 	my $slurp;
 	{ local $/; $slurp = <$fh> }
-	$slurp =~ s/^\$VERSION = '\d+\.\d+\.\d+'.+?\n//gm;
+	$slurp =~ s/^\$VERSION = .+TESTING ONLY.*\n//gm;
 	seek $fh, 0, 0;
 	print $fh $slurp;
 	truncate $fh, tell($fh);
