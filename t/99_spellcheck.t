@@ -20,7 +20,7 @@ else {
 	opendir my $dir, 't' or die qq{Could not open directory 't': $!\n};
 	@testfiles = map { "t/$_" } grep { /^.+\.(t|pl|pm)$/ } readdir $dir;
 	closedir $dir or die qq{Could not closedir "$dir": $!\n};
-	plan tests => 3+@testfiles;
+	plan tests => 2+@testfiles;
 }
 
 my %okword;
@@ -58,30 +58,7 @@ sub spellcheck {
 }
 
 
-## First, the plain old textfiles
-for my $file (qw/index.html/) {
-	if (!open $fh, '<', $file) {
-		fail(qq{Could not find the file "$file"!});
-	}
-	else {
-		{ local $/; $_ = <$fh>; }
-		close $fh or warn qq{Could not close "$file": $!\n};
-		if ($file eq 'Changes') {
-			s{\b(?:from|by) [A-Z][\w \.]+[<\[\n]}{}gs;
-			s{\b[Tt]hanks to ([A-Z]\w+\W){1,3}}{}gs;
-			s{Abhijit Menon-Sen}{}gs;
-			s{eg/lotest.pl}{};
-			s{\[.+?\]}{}gs;
-			s{\S+\@\S+\.\S+}{}gs;
-		}
-		elsif ($file eq 'README.dev') {
-			s/^\t\$.+//gsm;
-		}
-		spellcheck($file => $_, $file);
-	}
-}
-
-## Now the embedded POD
+## The embedded POD
 SKIP: {
 	if (!eval { require Pod::Spell; 1 }) {
 		skip 'Need Pod::Spell to test the spelling of embedded POD', 1;
