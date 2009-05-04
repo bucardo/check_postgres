@@ -252,6 +252,8 @@ sub test_database_handle {
 	};
 	if ($@) {
 		if ($@ =~ /role .+ does not exist/) {
+			## We want the current user, not whatever this is set to:
+			delete $ENV{PGUSER};
 			my @tempdsn = ($dsn, '', '', {AutoCommit=>1,RaiseError=>1,PrintError=>0});
 			my $tempdbh = DBI->connect(@tempdsn);
 			$tempdbh->do("CREATE USER $dbuser SUPERUSER");
