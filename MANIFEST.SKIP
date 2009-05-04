@@ -6,3 +6,4 @@ Makefile
 pm_to_blib
 TODO
 tar.gz$
+index.html

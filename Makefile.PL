@@ -66,12 +66,7 @@ my %opts =
 		$string .= qq{\t@ gpg --verify check_postgres.pl.asc\n};
 		$string .= qq{\nrelease : \n\t};
 		$string .= q{perl -pi -e "s/released on ([^\.]+)/released on `date +\"%B %-d, %Y\"`/" index.html};
-		$string .= "\n\n";
-		return $string;
-	}
-
-	sub manifypods {
-		my $string = shift->SUPER::manifypods(@_);
+		$string .= qq{\n\nhtml : \n\t};
 		$string .= <<'EOM';
 	pod2html check_postgres.pl > check_postgres.pl.html
 	@ perl -pi -e "s/<link.*?>//" check_postgres.pl.html
@@ -81,6 +76,13 @@ my %opts =
 	@ perl -pi -e "s~</TITLE>~</title>~" check_postgres.pl.html
 	@ perl -pi -e "s~\`\`(.+?)''~&quot;\\1&quot;~g" check_postgres.pl.html
 	@ rm -f pod2htmd.tmp pod2htmi.tmp
+EOM
+		return $string;
+	}
+
+	sub manifypods {
+		my $string = shift->SUPER::manifypods(@_);
+		$string .= <<'EOM';
 	@ perl -pi -e "s/\d+\.\d+\.\d+/`grep describes check_postgres.pl | cut -d' ' -f6`/" index.html
 EOM
 		return $string;

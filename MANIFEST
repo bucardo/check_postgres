@@ -4,7 +4,6 @@ check_postgres.pl.html
 README
 SIGNATURE
 Makefile.PL
-index.html
 MANIFEST
 MANIFEST.SKIP
 .gitignore
