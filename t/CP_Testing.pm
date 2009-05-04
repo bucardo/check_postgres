@@ -87,7 +87,6 @@ sub test_database_handle {
 		print $cfh qq{\n\n## check_postgres.pl testing parameters\n};
 		print $cfh qq{listen_addresses = ''\n};
 		print $cfh qq{max_connections = 10\n};
-		print $cfh qq{max_fsm_pages = 99999\n};
 
 		## Grab the version for finicky items
 		if (qx{$initdb --version} !~ /(\d+)\.(\d+)/) {
@@ -110,6 +109,11 @@ sub test_database_handle {
 		if ($imaj < 8 or ($imaj==8 and $imin <= 2)) {
 			print $cfh qq{stats_block_level = on\n};
 			print $cfh qq{stats_row_level = on\n};
+		}
+
+		## <= 8.3
+		if ($imaj < 8 or ($imaj==8 and $imin <= 3)) {
+			print $cfh qq{max_fsm_pages = 99999\n};
 		}
 
 		print $cfh "\n";
@@ -262,17 +266,15 @@ sub test_database_handle {
 
 	$dbh->{AutoCommit} = 1;
 	$dbh->{RaiseError} = 0;
-	if ($maj < 8 or ($maj==8 and $min < 1)) {
-		## Old school
-		$dbh->do('CREATE USER sixpack');
-		$dbh->do('CREATE USER readonly');
+	if ($maj > 8 or ($maj==8 and $min >= 1)) {
+		$SQL = q{SELECT count(*) FROM pg_user WHERE usename = ?};
+		$sth = $dbh->prepare($SQL);
+		$sth->execute($dbuser);
+		$count = $sth->fetchall_arrayref()->[0][0];
+		if (!$count) {
+			$dbh->do("CREATE USER $dbuser SUPERUSER");
+		}
 	}
-	else {
-		$dbh->do("CREATE USER $dbuser SUPERUSER");
-		$dbh->do('CREATE USER sixpack NOSUPERUSER CREATEDB');
-		$dbh->do('CREATE USER readonly NOSUPERUSER NOCREATEDB');
-	}
-	$dbh->do('ALTER USER readonly SET default_transaction_read_only = 1');
 	$dbh->do('CREATE DATABASE beedeebeedee');
 	$dbh->do('CREATE DATABASE ardala');
     $dbh->do('CREATE LANGUAGE plpgsql');
