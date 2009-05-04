@@ -2,7 +2,9 @@ test_database_check_postgres/
 ~$
 ^tmp/
 ^blib/
-Makefile
+Makefile$
+Makefile.old$
 pm_to_blib
 TODO
 tar.gz$
+check_postgres-.*
