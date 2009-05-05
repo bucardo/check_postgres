@@ -21,8 +21,8 @@ SHA1 f5d6e0d4a9b55e45eb5c8f37500261ff6f31e6a6 MANIFEST.SKIP
 SHA1 c7c7d89c214ecdb89d0fd110708125f8297e5b7a META.yml
 SHA1 5f7fd6a110717f8795b5cb8a59cff7c1ec27e189 Makefile.PL
 SHA1 3599f8a4e214b7d9efdcb4904df5ea0ccdfbde12 README
-SHA1 c52c56e41354f2d0e75ced785f56020f42bc0058 check_postgres.pl
-SHA1 867bf1f336528095bfe9d98a9d0c4d3314b04848 check_postgres.pl.asc
+SHA1 301606d891bf6f7ec4ce9ea8553159c0ed002bf3 check_postgres.pl
+SHA1 90aefb0ff7bde951fe9eef45101f863f22796567 check_postgres.pl.asc
 SHA1 eda0a0e142f2dd48c7d09f62dbca054a7f58c492 check_postgres.pl.html
 SHA1 c3d239c75a507a0b4d5a245ea82fb2e7fe2869cd t/00_basic.t
 SHA1 dc767132e602a61990c69082f27650e533db53c1 t/00_signature.t
@@ -67,7 +67,7 @@ SHA1 ca6ae120c55bde0e8284e038d5284ea562f978b3 t/99_spellcheck.t
 SHA1 08cfd146aa2696b5275e07f907f8e12715e30bda t/CP_Testing.pm
 -----BEGIN PGP SIGNATURE-----
 
-iEYEAREDAAYFAkn/UxkACgkQvJuQZxSWSsgRKgCgxll32EgLoTgPsukyD014Z6hC
-biQAn0T5sNGuKPXi9o5hQUMXz4zcDDvH
-=juvg
+iEYEAREDAAYFAkn/iHoACgkQvJuQZxSWSsggmwCfexxT9Qhtc2+uYoQpUDhlGVgo
+gOIAnRcE0gLZKfr8zds6Ym+lyixdMOcS
+=H6Y7
 -----END PGP SIGNATURE-----
