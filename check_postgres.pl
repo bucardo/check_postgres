@@ -792,7 +792,8 @@ if (! defined $PSQL or ! length $PSQL) {
 		-e $PSQL or ndie msg('opt-psql-noexist', $PSQL);
 	}
 	else {
-		chomp($PSQL = qx{which psql});
+		my $psql = $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/psql" : 'psql';
+		chomp($PSQL = qx{which $psql});
 		$PSQL or ndie msg('opt-psql-nofind');
 	}
 }
@@ -6091,7 +6092,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.8.0> (May ??, 2009)
+=item B<Version 2.8.0> (May 4, 2009)
 
   Added internationalization support (Greg)
   Added the 'disabled_triggers' check (Greg)
@@ -6111,7 +6112,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Set stats to zero if we bail early due to USERWHERECLAUSE (Andras Fabian)
   Add additional items to dbstats output (Andras Fabian)
   Remove --schema option from the fsm_ checks. (Greg Mullane and Robert Treat)
-  Various fixes. (Jeff Boes)
+  Handle case when ENV{PGUSER} is set. (Andy Lester)
+  Many various fixes. (Jeff Boes)
   Fix --dbservice: check version and use ENV{PGSERVICE} for old versions (Cédric Villemain)
 
 =item B<Version 2.7.3> (February 10, 2009)
