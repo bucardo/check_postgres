@@ -1,0 +1,31 @@
+Quick list of outstanding items / bugs / feature requests for CP:
+
+* Make a (semi) automated way to allow non-superusers to run all actions
+
+* Get a wiki and bug tracker
+
+* Put complete Nagios templates on a page somewhere
+
+* Get more language translations
+
+* Investigage report of an empty fsm_pages causing 255 out of range error
+
+* Check the current logfile is not bigger than X KB/MB/GB
+
+* Have the checksum action only warn once and save the result somewhere
+
+* Reconsider PGBINDIR and see if there is something more standard
+
+* Support for pg_bouncer checks
+
+* Full and correct support for Nagios, e.g.
+  http://nagiosplug.sourceforge.net/developer-guidelines.html#AEN203
+
+* Fix last_analyze, etc. with perflimit - can lead to no results die to filtering
+
+* For last_analyze and last_vacuum, way to skip null (never been hit)
+
+* Check at least one table has been vacuumed/analyzed since X time
+
+* Put on CPAN
+
