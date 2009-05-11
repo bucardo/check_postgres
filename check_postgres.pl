@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.8.0';
+our $VERSION = '2.8.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -506,7 +506,7 @@ our $nohost = 0;
 our $ERROR = '';
 
 $opt{test} = 0;
-$opt{timeout} = 10;
+$opt{timeout} = 30;
 
 die $USAGE unless
 	GetOptions(
@@ -699,7 +699,7 @@ Other options:
   --PSQL=FILE        location of the psql executable; avoid using if possible
   -v, --verbose      verbosity level; can be used more than once to increase the level
   -h, --help         display this help information
-  -t X, --timeout=X  how long in seconds before we timeout. Defaults to 10 seconds.
+  -t X, --timeout=X  how long in seconds before we timeout. Defaults to 30 seconds.
   --symlinks         create named symlinks to the main program for each action
 
 Actions:
@@ -1585,13 +1585,16 @@ sub run_command {
 			}
 		}
 
+		local $SIG{ALRM} = sub { die 'Timed out' };
+		my $timeout = $arg->{timeout} || $opt{timeout};
+		my $dbtimeout = $timeout * 1000;
+		alarm 0;
+
+		$string = "BEGIN;SET statement_timeout=$dbtimeout;COMMIT;$string";
+
 		push @args, '-c', $string;
 
 		$VERBOSE >= 3 and warn Dumper \@args;
-
-		local $SIG{ALRM} = sub { die 'Timed out' };
-		my $timeout = $arg->{timeout} || $opt{timeout};
-		alarm 0;
 
 		my $start = $opt{showtime} ? [gettimeofday()] : 0;
 		open my $oldstderr, '>&', \*STDERR or ndie msg('runcommand-nodupe');
@@ -1608,7 +1611,7 @@ sub run_command {
 			if ($err =~ /Timed out/) {
 				ndie msg('runcommand-timeout', $timeout);
 			}
-			else {
+			else {ndie $res;
 				ndie msg('runcommand-err');
 			}
 		}
@@ -1629,6 +1632,10 @@ sub run_command {
 
 			if ($db->{error} =~ /FATAL/) {
 				ndie "$db->{error}";
+			}
+
+			elsif ($db->{error} =~ /statement timeout/) {
+				ndie msg('runcommand-timeout', $timeout);
 			}
 
 			if (!$db->{ok} and !$arg->{failok} and !$arg->{noverify}) {
@@ -4747,7 +4754,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.8.0
+This documents describes check_postgres.pl version 2.8.1
 
 =head1 SYNOPSIS
 
@@ -6091,6 +6098,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.8.1> (May, 2009)
+
+  Added timeout via statement_timeout in addition to perl alarm (Greg)
 
 =item B<Version 2.8.0> (May 4, 2009)
 

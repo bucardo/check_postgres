@@ -47,6 +47,7 @@ t/02_txn_wraparound.t
 t/02_version.t
 t/02_wal_files.t
 t/03_translations.t
+t/04_timeout.t
 t/99_cleanup.t
 t/99_perlcritic.t
 t/99_pod.t
