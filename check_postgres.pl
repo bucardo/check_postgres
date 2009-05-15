@@ -6099,7 +6099,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.8.1> (May, 2009)
+=item B<Version 2.8.1> (May, 15 2009)
 
   Added timeout via statement_timeout in addition to perl alarm (Greg)
 
