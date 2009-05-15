@@ -14,16 +14,17 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: RIPEMD160
 
-SHA1 0e4d64eb4cd2bb51385fe329bab2c56fd8f391bc .gitignore
+SHA1 3aeda3534cbbbe219f97a0ebfc5081f88368af64 .gitignore
 SHA1 2fcd86d852f0a68d0370b801535aa1292a24d2c9 .perlcriticrc
-SHA1 367cdf97f828f35eb17964c366e9c2b4d1706ab8 MANIFEST
+SHA1 9a68022971fc8eca0dc25ef007f87b246ac97078 MANIFEST
 SHA1 f5d6e0d4a9b55e45eb5c8f37500261ff6f31e6a6 MANIFEST.SKIP
-SHA1 c7c7d89c214ecdb89d0fd110708125f8297e5b7a META.yml
-SHA1 5f7fd6a110717f8795b5cb8a59cff7c1ec27e189 Makefile.PL
+SHA1 56f72465b63e132edce233729626ed5cc95bd91e META.yml
+SHA1 24f66eee8e1c5bd935f8f6201cb7b733b5fc0ee1 Makefile.PL
 SHA1 3599f8a4e214b7d9efdcb4904df5ea0ccdfbde12 README
-SHA1 301606d891bf6f7ec4ce9ea8553159c0ed002bf3 check_postgres.pl
-SHA1 90aefb0ff7bde951fe9eef45101f863f22796567 check_postgres.pl.asc
-SHA1 eda0a0e142f2dd48c7d09f62dbca054a7f58c492 check_postgres.pl.html
+SHA1 75dbe2bf9c8ce468e72a11a9cb52f35c47c98183 TODO
+SHA1 32145a59dc79db5d183123fe0220ba5f561c61e3 check_postgres.pl
+SHA1 be22bfa2a7673665cf57831078d241bc0faf4db1 check_postgres.pl.asc
+SHA1 bae8195bbc7e1bcf4284bae4c8f0ced91778f59b check_postgres.pl.html
 SHA1 c3d239c75a507a0b4d5a245ea82fb2e7fe2869cd t/00_basic.t
 SHA1 dc767132e602a61990c69082f27650e533db53c1 t/00_signature.t
 SHA1 b3b833488dca6a766aa185c2457d361a978103cb t/00_test_tester.t
@@ -60,6 +61,7 @@ SHA1 8574b2b90ee3afb4921e04adebf51d77859be732 t/02_txn_wraparound.t
 SHA1 19b3e87dc7f5b54cb3c0ca37088313898ea5855f t/02_version.t
 SHA1 6520340ebf8f945954f18f5ac8fb2f2844df3ff3 t/02_wal_files.t
 SHA1 e1f22073b630d4252f0c1f65fafcec2df02132a3 t/03_translations.t
+SHA1 eb66336f915f77a1cd82c1b19b44acc7dc2d5038 t/04_timeout.t
 SHA1 089f28c3b740643f9a41c35305c8d322026184db t/99_cleanup.t
 SHA1 fa6b741f7d4fe4c4b52d03ab3bc3cd34bbc089ac t/99_perlcritic.t
 SHA1 e662fbf8cac082700d67bae655be2ce905b9f3dd t/99_pod.t
@@ -67,7 +69,7 @@ SHA1 ca6ae120c55bde0e8284e038d5284ea562f978b3 t/99_spellcheck.t
 SHA1 08cfd146aa2696b5275e07f907f8e12715e30bda t/CP_Testing.pm
 -----BEGIN PGP SIGNATURE-----
 
-iEYEAREDAAYFAkn/iHoACgkQvJuQZxSWSsggmwCfexxT9Qhtc2+uYoQpUDhlGVgo
-gOIAnRcE0gLZKfr8zds6Ym+lyixdMOcS
-=H6Y7
+iEYEAREDAAYFAkoNmkYACgkQvJuQZxSWSsiBpwCgvUwQMUIdQVMpyzrYfEofAXh9
+S50AnRo3/eNQmP+6hToUeDrZzFHMHjyG
+=R0Zv
 -----END PGP SIGNATURE-----
