@@ -67,3 +67,8 @@ Development happens via git. You can check out the repository by doing:
 
 git clone http://bucardo.org/check_postgres.git
 
+All changes are sent to the commit list:
+
+https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
+
+
