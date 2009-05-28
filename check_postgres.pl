@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.8.1';
+our $VERSION = '2.9.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -223,6 +223,8 @@ our %msg = (
 	'runtime-badmrtg'    => q{invalid queryname?},
 	'runtime-badname'    => q{Invalid queryname option: must be a simple view name},
 	'runtime-msg'        => q{query runtime: $1 seconds},
+    'same-matched'       => q{Both databases have identical items},
+    'same-failed'        => q{Databases were different. Items not matched: $1},
 	'seq-die'            => q{Could not determine information about sequence $1},
 	'seq-msg'            => q{$1=$2% (calls left=$3)},
 	'seq-none'           => q{No sequences found},
@@ -649,6 +651,7 @@ our $action_info = {
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
  replicate_row       => [0, 'Verify a simple update gets replicated to another server.'],
+ same_schema         => [0, 'Verify that two databases have the exact same tables, columns, etc.'],
  sequence            => [0, 'Checks remaining calls left in sequences.'],
  settings_checksum   => [0, 'Check that no settings have changed since the last check.'],
  timesync            => [0, 'Compare database time to local system time.'],
@@ -812,8 +815,12 @@ sub add_response {
 	my ($type,$msg) = @_;
 
 	$db->{host} ||= '';
-	if (defined $opt{host2} and length $opt{host2}->[0]) {
+
+	if (defined $opt{host2} and defined $opt{host2}->[0] and length $opt{host2}->[0]) {
 		$db->{host} .= " => $opt{host2}->[0]";
+	}
+	if (defined $opt{port2} and defined $opt{port2}->[0] and length $opt{port2}->[0]) {
+		$db->{port} .= " => $opt{port2}->[0]";
 	}
 	if ($nohost) {
 		push @{$type->{''}} => [$msg, length $nohost > 1 ? $nohost : ''];
@@ -945,7 +952,11 @@ sub finishup {
 		if ($opt{showperf}) {
 			print '| ';
 			for (sort keys %$info) {
-				printf '%s ', join $SEP => map { $_->[1] } @{$info->{$_}};
+				my $m = sprintf '%s ', join $SEP => map { $_->[1] } @{$info->{$_}};
+				if ($VERBOSE) {
+					$m =~ s/  /\n/g;
+				}
+				print $m;
 			}
 		}
 		print "\n";
@@ -1203,6 +1214,9 @@ check_custom_query() if $action eq 'custom_query';
 ## Test of replication
 check_replicate_row() if $action eq 'replicate_row';
 
+## Compare database schemas
+check_same_schema() if $action eq 'same_schema';
+
 ## Check sequence values
 check_sequence() if $action eq 'sequence';
 
@@ -1456,7 +1470,7 @@ sub run_command {
 		for my $v (keys %$conn) {
 			my $vname = $v;
 			## Something new?
-			if ($arg->{dbnumber}) {
+			if ($arg->{dbnumber} and $arg->{dbnumber} ne '1') {
 				$v .= "$arg->{dbnumber}";
 			}
 			if (defined $opt{$v}->[$gbin]) {
@@ -4226,6 +4240,1055 @@ sub check_replicate_row {
 } ## end of check_replicate_row
 
 
+sub check_same_schema {
+
+	## Verify that all relations inside two databases are the same
+	## Supports: Nagios, MRTG
+	## Include and exclude should be supported
+	## Warning and critical are not used as normal
+	## Warning is used to do filtering
+
+	## Check for filtering rules
+	my %filter;
+	if (exists $opt{warning} and length $opt{warning}) {
+		for my $phrase (split /\s+/ => $opt{warning}) {
+			for my $type (qw/schema user table view index sequence constraint trigger function/) {
+				if ($phrase =~ /^no${type}s?$/i) {
+					$filter{"no${type}s"} = 1;
+				}
+				elsif ($phrase =~ /^no$type=(.+)/i) {
+					push @{$filter{"no${type}_regex"}} => $1;
+				}
+			}
+			if ($phrase =~ /^noposition$/io) {
+				$filter{noposition} = 1;
+			}
+		}
+
+	}
+
+	my %thing;
+
+	my $saved_db;
+	for my $x (1..2) {
+
+		## Get a list of all users
+		if (! exists $filter{nousers}) {
+			$SQL = 'SELECT usesysid, quote_ident(usename), usecreatedb, usesuper FROM pg_user';
+			my $info = run_command($SQL, { dbnumber => $x } );
+			for $db (@{$info->{db}}) {
+				while ($db->{slurp} =~ /^\s*(\d+)\s*\| (.+?)\s*\| ([t|f])\s*\| ([t|f]).*/gmo) {
+					$thing{$x}{users}{$2} = { oid=>$1, createdb=>$3, superuser=>$4 };
+					$thing{$x}{useroid}{$1} = $2;
+				}
+			}
+		}
+
+		## Get a list of all schemas (aka namespaces)
+		if (! exists $filter{noschema}) {
+			$SQL = q{SELECT quote_ident(nspname), n.oid, quote_ident(usename), nspacl FROM pg_namespace n }
+				. q{JOIN pg_user u ON (u.usesysid = n.nspowner) }
+				. q{WHERE nspname !~ '^pg_t'};
+			$info = run_command($SQL, { dbnumber => $x } );
+			for $db (@{$info->{db}}) {
+				while ($db->{slurp} =~ /^\s*(.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (\S*).*/gmo) {
+					$thing{$x}{schemas}{$1} = { oid=>$2, owner=>$3, acl=>$4||'(none)' };
+				}
+			}
+		}
+
+		## Get a list of all relations
+		$SQL = q{SELECT relkind, quote_ident(nspname), quote_ident(relname), quote_ident(usename), relacl }
+			. q{FROM pg_class c }
+			. q{JOIN pg_namespace n ON (n.oid = c.relnamespace) }
+			. q{JOIN pg_user u ON (u.usesysid = c.relowner) }
+			. q{WHERE nspname !~ '^pg_t'};
+		exists $filter{notriggers}  and $SQL .= q{ AND relkind <> 'r'};
+		exists $filter{noviews}     and $SQL .= q{ AND relkind <> 'v'};
+		exists $filter{noindexes}   and $SQL .= q{ AND relkind <> 'i'};
+		exists $filter{nosequences} and $SQL .= q{ AND relkind <> 'S'};
+		$info = run_command($SQL, { dbnumber => $x } );
+		for $db (@{$info->{db}}) {
+			while ($db->{slurp} =~ /^\s*(\w)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (\S*).*/gmo) {
+				my ($kind,$schema,$name,$owner,$acl) = ($1,$2,$3,$4,$5);
+				if ($kind eq 'r') {
+					$thing{$x}{tables}{"$schema.$name"} =
+						{ schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
+				}
+				elsif ($kind eq 'v') {
+					$thing{$x}{views}{"$schema.$name"} =
+						{ schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
+				}
+				elsif ($kind eq 'i') {
+					$thing{$x}{indexes}{"$schema.$name"} =
+						{ schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
+				}
+				elsif ($kind eq 'S') {
+					$thing{$x}{sequences}{"$schema.$name"} =
+						{ schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
+				}
+			}
+		}
+
+		## Get a list of all types
+		$SQL = q{SELECT typname, oid FROM pg_type};
+		$info = run_command($SQL, { dbnumber => $x } );
+		for $db (@{$info->{db}}) {
+			while ($db->{slurp} =~ /^\s*(.+?)\s+\|\s+(\d+).*/gmo) {
+				$thing{$x}{type}{$2} = $1;
+			}
+			$saved_db = $db if ! defined $saved_db;
+		}
+
+		## Get a list of all triggers
+		if (! exists $filter{notriggers}) {
+			$SQL = q{SELECT tgname, quote_ident(relname), proname, proargtypes, tgtype FROM pg_trigger }
+				. q{ JOIN pg_class c ON (c.oid = tgrelid) }
+				. q{ JOIN pg_proc p ON (p.oid = tgfoid) }
+				. q{ WHERE NOT tgisconstraint}; ## constraints checked separately
+			$info = run_command($SQL, { dbnumber => $x } );
+			for $db (@{$info->{db}}) {
+				while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+).*/gmo) {
+					my ($name,$table,$func,$args,$type) = ($1,$2,$3,$4,$5);
+					$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
+					$args =~ s/^\s*(.*)\s*$/($1)/;
+					$thing{$x}{triggers}{$name} = { table=>$table, func=>$func, args=>$args, type=>$type };
+				}
+			}
+		}
+
+		## Get a list of all columns
+		## We'll use information_schema for this one
+		$SQL = q{SELECT table_schema, table_name, column_name, ordinal_position, }
+			. q{COALESCE(column_default, '(none)'), }
+			. q{is_nullable, data_type, }
+			. q{COALESCE(character_maximum_length, 0), }
+			. q{COALESCE(numeric_precision, 0), }
+			. q{COALESCE(numeric_scale,0) }
+			. q{FROM information_schema.columns};
+		$info = run_command($SQL, { dbnumber => $x } );
+		for $db (@{$info->{db}}) {
+			while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \|\s+(\d+) \|\s+(\d+).*/gmo) {
+				$thing{$x}{columns}{"$1.$2"}{$3} = {
+					schema     => $1,
+					table      => $2,
+					name       => $3,
+					position   => exists $filter{noposition} ?0 : $4,
+					default    => $5,
+					nullable   => $6,
+					type       => $7,
+					length     => $8,
+					precision  => $9,
+					scale      => $10,
+				};
+			}
+		}
+
+		## Get a list of all constraints
+		## We'll use information_schema for this one too
+		$SQL = q{SELECT constraint_schema, constraint_name, table_schema, table_name }
+			. q{FROM information_schema.constraint_table_usage};
+		$info = run_command($SQL, { dbnumber => $x } );
+		for $db (@{$info->{db}}) {
+			while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gmo) {
+				$thing{$x}{constraints}{"$1.$2"} = "$3.$4";
+			}
+		}
+		$SQL = q{SELECT constraint_schema, constraint_name, table_schema, table_name, column_name }
+			. q{FROM information_schema.constraint_column_usage};
+		$info = run_command($SQL, { dbnumber => $x } );
+		for $db (@{$info->{db}}) {
+			while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gmo) {
+				my ($cschema,$cname,$tschema,$tname,$col) = ($1,$2,$3,$4,$5);
+				if (exists $thing{$x}{colconstraints}{"$cschema.$cname"}) {
+					my @oldcols = split / / => $thing{$x}{colconstraints}{"$cschema.$cname"}->[1];
+					push @oldcols => $col;
+					$col = join ' ' => sort @oldcols;
+				}
+				$thing{$x}{colconstraints}{"$cschema.$cname"} = ["$tschema.$tname", $col];
+			}
+		}
+
+		## Get a list of all functions
+		$SQL = q{SELECT quote_ident(nspname), quote_ident(proname), proargtypes }
+			. q{FROM pg_proc JOIN pg_namespace n ON (n.oid = pronamespace)};
+		$info = run_command($SQL, { dbnumber => $x } );
+		for $db (@{$info->{db}}) {
+			while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)$/gmo) {
+				my ($schema,$name,$args) = ($1,$2,$3);
+				$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
+				$args =~ s/^\s*(.*)\s*$/($1)/;
+				$thing{$x}{functions}{"$schema.$name$args"} = "$schema.$name";
+			}
+		}
+	}
+
+	$db = $saved_db;
+
+	## Build a list of what has failed
+	my %fail;
+	my $failcount = 0;
+
+	## Compare users
+
+	## Any users on 1 but not 2?
+	USER:
+	{
+	for my $user (sort keys %{$thing{1}{users}}) {
+		next if exists $thing{2}{users}{$user};
+
+		if (exists $filter{nouser_regex}) {
+			for my $regex (@{$filter{nouser_regex}}) {
+				next USER if $name =~ /$regex/;
+			}
+		}
+
+		push @{$fail{users}{notexist}{1}} => $user;
+		$failcount++;
+	}
+	}
+
+	## Any users on 2 but not 1?
+	USER:
+	{
+	for my $user (sort keys %{$thing{2}{users}}) {
+
+		if (exists $filter{nouser_regex}) {
+			for my $regex (@{$filter{nouser_regex}}) {
+				next USER if $name =~ /$regex/;
+			}
+		}
+
+		if (! exists $thing{1}{users}{$user}) {
+			push @{$fail{users}{notexist}{2}} => $user;
+			$failcount++;
+			next;
+		}
+		## Do the matching users have the same superpowers?
+
+		if ($thing{1}{users}{$user}{createdb} ne $thing{2}{users}{$user}{createdb}) {
+			push @{$fail{users}{createdb}{1}{$thing{1}{users}{$user}{createdb}}} => $user;
+			$failcount++;
+		}
+
+		if ($thing{1}{users}{$user}{superuser} ne $thing{2}{users}{$user}{superuser}) {
+			push @{$fail{users}{superuser}{1}{$thing{1}{users}{$user}{superuser}}} => $user;
+			$failcount++;
+		}
+	}
+	}
+
+	## Compare schemas
+
+	## Any schemas on 1 but not 2?
+	SCHEMA:
+	{
+	for my $name (sort keys %{$thing{1}{schemas}}) {
+		next if exists $thing{2}{schemas}{$name};
+
+		if (exists $filter{noschema_regex}) {
+			for my $regex (@{$filter{noschema_regex}}) {
+				next SCHEMA if $name =~ /$regex/;
+			}
+		}
+
+		push @{$fail{schemas}{notexist}{1}} => $name;
+		$failcount++;
+	}
+	}
+
+	## Any schemas on 2 but not 1?
+	SCHEMA:
+	{
+	for my $name (sort keys %{$thing{2}{schemas}}) {
+
+		if (exists $filter{noschema_regex}) {
+			for my $regex (@{$filter{noschema_regex}}) {
+				next SCHEMA if $name =~ /$regex/;
+			}
+		}
+
+		if (! exists $thing{1}{schemas}{$name}) {
+			push @{$fail{schemas}{notexist}{2}} => $name;
+			$failcount++;
+			next;
+		}
+
+		## Do the schemas have same owner and permissions?
+		if ($thing{1}{schemas}{$name}{owner} ne $thing{2}{schemas}{$name}{owner}) {
+			push @{$fail{schemas}{diffowners}} =>
+				[
+				$name,
+				 $thing{1}{schemas}{$name}{owner},
+				 $thing{2}{schemas}{$name}{owner},
+				];
+			$failcount++;
+		}
+
+		if ($thing{1}{schemas}{$name}{acl} ne $thing{2}{schemas}{$name}{acl}) {
+			push @{$fail{schemas}{diffacls}} =>
+				[
+					$name,
+					$thing{1}{schemas}{$name}{acl},
+					$thing{2}{schemas}{$name}{acl},
+				];
+			$failcount++;
+		}
+
+	}
+	}
+
+	## Compare tables
+
+	## Any tables on 1 but not 2?
+	## We treat the name as a unified "schema.relname"
+  TABLE:
+	{
+	for my $name (sort keys %{$thing{1}{tables}}) {
+		next if exists $thing{2}{tables}{$name};
+
+		## If the schema does not exist, don't bother reporting it
+		next if ! exists $thing{2}{schemas}{ $thing{1}{tables}{$name}{schema} };
+
+		if (exists $filter{notable_regex}) {
+			for my $regex (@{$filter{notable_regex}}) {
+				next TABLE if $name =~ /$regex/;
+			}
+		}
+
+		push @{$fail{tables}{notexist}{1}} => $name;
+		$failcount++;
+	}
+	}
+
+	## Any tables on 2 but not 1?
+	TABLE:
+	{
+	for my $name (sort keys %{$thing{2}{tables}}) {
+
+		if (exists $filter{notable_regex}) {
+			for my $regex (@{$filter{notable_regex}}) {
+				next TABLE if $name =~ /$regex/;
+			}
+		}
+
+		if (! exists $thing{1}{tables}{$name}) {
+			## If the schema does not exist, don't bother reporting it
+			if (exists $thing{1}{schemas}{ $thing{2}{tables}{$name}{schema} }) {
+				push @{$fail{tables}{notexist}{2}} => $name;
+				$failcount++;
+			}
+			next;
+		}
+
+		## Do the tables have same owner and permissions?
+		if ($thing{1}{tables}{$name}{owner} ne $thing{2}{tables}{$name}{owner}) {
+			push @{$fail{tables}{diffowners}} =>
+				[$name,
+				 $thing{1}{tables}{$name}{owner},
+				 $thing{2}{tables}{$name}{owner},
+				];
+			$failcount++;
+		}
+
+		if ($thing{1}{tables}{$name}{acl} ne $thing{2}{tables}{$name}{acl}) {
+			push @{$fail{tables}{diffacls}} =>
+				[
+					$name,
+					$thing{1}{tables}{$name}{acl},
+					$thing{2}{tables}{$name}{acl}
+				];
+			$failcount++;
+		}
+
+	}
+	}
+
+	## Compare sequences
+
+	## Any sequences on 1 but not 2?
+	## We treat the name as a unified "schema.relname"
+  SEQUENCE:
+	{
+	for my $name (sort keys %{$thing{1}{sequences}}) {
+		next if exists $thing{2}{sequences}{$name};
+
+		## If the schema does not exist, don't bother reporting it
+		next if ! exists $thing{2}{schemas}{ $thing{1}{sequences}{$name}{schema} };
+
+		if (exists $filter{nosequence_regex}) {
+			for my $regex (@{$filter{nosequence_regex}}) {
+				next SEQUENCE if $name =~ /$regex/;
+			}
+		}
+
+		push @{$fail{sequences}{notexist}{1}} => $name;
+		$failcount++;
+	}
+	}
+
+	## Any sequences on 2 but not 1?
+	SEQUENCE:
+	{
+	for my $name (sort keys %{$thing{2}{sequences}}) {
+
+		if (exists $filter{nosequence_regex}) {
+			for my $regex (@{$filter{nosequence_regex}}) {
+				next SEQUENCE if $name =~ /$regex/;
+			}
+		}
+
+		if (! exists $thing{1}{sequences}{$name}) {
+			## If the schema does not exist, don't bother reporting it
+			if (exists $thing{1}{schemas}{ $thing{2}{sequences}{$name}{schema} }) {
+				push @{$fail{sequences}{notexist}{2}} => $name;
+				$failcount++;
+			}
+			next;
+		}
+
+		## Do the sequences have same owner and permissions?
+		if ($thing{1}{sequences}{$name}{owner} ne $thing{2}{sequences}{$name}{owner}) {
+			push @{$fail{sequences}{diffowners}} =>
+				[$name,
+				 $thing{1}{sequences}{$name}{owner},
+				 $thing{2}{sequences}{$name}{owner},
+				];
+			$failcount++;
+		}
+
+		if ($thing{1}{sequences}{$name}{acl} ne $thing{2}{sequences}{$name}{acl}) {
+			push @{$fail{sequences}{diffacls}} =>
+				[
+					$name,
+					$thing{1}{sequences}{$name}{acl},
+					$thing{2}{sequences}{$name}{acl}
+				];
+			$failcount++;
+		}
+	}
+	}
+
+	## Compare views
+
+	## Any views on 1 but not 2?
+	## We treat the name as a unified "schema.relname"
+	VIEW:
+	{
+	for my $name (sort keys %{$thing{1}{views}}) {
+		next if exists $thing{2}{views}{$name};
+
+		## If the schema does not exist, don't bother reporting it
+		next if ! exists $thing{2}{schemas}{ $thing{1}{views}{$name}{schema} };
+
+		if (exists $filter{noview_regex}) {
+			for my $regex (@{$filter{noview_regex}}) {
+				next VIEW if $name =~ /$regex/;
+			}
+		}
+
+		push @{$fail{views}{notexist}{1}} => $name;
+		$failcount++;
+	}
+	}
+
+	## Any views on 2 but not 1?
+	VIEW:
+	{
+	for my $name (sort keys %{$thing{2}{views}}) {
+
+		if (exists $filter{noview_regex}) {
+			for my $regex (@{$filter{noview_regex}}) {
+				next VIEW if $name =~ /$regex/;
+			}
+		}
+
+		if (! exists $thing{1}{views}{$name}) {
+			## If the schema does not exist, don't bother reporting it
+			if (exists $thing{1}{schemas}{ $thing{2}{views}{$name}{schema} }) {
+				push @{$fail{views}{notexist}{2}} => $name;
+				$failcount++;
+			}
+			next;
+		}
+
+		## Do the views have same owner and permissions?
+		if ($thing{1}{views}{$name}{owner} ne $thing{2}{views}{$name}{owner}) {
+			push @{$fail{views}{diffowners}} =>
+				[$name,
+				 $thing{1}{views}{$name}{owner},
+				 $thing{2}{views}{$name}{owner},
+				];
+			$failcount++;
+		}
+
+		if ($thing{1}{views}{$name}{acl} ne $thing{2}{views}{$name}{acl}) {
+			push @{$fail{views}{diffacls}} =>
+				[
+					$name,
+					$thing{1}{views}{$name}{acl},
+					$thing{2}{views}{$name}{acl}
+				];
+			$failcount++;
+		}
+
+	}
+
+	## Compare triggers
+
+	## Any triggers on 1 but not 2?
+	TRIGGER:
+	{
+	for my $name (sort keys %{$thing{1}{triggers}}) {
+		next if exists $thing{2}{triggers}{$name};
+		if (exists $filter{notrigger_regex}) {
+			for my $regex (@{$filter{notrigger_regex}}) {
+				next TRIGGER if $name =~ /$regex/;
+			}
+		}
+		push @{$fail{triggers}{notexist}{1}} => $name;
+		$failcount++;
+	}
+	}
+
+	## Any triggers on 2 but not 1?
+	TRIGGER:
+	{
+	for my $name (sort keys %{$thing{2}{triggers}}) {
+		if (! exists $thing{1}{triggers}{$name}) {
+			if (exists $filter{notrigger_regex}) {
+				for my $regex (@{$filter{notrigger_regex}}) {
+					next TRIGGER if $name =~ /$regex/;
+				}
+			}
+			push @{$fail{triggers}{notexist}{2}} => $name;
+			$failcount++;
+			next;
+		}
+
+		## Do the triggers call the same function?
+		if (
+			$thing{1}{triggers}{$name}{func} ne $thing{2}{triggers}{$name}{func}
+				or $thing{1}{triggers}{$name}{args} ne $thing{2}{triggers}{$name}{args}
+		) {
+			push @{$fail{triggers}{difffunc}} =>
+				[$name,
+				 $thing{1}{triggers}{$name}{func} . $thing{1}{triggers}{$name}{args},
+				 $thing{2}{triggers}{$name}{func} . $thing{2}{triggers}{$name}{args},
+				 ];
+			$failcount++;
+		}
+	}
+	}
+
+	## Compare columns
+
+	## Any columns on 1 but not 2, or 2 but not 1?
+	for my $name (sort keys %{$thing{1}{columns}}) {
+		## Skip any mismatched tables - already handled above
+		next if ! exists $thing{2}{columns}{$name};
+
+		my ($t1,$t2) = ($thing{1}{columns}{$name},$thing{2}{columns}{$name});
+		for my $col (sort keys %$t1) {
+			if (! exists $t2->{$col}) {
+				push @{$fail{columns}{notexist}{1}} => [$name,$col];
+				$failcount++;
+			}
+		}
+		for my $col (sort keys %$t2) {
+			if (! exists $t1->{$col}) {
+				push @{$fail{columns}{notexist}{2}} => [$name,$col];
+				$failcount++;
+				next;
+			}
+			## They exist, so dig deeper for differences. Done in two passes.
+			my $newtype = 0;
+			for my $var (qw/position type default nullable/) {
+				if ($t1->{$col}{$var} ne $t2->{$col}{$var}) {
+					$fail{columns}{diff}{$name}{$col}{$var} = [$t1->{$col}{$var}, $t2->{$col}{$var}];
+					$failcount++;
+					$newtype = 1 if $var eq 'type';
+				}
+			}
+			## Now the rest, with the caveat that we don't care about the rest if the type has changed
+			if (!$newtype) {
+				for my $var (qw/length precision scale/) {
+					if ($t1->{$col}{$var} ne $t2->{$col}{$var}) {
+						$fail{columns}{diff}{$name}{$col}{$var} = [$t1->{$col}{$var}, $t2->{$col}{$var}];
+						$failcount++;
+					}
+				}
+			}
+		}
+	}
+	}
+
+	## Compare constraints
+
+	## Table constraints - any exists on 1 but not 2?
+	CONSTRAINT:
+	{
+	for my $name (sort keys %{$thing{1}{constraints}}) {
+		next if exists $thing{2}{constraints}{$name};
+
+		## If the table does not exist, we don't report it
+		next if ! exists $thing{2}{tables}{ $thing{1}{constraints}{$name} };
+
+		if (exists $filter{noconstraint_regex}) {
+			for my $regex (@{$filter{noconstraint_regex}}) {
+				next CONSTRAINT if $name =~ /$regex/;
+			}
+		}
+
+		push @{$fail{constraints}{notexist}{1}} => [$name, $thing{1}{constraints}{$name}];
+		$failcount++;
+	}
+	}
+
+	## Check exists on 2 but not 1, and make sure the schema/table matches
+  CONSTRAINT:
+	{
+	for my $name (sort keys %{$thing{2}{constraints}}) {
+
+		if (exists $filter{noconstraint_regex}) {
+			for my $regex (@{$filter{noconstraint_regex}}) {
+				next CONSTRAINT if $name =~ /$regex/;
+			}
+		}
+
+		if (! exists $thing{1}{constraints}{$name}) {
+
+			## If the table does not exist, we don't report it
+			if (exists $thing{1}{tables}{ $thing{2}{constraints}{$name} }) {
+				push @{$fail{constraints}{notexist}{2}} => [$name, $thing{2}{constraints}{$name}];
+				$failcount++;
+			}
+
+			next;
+		}
+		if ($thing{1}{constraints}{$name} ne $thing{2}{constraints}{$name}) {
+			push @{$fail{constraints}{tablediff}} =>
+				[
+					$name,
+					$thing{1}{constraints}{$name},
+					$thing{2}{constraints}{$name},
+				];
+			$failcount++;
+		}
+	}
+	}
+
+	## Column constraints - any exists on 1 but not 2?
+	CONSTRAINT:
+	{
+	for my $name (sort keys %{$thing{1}{colconstraints}}) {
+		next if exists $thing{2}{colconstraints}{$name};
+
+		## If the table does not exist, we don't report it
+		my ($tname,$cname) = @{$thing{1}{colconstraints}{$name}};
+		next if ! exists $thing{2}{tables}{$tname};
+
+		if (exists $filter{noconstraint_regex}) {
+			for my $regex (@{$filter{noconstraint_regex}}) {
+				next CONSTRAINT if $name =~ /$regex/;
+			}
+		}
+
+		push @{$fail{colconstraints}{notexist}{1}} => [$name, $tname, $cname];
+		$failcount++;
+	}
+	}
+
+	## Check exists on 2 but not 1, and make sure the schema/table/column matches
+	CONSTRAINT:
+	{
+	for my $name (sort keys %{$thing{2}{colconstraints}}) {
+
+		if (exists $filter{noconstraint_regex}) {
+			for my $regex (@{$filter{noconstraint_regex}}) {
+				next CONSTRAINT if $name =~ /$regex/;
+			}
+		}
+
+		if (! exists $thing{1}{colconstraints}{$name}) {
+
+			## If the table does not exist, we don't report it
+			if (exists $thing{1}{tables}{ $thing{2}{colconstraints}{$name} }) {
+				push @{$fail{colconstraints}{notexist}{2}} => [$name, $thing{2}{colconstraints}{$name}];
+				$failcount++;
+			}
+			next;
+		}
+
+		## Check for a difference in schema/table
+		my ($tname1,$cname1) = @{$thing{1}{colconstraints}{$name}};
+		my ($tname2,$cname2) = @{$thing{2}{colconstraints}{$name}};
+		if ($tname1 ne $tname2) {
+			push @{$fail{colconstraints}{tablediff}} =>
+				[
+					$name,
+					$tname1,
+					$tname2,
+				];
+			$failcount++;
+		}
+		## Check for a difference in schema/table/column
+		elsif ($cname1 ne $cname2) {
+			push @{$fail{colconstraints}{columndiff}} =>
+				[
+					$name,
+					$tname1, $cname1,
+					$tname2, $cname2,
+				];
+			$failcount++;
+		}
+	}
+	}
+
+	## Compare functions
+
+	## Functions on 1 but not 2?
+	FUNCTION:
+	{
+	for my $name (sort keys %{$thing{1}{functions}}) {
+		next if exists $thing{2}{functions}{$name};
+
+		if (exists $filter{nofunction_regex}) {
+			for my $regex (@{$filter{nofunction_regex}}) {
+				next FUNCTION if $name =~ /$regex/;
+			}
+		}
+
+		push @{$fail{functions}{notexist}{1}} => $name;
+		$failcount++;
+	}
+	}
+
+	## Functions on 2 but not 1
+	FUNCTION:
+	{
+	for my $name (sort keys %{$thing{2}{functions}}) {
+		next if exists $thing{1}{functions}{$name};
+
+		if (exists $filter{nofunction_regex}) {
+			for my $regex (@{$filter{nofunction_regex}}) {
+				next FUNCTION if $name =~ /$regex/;
+			}
+		}
+
+		push @{$fail{functions}{notexist}{2}} => $name;
+		$failcount++;
+	}
+	}
+
+	##
+	## Comparison is done, let's report the results
+	##
+
+	if (! $failcount) {
+		add_ok msg('same-matched');
+		return;
+	}
+
+	## Build a pretty message giving all the gory details
+
+	$db->{perf} = '';
+
+	## User differences
+	if (exists $fail{users}) {
+		if (exists $fail{users}{notexist}) {
+			if (exists $fail{users}{notexist}{1}) {
+				$db->{perf} .= ' Users in 1 but not 2: ';
+				$db->{perf} .= join ', ' => @{$fail{users}{notexist}{1}};
+				$db->{perf} .= ' ';
+			}
+			if (exists $fail{users}{notexist}{2}) {
+				$db->{perf} .= ' Users in 2 but not 1: ';
+				$db->{perf} .= join ', ' => @{$fail{users}{notexist}{2}};
+				$db->{perf} .= ' ';
+			}
+		}
+		if (exists $fail{users}{createdb}) {
+			if (exists $fail{users}{createdb}{1}) {
+				if (exists $fail{users}{createdb}{1}{t}) {
+					$db->{perf} .= ' Users with createdb on 1 but not 2: ';
+					$db->{perf} .= join ', ' => @{$fail{users}{createdb}{1}{t}};
+					$db->{perf} .= ' ';
+				}
+				if (exists $fail{users}{createdb}{1}{f}) {
+					$db->{perf} .= ' Users with createdb on 2 but not 1: ';
+					$db->{perf} .= join ', ' => @{$fail{users}{createdb}{1}{f}};
+					$db->{perf} .= ' ';
+				}
+			}
+		}
+		if (exists $fail{users}{superuser}) {
+			if (exists $fail{users}{superuser}{1}) {
+				if (exists $fail{users}{superuser}{1}{t}) {
+					$db->{perf} .= ' Users with superuser on 1 but not 2: ';
+					$db->{perf} .= join ', ' => @{$fail{users}{superuser}{1}{t}};
+					$db->{perf} .= ' ';
+				}
+				if (exists $fail{users}{superuser}{1}{f}) {
+					$db->{perf} .= ' Users with superuser on 2 but not 1: ';
+					$db->{perf} .= join ', ' => @{$fail{users}{superuser}{1}{f}};
+					$db->{perf} .= ' ';
+				}
+			}
+		}
+	}
+
+	## Schema differences
+	if (exists $fail{schemas}) {
+		if (exists $fail{schemas}{notexist}) {
+			if (exists $fail{schemas}{notexist}{1}) {
+				$db->{perf} .= ' Schemas in 1 but not 2: ';
+				$db->{perf} .= join ', ' => @{$fail{schemas}{notexist}{1}};
+				$db->{perf} .= ' ';
+			}
+			if (exists $fail{schemas}{notexist}{2}) {
+				$db->{perf} .= ' Schemas in 2 but not 1: ';
+				$db->{perf} .= join ', ' => @{$fail{schemas}{notexist}{2}};
+				$db->{perf} .= ' ';
+			}
+		}
+		if (exists $fail{schemas}{diffowners}) {
+			for my $item (@{$fail{schemas}{diffowners}}) {
+				my ($name,$owner1,$owner2) = @$item;
+				$db->{perf} .= " Schema $name owned by $owner1 on 1, but by $owner2 on 2. ";
+			}
+		}
+		if (exists $fail{schemas}{diffacls}) {
+			for my $item (@{$fail{schemas}{diffacls}}) {
+				my ($name,$acl1,$acl2) = @$item;
+				$db->{perf} .= " Schema $name has $acl1 perms on 1, but $acl2 perms on 2. ";
+			}
+		}
+	}
+
+	## Table differences
+	if (exists $fail{tables}) {
+		if (exists $fail{tables}{notexist}) {
+			if (exists $fail{tables}{notexist}{1}) {
+				$db->{perf} .= ' Tables in 1 but not 2: ';
+				$db->{perf} .= join ', ' => @{$fail{tables}{notexist}{1}};
+				$db->{perf} .= ' ';
+			}
+			if (exists $fail{tables}{notexist}{2}) {
+				$db->{perf} .= ' Tables in 2 but not 1: ';
+				$db->{perf} .= join ', ' => @{$fail{tables}{notexist}{2}};
+				$db->{perf} .= ' ';
+			}
+		}
+		if (exists $fail{tables}{diffowners}) {
+			for my $item (@{$fail{tables}{diffowners}}) {
+				my ($name,$owner1,$owner2) = @$item;
+				$db->{perf} .= " Table $name owned by $owner1 on 1, but by $owner2 on 2. ";
+			}
+		}
+		if (exists $fail{tables}{diffacls}) {
+			for my $item (@{$fail{tables}{diffacls}}) {
+				my ($name,$acl1,$acl2) = @$item;
+				$db->{perf} .= " Table $name has $acl1 perms on 1, but $acl2 perms on 2. ";
+			}
+		}
+	}
+
+	## Sequence differences
+	if (exists $fail{sequences}) {
+		if (exists $fail{sequences}{notexist}) {
+			if (exists $fail{sequences}{notexist}{1}) {
+				$db->{perf} .= ' Sequences in 1 but not 2: ';
+				$db->{perf} .= join ', ' => @{$fail{sequences}{notexist}{1}};
+				$db->{perf} .= ' ';
+			}
+			if (exists $fail{sequences}{notexist}{2}) {
+				$db->{perf} .= ' Sequences in 2 but not 1: ';
+				$db->{perf} .= join ', ' => @{$fail{sequences}{notexist}{2}};
+				$db->{perf} .= ' ';
+			}
+		}
+		if (exists $fail{sequences}{diffowners}) {
+			for my $item (@{$fail{sequences}{diffowners}}) {
+				my ($name,$owner1,$owner2) = @$item;
+				$db->{perf} .= " Sequence $name owned by $owner1 on 1, but by $owner2 on 2. ";
+			}
+		}
+		if (exists $fail{sequences}{diffacls}) {
+			for my $item (@{$fail{sequences}{diffacls}}) {
+				my ($name,$acl1,$acl2) = @$item;
+				$db->{perf} .= " Sequence $name has $acl1 perms on 1, but $acl2 perms on 2. ";
+			}
+		}
+	}
+
+	## View differences
+	if (exists $fail{views}) {
+		if (exists $fail{views}{notexist}) {
+			if (exists $fail{views}{notexist}{1}) {
+				$db->{perf} .= ' Views in 1 but not 2: ';
+				$db->{perf} .= join ', ' => @{$fail{views}{notexist}{1}};
+				$db->{perf} .= ' ';
+			}
+			if (exists $fail{views}{notexist}{2}) {
+				$db->{perf} .= ' Views in 2 but not 1: ';
+				$db->{perf} .= join ', ' => @{$fail{views}{notexist}{2}};
+				$db->{perf} .= ' ';
+			}
+		}
+		if (exists $fail{views}{diffowners}) {
+			for my $item (@{$fail{views}{diffowners}}) {
+				my ($name,$owner1,$owner2) = @$item;
+				$db->{perf} .= " View $name owned by $owner1 on 1, but by $owner2 on 2. ";
+			}
+		}
+		if (exists $fail{views}{diffacls}) {
+			for my $item (@{$fail{views}{diffacls}}) {
+				my ($name,$acl1,$acl2) = @$item;
+				$db->{perf} .= " View $name has $acl1 perms on 1, but $acl2 perms on 2. ";
+			}
+		}
+	}
+
+	## Trigger differences
+	if (exists $fail{triggers}) {
+		if (exists $fail{triggers}{notexist}) {
+			if (exists $fail{triggers}{notexist}{1}) {
+				$db->{perf} .= ' Triggers in 1 but not 2: ';
+				$db->{perf} .= join ', ' => @{$fail{triggers}{notexist}{1}};
+				$db->{perf} .= ' ';
+			}
+			if (exists $fail{triggers}{notexist}{2}) {
+				$db->{perf} .= ' Triggers in 2 but not 1: ';
+				$db->{perf} .= join ', ' => @{$fail{triggers}{notexist}{2}};
+				$db->{perf} .= ' ';
+			}
+		}
+		if (exists $fail{triggers}{difffunc}) {
+			for my $item (@{$fail{triggers}{diffowners}}) {
+				my ($name,$func1,$func2) = @$item;
+				$db->{perf} .= " Trigger $name calls function $func1 on 1, but function $func2 on 2. ";
+			}
+		}
+	}
+
+	## Column differences
+	if (exists $fail{columns}) {
+		if (exists $fail{columns}{notexist}) {
+			if (exists $fail{columns}{notexist}{1}) {
+				for my $row (@{$fail{columns}{notexist}{1}}) {
+					my ($tname,$cname) = @$row;
+					$db->{perf} .= " Table $tname on 1 has column $cname, but 2 does not. ";
+				}
+			}
+			if (exists $fail{columns}{notexist}{2}) {
+				for my $row (@{$fail{columns}{notexist}{2}}) {
+					my ($tname,$cname) = @$row;
+					$db->{perf} .= " Table $tname on 2 has column $cname, but 1 does not. ";
+				}
+			}
+		}
+		if (exists $fail{columns}{diff}) {
+			for my $tname (sort keys %{$fail{columns}{diff}}) {
+				for my $cname (sort keys %{$fail{columns}{diff}{$tname}}) {
+					for my $var (sort keys %{$fail{columns}{diff}{$tname}{$cname}}) {
+						my ($v1,$v2) = @{$fail{columns}{diff}{$tname}{$cname}{$var}};
+						$db->{perf} .= " Column $cname of $tname: $var is $v1 on 1, but $v2 on 2 ";
+					}
+					$db->{perf} .= '. ';
+				}
+			}
+		}
+	}
+
+	## Constraint differences - table level
+	## Don't report things twice
+	my %doublec;
+	if (exists $fail{constraints}) {
+		if (exists $fail{constraints}{notexist}) {
+			if (exists $fail{constraints}{notexist}{1}) {
+				for my $row (@{$fail{constraints}{notexist}{1}}) {
+					my ($cname,$tname) = @$row;
+					$db->{perf} .= " Table $tname on 1 has constraint $cname, but 2 does not. ";
+					$doublec{$cname}++;
+				}
+			}
+			if (exists $fail{constraints}{notexist}{2}) {
+				for my $row (@{$fail{constraints}{notexist}{2}}) {
+					my ($cname,$tname) = @$row;
+					$db->{perf} .= " Table $tname on 2 has constraint $cname, but 1 does not. ";
+					$doublec{$cname}++;
+				}
+			}
+		}
+		if (exists $fail{constraints}{tablediff}) {
+			for my $row (@{$fail{constraints}{tablediff}}) {
+				my ($cname,$t1,$t2) = @$row;
+				$db->{perf} .= " Constraint $cname is applied to $t1 on 1, but to $t2 on 2. ";
+				$doublec{$cname}++;
+			}
+		}
+	}
+
+	## Constraint differences - column level
+	if (exists $fail{colconstraints}) {
+		if (exists $fail{colconstraints}{notexist}) {
+			if (exists $fail{colconstraints}{notexist}{1}) {
+				for my $row (@{$fail{colconstraints}{notexist}{1}}) {
+					my ($name,$tname,$cname) = @$row;
+					if (! exists $doublec{$name}) {
+						$db->{perf} .= " Table $tname on 1 has constraint $name on column $cname, but 2 does not. ";
+					}
+				}
+			}
+			if (exists $fail{colconstraints}{notexist}{2}) {
+				for my $row (@{$fail{colconstraints}{notexist}{2}}) {
+					my ($name,$tname,$cname) = @$row;
+					if (! exists $doublec{$name}) {
+						$db->{perf} .= " Table $tname on 2 has constraint $name on column $cname, but 1 does not. ";
+					}
+				}
+			}
+		}
+		if (exists $fail{colconstraints}{tablediff}) {
+			for my $row (@{$fail{colconstraints}{tablediff}}) {
+				my ($name,$t1,$t2) = @$row;
+				if (! exists $doublec{$name}) {
+					$db->{perf} .= " Constraint $name is applied to $t1 on 1, but to $t2 on 2. ";
+				}
+			}
+		}
+		if (exists $fail{colconstraints}{columndiff}) {
+			for my $row (@{$fail{colconstraints}{columndiff}}) {
+				my ($name,$t1,$c1,$t2,$c2) = @$row;
+				if (! exists $doublec{$name}) {
+					$db->{perf} .= " Constraint $name on 1 is applied to $t1.$c1, but to $t2.$c2 on 2. ";
+				}
+			}
+		}
+	}
+
+	## Function differences
+	if (exists $fail{functions}) {
+		if (exists $fail{functions}{notexist}) {
+			if (exists $fail{functions}{notexist}{1}) {
+				$db->{perf} .= ' Functions on 1 but not 2: ';
+				$db->{perf} .= join ', ' => @{$fail{functions}{notexist}{1}};
+			}
+			if (exists $fail{functions}{notexist}{2}) {
+				$db->{perf} .= ' Functions on 2 but not 1: ';
+				$db->{perf} .= join ', ' => @{$fail{functions}{notexist}{2}};
+			}
+		}
+	}
+
+	add_critical msg('same-failed', $failcount);
+
+	return;
+
+} ## end of check_same_schema
+
+
 sub check_sequence {
 
 	## Checks how many values are left in sequences
@@ -4754,7 +5817,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.8.1
+This documents describes check_postgres.pl version 2.9.0
 
 =head1 SYNOPSIS
 
@@ -5693,6 +6756,51 @@ Example 3: Warn if user 'don' has a query running over 20 seconds
 For MRTG output, returns the length in seconds of the longest running query on the first line. The fourth 
 line gives the name of the database.
 
+=head2 B<same_schema>
+
+(C<symlink: check_postgres_same_schema>) Verifies that two databases are identical as far as their 
+schema (but not the data within). This is particularly handy for making sure your slaves have not 
+been modified or corrupted in any way when using master to slave replication. Unlike most other 
+actions, this has no warning or critical criteria - the databases are either in sync, or are not. 
+If they are not, a detailed list of the differences is presented. To make the list more readable, 
+provide a C<--verbose> argument, which will output one item per line.
+
+You may want to exclude or filter out certain differences. The way to do this is to add strings 
+to the C<--warning> option. To exclude a type of object, use "noobjectnames". To exclude 
+objects of a certain type by a regular expression against their name, use "noobjectname=regex". 
+See the examples for a better understanding.
+
+The types of objects that can be filtered are:
+
+=over 4
+
+=item user
+=item schema
+=item table
+=item view
+=item index
+=item sequence
+=item constraint
+=item trigger
+=item function
+
+=back
+
+You must provide information on how to reach the second database by a connection 
+parameter ending in the number 2, such as "--dbport2=5543"
+
+Example 1: Verify that two databases on hosts star and line are the same:
+
+  check_postgres_same_schema --dbhost=star --dbhost=line
+
+Example 2: Same as before, but exclude any triggers with "slony" in their name
+
+  check_postgres_same_schema --dbhost=star --dbhost=line --warning="notrigger=slony"
+
+Example 2: Same as before, but also exclude all indexes
+
+  check_postgres_same_schema --dbhost=star --dbhost=line --warning="notrigger=slony noindexes"
+
 =head2 B<sequence>
 
 (C<symlink: check_postgres_sequence>) Checks how much room is left on all sequences in the database.
@@ -6104,7 +7212,11 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.8.1> (May, 15 2009)
+=item B<Version 2.9.0> (May 28, 2009)
+
+  Added the same_schema action (Greg)
+
+=item B<Version 2.8.1> (May 15, 2009)
 
   Added timeout via statement_timeout in addition to perl alarm (Greg)
 
