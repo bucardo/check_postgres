@@ -9,3 +9,4 @@ Makefile.old
 pm_to_blib
 blib/*
 *.tar.gz
+test_database_check_postgres/*
