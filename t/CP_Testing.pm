@@ -105,6 +105,11 @@ sub test_database_handle {
 			print $cfh qq{max_prepared_transactions = 5\n};
 		}
 
+		## ## >= 8.2
+		if ($imaj > 8 or ($imaj==8 and $imin >= 2)) {
+			print $cfh qq{logging_collector = off\n};
+		}
+
 		## ## <= 8.2
 		if ($imaj < 8 or ($imaj==8 and $imin <= 2)) {
 			print $cfh qq{stats_block_level = on\n};
