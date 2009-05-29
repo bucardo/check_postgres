@@ -5253,17 +5253,19 @@ sub check_same_schema {
 	if (exists $fail{functions}) {
 		if (exists $fail{functions}{notexist}) {
 			if (exists $fail{functions}{notexist}{1}) {
-				$db->{perf} .= ' Functions on 1 but not 2: ';
-				$db->{perf} .= join ', ' => @{$fail{functions}{notexist}{1}};
+				for my $name (@{$fail{functions}{notexist}{1}}) {
+					$db->{perf} .= " Function on 1 but not 2: $name ";
+				}
 			}
 			if (exists $fail{functions}{notexist}{2}) {
-				$db->{perf} .= ' Functions on 2 but not 1: ';
-				$db->{perf} .= join ', ' => @{$fail{functions}{notexist}{2}};
+				for my $name (@{$fail{functions}{notexist}{2}}) {
+					$db->{perf} .= " Function on 2 but not 1: $name ";
+				}
 			}
 		}
 		if (exists $fail{functions}{diffbody}) {
 			for my $name (sort @{$fail{functions}{diffbody}}) {
-				$db->{perf} .= "  Function body different on 1 than 2: $name";
+				$db->{perf} .= " Function body different on 1 than 2: $name ";
 			}
 		}
 	}
