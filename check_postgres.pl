@@ -4269,7 +4269,6 @@ sub check_same_schema {
 				$filter{nofuncbody} = 1;
 			}
 		}
-
 	}
 
 	my (%thing,$info);
@@ -4391,26 +4390,28 @@ sub check_same_schema {
 
 		## Get a list of all constraints
 		## We'll use information_schema for this one too
-		$SQL = q{SELECT constraint_schema, constraint_name, table_schema, table_name }
-			. q{FROM information_schema.constraint_table_usage};
-		$info = run_command($SQL, { dbnumber => $x } );
-		for $db (@{$info->{db}}) {
-			while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gmo) {
-				$thing{$x}{constraints}{"$1.$2"} = "$3.$4";
-			}
-		}
-		$SQL = q{SELECT constraint_schema, constraint_name, table_schema, table_name, column_name }
-			. q{FROM information_schema.constraint_column_usage};
-		$info = run_command($SQL, { dbnumber => $x } );
-		for $db (@{$info->{db}}) {
-			while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gmo) {
-				my ($cschema,$cname,$tschema,$tname,$col) = ($1,$2,$3,$4,$5);
-				if (exists $thing{$x}{colconstraints}{"$cschema.$cname"}) {
-					my @oldcols = split / / => $thing{$x}{colconstraints}{"$cschema.$cname"}->[1];
-					push @oldcols => $col;
-					$col = join ' ' => sort @oldcols;
+		if (! exists $filter{noconstraints}) {
+			$SQL = q{SELECT constraint_schema, constraint_name, table_schema, table_name }
+				. q{FROM information_schema.constraint_table_usage};
+			$info = run_command($SQL, { dbnumber => $x } );
+			for $db (@{$info->{db}}) {
+				while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gmo) {
+					$thing{$x}{constraints}{"$1.$2"} = "$3.$4";
 				}
-				$thing{$x}{colconstraints}{"$cschema.$cname"} = ["$tschema.$tname", $col];
+			}
+			$SQL = q{SELECT constraint_schema, constraint_name, table_schema, table_name, column_name }
+				. q{FROM information_schema.constraint_column_usage};
+			$info = run_command($SQL, { dbnumber => $x } );
+			for $db (@{$info->{db}}) {
+				while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gmo) {
+					my ($cschema,$cname,$tschema,$tname,$col) = ($1,$2,$3,$4,$5);
+					if (exists $thing{$x}{colconstraints}{"$cschema.$cname"}) {
+						my @oldcols = split / / => $thing{$x}{colconstraints}{"$cschema.$cname"}->[1];
+						push @oldcols => $col;
+						$col = join ' ' => sort @oldcols;
+					}
+					$thing{$x}{colconstraints}{"$cschema.$cname"} = ["$tschema.$tname", $col];
+				}
 			}
 		}
 
@@ -5298,7 +5299,7 @@ sub check_same_schema {
 		}
 		if (exists $fail{functions}{diffbody}) {
 			for my $name (sort @{$fail{functions}{diffbody}}) {
-				$db->{perf} .= "  Function body different on 1 than 2: $name ";
+				$db->{perf} .= "  Function body different on 1 than 2: $name";
 			}
 		}
 	}
