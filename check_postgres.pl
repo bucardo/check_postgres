@@ -4265,6 +4265,9 @@ sub check_same_schema {
 			if ($phrase =~ /^noposition$/io) {
 				$filter{noposition} = 1;
 			}
+			if ($phrase =~ /^nofuncbody$/io) {
+				$filter{nofuncbody} = 1;
+			}
 		}
 
 	}
@@ -4344,17 +4347,17 @@ sub check_same_schema {
 
 		## Get a list of all triggers
 		if (! exists $filter{notriggers}) {
-			$SQL = q{SELECT tgname, quote_ident(relname), proname, proargtypes, tgtype FROM pg_trigger }
+			$SQL = q{SELECT tgname, quote_ident(relname), proname, proargtypes FROM pg_trigger }
 				. q{ JOIN pg_class c ON (c.oid = tgrelid) }
 				. q{ JOIN pg_proc p ON (p.oid = tgfoid) }
 				. q{ WHERE NOT tgisconstraint}; ## constraints checked separately
 			$info = run_command($SQL, { dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+).*/gmo) {
-					my ($name,$table,$func,$args,$type) = ($1,$2,$3,$4,$5);
+				while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\S+).*/gmo) {
+					my ($name,$table,$func,$args,$md5) = ($1,$2,$3,$4,$5);
 					$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
 					$args =~ s/^\s*(.*)\s*$/($1)/;
-					$thing{$x}{triggers}{$name} = { table=>$table, func=>$func, args=>$args, type=>$type };
+					$thing{$x}{triggers}{$name} = { table=>$table, func=>$func, args=>$args, md5=>$md5 };
 				}
 			}
 		}
@@ -4412,15 +4415,15 @@ sub check_same_schema {
 		}
 
 		## Get a list of all functions
-		$SQL = q{SELECT quote_ident(nspname), quote_ident(proname), proargtypes }
+		$SQL = q{SELECT quote_ident(nspname), quote_ident(proname), proargtypes, md5(prosrc) }
 			. q{FROM pg_proc JOIN pg_namespace n ON (n.oid = pronamespace)};
 		$info = run_command($SQL, { dbnumber => $x } );
 		for $db (@{$info->{db}}) {
-			while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)$/gmo) {
-				my ($schema,$name,$args) = ($1,$2,$3);
+			while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+/gmo) {
+				my ($schema,$name,$args,$md5) = ($1,$2,$3,$4);
 				$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
 				$args =~ s/^\s*(.*)\s*$/($1)/;
-				$thing{$x}{functions}{"$schema.$name$args"} = "$schema.$name";
+				$thing{$x}{functions}{"$schema.$name$args"} = $md5;
 			}
 		}
 	}
@@ -4970,7 +4973,6 @@ sub check_same_schema {
 	FUNCTION:
 	{
 	for my $name (sort keys %{$thing{2}{functions}}) {
-		next if exists $thing{1}{functions}{$name};
 
 		if (exists $filter{nofunction_regex}) {
 			for my $regex (@{$filter{nofunction_regex}}) {
@@ -4978,8 +4980,20 @@ sub check_same_schema {
 			}
 		}
 
-		push @{$fail{functions}{notexist}{2}} => $name;
-		$failcount++;
+		if (! exists $thing{1}{functions}{$name}) {
+			push @{$fail{functions}{notexist}{2}} => $name;
+			$failcount++;
+			next;
+		}
+
+		## Are the insides exactly the same
+		if (! $filter{nofuncbody}) {
+			if ($thing{1}{functions}{$name} ne $thing{2}{functions}{$name}) {
+				push @{$fail{functions}{diffbody}}, $name;
+				$failcount++;
+			}
+		}
+
 	}
 	}
 
@@ -5280,6 +5294,11 @@ sub check_same_schema {
 			if (exists $fail{functions}{notexist}{2}) {
 				$db->{perf} .= ' Functions on 2 but not 1: ';
 				$db->{perf} .= join ', ' => @{$fail{functions}{notexist}{2}};
+			}
+		}
+		if (exists $fail{functions}{diffbody}) {
+			for my $name (sort @{$fail{functions}{diffbody}}) {
+				$db->{perf} .= "  Function body different on 1 than 2: $name ";
 			}
 		}
 	}
@@ -6788,8 +6807,11 @@ The types of objects that can be filtered are:
 
 =back
 
-A final filter option is "noposition", which prevents verification of the position of 
+The filter option "noposition"  prevents verification of the position of 
 columns within a table.
+
+The filter option "nofuncbody" prevents comparison of the bodies of all 
+functions.
 
 You must provide information on how to reach the second database by a connection 
 parameter ending in the number 2, such as "--dbport2=5543"
