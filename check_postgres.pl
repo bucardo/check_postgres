@@ -416,6 +416,8 @@ our %msg = (
 	'runtime-badmrtg'    => q{queryname invalide ?},
 	'runtime-badname'    => q{Option invalide pour queryname option : doit être le nom d'une vue},
 	'runtime-msg'        => q{durée d'exécution de la requête : $1 secondes},
+'same-matched'       => q{Both databases have identical items},
+'same-failed'        => q{Databases were different. Items not matched: $1},
 	'seq-die'            => q{N'a pas pu récupérer d'informations sur la séquence $1},
 	'seq-msg'            => q{$1=$2% (appels restant=$3)},
 	'seq-none'           => q{Aucune sequences trouvée},
@@ -4267,7 +4269,7 @@ sub check_same_schema {
 
 	}
 
-	my %thing;
+	my (%thing,$info);
 
 	my $saved_db;
 	for my $x (1..2) {
@@ -4275,7 +4277,7 @@ sub check_same_schema {
 		## Get a list of all users
 		if (! exists $filter{nousers}) {
 			$SQL = 'SELECT usesysid, quote_ident(usename), usecreatedb, usesuper FROM pg_user';
-			my $info = run_command($SQL, { dbnumber => $x } );
+			$info = run_command($SQL, { dbnumber => $x } );
 			for $db (@{$info->{db}}) {
 				while ($db->{slurp} =~ /^\s*(\d+)\s*\| (.+?)\s*\| ([t|f])\s*\| ([t|f]).*/gmo) {
 					$thing{$x}{users}{$2} = { oid=>$1, createdb=>$3, superuser=>$4 };
@@ -4439,7 +4441,7 @@ sub check_same_schema {
 
 		if (exists $filter{nouser_regex}) {
 			for my $regex (@{$filter{nouser_regex}}) {
-				next USER if $name =~ /$regex/;
+				next USER if $user =~ /$regex/;
 			}
 		}
 
@@ -4455,7 +4457,7 @@ sub check_same_schema {
 
 		if (exists $filter{nouser_regex}) {
 			for my $regex (@{$filter{nouser_regex}}) {
-				next USER if $name =~ /$regex/;
+				next USER if $user =~ /$regex/;
 			}
 		}
 
@@ -6785,6 +6787,9 @@ The types of objects that can be filtered are:
 =item function
 
 =back
+
+A final filter option is "noposition", which prevents verification of the position of 
+columns within a table.
 
 You must provide information on how to reach the second database by a connection 
 parameter ending in the number 2, such as "--dbport2=5543"
