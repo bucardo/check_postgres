@@ -4438,8 +4438,7 @@ sub check_same_schema {
 	## Compare users
 
 	## Any users on 1 but not 2?
-	USER:
-	{
+  USER:
 	for my $user (sort keys %{$thing{1}{users}}) {
 		next if exists $thing{2}{users}{$user};
 
@@ -4452,11 +4451,9 @@ sub check_same_schema {
 		push @{$fail{users}{notexist}{1}} => $user;
 		$failcount++;
 	}
-	}
 
 	## Any users on 2 but not 1?
-	USER:
-	{
+  USER:
 	for my $user (sort keys %{$thing{2}{users}}) {
 
 		if (exists $filter{nouser_regex}) {
@@ -4482,13 +4479,11 @@ sub check_same_schema {
 			$failcount++;
 		}
 	}
-	}
 
 	## Compare schemas
 
 	## Any schemas on 1 but not 2?
-	SCHEMA:
-	{
+  SCHEMA:
 	for my $name (sort keys %{$thing{1}{schemas}}) {
 		next if exists $thing{2}{schemas}{$name};
 
@@ -4501,11 +4496,9 @@ sub check_same_schema {
 		push @{$fail{schemas}{notexist}{1}} => $name;
 		$failcount++;
 	}
-	}
 
 	## Any schemas on 2 but not 1?
-	SCHEMA:
-	{
+  SCHEMA:
 	for my $name (sort keys %{$thing{2}{schemas}}) {
 
 		if (exists $filter{noschema_regex}) {
@@ -4542,14 +4535,12 @@ sub check_same_schema {
 		}
 
 	}
-	}
 
 	## Compare tables
 
 	## Any tables on 1 but not 2?
 	## We treat the name as a unified "schema.relname"
   TABLE:
-	{
 	for my $name (sort keys %{$thing{1}{tables}}) {
 		next if exists $thing{2}{tables}{$name};
 
@@ -4565,11 +4556,9 @@ sub check_same_schema {
 		push @{$fail{tables}{notexist}{1}} => $name;
 		$failcount++;
 	}
-	}
 
 	## Any tables on 2 but not 1?
-	TABLE:
-	{
+  TABLE:
 	for my $name (sort keys %{$thing{2}{tables}}) {
 
 		if (exists $filter{notable_regex}) {
@@ -4608,14 +4597,12 @@ sub check_same_schema {
 		}
 
 	}
-	}
 
 	## Compare sequences
 
 	## Any sequences on 1 but not 2?
 	## We treat the name as a unified "schema.relname"
   SEQUENCE:
-	{
 	for my $name (sort keys %{$thing{1}{sequences}}) {
 		next if exists $thing{2}{sequences}{$name};
 
@@ -4631,11 +4618,9 @@ sub check_same_schema {
 		push @{$fail{sequences}{notexist}{1}} => $name;
 		$failcount++;
 	}
-	}
 
 	## Any sequences on 2 but not 1?
-	SEQUENCE:
-	{
+  SEQUENCE:
 	for my $name (sort keys %{$thing{2}{sequences}}) {
 
 		if (exists $filter{nosequence_regex}) {
@@ -4673,14 +4658,12 @@ sub check_same_schema {
 			$failcount++;
 		}
 	}
-	}
 
 	## Compare views
 
 	## Any views on 1 but not 2?
 	## We treat the name as a unified "schema.relname"
-	VIEW:
-	{
+  VIEW:
 	for my $name (sort keys %{$thing{1}{views}}) {
 		next if exists $thing{2}{views}{$name};
 
@@ -4696,11 +4679,9 @@ sub check_same_schema {
 		push @{$fail{views}{notexist}{1}} => $name;
 		$failcount++;
 	}
-	}
 
 	## Any views on 2 but not 1?
-	VIEW:
-	{
+  VIEW:
 	for my $name (sort keys %{$thing{2}{views}}) {
 
 		if (exists $filter{noview_regex}) {
@@ -4743,8 +4724,7 @@ sub check_same_schema {
 	## Compare triggers
 
 	## Any triggers on 1 but not 2?
-	TRIGGER:
-	{
+  TRIGGER:
 	for my $name (sort keys %{$thing{1}{triggers}}) {
 		next if exists $thing{2}{triggers}{$name};
 		if (exists $filter{notrigger_regex}) {
@@ -4755,11 +4735,9 @@ sub check_same_schema {
 		push @{$fail{triggers}{notexist}{1}} => $name;
 		$failcount++;
 	}
-	}
 
 	## Any triggers on 2 but not 1?
-	TRIGGER:
-	{
+  TRIGGER:
 	for my $name (sort keys %{$thing{2}{triggers}}) {
 		if (! exists $thing{1}{triggers}{$name}) {
 			if (exists $filter{notrigger_regex}) {
@@ -4784,7 +4762,6 @@ sub check_same_schema {
 				 ];
 			$failcount++;
 		}
-	}
 	}
 
 	## Compare columns
@@ -4827,13 +4804,11 @@ sub check_same_schema {
 			}
 		}
 	}
-	}
 
 	## Compare constraints
 
 	## Table constraints - any exists on 1 but not 2?
-	CONSTRAINT:
-	{
+  CONSTRAINT:
 	for my $name (sort keys %{$thing{1}{constraints}}) {
 		next if exists $thing{2}{constraints}{$name};
 
@@ -4849,11 +4824,9 @@ sub check_same_schema {
 		push @{$fail{constraints}{notexist}{1}} => [$name, $thing{1}{constraints}{$name}];
 		$failcount++;
 	}
-	}
 
 	## Check exists on 2 but not 1, and make sure the schema/table matches
   CONSTRAINT:
-	{
 	for my $name (sort keys %{$thing{2}{constraints}}) {
 
 		if (exists $filter{noconstraint_regex}) {
@@ -4882,11 +4855,9 @@ sub check_same_schema {
 			$failcount++;
 		}
 	}
-	}
 
 	## Column constraints - any exists on 1 but not 2?
-	CONSTRAINT:
-	{
+  CONSTRAINT:
 	for my $name (sort keys %{$thing{1}{colconstraints}}) {
 		next if exists $thing{2}{colconstraints}{$name};
 
@@ -4903,11 +4874,9 @@ sub check_same_schema {
 		push @{$fail{colconstraints}{notexist}{1}} => [$name, $tname, $cname];
 		$failcount++;
 	}
-	}
 
 	## Check exists on 2 but not 1, and make sure the schema/table/column matches
-	CONSTRAINT:
-	{
+  CONSTRAINT:
 	for my $name (sort keys %{$thing{2}{colconstraints}}) {
 
 		if (exists $filter{noconstraint_regex}) {
@@ -4949,13 +4918,11 @@ sub check_same_schema {
 			$failcount++;
 		}
 	}
-	}
 
 	## Compare functions
 
 	## Functions on 1 but not 2?
-	FUNCTION:
-	{
+  FUNCTION:
 	for my $name (sort keys %{$thing{1}{functions}}) {
 		next if exists $thing{2}{functions}{$name};
 
@@ -4968,11 +4935,9 @@ sub check_same_schema {
 		push @{$fail{functions}{notexist}{1}} => $name;
 		$failcount++;
 	}
-	}
 
 	## Functions on 2 but not 1
-	FUNCTION:
-	{
+  FUNCTION:
 	for my $name (sort keys %{$thing{2}{functions}}) {
 
 		if (exists $filter{nofunction_regex}) {
@@ -4995,7 +4960,6 @@ sub check_same_schema {
 			}
 		}
 
-	}
 	}
 
 	##
