@@ -5023,14 +5023,14 @@ sub check_same_schema {
 	if (exists $fail{schemas}) {
 		if (exists $fail{schemas}{notexist}) {
 			if (exists $fail{schemas}{notexist}{1}) {
-				$db->{perf} .= ' Schemas in 1 but not 2: ';
-				$db->{perf} .= join ', ' => @{$fail{schemas}{notexist}{1}};
-				$db->{perf} .= ' ';
+				for my $name (@{$fail{schemas}{notexist}{1}}) {
+					$db->{perf} .= " Schema in 1 but not 2: $name ";
+				}
 			}
 			if (exists $fail{schemas}{notexist}{2}) {
-				$db->{perf} .= ' Schemas in 2 but not 1: ';
-				$db->{perf} .= join ', ' => @{$fail{schemas}{notexist}{2}};
-				$db->{perf} .= ' ';
+				for my $name (@{$fail{schemas}{notexist}{2}}) {
+					$db->{perf} .= " Schema in 2 but not 1: $name ";
+				}
 			}
 		}
 		if (exists $fail{schemas}{diffowners}) {
@@ -5051,14 +5051,14 @@ sub check_same_schema {
 	if (exists $fail{tables}) {
 		if (exists $fail{tables}{notexist}) {
 			if (exists $fail{tables}{notexist}{1}) {
-				$db->{perf} .= ' Tables in 1 but not 2: ';
-				$db->{perf} .= join ', ' => @{$fail{tables}{notexist}{1}};
-				$db->{perf} .= ' ';
+				for my $name (@{$fail{tables}{notexist}{1}}) {
+					$db->{perf} .= " Table in 1 but not 2: $name ";
+				}
 			}
 			if (exists $fail{tables}{notexist}{2}) {
-				$db->{perf} .= ' Tables in 2 but not 1: ';
-				$db->{perf} .= join ', ' => @{$fail{tables}{notexist}{2}};
-				$db->{perf} .= ' ';
+				for my $name (@{$fail{tables}{notexist}{2}}) {
+					$db->{perf} .= " Table in 2 but not 1: $name ";
+				}
 			}
 		}
 		if (exists $fail{tables}{diffowners}) {
@@ -5079,14 +5079,14 @@ sub check_same_schema {
 	if (exists $fail{sequences}) {
 		if (exists $fail{sequences}{notexist}) {
 			if (exists $fail{sequences}{notexist}{1}) {
-				$db->{perf} .= ' Sequences in 1 but not 2: ';
-				$db->{perf} .= join ', ' => @{$fail{sequences}{notexist}{1}};
-				$db->{perf} .= ' ';
+				for my $name (@{$fail{sequences}{notexist}{1}}) {
+					$db->{perf} .= " Sequence in 1 but not 2: $name ";
+				}
 			}
 			if (exists $fail{sequences}{notexist}{2}) {
-				$db->{perf} .= ' Sequences in 2 but not 1: ';
-				$db->{perf} .= join ', ' => @{$fail{sequences}{notexist}{2}};
-				$db->{perf} .= ' ';
+				for my $name (@{$fail{sequences}{notexist}{2}}) {
+					$db->{perf} .= " Sequence in 2 but not 1: $name ";
+				}
 			}
 		}
 		if (exists $fail{sequences}{diffowners}) {
@@ -5107,14 +5107,14 @@ sub check_same_schema {
 	if (exists $fail{views}) {
 		if (exists $fail{views}{notexist}) {
 			if (exists $fail{views}{notexist}{1}) {
-				$db->{perf} .= ' Views in 1 but not 2: ';
-				$db->{perf} .= join ', ' => @{$fail{views}{notexist}{1}};
-				$db->{perf} .= ' ';
+				for my $name (@{$fail{views}{notexist}{1}}) {
+					$db->{perf} .= " View in 1 but not 2: $name ";
+				}
 			}
 			if (exists $fail{views}{notexist}{2}) {
-				$db->{perf} .= ' Views in 2 but not 1: ';
-				$db->{perf} .= join ', ' => @{$fail{views}{notexist}{2}};
-				$db->{perf} .= ' ';
+				for my $name (@{$fail{views}{notexist}{2}}) {
+					$db->{perf} .= " View in 2 but not 1: $name ";
+				}
 			}
 		}
 		if (exists $fail{views}{diffowners}) {
@@ -5135,14 +5135,14 @@ sub check_same_schema {
 	if (exists $fail{triggers}) {
 		if (exists $fail{triggers}{notexist}) {
 			if (exists $fail{triggers}{notexist}{1}) {
-				$db->{perf} .= ' Triggers in 1 but not 2: ';
-				$db->{perf} .= join ', ' => @{$fail{triggers}{notexist}{1}};
-				$db->{perf} .= ' ';
+				for my $name (@{$fail{triggers}{notexist}{1}}) {
+					$db->{perf} .= " Trigger in 1 but not 2: $name ";
+				}
 			}
 			if (exists $fail{triggers}{notexist}{2}) {
-				$db->{perf} .= ' Triggers in 2 but not 1: ';
-				$db->{perf} .= join ', ' => @{$fail{triggers}{notexist}{2}};
-				$db->{perf} .= ' ';
+				for my $name (@{$fail{triggers}{notexist}{2}}) {
+					$db->{perf} .= " Trigger in 2 but not 1: $name ";
+				}
 			}
 		}
 		if (exists $fail{triggers}{difffunc}) {
