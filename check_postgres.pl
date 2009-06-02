@@ -4420,7 +4420,7 @@ sub check_same_schema {
 			. q{FROM pg_proc JOIN pg_namespace n ON (n.oid = pronamespace)};
 		$info = run_command($SQL, { dbnumber => $x } );
 		for $db (@{$info->{db}}) {
-			while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+/gmo) {
+			while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*/gmo) {
 				my ($schema,$name,$args,$md5) = ($1,$2,$3,$4);
 				$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
 				$args =~ s/^\s*(.*)\s*$/($1)/;
