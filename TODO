@@ -35,3 +35,6 @@ Quick list of outstanding items / bugs / feature requests for CP:
 
 * Check the current logfile is not bigger than X KB/MB/GB
 
+* Make the bloat estimation more accurate (lots of small bad assumptions in there)
+
+* Consider a more accurate bloat check, using the expensive pg_stattuple function
