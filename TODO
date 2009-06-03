@@ -28,3 +28,10 @@ Quick list of outstanding items / bugs / feature requests for CP:
 * Check at least one table has been vacuumed/analyzed since X time
 
 * Put on CPAN
+
+* Check every table has been vacuum|analyze at least once. (no NULL)
+
+* Check at least one table has been vacuumed|analyzed since X hours/days/...
+
+* Check the current logfile is not bigger than X KB/MB/GB
+
