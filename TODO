@@ -8,7 +8,7 @@ Quick list of outstanding items / bugs / feature requests for CP:
 
 * Get more language translations
 
-* Investigage report of an empty fsm_pages causing 255 out of range error
+* Investigate report of an empty fsm_pages causing 255 out of range error
 
 * Check the current logfile is not bigger than X KB/MB/GB
 
