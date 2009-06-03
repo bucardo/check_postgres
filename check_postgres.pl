@@ -2442,7 +2442,7 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 			$max = -2 if $max == -1;
 
 			## Do the table first if we haven't seen it
-			if (! $seenit{"$schema.$table"}++) {
+			if (! $seenit{"$db->{dbname}.schema.$table"}++) {
 				$db->{perf} .= " $schema.$table=$wb";
 				my $msg = msg('bloat-table', $schema, $table, $tups, $pages, $otta, $bloat, $wb, $ws);
 				my $ok = 1;
@@ -7205,6 +7205,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.9.1> (May 2009)
+
+  Fix for multiple databases with the check_bloat action (Mark Kirkwood)
 
 =item B<Version 2.9.0> (May 28, 2009)
 
