@@ -57,6 +57,8 @@ like ($cp->run(''), qr{ERROR:\s*(?:Could not determine|cannot access temporary)}
 $dbh->do("CREATE SEQUENCE $seqname");
 $cp->drop_sequence_if_exists($seqname.'2');
 
+END { $cp->drop_sequence_if_exists($seqname) }
+
 $t=qq{$S returns correct information for a new sequence};
 like ($cp->run(''), qr{OK:.+public.cp_test_sequence=0% \(calls left=9223372036854775806\)}, $t);
 
