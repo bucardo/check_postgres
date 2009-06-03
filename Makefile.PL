@@ -57,8 +57,8 @@ my %opts =
 );
 
 {
-	package MY;
-	sub clean {
+	package MY; ## no critic
+	sub clean { ## no critic (RequireArgUnpacking)
 		my $string = shift->SUPER::clean(@_);
 		$string =~ s{\t}{\tperl t/99_cleanup\.t\n\t};
 		$string .= qq{\nsignature_asc : \n};
