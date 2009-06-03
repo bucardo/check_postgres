@@ -11,6 +11,8 @@ use DBI;
 use Cwd;
 
 our $DEBUG = 0;
+our $MAX_HOST_PATH = 60;
+our $next_socket_mod = 1;
 
 use vars qw/$com $info $count $SQL $sth/;
 
@@ -237,8 +239,8 @@ sub test_database_handle {
 	$dbhost =~ s/([^\\]) /$1\\ /g;
 
 	## Workaround for bug where psql -h /some/long/path fails
-	if (length($dbhost) > 90) {
-		my $newname = '/tmp/cptesting_socket';
+	if (length($dbhost) > $MAX_HOST_PATH) {
+		my $newname = '/tmp/cptesting_socket' . ($next_socket_mod++);
 		if (! -e $newname) {
 			warn "Creating new symlink socket at $newname\n";
 			(my $oldname = $dbhost) =~ s/\\//g;

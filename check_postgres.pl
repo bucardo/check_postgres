@@ -1441,7 +1441,7 @@ sub run_command {
 		 host   =>    [$ENV{PGHOST}     || '<none>'],
 		 port   =>    [$ENV{PGPORT}     || $opt{defaultport}],
 		 dbname =>    [$ENV{PGDATABASE} || $opt{defaultdb}],
-		 dbuser =>    [$ENV{PGUSER}     || $opt{defaultuser}],
+		 dbuser =>    [$ENV{PGUSER}     || $arg->{dbuser} || $opt{defaultuser}],
 		 dbpass =>    [$ENV{PGPASSWORD} || ''],
 		 dbservice => [''],
 		 };
@@ -4279,7 +4279,7 @@ sub check_same_schema {
 		## Get a list of all users
 		if (! exists $filter{nousers}) {
 			$SQL = 'SELECT usesysid, quote_ident(usename), usecreatedb, usesuper FROM pg_user';
-			$info = run_command($SQL, { dbnumber => $x } );
+			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
 				while ($db->{slurp} =~ /^\s*(\d+)\s*\| (.+?)\s*\| ([t|f])\s*\| ([t|f]).*/gmo) {
 					$thing{$x}{users}{$2} = { oid=>$1, createdb=>$3, superuser=>$4 };
@@ -4293,7 +4293,7 @@ sub check_same_schema {
 			$SQL = q{SELECT quote_ident(nspname), n.oid, quote_ident(usename), nspacl FROM pg_namespace n }
 				. q{JOIN pg_user u ON (u.usesysid = n.nspowner) }
 				. q{WHERE nspname !~ '^pg_t'};
-			$info = run_command($SQL, { dbnumber => $x } );
+			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
 				while ($db->{slurp} =~ /^\s*(.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (\S*).*/gmo) {
 					$thing{$x}{schemas}{$1} = { oid=>$2, owner=>$3, acl=>$4||'(none)' };
@@ -4311,7 +4311,7 @@ sub check_same_schema {
 		exists $filter{noviews}     and $SQL .= q{ AND relkind <> 'v'};
 		exists $filter{noindexes}   and $SQL .= q{ AND relkind <> 'i'};
 		exists $filter{nosequences} and $SQL .= q{ AND relkind <> 'S'};
-		$info = run_command($SQL, { dbnumber => $x } );
+		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 		for $db (@{$info->{db}}) {
 			while ($db->{slurp} =~ /^\s*(\w)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (\S*).*/gmo) {
 				my ($kind,$schema,$name,$owner,$acl) = ($1,$2,$3,$4,$5);
@@ -4336,7 +4336,7 @@ sub check_same_schema {
 
 		## Get a list of all types
 		$SQL = q{SELECT typname, oid FROM pg_type};
-		$info = run_command($SQL, { dbnumber => $x } );
+		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 		for $db (@{$info->{db}}) {
 			while ($db->{slurp} =~ /^\s*(.+?)\s+\|\s+(\d+).*/gmo) {
 				$thing{$x}{type}{$2} = $1;
@@ -4350,7 +4350,7 @@ sub check_same_schema {
 				. q{ JOIN pg_class c ON (c.oid = tgrelid) }
 				. q{ JOIN pg_proc p ON (p.oid = tgfoid) }
 				. q{ WHERE NOT tgisconstraint}; ## constraints checked separately
-			$info = run_command($SQL, { dbnumber => $x } );
+			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
 				while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\S+).*/gmo) {
 					my ($name,$table,$func,$args,$md5) = ($1,$2,$3,$4,$5);
@@ -4370,7 +4370,7 @@ sub check_same_schema {
 			. q{COALESCE(numeric_precision, 0), }
 			. q{COALESCE(numeric_scale,0) }
 			. q{FROM information_schema.columns};
-		$info = run_command($SQL, { dbnumber => $x } );
+		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 		for $db (@{$info->{db}}) {
 			while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \|\s+(\d+) \|\s+(\d+).*/gmo) {
 				$thing{$x}{columns}{"$1.$2"}{$3} = {
@@ -4393,7 +4393,7 @@ sub check_same_schema {
 		if (! exists $filter{noconstraints}) {
 			$SQL = q{SELECT constraint_schema, constraint_name, table_schema, table_name }
 				. q{FROM information_schema.constraint_table_usage};
-			$info = run_command($SQL, { dbnumber => $x } );
+			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
 				while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gmo) {
 					$thing{$x}{constraints}{"$1.$2"} = "$3.$4";
@@ -4401,7 +4401,7 @@ sub check_same_schema {
 			}
 			$SQL = q{SELECT constraint_schema, constraint_name, table_schema, table_name, column_name }
 				. q{FROM information_schema.constraint_column_usage};
-			$info = run_command($SQL, { dbnumber => $x } );
+			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
 				while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gmo) {
 					my ($cschema,$cname,$tschema,$tname,$col) = ($1,$2,$3,$4,$5);
@@ -4418,7 +4418,7 @@ sub check_same_schema {
 		## Get a list of all functions
 		$SQL = q{SELECT quote_ident(nspname), quote_ident(proname), proargtypes, md5(prosrc) }
 			. q{FROM pg_proc JOIN pg_namespace n ON (n.oid = pronamespace)};
-		$info = run_command($SQL, { dbnumber => $x } );
+		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 		for $db (@{$info->{db}}) {
 			while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*/gmo) {
 				my ($schema,$name,$args,$md5) = ($1,$2,$3,$4);
@@ -4427,6 +4427,7 @@ sub check_same_schema {
 				$thing{$x}{functions}{"$schema.$name$args"} = $md5;
 			}
 		}
+1;
 	}
 
 	$db = $saved_db;
