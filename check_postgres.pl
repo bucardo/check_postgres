@@ -4262,10 +4262,10 @@ sub check_same_schema {
 					push @{$filter{"no${type}_regex"}} => $1;
 				}
 			}
-			if ($phrase =~ /^noposition$/io) {
+			if ($phrase =~ /^noposition$/io) { ## no critic (ProhibitFixedStringMatches)
 				$filter{noposition} = 1;
 			}
-			if ($phrase =~ /^nofuncbody$/io) {
+			if ($phrase =~ /^nofuncbody$/io) { ## no critic (ProhibitFixedStringMatches)
 				$filter{nofuncbody} = 1;
 			}
 		}

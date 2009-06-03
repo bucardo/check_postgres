@@ -57,7 +57,7 @@ my %opts =
 );
 
 {
-	package MY; ## no critic
+	package MY;
 	sub clean { ## no critic (RequireArgUnpacking)
 		my $string = shift->SUPER::clean(@_);
 		$string =~ s{\t}{\tperl t/99_cleanup\.t\n\t};

@@ -38,6 +38,7 @@ stop_words = Mullane Nagios Slony nols salesrep psql dbname postgres USERNAME us
 [-Miscellanea::RequireRcsKeywords]
 [-Modules::ProhibitExcessMainComplexity]
 [-Modules::RequireExplicitInclusion]
+[-Modules::RequireFilenameMatchesPackage]
 [-NamingConventions::Capitalization]
 [-NamingConventions::ProhibitAmbiguousNames]
 [-NamingConventions::ProhibitMixedCaseVars]
