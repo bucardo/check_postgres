@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 16;
+use Test::More tests => 24;
 use lib 't','.';
 use CP_Testing;
 
@@ -58,12 +58,16 @@ like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}),
       qr{^$label CRITICAL.*Items not matched: 1\b.*Schema in 1 but not 2: schema_1_only},
       $t);
 
+$t = qq{$S succeeds when noschema filter used};
+like ($cp1->run(qq{--warning=noschema --dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label OK}, $t);
+
 $t = qq{$S fails when schemas have different owners};
 $dbh1->do(q{ALTER SCHEMA schema_1_only OWNER TO alternate_owner});
 $dbh2->do(q{CREATE SCHEMA schema_1_only});
 like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}),
       qr{^$label CRITICAL.*Items not matched: 1\b.*Schema schema_1_only owned by alternate_owner},
       $t);
+
 $dbh1->do(q{DROP SCHEMA schema_1_only});
 $dbh2->do(q{DROP SCHEMA schema_1_only});
 
@@ -72,6 +76,9 @@ $dbh2->do(q{CREATE SCHEMA schema_2_only});
 like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}),
       qr{^$label CRITICAL.*Items not matched: 1\b.*Schema in 2 but not 1: schema_2_only},
       $t);
+
+$t = qq{$S succeeds when noschema filter used};
+like ($cp1->run(qq{--warning=noschema --dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label OK}, $t);
 
 $t = qq{$S fails when schemas have different owners};
 $dbh2->do(q{ALTER SCHEMA schema_2_only OWNER TO alternate_owner});
@@ -90,6 +97,9 @@ like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}),
       qr{^$label CRITICAL.*Items not matched: 1\b.*Table in 1 but not 2: public.table_1_only},
       $t);
 
+$t = qq{$S succeeds when notables filter used};
+like ($cp1->run(qq{--warning=notables --dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label OK}, $t);
+
 $t = qq{$S fails when tables have different owners};
 $dbh1->do(q{ALTER TABLE table_1_only OWNER TO alternate_owner});
 $dbh2->do(q{CREATE TABLE table_1_only (a int)});
@@ -105,6 +115,9 @@ like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}),
       qr{^$label CRITICAL.*Items not matched: 1\b.*Table in 2 but not 1: public.table_2_only},
       $t);
 
+$t = qq{$S succeeds when notables filter used};
+like ($cp1->run(qq{--warning=notables --dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label OK}, $t);
+
 $t = qq{$S fails when tables have different owners};
 $dbh2->do(q{ALTER TABLE table_2_only OWNER TO alternate_owner});
 $dbh1->do(q{CREATE TABLE table_2_only (a int)});
@@ -114,7 +127,6 @@ like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}),
 $dbh1->do(q{DROP TABLE table_2_only});
 $dbh2->do(q{DROP TABLE table_2_only});
 
-
 #/////////// Sequences
 
 $t = qq{$S fails when first schema has an extra sequence};
@@ -122,6 +134,10 @@ $dbh1->do(q{CREATE SEQUENCE sequence_1_only});
 like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}),
       qr{^$label CRITICAL.*Items not matched: 1\b.*Sequence in 1 but not 2: public.sequence_1_only},
       $t);
+
+$t = qq{$S succeeds when nosequences filter used};
+like ($cp1->run(qq{--warning=nosequences --dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label OK}, $t);
+
 $dbh1->do(q{DROP SEQUENCE sequence_1_only});
 
 $t = qq{$S fails when second schema has an extra sequence};
@@ -129,6 +145,10 @@ $dbh2->do(q{CREATE SEQUENCE sequence_2_only});
 like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}),
       qr{^$label CRITICAL.*Items not matched: 1\b.*Sequence in 2 but not 1: public.sequence_2_only},
       $t);
+
+$t = qq{$S succeeds when nosequences filter used};
+like ($cp1->run(qq{--warning=nosequences --dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label OK}, $t);
+
 $dbh2->do(q{DROP SEQUENCE sequence_2_only});
 
 #/////////// Views
@@ -138,6 +158,10 @@ $dbh1->do(q{CREATE VIEW view_1_only AS SELECT 1});
 like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}),
       qr{^$label CRITICAL.*Items not matched: 1\b.*View in 1 but not 2: public.view_1_only},
       $t);
+
+$t = qq{$S succeeds when noviews filter used};
+like ($cp1->run(qq{--warning=noviews --dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label OK}, $t);
+
 $dbh1->do(q{DROP VIEW view_1_only});
 
 $t = qq{$S fails when second schema has an extra view};
@@ -145,6 +169,10 @@ $dbh2->do(q{CREATE VIEW view_2_only AS SELECT 1});
 like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}),
       qr{^$label CRITICAL.*Items not matched: 1\b.*View in 2 but not 1: public.view_2_only},
       $t);
+
+$t = qq{$S succeeds when noviews filter used};
+like ($cp1->run(qq{--warning=noviews --dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label OK}, $t);
+
 $dbh2->do(q{DROP VIEW view_2_only});
 
 
