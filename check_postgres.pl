@@ -809,7 +809,7 @@ our $psql_version = $1;
 our $psql_revision = $2;
 $psql_revision =~ s/\D//g;
 
-$VERBOSE >= 1 and warn qq{psql=$PSQL version=$psql_version\n};
+$VERBOSE >= 2 and warn qq{psql=$PSQL version=$psql_version\n};
 
 $opt{defaultdb} = $psql_version >= 7.4 ? 'postgres' : 'template1';
 
