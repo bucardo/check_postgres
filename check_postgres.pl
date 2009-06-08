@@ -4269,6 +4269,7 @@ sub check_same_schema {
 				$filter{nofuncbody} = 1;
 			}
 		}
+        $VERBOSE >= 3 and warn Dumper \%filter;
 	}
 
 	my (%thing,$info);
@@ -4289,7 +4290,7 @@ sub check_same_schema {
 		}
 
 		## Get a list of all schemas (aka namespaces)
-		if (! exists $filter{noschema}) {
+		if (! exists $filter{noschemas}) {
 			$SQL = q{SELECT quote_ident(nspname), n.oid, quote_ident(usename), nspacl FROM pg_namespace n }
 				. q{JOIN pg_user u ON (u.usesysid = n.nspowner) }
 				. q{WHERE nspname !~ '^pg_t'};
@@ -4302,37 +4303,43 @@ sub check_same_schema {
 		}
 
 		## Get a list of all relations
-		$SQL = q{SELECT relkind, quote_ident(nspname), quote_ident(relname), quote_ident(usename), relacl }
-			. q{FROM pg_class c }
-			. q{JOIN pg_namespace n ON (n.oid = c.relnamespace) }
-			. q{JOIN pg_user u ON (u.usesysid = c.relowner) }
-			. q{WHERE nspname !~ '^pg_t'};
-		exists $filter{notriggers}  and $SQL .= q{ AND relkind <> 'r'};
-		exists $filter{noviews}     and $SQL .= q{ AND relkind <> 'v'};
-		exists $filter{noindexes}   and $SQL .= q{ AND relkind <> 'i'};
-		exists $filter{nosequences} and $SQL .= q{ AND relkind <> 'S'};
-		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
-		for $db (@{$info->{db}}) {
-			while ($db->{slurp} =~ /^\s*(\w)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (\S*).*/gmo) {
-				my ($kind,$schema,$name,$owner,$acl) = ($1,$2,$3,$4,$5);
-				if ($kind eq 'r') {
-					$thing{$x}{tables}{"$schema.$name"} =
-						{ schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
-				}
-				elsif ($kind eq 'v') {
-					$thing{$x}{views}{"$schema.$name"} =
-						{ schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
-				}
-				elsif ($kind eq 'i') {
-					$thing{$x}{indexes}{"$schema.$name"} =
-						{ schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
-				}
-				elsif ($kind eq 'S') {
-					$thing{$x}{sequences}{"$schema.$name"} =
-						{ schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
-				}
-			}
-		}
+        if (! exists $filter{notables}) {
+            $SQL = q{SELECT relkind, quote_ident(nspname), quote_ident(relname), quote_ident(usename), relacl }
+                . q{FROM pg_class c }
+                    . q{JOIN pg_namespace n ON (n.oid = c.relnamespace) }
+                        . q{JOIN pg_user u ON (u.usesysid = c.relowner) }
+                            . q{WHERE nspname !~ '^pg_t'};
+            exists $filter{notriggers}  and $SQL .= q{ AND relkind <> 'r'};
+            exists $filter{noviews}     and $SQL .= q{ AND relkind <> 'v'};
+            exists $filter{noindexes}   and $SQL .= q{ AND relkind <> 'i'};
+            exists $filter{nosequences} and $SQL .= q{ AND relkind <> 'S'};
+            $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
+            for $db (@{$info->{db}}) {
+                while ($db->{slurp} =~ /^\s*(\w)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (\S*).*/gmo) {
+                    my ($kind,$schema,$name,$owner,$acl) = ($1,$2,$3,$4,$5);
+                    if ($kind eq 'r') {
+                        $thing{$x}{tables}{"$schema.$name"} =
+						{
+                         schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
+                    }
+                    elsif ($kind eq 'v') {
+                        $thing{$x}{views}{"$schema.$name"} =
+						{
+                         schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
+                    }
+                    elsif ($kind eq 'i') {
+                        $thing{$x}{indexes}{"$schema.$name"} =
+						{
+                         schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
+                    }
+                    elsif ($kind eq 'S') {
+                        $thing{$x}{sequences}{"$schema.$name"} =
+						{
+                         schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
+                    }
+                }
+            }
+        }
 
 		## Get a list of all types
 		$SQL = q{SELECT typname, oid FROM pg_type};
