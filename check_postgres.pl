@@ -4359,11 +4359,11 @@ sub check_same_schema {
 				. q{ WHERE NOT tgisconstraint}; ## constraints checked separately
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\S+).*/gmo) {
-					my ($name,$table,$func,$args,$md5) = ($1,$2,$3,$4,$5);
+				while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.*?)/gmo) {
+					my ($name,$table,$func,$args) = ($1,$2,$3,$4);
 					$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
 					$args =~ s/^\s*(.*)\s*$/($1)/;
-					$thing{$x}{triggers}{$name} = { table=>$table, func=>$func, args=>$args, md5=>$md5 };
+					$thing{$x}{triggers}{$name} = { table=>$table, func=>$func, args=>$args };
 				}
 			}
 		}
@@ -4406,18 +4406,58 @@ sub check_same_schema {
 					$thing{$x}{constraints}{"$1.$2"} = "$3.$4";
 				}
 			}
-			$SQL = q{SELECT constraint_schema, constraint_name, table_schema, table_name, column_name }
-				. q{FROM information_schema.constraint_column_usage};
+			$SQL = <<'SQL';  # cribbed from information_schema.constraint_column_usage
+ SELECT current_database()::information_schema.sql_identifier AS table_catalog,
+    x.tblschema::information_schema.sql_identifier AS table_schema,
+    x.tblname::information_schema.sql_identifier AS table_name,
+    x.colname::information_schema.sql_identifier AS column_name,
+    current_database()::information_schema.sql_identifier AS constraint_catalog,
+    x.cstrschema::information_schema.sql_identifier AS constraint_schema,
+    x.cstrname::information_schema.sql_identifier AS constraint_name,
+    constrdef
+FROM (( SELECT DISTINCT nr.nspname, r.relname, r.relowner, a.attname, nc.nspname, c.conname,
+          pg_catalog.pg_get_constraintdef(c.oid, true)
+          FROM pg_namespace nr, pg_class r, pg_attribute a, pg_depend d, pg_namespace nc, pg_constraint c
+         WHERE nr.oid = r.relnamespace
+           AND r.oid = a.attrelid
+           AND d.refclassid = 'pg_class'::regclass::oid
+           AND d.refobjid = r.oid
+           AND d.refobjsubid= a.attnum
+           AND d.classid = 'pg_constraint'::regclass::oid
+           AND d.objid = c.oid
+           AND c.connamespace = nc.oid
+           AND c.contype = 'c'::"char"
+           AND r.relkind = 'r'::"char"
+           AND NOT a.attisdropped
+         ORDER BY nr.nspname, r.relname, r.relowner, a.attname, nc.nspname, c.conname)
+     UNION ALL
+        SELECT nr.nspname, r.relname, r.relowner, a.attname, nc.nspname, c.conname,
+          pg_catalog.pg_get_constraintdef(c.oid, true)
+          FROM pg_namespace nr, pg_class r, pg_attribute a, pg_namespace nc, pg_constraint c
+         WHERE nr.oid = r.relnamespace
+           AND r.oid = a.attrelid
+           AND nc.oid = c.connamespace
+           AND
+               CASE
+                   WHEN c.contype = 'f'::"char" THEN r.oid = c.confrelid AND (a.attnum = ANY (c.confkey))
+                   ELSE r.oid = c.conrelid AND (a.attnum = ANY (c.conkey))
+               END
+           AND NOT a.attisdropped
+           AND (c.contype = ANY (ARRAY['p'::"char", 'u'::"char", 'f'::"char"]))
+           AND r.relkind = 'r'::"char")
+  x(tblschema, tblname, tblowner, colname, cstrschema, cstrname, constrdef)
+WHERE pg_has_role(x.tblowner, 'USAGE'::text)
+SQL
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gmo) {
-					my ($cschema,$cname,$tschema,$tname,$col) = ($1,$2,$3,$4,$5);
+				while ($db->{slurp} =~ /^ \s* (.+?) \s+\|  \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?)\s*$/gmox) {
+					my ($cschema,$cname,$tschema,$tname,$col,$cdef) = ($6,$7,$2,$3,$4,$8);
 					if (exists $thing{$x}{colconstraints}{"$cschema.$cname"}) {
 						my @oldcols = split / / => $thing{$x}{colconstraints}{"$cschema.$cname"}->[1];
 						push @oldcols => $col;
 						$col = join ' ' => sort @oldcols;
 					}
-					$thing{$x}{colconstraints}{"$cschema.$cname"} = ["$tschema.$tname", $col];
+					$thing{$x}{colconstraints}{"$cschema.$cname"} = ["$tschema.$tname", $col, $cdef];
 				}
 			}
 		}
@@ -4904,8 +4944,8 @@ sub check_same_schema {
 		}
 
 		## Check for a difference in schema/table
-		my ($tname1,$cname1) = @{$thing{1}{colconstraints}{$name}};
-		my ($tname2,$cname2) = @{$thing{2}{colconstraints}{$name}};
+		my ($tname1,$cname1,$cdef1) = @{$thing{1}{colconstraints}{$name}};
+		my ($tname2,$cname2,$cdef2) = @{$thing{2}{colconstraints}{$name}};
 		if ($tname1 ne $tname2) {
 			push @{$fail{colconstraints}{tablediff}} =>
 				[
@@ -4922,6 +4962,16 @@ sub check_same_schema {
 					$name,
 					$tname1, $cname1,
 					$tname2, $cname2,
+				];
+			$failcount++;
+		}
+		## Check for a difference in schema/table/column/definition
+		elsif ($cdef1 ne $cdef2) {
+			push @{$fail{colconstraints}{defdiff}} =>
+				[
+					$name,
+					$tname1, $cname1, $cdef1,
+					$tname2, $cname2, $cdef2,
 				];
 			$failcount++;
 		}
@@ -5252,6 +5302,14 @@ sub check_same_schema {
 				my ($name,$t1,$c1,$t2,$c2) = @$row;
 				if (! exists $doublec{$name}) {
 					$db->{perf} .= " Constraint $name on 1 is applied to $t1.$c1, but to $t2.$c2 on 2. ";
+				}
+			}
+		}
+		if (exists $fail{colconstraints}{defdiff}) {
+			for my $row (@{$fail{colconstraints}{defdiff}}) {
+				my ($name,$t1,$c1,$d1,$t2,$c2,$d2) = @$row;
+				if (! exists $doublec{$name}) {
+					$db->{perf} .= qq{ Constraint $name on 1 differs from 2 ("$d1" vs. "$d2")};
 				}
 			}
 		}

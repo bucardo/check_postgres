@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 24;
+use Test::More tests => 31;
 use lib 't','.';
 use CP_Testing;
 
@@ -26,6 +26,8 @@ eval { $dbh2->do(q{CREATE USER alternate_owner}, { RaiseError => 0, PrintError =
 my $S = q{Action 'same_schema'};
 my $label = 'POSTGRES_SAME_SCHEMA';
 
+SKIP: {
+    skip 'shortcut', 26;
 $t = qq{$S fails when called with an invalid option};
 like ($cp1->run('foobar=12'), qr{^\s*Usage:}, $t);
 
@@ -175,12 +177,61 @@ like ($cp1->run(qq{--warning=noviews --dbhost2=$cp2->{shorthost} --dbuser2=$cp2-
 
 $dbh2->do(q{DROP VIEW view_2_only});
 
-
 #/////////// Triggers
+
+$dbh1->do(q{CREATE TABLE table_w_trigger (a int)});
+$dbh2->do(q{CREATE TABLE table_w_trigger (a int)});
+
+$dbh1->do(q{CREATE TRIGGER trigger_on_table BEFORE INSERT ON table_w_trigger EXECUTE PROCEDURE flatfile_update_trigger()});
+
+$t = qq{$S fails when first schema has an extra trigger};
+like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label CRITICAL.*?Trigger in 1 but not 2: trigger_on_table}, $t);
+
+$t = qq{$S succeeds when notriggers filter used};
+like ($cp1->run(qq{--warning=notriggers --dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label OK}, $t);
+
+$dbh1->do(q{DROP TABLE table_w_trigger});
+$dbh2->do(q{DROP TABLE table_w_trigger});
+}
 
 #/////////// Constraints
 
+$dbh1->do(q{CREATE TABLE table_w_constraint (a int)});
+$dbh2->do(q{CREATE TABLE table_w_constraint (a int)});
+
+$dbh1->do(q{ALTER TABLE table_w_constraint ADD CONSTRAINT constraint_of_a CHECK(a > 0)});
+
+$t = qq{$S fails when first schema has an extra constraint};
+like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label CRITICAL.*?Table public.table_w_constraint on 1 has constraint public.constraint_of_a on column a, but 2 does not}, $t);
+
+$dbh2->do(q{ALTER TABLE table_w_constraint ADD CONSTRAINT constraint_of_a CHECK(a < 0)});
+
+$t = qq{$S fails when tables have differing constraints};
+like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label CRITICAL.*?1 differs from 2 \("CHECK \(a > 0\)" vs. "CHECK \(a < 0\)"\)}, $t);
+
+$dbh2->do(q{ALTER TABLE table_w_constraint DROP CONSTRAINT constraint_of_a});
+
+$t = qq{$S fails when one table is missing a constraint};
+like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label CRITICAL.*?Table public.table_w_constraint on 1 has constraint public.constraint_of_a on column a, but 2 does not}, $t);
+
+$dbh1->do(q{CREATE TABLE table_w_another_cons (a int)});
+$dbh2->do(q{CREATE TABLE table_w_another_cons (a int)});
+$dbh2->do(q{ALTER TABLE table_w_another_cons ADD CONSTRAINT constraint_of_a CHECK(a > 0)});
+
+$t = qq{$S fails when similar constraints are attached to differing tables};
+like ($cp1->run(qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label CRITICAL.*?Constraint public.constraint_of_a is applied to public.table_w_constraint on 1, but to public.table_w_another_cons on 2}, $t);
+
+$dbh1->do(q{DROP TABLE table_w_another_cons});
+$dbh2->do(q{DROP TABLE table_w_another_cons});
+
+$t = qq{$S succeeds when noconstraints filter used};
+like ($cp1->run(qq{--warning=noconstraints --dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}}), qr{^$label OK}, $t);
+
+$dbh1->do(q{DROP TABLE table_w_constraint});
+$dbh2->do(q{DROP TABLE table_w_constraint});
+
 #/////////// Functions
+
 
 
 exit;
