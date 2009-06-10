@@ -4245,7 +4245,7 @@ sub check_replicate_row {
 sub check_same_schema {
 
 	## Verify that all relations inside two databases are the same
-	## Supports: Nagios, MRTG
+	## Supports: Nagios
 	## Include and exclude should be supported
 	## Warning and critical are not used as normal
 	## Warning is used to do filtering
