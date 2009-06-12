@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.9.0';
+our $VERSION = '2.9.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -5949,7 +5949,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.9.0
+This documents describes check_postgres.pl version 2.9.1
 
 =head1 SYNOPSIS
 
@@ -7351,9 +7351,10 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.9.1> (May 2009)
+=item B<Version 2.9.1> (June 2009)
 
   Fix for multiple databases with the check_bloat action (Mark Kirkwood)
+  Tests for same_schema, other minor test fixes (Jeff Boes)
 
 =item B<Version 2.9.0> (May 28, 2009)
 

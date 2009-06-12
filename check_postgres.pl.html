@@ -9,8 +9,10 @@
 
 <body style="background-color: white">
 
-<p><a name="__index__"></a></p>
+
 <!-- INDEX BEGIN -->
+<div name="index">
+<p><a name="__index__"></a></p>
 
 <ul>
 
@@ -62,6 +64,7 @@
 		<li><a href="#prepared_txns"><strong>prepared_txns</strong></a></li>
 		<li><a href="#query_runtime"><strong>query_runtime</strong></a></li>
 		<li><a href="#query_time"><strong>query_time</strong></a></li>
+		<li><a href="#same_schema"><strong>same_schema</strong></a></li>
 		<li><a href="#sequence"><strong>sequence</strong></a></li>
 		<li><a href="#replicate_row"><strong>replicate_row</strong></a></li>
 		<li><a href="#txn_time"><strong>txn_time</strong></a></li>
@@ -88,15 +91,17 @@
 	<li><a href="#nagios_examples">NAGIOS EXAMPLES</a></li>
 	<li><a href="#license_and_copyright">LICENSE AND COPYRIGHT</a></li>
 </ul>
+
+<hr name="index" />
+</div>
 <!-- INDEX END -->
 
-<hr />
 <p>
 </p>
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.8.1</p>
+<p>This documents describes check_postgres.pl version 2.9.1</p>
 <p>
 </p>
 <hr />
@@ -148,25 +153,25 @@ the directory naming trick.</p>
 <p>The default output format is for Nagios, which is a single line of information, along 
 with four specific exit codes:</p>
 <ol>
-<li><strong><a name="item__28ok_29">(OK)</a></strong>
+<li><strong><a name="ok" class="item">(OK)</a></strong>
 
 </li>
-<li><strong><a name="item__28warning_29">(WARNING)</a></strong>
+<li><strong><a name="warning" class="item">(WARNING)</a></strong>
 
 </li>
-<li><strong><a name="item__28critical_29">(CRITICAL)</a></strong>
+<li><strong><a name="critical" class="item">(CRITICAL)</a></strong>
 
 </li>
-<li><strong><a name="item__28unknown_29">(UNKNOWN)</a></strong>
+<li><strong><a name="unknown" class="item">(UNKNOWN)</a></strong>
 
 </li>
 </ol>
 <p>The output line is one of the words above, a colon, and then a short description of what 
 was measured. Additional statistics information, as well as the total time the command 
 took, can be output as well: see the documentation on the arguments 
-<em><a href="#item__2d_2dshowperf_3dval">--showperf</a></em>, 
-<em><a href="#item__2d_2dperflimit_3di">--perflimit</a></em>, and 
-<em><a href="#item__2d_2dshowtime_3dval">--showtime</a></em>.</p>
+<em><a href="#showperf_val">--showperf</a></em>, 
+<em><a href="#perflimit_i">--perflimit</a></em>, and 
+<em><a href="#showtime_val">--showtime</a></em>.</p>
 <p>
 </p>
 <h3><a name="mrtg_output">MRTG output</a></h3>
@@ -201,41 +206,41 @@ other actions, using --simple is enough to make Cacti happy.</p>
 <h1><a name="database_connection_options">DATABASE CONNECTION OPTIONS</a></h1>
 <p>All actions accept a common set of database options.</p>
 <dl>
-<dt><strong><a name="item__2dh_name_or__2d_2dhost_3dname"><strong>-H NAME</strong> or <strong>--host=NAME</strong></a></strong></dt>
+<dt><strong><a name="h_name_or_host_name" class="item"><strong>-H NAME</strong> or <strong>--host=NAME</strong></a></strong></dt>
 
 <dd>
 <p>Connect to the host indicated by NAME. Can be a comma-separated list of names. Multiple host arguments 
 are allowed. If no host is given, defaults to the <code>PGHOST</code> environment variable or no host at all 
 (which indicates using a local Unix socket). You may also use &quot;--dbhost&quot;.</p>
 </dd>
-<dt><strong><a name="item__2dp_port_or__2d_2dport_3dport"><strong>-p PORT</strong> or <strong>--port=PORT</strong></a></strong></dt>
+<dt><strong><a name="p_port_or_port_port" class="item"><strong>-p PORT</strong> or <strong>--port=PORT</strong></a></strong></dt>
 
 <dd>
 <p>Connects using the specified PORT number. Can be a comma-separated list of port numbers, and multiple 
 port arguments are allowed. If no port number is given, defaults to the <code>PGPORT</code> environment variable. If 
 that is not set, it defaults to 5432. You may also use &quot;--dbport&quot;</p>
 </dd>
-<dt><strong><a name="item__2ddb_name_or__2d_2ddbname_3dname"><strong>-db NAME</strong> or <strong>--dbname=NAME</strong></a></strong></dt>
+<dt><strong><a name="db_name_or_dbname_name" class="item"><strong>-db NAME</strong> or <strong>--dbname=NAME</strong></a></strong></dt>
 
 <dd>
 <p>Specifies which database to connect to. Can be a comma-separated list of names, and multiple dbname 
 arguments are allowed. If no dbname option is provided, defaults to the <code>PGDATABASE</code> environment variable. 
 If that is not set, it defaults to 'postgres' if psql is version 8 or greater, and 'template1' otherwise.</p>
 </dd>
-<dt><strong><a name="item__2du_username_or__2d_2ddbuser_3dusername"><strong>-u USERNAME</strong> or <strong>--dbuser=USERNAME</strong></a></strong></dt>
+<dt><strong><a name="u_username_or_dbuser_username" class="item"><strong>-u USERNAME</strong> or <strong>--dbuser=USERNAME</strong></a></strong></dt>
 
 <dd>
 <p>The name of the database user to connect as. Can be a comma-separated list of usernames, and multiple 
 dbuser arguments are allowed. If this is not provided, it defaults to the <code>PGUSER</code> environment variable, otherwise 
 it defaults to 'postgres'.</p>
 </dd>
-<dt><strong><a name="item__2d_2ddbpass_3dpassword"><strong>--dbpass=PASSWORD</strong></a></strong></dt>
+<dt><strong><a name="dbpass_password" class="item"><strong>--dbpass=PASSWORD</strong></a></strong></dt>
 
 <dd>
 <p>Provides the password to connect to the database with. Use of this option is highly discouraged.
 Instead, one should use a .pgpass or pg_service.conf file.</p>
 </dd>
-<dt><strong><a name="item__2d_2ddbservice_3dname"><strong>--dbservice=NAME</strong></a></strong></dt>
+<dt><strong><a name="dbservice_name" class="item"><strong>--dbservice=NAME</strong></a></strong></dt>
 
 <dd>
 <p>The name of a service inside of the pg_service.conf file. This file is in your home directory by 
@@ -268,56 +273,56 @@ carries over until it is changed again.</p>
 <h1><a name="other_options">OTHER OPTIONS</a></h1>
 <p>Other options include:</p>
 <dl>
-<dt><strong><a name="item__2d_2daction_3dname"><strong>--action=NAME</strong></a></strong></dt>
+<dt><strong><a name="action_name" class="item"><strong>--action=NAME</strong></a></strong></dt>
 
 <dd>
 <p>States what action we are running. Required unless using a symlinked file, 
 in which case the name of the file is used to figure out the action.</p>
 </dd>
-<dt><strong><a name="item__2d_2dwarning_3dval_or__2dw_val"><strong>--warning=VAL or -w VAL</strong></a></strong></dt>
+<dt><strong><a name="warning_val_or_w_val" class="item"><strong>--warning=VAL or -w VAL</strong></a></strong></dt>
 
 <dd>
 <p>Sets the threshold at which a warning alert is fired. The valid options for this 
 option depends on the action used.</p>
 </dd>
-<dt><strong><a name="item__2d_2dcritical_3dval_or__2dc_val"><strong>--critical=VAL or -c VAL</strong></a></strong></dt>
+<dt><strong><a name="critical_val_or_c_val" class="item"><strong>--critical=VAL or -c VAL</strong></a></strong></dt>
 
 <dd>
 <p>Sets the threshold at which a critical alert is fired. The valid options for this 
 option depends on the action used.</p>
 </dd>
-<dt><strong><a name="item__2dt_val_or__2d_2dtimeout_3dval"><strong>-t VAL</strong> or <strong>--timeout=VAL</strong></a></strong></dt>
+<dt><strong><a name="t_val_or_timeout_val" class="item"><strong>-t VAL</strong> or <strong>--timeout=VAL</strong></a></strong></dt>
 
 <dd>
 <p>Sets the timeout in seconds after which the script will abort whatever it is doing 
 and return an UNKNOWN status. The timeout is per Postgres cluster, not for the entire 
 script. The default value is 10; the units are always in seconds.</p>
 </dd>
-<dt><strong><a name="item__2dh_or__2d_2dhelp"><strong>-h</strong> or <strong>--help</strong></a></strong></dt>
+<dt><strong><a name="h_or_help" class="item"><strong>-h</strong> or <strong>--help</strong></a></strong></dt>
 
 <dd>
 <p>Displays a help screen with a summary of all actions and options.</p>
 </dd>
-<dt><strong><a name="item__2dv_or__2d_2dversion"><strong>-V</strong> or <strong>--version</strong></a></strong></dt>
+<dt><strong><a name="v_or_version" class="item"><strong>-V</strong> or <strong>--version</strong></a></strong></dt>
 
 <dd>
 <p>Shows the current version.</p>
 </dd>
-<dt><strong><a name="item__2dv_or__2d_2dverbose"><strong>-v</strong> or <strong>--verbose</strong></a></strong></dt>
+<dt><strong><a name="v_or_verbose" class="item"><strong>-v</strong> or <strong>--verbose</strong></a></strong></dt>
 
 <dd>
 <p>Set the verbosity level. Can call more than once to boost the level. Setting it to three 
 or higher (in other words, issuing <code>-v -v -v</code>) turns on debugging information for this 
 program which is sent to stderr.</p>
 </dd>
-<dt><strong><a name="item__2d_2dshowperf_3dval"><strong>--showperf=VAL</strong></a></strong></dt>
+<dt><strong><a name="showperf_val" class="item"><strong>--showperf=VAL</strong></a></strong></dt>
 
 <dd>
 <p>Determines if we output additional performance data in standard Nagios format 
 (at end of string, after a pipe symbol, using name=value). 
 VAL should be 0 or 1. The default is 1. Only takes effect if using Nagios output mode.</p>
 </dd>
-<dt><strong><a name="item__2d_2dperflimit_3di"><strong>--perflimit=i</strong></a></strong></dt>
+<dt><strong><a name="perflimit_i" class="item"><strong>--perflimit=i</strong></a></strong></dt>
 
 <dd>
 <p>Sets a limit as to how many items of interest are reported back when using the 
@@ -327,19 +332,19 @@ careful when using this with the <em>--include</em> or <em>--exclude</em> option
 those restrictions are done <em>after</em> the query has been run, and thus your 
 limit may not include the items you want. Only takes effect if using Nagios output mode.</p>
 </dd>
-<dt><strong><a name="item__2d_2dshowtime_3dval"><strong>--showtime=VAL</strong></a></strong></dt>
+<dt><strong><a name="showtime_val" class="item"><strong>--showtime=VAL</strong></a></strong></dt>
 
 <dd>
 <p>Determines if the time taken to run each query is shown in the output. VAL 
 should be 0 or 1. The default is 1. No effect unless <em>showperf</em> is on.
 Only takes effect if using Nagios output mode.</p>
 </dd>
-<dt><strong><a name="item__2d_2dtest"><strong>--test</strong></a></strong></dt>
+<dt><strong><a name="test" class="item"><strong>--test</strong></a></strong></dt>
 
 <dd>
 <p>Enables test mode. See the <a href="#test_mode">TEST MODE</a> section below.</p>
 </dd>
-<dt><strong><a name="item__2d_2dpsql_3dpath"><strong>--PSQL=PATH</strong></a></strong></dt>
+<dt><strong><a name="psql_path" class="item"><strong>--PSQL=PATH</strong></a></strong></dt>
 
 <dd>
 <p>Tells the script where to find the psql program. Useful if you have more than 
@@ -349,23 +354,23 @@ is <em>not allowed</em>. To enable it, you must change the <code>$NO_PSQL_OPTION
 top of the script to 0. Avoid using this option if you can, and instead hard-code 
 your psql location into the <code>$PSQL</code> variable, also near the top of the script.</p>
 </dd>
-<dt><strong><a name="item__2d_2dsymlinks"><strong>--symlinks</strong></a></strong></dt>
+<dt><strong><a name="symlinks" class="item"><strong>--symlinks</strong></a></strong></dt>
 
 <dd>
 <p>Creates symlinks to the main program for each action.</p>
 </dd>
-<dt><strong><a name="item__2d_2doutput_3dval"><strong>--output=VAL</strong></a></strong></dt>
+<dt><strong><a name="output_val" class="item"><strong>--output=VAL</strong></a></strong></dt>
 
 <dd>
 <p>Determines the format of the output, for use in various programs. The default is 'nagios'. No
 other systems are supported yet.</p>
 </dd>
-<dt><strong><a name="item__2d_2dmrtg_3dval"><strong>--mrtg=VAL</strong></a></strong></dt>
+<dt><strong><a name="mrtg_val" class="item"><strong>--mrtg=VAL</strong></a></strong></dt>
 
 <dd>
 <p>Used only for the MRTG or simple output, for a few specific actions.</p>
 </dd>
-<dt><strong><a name="item__2d_2ddebugoutput_3dval"><strong>--debugoutput=VAL</strong></a></strong></dt>
+<dt><strong><a name="debugoutput_val" class="item"><strong>--debugoutput=VAL</strong></a></strong></dt>
 
 <dd>
 <p>Outputs the exact string returned by psql, for use in debugging. The value is one or more letters,
@@ -583,61 +588,61 @@ and the name of the database on the fourth line.</p>
 and outputs it in a Cacti-friendly manner. No other output is supported, as the output 
 is informational and does not lend itself to alerts, such as used with Nagios. If no 
 options are given, all databases are returned, one per line. You can include a specific 
-database by use of the <code>--include</code> option, or you can use the <code>--dbname</code> option.</p>
+database by use of the <code>--include</code> option, or you can use the <a href="#dbname"><code>--dbname</code></a> option.</p>
 <p>Eleven items are returned on each line, in the format name:value, separated by a single 
 space. The items are:</p>
 <dl>
-<dt><strong><a name="item_backends">backends</a></strong></dt>
+<dt><strong><a name="backends" class="item">backends</a></strong></dt>
 
 <dd>
 <p>The number of currently running backends for this database.</p>
 </dd>
-<dt><strong><a name="item_commits">commits</a></strong></dt>
+<dt><strong><a name="commits" class="item">commits</a></strong></dt>
 
 <dd>
 <p>The total number of commits for this database since it was created or reset.</p>
 </dd>
-<dt><strong><a name="item_rollbacks">rollbacks</a></strong></dt>
+<dt><strong><a name="rollbacks" class="item">rollbacks</a></strong></dt>
 
 <dd>
 <p>The total number of rollbacks for this database since it was created or reset.</p>
 </dd>
-<dt><strong><a name="item_read">read</a></strong></dt>
+<dt><strong><a name="read" class="item">read</a></strong></dt>
 
 <dd>
 <p>The total number of disk blocks read.</p>
 </dd>
-<dt><strong><a name="item_hit">hit</a></strong></dt>
+<dt><strong><a name="hit" class="item">hit</a></strong></dt>
 
 <dd>
 <p>The total number of buffer hits.</p>
 </dd>
-<dt><strong><a name="item_ret">ret</a></strong></dt>
+<dt><strong><a name="ret" class="item">ret</a></strong></dt>
 
 <dd>
 <p>The total number of rows returned.</p>
 </dd>
-<dt><strong><a name="item_fetch">fetch</a></strong></dt>
+<dt><strong><a name="fetch" class="item">fetch</a></strong></dt>
 
 <dd>
 <p>The total number of rows fetched.</p>
 </dd>
-<dt><strong><a name="item_ins">ins</a></strong></dt>
+<dt><strong><a name="ins" class="item">ins</a></strong></dt>
 
 <dd>
 <p>The total number of rows inserted.</p>
 </dd>
-<dt><strong><a name="item_upd">upd</a></strong></dt>
+<dt><strong><a name="upd" class="item">upd</a></strong></dt>
 
 <dd>
 <p>The total number of rows updated.</p>
 </dd>
-<dt><strong><a name="item_del">del</a></strong></dt>
+<dt><strong><a name="del" class="item">del</a></strong></dt>
 
 <dd>
 <p>The total number of rows deleted.</p>
 </dd>
-<dt><strong><a name="item_dbname">dbname</a></strong></dt>
+<dt><strong><a name="dbname" class="item">dbname</a></strong></dt>
 
 <dd>
 <p>The name of the database.</p>
@@ -647,37 +652,37 @@ space. The items are:</p>
 not available in those versions.</p>
 <p>If the dbname argument is given, seven additional items are returned:</p>
 <dl>
-<dt><strong><a name="item_idx_scan">idx_scan</a></strong></dt>
+<dt><strong><a name="idx_scan" class="item">idx_scan</a></strong></dt>
 
 <dd>
 <p>Total number of user index scans.</p>
 </dd>
-<dt><strong><a name="item_idx_tup_read">idx_tup_read</a></strong></dt>
+<dt><strong><a name="idx_tup_read" class="item">idx_tup_read</a></strong></dt>
 
 <dd>
 <p>Total number of user index entries returned.</p>
 </dd>
-<dt><strong><a name="item_idx_tup_fetch">idx_tup_fetch</a></strong></dt>
+<dt><strong><a name="idx_tup_fetch" class="item">idx_tup_fetch</a></strong></dt>
 
 <dd>
 <p>Total number of rows fetched by simple user index scans.</p>
 </dd>
-<dt><strong><a name="item_idx_blks_read">idx_blks_read</a></strong></dt>
+<dt><strong><a name="idx_blks_read" class="item">idx_blks_read</a></strong></dt>
 
 <dd>
 <p>Total number of disk blocks read for all user indexes.</p>
 </dd>
-<dt><strong><a name="item_idx_blks_hit">idx_blks_hit</a></strong></dt>
+<dt><strong><a name="idx_blks_hit" class="item">idx_blks_hit</a></strong></dt>
 
 <dd>
 <p>Total number of buffer hits for all user indexes.</p>
 </dd>
-<dt><strong><a name="item_seq_scan">seq_scan</a></strong></dt>
+<dt><strong><a name="seq_scan" class="item">seq_scan</a></strong></dt>
 
 <dd>
 <p>Total number of sequential scans against all user tables.</p>
 </dd>
-<dt><strong><a name="item_seq_tup_read">seq_tup_read</a></strong></dt>
+<dt><strong><a name="seq_tup_read" class="item">seq_tup_read</a></strong></dt>
 
 <dd>
 <p>Total number of tuples returned from all user tables.</p>
@@ -884,7 +889,7 @@ This action issues a command that throws an error on each database it is
 checking, and ensures that the message shows up in the logs. It scans the 
 various log_* settings inside of Postgres to figure out where the logs should be. 
 If you are using syslog, it does a rough (but not foolproof) scan of 
-<em>/etc/syslog.conf</em>. Alternatively, you can provide the name of the logfile 
+<em class="file">/etc/syslog.conf</em>. Alternatively, you can provide the name of the logfile 
 with the <em>--logfile</em> option. This is especially useful if the logs have a 
 custom rotation scheme driven be an external program. The <strong>--logfile</strong> option 
 supports the following escape characters: <code>%Y %m %d %H</code>, which represent 
@@ -979,6 +984,47 @@ assumed to be seconds.</p>
 line gives the name of the database.</p>
 <p>
 </p>
+<h2><a name="same_schema"><strong>same_schema</strong></a></h2>
+<p>(<code>symlink: check_postgres_same_schema</code>) Verifies that two databases are identical as far as their 
+schema (but not the data within). This is particularly handy for making sure your slaves have not 
+been modified or corrupted in any way when using master to slave replication. Unlike most other 
+actions, this has no warning or critical criteria - the databases are either in sync, or are not. 
+If they are not, a detailed list of the differences is presented. To make the list more readable, 
+provide a <code>--verbose</code> argument, which will output one item per line.</p>
+<p>You may want to exclude or filter out certain differences. The way to do this is to add strings 
+to the <code>--warning</code> option. To exclude a type of object, use &quot;noobjectnames&quot;. To exclude 
+objects of a certain type by a regular expression against their name, use &quot;noobjectname=regex&quot;. 
+See the examples for a better understanding.</p>
+<p>The types of objects that can be filtered are:</p>
+<dl>
+<dt><strong><a name="user_item_schema_item_table_item_view_item_index_item_sequence_item_constraint_item_trigger_item_function" class="item">user
+=item schema
+=item table
+=item view
+=item index
+=item sequence
+=item constraint
+=item trigger
+=item function</a></strong></dt>
+
+</dl>
+<p>The filter option &quot;noposition&quot;  prevents verification of the position of 
+columns within a table.</p>
+<p>The filter option &quot;nofuncbody&quot; prevents comparison of the bodies of all 
+functions.</p>
+<p>You must provide information on how to reach the second database by a connection 
+parameter ending in the number 2, such as &quot;--dbport2=5543&quot;</p>
+<p>Example 1: Verify that two databases on hosts star and line are the same:</p>
+<pre>
+  check_postgres_same_schema --dbhost=star --dbhost=line</pre>
+<p>Example 2: Same as before, but exclude any triggers with &quot;slony&quot; in their name</p>
+<pre>
+  check_postgres_same_schema --dbhost=star --dbhost=line --warning=&quot;notrigger=slony&quot;</pre>
+<p>Example 2: Same as before, but also exclude all indexes</p>
+<pre>
+  check_postgres_same_schema --dbhost=star --dbhost=line --warning=&quot;notrigger=slony noindexes&quot;</pre>
+<p>
+</p>
 <h2><a name="sequence"><strong>sequence</strong></a></h2>
 <p>(<code>symlink: check_postgres_sequence</code>) Checks how much room is left on all sequences in the database.
 This is measured as the percent of total possible values that have been used for each sequence. 
@@ -1070,7 +1116,8 @@ section below for more details.</p>
 be provided (there are no defaults). Valid units are 'seconds', 'minutes', 'hours', 
 or 'days'. Each may be written singular or abbreviated to just the first letter. 
 If no units are given, the units are assumed to be seconds.</p>
-<p>This action requires Postgres 8.3 or better.</p>
+<p>This action requires Postgres 8.0 or better. Additionally, if the version is less than 8.3, 
+the 'stats_command_string' parameter must be set to 'on'.</p>
 <p>Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:</p>
 <pre>
   check_postgres_txn_idle --port=5432 --warning='15 seconds'</pre>
@@ -1144,12 +1191,12 @@ while line 4 indicates which database it is.</p>
 <p>
 </p>
 <h2><a name="wal_files"><strong>wal_files</strong></a></h2>
-<p>(<code>symlink: check_postgres_wal_files</code>) Checks how many WAL files exist in the <em>pg_xlog</em> directory, which is found 
+<p>(<code>symlink: check_postgres_wal_files</code>) Checks how many WAL files exist in the <em class="file">pg_xlog</em> directory, which is found 
 off of your <strong>data_directory</strong>, sometimes as a symlink to another physical disk for 
 performance reasons. This action must be run as a superuser, in order to access the 
-contents of the <em>pg_xlog</em> directory. The minimum version to use this action is 
+contents of the <em class="file">pg_xlog</em> directory. The minimum version to use this action is 
 Postgres 8.1. The <em>--warning</em> and <em>--critical</em> options are simply the number of 
-files in the <em>pg_xlog</em> directory. What number to set this to will vary, but a general 
+files in the <em class="file">pg_xlog</em> directory. What number to set this to will vary, but a general 
 guideline is to put a number slightly higher than what is normally there, to catch 
 problems early.</p>
 <p>Normally, WAL files are closed and then re-used, but a long-running open 
@@ -1235,21 +1282,21 @@ An <em>--includeuser</em> option always trumps an <em>--excludeuser</em> option.
 give each option more than once for multiple users, or you can give a 
 comma-separated list. The actions that currently use these options are:</p>
 <dl>
-<dt><strong><a name="item_database_size">database_size</a></strong></dt>
+<dt><strong><a name="database_size" class="item">database_size</a></strong></dt>
 
-<dt><strong><a name="item_last_analyze">last_analyze</a></strong></dt>
+<dt><strong><a name="last_analyze" class="item">last_analyze</a></strong></dt>
 
-<dt><strong><a name="item_last_autoanalyze">last_autoanalyze</a></strong></dt>
+<dt><strong><a name="last_autoanalyze" class="item">last_autoanalyze</a></strong></dt>
 
-<dt><strong><a name="item_last_vacuum">last_vacuum</a></strong></dt>
+<dt><strong><a name="last_vacuum" class="item">last_vacuum</a></strong></dt>
 
-<dt><strong><a name="item_last_autovacuum">last_autovacuum</a></strong></dt>
+<dt><strong><a name="last_autovacuum" class="item">last_autovacuum</a></strong></dt>
 
-<dt><strong><a name="item_query_time">query_time</a></strong></dt>
+<dt><strong><a name="query_time" class="item">query_time</a></strong></dt>
 
-<dt><strong><a name="item_relation_size">relation_size</a></strong></dt>
+<dt><strong><a name="relation_size" class="item">relation_size</a></strong></dt>
 
-<dt><strong><a name="item_txn_time">txn_time</a></strong></dt>
+<dt><strong><a name="txn_time" class="item">txn_time</a></strong></dt>
 
 </dl>
 <p>Examples:</p>
@@ -1289,15 +1336,15 @@ instead of symlinks, so that the plugin only gets compiled one time.</p>
 <h1><a name="dependencies">DEPENDENCIES</a></h1>
 <p>Access to a working version of psql, and the following very standard Perl modules:</p>
 <dl>
-<dt><strong><a name="item_cwd"><strong>Cwd</strong></a></strong></dt>
+<dt><strong><a name="cwd" class="item"><strong>Cwd</strong></a></strong></dt>
 
-<dt><strong><a name="item_getopt_3a_3along"><strong>Getopt::Long</strong></a></strong></dt>
+<dt><strong><a name="getopt_long" class="item"><strong>Getopt::Long</strong></a></strong></dt>
 
-<dt><strong><a name="item_file_3a_3abasename"><strong>File::Basename</strong></a></strong></dt>
+<dt><strong><a name="file_basename" class="item"><strong>File::Basename</strong></a></strong></dt>
 
-<dt><strong><a name="item_file_3a_3atemp"><strong>File::Temp</strong></a></strong></dt>
+<dt><strong><a name="file_temp" class="item"><strong>File::Temp</strong></a></strong></dt>
 
-<dt><strong><a name="item_hires"><strong>Time::HiRes</strong> (if <code>$opt{showtime}</code> is set to true, which is the default)</a></strong></dt>
+<dt><strong><a name="hires" class="item"><strong>Time::HiRes</strong> (if <code>$opt{showtime}</code> is set to true, which is the default)</a></strong></dt>
 
 </dl>
 <p>The <a href="#settings_checksum">settings_checksum</a> action requires the <strong>Digest::MD5</strong> module.</p>
@@ -1331,13 +1378,26 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
-<dt><strong><a name="item_1"><strong>Version 2.8.1</strong> (May, 15 2009)</a></strong></dt>
+<dt><strong><a name="1" class="item"><strong>Version 2.9.1</strong> (June 2009)</a></strong></dt>
+
+<dd>
+<pre>
+  Fix for multiple databases with the check_bloat action (Mark Kirkwood)
+  Tests for same_schema, other minor test fixes (Jeff Boes)</pre>
+</dd>
+<dt><strong><a name="0" class="item"><strong>Version 2.9.0</strong> (May 28, 2009)</a></strong></dt>
+
+<dd>
+<pre>
+  Added the same_schema action (Greg)</pre>
+</dd>
+<dt><strong><strong>Version 2.8.1</strong> (May 15, 2009)</strong></dt>
 
 <dd>
 <pre>
   Added timeout via statement_timeout in addition to perl alarm (Greg)</pre>
 </dd>
-<dt><strong><a name="item_0"><strong>Version 2.8.0</strong> (May 4, 2009)</a></strong></dt>
+<dt><strong><strong>Version 2.8.0</strong> (May 4, 2009)</strong></dt>
 
 <dd>
 <pre>
@@ -1363,14 +1423,14 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
   Many various fixes. (Jeff Boes)
   Fix --dbservice: check version and use ENV{PGSERVICE} for old versions (Cédric Villemain)</pre>
 </dd>
-<dt><strong><a name="item_3"><strong>Version 2.7.3</strong> (February 10, 2009)</a></strong></dt>
+<dt><strong><a name="3" class="item"><strong>Version 2.7.3</strong> (February 10, 2009)</a></strong></dt>
 
 <dd>
 <pre>
   Make the sequence action check if sequence being used for a int4 column and
   react appropriately. (Michael Glaesemann)</pre>
 </dd>
-<dt><strong><a name="item_2"><strong>Version 2.7.2</strong> (February 9, 2009)</a></strong></dt>
+<dt><strong><a name="2" class="item"><strong>Version 2.7.2</strong> (February 9, 2009)</a></strong></dt>
 
 <dd>
 <pre>
@@ -1401,7 +1461,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
   Add the 'checkpoint' action.</pre>
 </dd>
-<dt><strong><a name="item_4"><strong>Version 2.5.4</strong> (January 7, 2009)</a></strong></dt>
+<dt><strong><a name="4" class="item"><strong>Version 2.5.4</strong> (January 7, 2009)</a></strong></dt>
 
 <dd>
 <pre>
@@ -1464,7 +1524,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
  Pretty up the time output for last vacuum and analyze actions.
  Show the percentage of backends on the check_backends action.</pre>
 </dd>
-<dt><strong><a name="item_10"><strong>Version 2.3.10</strong> (October 23, 2008)</a></strong></dt>
+<dt><strong><a name="10" class="item"><strong>Version 2.3.10</strong> (October 23, 2008)</a></strong></dt>
 
 <dd>
 <pre>
@@ -1472,32 +1532,32 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
  Allow warning to be greater than critical when using the --reverse option.
  Support the --perflimit option for the check_sequence action.</pre>
 </dd>
-<dt><strong><a name="item_9"><strong>Version 2.3.9</strong> (October 23, 2008)</a></strong></dt>
+<dt><strong><a name="9" class="item"><strong>Version 2.3.9</strong> (October 23, 2008)</a></strong></dt>
 
 <dd>
 <pre>
  Minor tweak to way we store the default port.</pre>
 </dd>
-<dt><strong><a name="item_8"><strong>Version 2.3.8</strong> (October 21, 2008)</a></strong></dt>
+<dt><strong><a name="8" class="item"><strong>Version 2.3.8</strong> (October 21, 2008)</a></strong></dt>
 
 <dd>
 <pre>
  Allow the default port to be changed easily.
  Allow transform of simple output by MB, GB, etc.</pre>
 </dd>
-<dt><strong><a name="item_7"><strong>Version 2.3.7</strong> (October 14, 2008)</a></strong></dt>
+<dt><strong><a name="7" class="item"><strong>Version 2.3.7</strong> (October 14, 2008)</a></strong></dt>
 
 <dd>
 <pre>
  Allow multiple databases in 'sequence' action. Reported by Christoph Zwerschke.</pre>
 </dd>
-<dt><strong><a name="item_6"><strong>Version 2.3.6</strong>  (October 13, 2008)</a></strong></dt>
+<dt><strong><a name="6" class="item"><strong>Version 2.3.6</strong>  (October 13, 2008)</a></strong></dt>
 
 <dd>
 <pre>
  Add missing $schema to check_fsm_pages. (Robert Treat)</pre>
 </dd>
-<dt><strong><a name="item_5"><strong>Version 2.3.5</strong> (October 9, 2008)</a></strong></dt>
+<dt><strong><a name="5" class="item"><strong>Version 2.3.5</strong> (October 9, 2008)</a></strong></dt>
 
 <dd>
 <pre>
@@ -1793,7 +1853,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
  Remove 'redirect_stderr' requirement from 'logfile' due to 8.3 changes.
  Actions 'last_vacuum' and 'last_analyze' are 8.2 only (Robert Treat)</pre>
 </dd>
-<dt><strong><a name="item_16"><strong>Version 1.0.16</strong> (December 7, 2007)</a></strong></dt>
+<dt><strong><a name="16" class="item"><strong>Version 1.0.16</strong> (December 7, 2007)</a></strong></dt>
 
 <dd>
 <pre>
