@@ -38,6 +38,7 @@ t/02_query_runtime.t
 t/02_query_time.t
 t/02_relation_size.t
 t/02_replicate_row.t
+t/02_same_schema.t
 t/02_sequence.t
 t/02_settings_checksum.t
 t/02_timesync.t
