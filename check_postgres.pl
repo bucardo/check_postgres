@@ -7047,7 +7047,8 @@ be provided (there are no defaults). Valid units are 'seconds', 'minutes', 'hour
 or 'days'. Each may be written singular or abbreviated to just the first letter. 
 If no units are given, the units are assumed to be seconds.
 
-This action requires Postgres 8.3 or better.
+This action requires Postgres 8.0 or better. Additionally, if the version is less than 8.3, 
+the 'stats_command_string' parameter must be set to 'on'.
 
 Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:
 
