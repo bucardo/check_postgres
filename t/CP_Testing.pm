@@ -12,7 +12,6 @@ use Cwd;
 
 our $DEBUG = 0;
 our $MAX_HOST_PATH = 60;
-our $next_socket_mod = 1;
 
 use vars qw/$com $info $count $SQL $sth/;
 
@@ -29,6 +28,9 @@ sub new {
 	if (exists $arg->{default_action}) {
 		$self->{action} = $arg->{default_action};
 	}
+	if (exists $arg->{dbnum} and $arg->{dbnum}) {
+		$self->{dbdir} .= $arg->{dbnum};
+	}
 	return bless $self => $class;
 }
 
@@ -38,15 +40,20 @@ sub cleanup {
 	my $dbdir = $self->{dbdir} or die;
 	for my $dirnum ('', '2', '3', '4', '5') {
 		my $pidfile = "$dbdir$dirnum/data space/postmaster.pid";
-		next if ! -e $pidfile;
-		open my $fh, '<', $pidfile or die qq{Could not open "$pidfile": $!\n};
-		<$fh> =~ /^(\d+)/ or die qq{File "$pidfile" did not start with a number!\n};
-		my $pid = $1;
-		close $fh or die qq{Could not close "$pidfile": $!\n};
-		kill 15 => $pid;
-		sleep 1;
-		if (kill 0 => $pid) {
-			kill 9 => $pid;
+		if (-e $pidfile) {
+			open my $fh, '<', $pidfile or die qq{Could not open "$pidfile": $!\n};
+			<$fh> =~ /^(\d+)/ or die qq{File "$pidfile" did not start with a number!\n};
+			my $pid = $1;
+			close $fh or die qq{Could not close "$pidfile": $!\n};
+			kill 15 => $pid;
+			sleep 1;
+			if (kill 0 => $pid) {
+				kill 9 => $pid;
+			}
+		}
+		my $symlink = "/tmp/cptesting_socket$dirnum";
+		if (-l $symlink) {
+			unlink $symlink;
 		}
 	}
 
@@ -244,7 +251,10 @@ sub test_database_handle {
 
 	## Workaround for bug where psql -h /some/long/path fails
 	if (length($dbhost) > $MAX_HOST_PATH) {
-		my $newname = '/tmp/cptesting_socket' . ($next_socket_mod++);
+		my $newname = '/tmp/cptesting_socket';
+		if ($self->{dbdir} =~ /(\d+)$/) {
+			$newname .= $1;
+		}
 		if (! -e $newname) {
 			warn "Creating new symlink socket at $newname\n";
 			(my $oldname = $dbhost) =~ s/\\//g;

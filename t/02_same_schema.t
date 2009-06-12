@@ -13,8 +13,7 @@ use CP_Testing;
 use vars qw/$dbh1 $dbh2 $SQL $t $stdargs/;
 
 my $cp1 = CP_Testing->new({ default_action => 'same_schema' });
-my $cp2 = CP_Testing->new({ default_action => 'same_schema',
-                            dbdir => $cp1->{dbdir} . '2' });
+my $cp2 = CP_Testing->new({ default_action => 'same_schema', dbnum => 2});
 
 $dbh1 = $cp1->test_database_handle();
 $dbh1->{AutoCommit} = 1;
