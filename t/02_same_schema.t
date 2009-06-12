@@ -10,11 +10,12 @@ use Test::More tests => 35;
 use lib 't','.';
 use CP_Testing;
 
-use vars qw/$dbh1 $dbh2 $SQL $t $stdargs/;
+use vars qw/$dbh1 $dbh2 $SQL $t/;
 
 my $cp1 = CP_Testing->new({ default_action => 'same_schema' });
 my $cp2 = CP_Testing->new({ default_action => 'same_schema', dbnum => 2});
 
+## Setup both database handles, and create a testing user
 $dbh1 = $cp1->test_database_handle();
 $dbh1->{AutoCommit} = 1;
 eval { $dbh1->do(q{CREATE USER alternate_owner}, { RaiseError => 0, PrintError => 0 }); };
@@ -22,8 +23,7 @@ $dbh2 = $cp2->test_database_handle();
 $dbh2->{AutoCommit} = 1;
 eval { $dbh2->do(q{CREATE USER alternate_owner}, { RaiseError => 0, PrintError => 0 }); };
 
-$stdargs = qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}};
-
+my $stdargs = qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}};
 my $S = q{Action 'same_schema'};
 my $label = 'POSTGRES_SAME_SCHEMA';
 
@@ -31,12 +31,18 @@ $t = qq{$S fails when called with an invalid option};
 like ($cp1->run('foobar=12'),
       qr{^\s*Usage:}, $t);
 
+## Because other tests may have left artifacts around, we want to recreate the databases
+$dbh1 = $cp1->recreate_database($dbh1);
+$dbh2 = $cp2->recreate_database($dbh2);
+
 $t = qq{$S succeeds with two empty databases};
-#local($CP_Testing::DEBUG) = 1;
 like ($cp1->run($stdargs),
       qr{^$label OK}, $t);
 
 #/////////// Users
+
+$dbh1->{AutoCommit} = 1;
+$dbh2->{AutoCommit} = 1;
 
 $t = qq{$S fails when first schema has an extra user};
 $dbh1->do(q{CREATE USER user_1_only});

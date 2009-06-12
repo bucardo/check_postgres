@@ -344,6 +344,40 @@ sub test_database_handle {
 
 } ## end of test_database_handle
 
+sub recreate_database {
+
+	## Given a database handle, comepletely recreate the current database
+
+	my ($self,$dbh) = @_;
+
+	my $dbname = $dbh->{pg_db};
+
+	$dbname eq 'template1' and die qq{Cannot recreate from template1!\n};
+
+	my $user = $dbh->{pg_user};
+	my $host = $dbh->{pg_host};
+	my $port = $dbh->{pg_port};
+
+	$dbh->disconnect();
+
+	my $dsn = "DBI:Pg:dbname=template1;port=$port;host=$host";
+
+	$dbh = DBI->connect($dsn, $user, '', {AutoCommit=>1, RaiseError=>1, PrintError=>0});
+
+	$dbh->do("DROP DATABASE $dbname");
+	$dbh->do("CREATE DATABASE $dbname");
+
+	$dbh->disconnect();
+
+	$dsn = "DBI:Pg:dbname=$dbname;port=$port;host=$host";
+
+	$dbh = DBI->connect($dsn, $user, '', {AutoCommit=>0, RaiseError=>1, PrintError=>0});
+
+	return $dbh;
+
+} ## end of recreate_database
+
+
 sub get_command {
   return run('get_command', @_);
 }
