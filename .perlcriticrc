@@ -5,7 +5,7 @@ severity = 1
 profile-strictness = quiet
 
 [Documentation::PodSpelling]
-stop_words = Mullane Nagios Slony nols salesrep psql dbname postgres USERNAME usernames dbuser pgpass nagios stderr showperf symlinked timesync criticals quirm lancre exabytes sami includeuser excludeuser flagg tardis WAL tablespaces tablespace perflimit burrick mallory grimm oskar ExclusiveLock garrett artemus queryname speedtest checksum checksums morpork klatch pluto faceoff slon greg watson franklin wilkins scott Sabino Seklecki dbpass autovacuum Astill refactoring NAGIOS localhost cronjob symlink symlinks backends snazzo logfile syslog parens plugin Cwd Ioannis Tambouras schemas SQL MRTG mrtg uptime datallowconn dbhost dbport ok contrib pageslots robert dylan emma fsm minvalue nextval dbstats del ret upd Bucardo noidle bucardo petabytes zettabytes tuples
+stop_words = Mullane Nagios Slony nols salesrep psql dbname postgres USERNAME usernames dbuser pgpass nagios stderr showperf symlinked timesync criticals quirm lancre exabytes sami includeuser excludeuser flagg tardis WAL tablespaces tablespace perflimit burrick mallory grimm oskar ExclusiveLock garrett artemus queryname speedtest checksum checksums morpork klatch pluto faceoff slon greg watson franklin wilkins scott Sabino Seklecki dbpass autovacuum Astill refactoring NAGIOS localhost cronjob symlink symlinks backends snazzo logfile syslog parens plugin Cwd Ioannis Tambouras schemas SQL MRTG mrtg uptime datallowconn dbhost dbport ok contrib pageslots robert dylan emma fsm minvalue nextval dbstats del ret upd Bucardo noidle bucardo petabytes zettabytes tuples noobjectnames noposition nofuncbody slony
 
 [-Bangs::ProhibitFlagComments]
 [-Bangs::ProhibitNumberedNames]
@@ -21,6 +21,7 @@ stop_words = Mullane Nagios Slony nols salesrep psql dbname postgres USERNAME us
 [-ControlStructures::ProhibitNegativeExpressionsInUnlessAndUntilConditions] 
 [-ControlStructures::ProhibitPostfixControls]
 [-ControlStructures::ProhibitUnlessBlocks]
+[-Documentation::RequireEndBeforeLastPod]
 [-Documentation::RequirePodAtEnd]
 [-Documentation::RequirePodSections]
 [-Documentation::RequirePODUseEncodingUTF8]
