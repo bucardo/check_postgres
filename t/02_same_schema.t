@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 38;
+use Test::More tests => 35;
 use lib 't','.';
 use CP_Testing;
 
@@ -28,8 +28,6 @@ $stdargs = qq{--dbhost2=$cp2->{shorthost} --dbuser2=$cp2->{testuser}};
 my $S = q{Action 'same_schema'};
 my $label = 'POSTGRES_SAME_SCHEMA';
 
-SKIP: {
-    skip 'shortcut', 36;
 $t = qq{$S fails when called with an invalid option};
 like ($cp1->run('foobar=12'),
       qr{^\s*Usage:}, $t);
@@ -251,9 +249,40 @@ like ($cp1->run(qq{--warning=noconstraints $stdargs}),
 
 $dbh1->do(q{DROP TABLE table_w_constraint});
 $dbh2->do(q{DROP TABLE table_w_constraint});
-}
 
 #/////////// Functions
+
+$dbh1->do(q{CREATE FUNCTION f1() RETURNS INTEGER LANGUAGE SQL AS 'SELECT 1'});
+$t = qq{$S fails when first schema has an extra function};
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL.*?\QFunction on 1 but not 2: public.f1()\E},
+      $t);
+$dbh1->do(q{DROP FUNCTION f1()});
+
+$dbh2->do(q{CREATE FUNCTION f2() RETURNS INTEGER LANGUAGE SQL AS 'SELECT 1'});
+$t = qq{$S fails when second schema has an extra function};
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL.*?\QFunction on 2 but not 1: public.f2()\E},
+      $t);
+$dbh2->do(q{DROP FUNCTION f2()});
+
+$dbh1->do(q{CREATE FUNCTION f3(INTEGER) RETURNS INTEGER LANGUAGE SQL AS 'SELECT 1'});
+$dbh2->do(q{CREATE FUNCTION f3() RETURNS INTEGER LANGUAGE SQL AS 'SELECT 1'});
+$t = qq{$S fails when second schema has an extra argument};
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL.*?\QFunction on 1 but not 2: public.f3(int4)  Function on 2 but not 1: public.f3()\E},
+      $t);
+$dbh1->do(q{DROP FUNCTION f3(INTEGER)});
+$dbh2->do(q{DROP FUNCTION f3()});
+
+$dbh1->do(q{CREATE FUNCTION f4() RETURNS INTEGER LANGUAGE SQL AS 'SELECT 1'});
+$dbh2->do(q{CREATE FUNCTION f4() RETURNS SETOF INTEGER LANGUAGE SQL AS 'SELECT 1'});
+$t = qq{$S fails when functions have different return types};
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL.*?\QFunction return-set different on 1 than 2: public.f4()\E},
+      $t);
+$dbh1->do(q{DROP FUNCTION f4()});
+$dbh2->do(q{DROP FUNCTION f4()});
 
 
 exit;

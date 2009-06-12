@@ -4282,7 +4282,12 @@ sub check_same_schema {
 			$SQL = 'SELECT usesysid, quote_ident(usename), usecreatedb, usesuper FROM pg_user';
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				while ($db->{slurp} =~ /^\s*(\d+)\s*\| (.+?)\s*\| ([t|f])\s*\| ([t|f]).*/gmo) {
+                for my $line (split /\n/, $db->{slurp}) {
+                    unless ($line =~ /^\s*(\d+)\s*\| (.+?)\s*\| ([t|f])\s*\| ([t|f]).*/gmo) {
+                        warn "Query processing failed:\n$line\nfrom $SQL\n";
+                        next;
+                    }
+
 					$thing{$x}{users}{$2} = { oid=>$1, createdb=>$3, superuser=>$4 };
 					$thing{$x}{useroid}{$1} = $2;
 				}
@@ -4296,7 +4301,11 @@ sub check_same_schema {
 				. q{WHERE nspname !~ '^pg_t'};
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				while ($db->{slurp} =~ /^\s*(.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (\S*).*/gmo) {
+                for my $line (split /\n/, $db->{slurp}) {
+                    unless ($line =~ /^\s*(.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (\S*).*/gmo) {
+                        warn "Query processing failed:\n$line\nfrom $SQL\n";
+                        next;
+                    }
 					$thing{$x}{schemas}{$1} = { oid=>$2, owner=>$3, acl=>$4||'(none)' };
 				}
 			}
@@ -4315,7 +4324,12 @@ sub check_same_schema {
             exists $filter{nosequences} and $SQL .= q{ AND relkind <> 'S'};
             $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
             for $db (@{$info->{db}}) {
-                while ($db->{slurp} =~ /^\s*(\w)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (\S*).*/gmo) {
+                for my $line (split /\n/, $db->{slurp}) {
+                    unless ($line =~ /^\s*(\w)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (\S*).*/gmo) {
+                        warn "Query processing failed:\n$line\nfrom $SQL\n";
+                        next;
+                    }
+
                     my ($kind,$schema,$name,$owner,$acl) = ($1,$2,$3,$4,$5);
                     if ($kind eq 'r') {
                         $thing{$x}{tables}{"$schema.$name"} =
@@ -4345,7 +4359,11 @@ sub check_same_schema {
 		$SQL = q{SELECT typname, oid FROM pg_type};
 		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 		for $db (@{$info->{db}}) {
-			while ($db->{slurp} =~ /^\s*(.+?)\s+\|\s+(\d+).*/gmo) {
+            for my $line (split /\n/, $db->{slurp}) {
+                unless ($line =~ /^\s*(.+?)\s+\|\s+(\d+).*/gmo) {
+                    warn "Query processing failed:\n$line\nfrom $SQL\n";
+                    next;
+                }
 				$thing{$x}{type}{$2} = $1;
 			}
 			$saved_db = $db if ! defined $saved_db;
@@ -4359,7 +4377,11 @@ sub check_same_schema {
 				. q{ WHERE NOT tgisconstraint}; ## constraints checked separately
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.*?)/gmo) {
+                for my $line (split /\n/, $db->{slurp}) {
+                    unless ($line =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.*?)/gmo) {
+                        warn "Query processing failed:\n$line\nfrom $SQL\n";
+                        next;
+                    }
 					my ($name,$table,$func,$args) = ($1,$2,$3,$4);
 					$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
 					$args =~ s/^\s*(.*)\s*$/($1)/;
@@ -4379,7 +4401,12 @@ sub check_same_schema {
 			. q{FROM information_schema.columns};
 		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 		for $db (@{$info->{db}}) {
-			while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \|\s+(\d+) \|\s+(\d+).*/gmo) {
+            for my $line (split /\n/, $db->{slurp}) {
+                unless ($line =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \|\s+(\d+) \|\s+(\d+).*/gmo) {
+                    warn "Query processing failed:\n$line\nfrom $SQL\n";
+                    next;
+                }
+
 				$thing{$x}{columns}{"$1.$2"}{$3} = {
 					schema     => $1,
 					table      => $2,
@@ -4402,7 +4429,12 @@ sub check_same_schema {
 				. q{FROM information_schema.constraint_table_usage};
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gmo) {
+                for my $line (split /\n/, $db->{slurp}) {
+                    unless ($line =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gmo) {
+                        warn "Query processing failed:\n$line\nfrom $SQL\n";
+                        next;
+                    }
+
 					$thing{$x}{constraints}{"$1.$2"} = "$3.$4";
 				}
 			}
@@ -4450,7 +4482,11 @@ WHERE pg_has_role(x.tblowner, 'USAGE'::text)
 SQL
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				while ($db->{slurp} =~ /^ \s* (.+?) \s+\|  \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?)\s*$/gmox) {
+                for my $line (split /\n/, $db->{slurp}) {
+                    unless ($line =~ /^ \s* (.+?) \s+\|  \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?)\s*$/gmox) {
+                        warn "Query processing failed:\n$line\nfrom $SQL\n";
+                        next;
+                    }
 					my ($cschema,$cname,$tschema,$tname,$col,$cdef) = ($6,$7,$2,$3,$4,$8);
 					if (exists $thing{$x}{colconstraints}{"$cschema.$cname"}) {
 						my @oldcols = split / / => $thing{$x}{colconstraints}{"$cschema.$cname"}->[1];
@@ -4463,18 +4499,26 @@ SQL
 		}
 
 		## Get a list of all functions
-		$SQL = q{SELECT quote_ident(nspname), quote_ident(proname), proargtypes, md5(prosrc) }
+		$SQL = q{SELECT quote_ident(nspname), quote_ident(proname), proargtypes, md5(prosrc), }
+            . q{proisstrict, proretset, provolatile }
 			. q{FROM pg_proc JOIN pg_namespace n ON (n.oid = pronamespace)};
 		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 		for $db (@{$info->{db}}) {
-			while ($db->{slurp} =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*/gmo) {
-				my ($schema,$name,$args,$md5) = ($1,$2,$3,$4);
+            for my $line (split /\n/, $db->{slurp}) {
+                unless ($line =~ /^\s*(.+?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s*/gmo) {
+                    warn "Query processing failed:\n$line\nfrom $SQL\n";
+                    next;
+                }
+				my ($schema,$name,$args,$md5,$isstrict,$retset,$volatile) = ($1,$2,$3,$4,$5,$6,$7);
 				$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
 				$args =~ s/^\s*(.*)\s*$/($1)/;
-				$thing{$x}{functions}{"$schema.$name$args"} = $md5;
+				$thing{$x}{functions}{"${schema}.${name}${args}"} = { md5 => $md5,
+                                                                isstrict => $isstrict,
+                                                                retset => $retset,
+                                                                volatile => $volatile,
+                                                           };
 			}
 		}
-1;
 	}
 
 	$db = $saved_db;
@@ -4994,7 +5038,7 @@ SQL
 		$failcount++;
 	}
 
-	## Functions on 2 but not 1
+	## Functions on 2 but not 1 and check for identity
   FUNCTION:
 	for my $name (sort keys %{$thing{2}{functions}}) {
 
@@ -5012,12 +5056,31 @@ SQL
 
 		## Are the insides exactly the same
 		if (! $filter{nofuncbody}) {
-			if ($thing{1}{functions}{$name} ne $thing{2}{functions}{$name}) {
+			if ($thing{1}{functions}{$name}{md5} ne $thing{2}{functions}{$name}{md5}) {
 				push @{$fail{functions}{diffbody}}, $name;
 				$failcount++;
 			}
 		}
 
+		if (! $filter{nofuncstrict}) {
+			if ($thing{1}{functions}{$name}{isstrict} ne $thing{2}{functions}{$name}{isstrict}) {
+				push @{$fail{functions}{diffstrict}}, $name;
+				$failcount++;
+			}
+		}
+
+		if (! $filter{nofuncret}) {
+			if ($thing{1}{functions}{$name}{retset} ne $thing{2}{functions}{$name}{retset}) {
+				push @{$fail{functions}{diffretset}}, $name;
+				$failcount++;
+			}
+		}
+		if (! $filter{nofuncvol}) {
+			if ($thing{1}{functions}{$name}{volatile} ne $thing{2}{functions}{$name}{volatile}) {
+				push @{$fail{functions}{diffvol}}, $name;
+				$failcount++;
+			}
+		}
 	}
 
 	##
@@ -5332,6 +5395,21 @@ SQL
 		if (exists $fail{functions}{diffbody}) {
 			for my $name (sort @{$fail{functions}{diffbody}}) {
 				$db->{perf} .= " Function body different on 1 than 2: $name ";
+			}
+		}
+		if (exists $fail{functions}{diffstrict}) {
+			for my $name (sort @{$fail{functions}{diffbody}}) {
+				$db->{perf} .= " Function strictness different on 1 than 2: $name ";
+			}
+		}
+		if (exists $fail{functions}{diffretset}) {
+			for my $name (sort @{$fail{functions}{diffretset}}) {
+				$db->{perf} .= " Function return-set different on 1 than 2: $name ";
+			}
+		}
+		if (exists $fail{functions}{diffvol}) {
+			for my $name (sort @{$fail{functions}{diffvol}}) {
+				$db->{perf} .= " Function volatilitiy different on 1 than 2: $name ";
 			}
 		}
 	}
