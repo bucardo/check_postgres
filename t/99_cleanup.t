@@ -16,6 +16,6 @@ my $cp = CP_Testing->new();
 
 $cp->cleanup();
 
-pass 'Test database has been shut down';
+pass 'Test database(s) shut down';
 
 exit;

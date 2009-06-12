@@ -36,18 +36,22 @@ sub cleanup {
 
 	my $self = shift;
 	my $dbdir = $self->{dbdir} or die;
-	my $pidfile = "$dbdir/data space/postmaster.pid";
-	return if ! -e $pidfile;
-	open my $fh, '<', $pidfile or die qq{Could not open "$pidfile": $!\n};
-	<$fh> =~ /^(\d+)/ or die qq{File "$pidfile" did not start with a number!\n};
-	my $pid = $1;
-	close $fh or die qq{Could not close "$pidfile": $!\n};
-	kill 15 => $pid;
-	sleep 1;
-	if (kill 0 => $pid) {
-		kill 9 => $pid;
+	for my $dirnum ('', '2', '3', '4', '5') {
+		my $pidfile = "$dbdir$dirnum/data space/postmaster.pid";
+		next if ! -e $pidfile;
+		open my $fh, '<', $pidfile or die qq{Could not open "$pidfile": $!\n};
+		<$fh> =~ /^(\d+)/ or die qq{File "$pidfile" did not start with a number!\n};
+		my $pid = $1;
+		close $fh or die qq{Could not close "$pidfile": $!\n};
+		kill 15 => $pid;
+		sleep 1;
+		if (kill 0 => $pid) {
+			kill 9 => $pid;
+		}
 	}
+
 	return;
+
 }
 
 sub test_database_handle {
