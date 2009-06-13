@@ -7351,7 +7351,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.9.1> (June 2009)
+=item B<Version 2.9.1> (June 12, 2009)
 
   Fix for multiple databases with the check_bloat action (Mark Kirkwood)
   Tests for same_schema, other minor test fixes (Jeff Boes)
