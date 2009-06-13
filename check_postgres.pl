@@ -6907,13 +6907,21 @@ The types of objects that can be filtered are:
 =over 4
 
 =item user
+
 =item schema
+
 =item table
+
 =item view
+
 =item index
+
 =item sequence
+
 =item constraint
+
 =item trigger
+
 =item function
 
 =back
