@@ -227,8 +227,11 @@ msg
 nagios
 NAGIOS
 nextval
+nofuncbody
 noidle
+noobjectnames
 nols
+noposition
 ok
 oskar
 pageslots
@@ -253,6 +256,7 @@ Seklecki
 showperf
 slon
 Slony
+slony
 snazzo
 speedtest
 SQL
