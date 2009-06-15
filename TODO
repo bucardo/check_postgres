@@ -38,3 +38,13 @@ Quick list of outstanding items / bugs / feature requests for CP:
 * Make the bloat estimation more accurate (lots of small bad assumptions in there)
 
 * Consider a more accurate bloat check, using the expensive pg_stattuple function
+
+* Return something other than unknown for "FATAL: too many clients" on backend checks, 
+  and possibly similar ones. Possible strategy for these: try once, and if we can't 
+  parse the output and the language is non-English, force to English and re-run, such 
+  that we can have a standard regex collection of error strings. Otherwise, we can 
+  use the msg() strings per-language.
+
+* Consider an automated parser of the Postgres source code to pre-populate some of 
+  the error message strings.
+
