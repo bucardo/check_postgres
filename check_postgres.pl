@@ -89,9 +89,9 @@ our %msg = (
 	'backends-nomax'     => q{Could not determine max_connections},
 	'backends-oknone'    => q{No connections},
 	'backends-users'     => q{$1 for number of users must be a number or percentage},
-	'bloat-index'        => q{index $1 rows:$2 pages:$3 shouldbe:$4 ($5X) wasted bytes:$6 ($7)},
+	'bloat-index'        => q{(db $1) index $2 rows:$3 pages:$4 shouldbe:$5 ($6X) wasted bytes:$7 ($8)},
 	'bloat-nomin'        => q{no relations meet the minimum bloat criteria},
-	'bloat-table'        => q{table $1.$2 rows:$3 pages:$4 shouldbe:$5 ($6X) wasted size:$7 ($8)},
+	'bloat-table'        => q{(db $1) table $2.$3 rows:$4 pages:$5 shouldbe:$6 ($7X) wasted size:$8 ($9)},
 	'checkpoint-baddir'  => q{Invalid data_directory: "$1"},
 	'checkpoint-baddir2' => q{pg_controldata could not read the given data directory: "$1"},
 	'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version},
@@ -282,9 +282,9 @@ our %msg = (
 	'backends-nomax'     => q{N'a pas pu déterminer max_connections},
 	'backends-oknone'    => q{Aucune connexion},
 	'backends-users'     => q{$1 pour le nombre d'utilisateurs doit être un nombre ou un pourcentage},
-	'bloat-index'        => q{index $1 lignes:$2 pages:$3 devrait être:$4 ($5X) octets perdus:$6 ($7)},
+'bloat-index'        => q{(db $1) index $2 lignes:$3 pages:$4 devrait être:$5 ($6X) octets perdus:$7 ($8)},
 	'bloat-nomin'        => q{aucune relation n'atteint le critère minimum de fragmentation},
-	'bloat-table'        => q{table $1.$2 lignes:$3 pages:$4 devrait être:$5 ($6X) place perdue:$7 ($8)},
+'bloat-table'        => q{(db $1) table $2.$3 lignes:$4 pages:$5 devrait être:$6 ($7X) place perdue:$8 ($9)},
 	'checkpoint-baddir'  => q{data_directory invalide : "$1"},
 'checkpoint-baddir2' => q{pg_controldata could not read the given data directory: "$1"},
 'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version},
@@ -2360,7 +2360,7 @@ sub check_bloat {
 	## This was fun to write
 	$SQL = qq{
 SELECT
-  schemaname, tablename, reltuples::bigint, relpages::bigint, otta,
+  current_database(), schemaname, tablename, reltuples::bigint, relpages::bigint, otta,
   ROUND(CASE WHEN otta=0 THEN 0.0 ELSE sml.relpages/otta::numeric END,1) AS tbloat,
   CASE WHEN relpages < otta THEN 0 ELSE relpages::bigint - otta END AS wastedpages,
   CASE WHEN relpages < otta THEN 0 ELSE bs*(sml.relpages-otta)::bigint END AS wastedbytes,
@@ -2433,23 +2433,24 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 		my $max = -1;
 		my $maxmsg = '?';
 	  SLURP: for (split /\n/o => $db->{slurp}) {
-			my ($schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws,
+			my ($dbname,$schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws,
 			 $index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws)
 				= split /\s*\|\s*/o;
+			$dbname =~ s/^\s+//;
 			$schema =~ s/^\s+//;
 			next SLURP if skip_item($table, $schema);
 			## Made it past the exclusions
 			$max = -2 if $max == -1;
 
 			## Do the table first if we haven't seen it
-			if (! $seenit{"$db->{dbname}.schema.$table"}++) {
+			if (! $seenit{"$dbname.$schema.$table"}++) {
 				$db->{perf} .= " $schema.$table=$wb";
-				my $msg = msg('bloat-table', $schema, $table, $tups, $pages, $otta, $bloat, $wb, $ws);
+				my $msg = msg('bloat-table', $dbname, $schema, $table, $tups, $pages, $otta, $bloat, $wb, $ws);
 				my $ok = 1;
 				my $perbloat = $bloat * 100;
 
 				if ($MRTG) {
-					$stats{table}{"DB=$db->{dbname} TABLE=$schema.$table"} = [$wb, $bloat];
+					$stats{table}{"DB=$dbname TABLE=$schema.$table"} = [$wb, $bloat];
 					next;
 				}
 				if (length $critical) {
@@ -2485,12 +2486,12 @@ ORDER BY wastedbytes DESC LIMIT $LIMIT
 			## Now the index, if it exists
 			if ($index ne '?') {
 				$db->{perf} .= " $index=$iwb" if $iwb;
-				my $msg = msg('bloat-index', $index, $irows, $ipages, $iotta, $ibloat, $iwb, $iws);
+				my $msg = msg('bloat-index', $dbname, $index, $irows, $ipages, $iotta, $ibloat, $iwb, $iws);
 				my $ok = 1;
 				my $iperbloat = $ibloat * 100;
 
 				if ($MRTG) {
-					$stats{index}{"DB=$db->{dbname} INDEX=$index"} = [$iwb, $ibloat];
+					$stats{index}{"DB=$dbname INDEX=$index"} = [$iwb, $ibloat];
 					next;
 				}
 				if (length $critical) {
@@ -7362,6 +7363,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.9.2>
 
   Allow dots and dashes in database name for the backends check (Davide Abrigo)
+  Check and display the database for each match in the bloat check (Cédric Villemain)
 
 =item B<Version 2.9.1> (June 12, 2009)
 
