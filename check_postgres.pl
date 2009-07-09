@@ -2260,7 +2260,7 @@ sub check_backends {
 
 	for $db (@{$info->{db}}) {
 		my ($limit,$total,$grandtotal) = (0,0,0);
-	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+)\s+\|\s+(\w+)\s*/gsm) {
+	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+)\s+\|\s+([\w\-\.]+)\s*/gsm) {
 			$grandtotal++;
 			$limit ||= $2;
 			my ($current,$dbname) = ($1,$3);
@@ -7358,6 +7358,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.9.2>
+
+  Allow dots and dashes in database name for the backends check (Davide Abrigo)
 
 =item B<Version 2.9.1> (June 12, 2009)
 
