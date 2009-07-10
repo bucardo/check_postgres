@@ -7379,6 +7379,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
   Allow dots and dashes in database name for the backends check (Davide Abrigo)
   Check and display the database for each match in the bloat check (Cédric Villemain)
+  Handle 'too many connections' FATAL error in the backends check with a critical,
+    rather than a generic error (Greg, idea by Jürgen Schulz-Brüssel)
 
 =item B<Version 2.9.1> (June 12, 2009)
 
