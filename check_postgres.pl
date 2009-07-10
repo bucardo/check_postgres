@@ -3170,7 +3170,7 @@ sub check_last_vacuum_analyze {
 		   .q{WHERE relkind = 'r' AND n.oid = c.relnamespace AND n.nspname <> 'information_schema' }
 		   .q{ORDER BY 3) AS foo};
 	if ($opt{perflimit}) {
-		$SQL .= " ORDER BY 3 DESC LIMIT $opt{perflimit}";
+		$SQL .= ' ORDER BY 3 DESC';
 	}
 
 	if ($USERWHERECLAUSE) {
@@ -3194,6 +3194,7 @@ sub check_last_vacuum_analyze {
 		my $maxptime = '?';
 		my ($minrel,$maxrel) = ('?','?'); ## no critic
 		my $mintime = 0; ## used for MRTG only
+		my $count = 0;
 		SLURP: while ($db->{slurp} =~ /(\S+)\s+\| (\S+)\s+\|\s+(\-?\d+) \| (.+)\s*$/gm) {
 			my ($schema,$name,$time,$ptime) = ($1,$2,$3,$4);
 			$maxtime = -3 if $maxtime == -1;
@@ -3210,6 +3211,9 @@ sub check_last_vacuum_analyze {
 			if ($time > 0 and ($time < $mintime or !$mintime)) {
 				$mintime = $time;
 				$minrel = "$schema.$name";
+			}
+			if ($opt{perflimit}) {
+				last if ++$count >= $opt{perflimit};
 			}
 		}
 		if ($MRTG) {
@@ -7381,6 +7385,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Check and display the database for each match in the bloat check (Cédric Villemain)
   Handle 'too many connections' FATAL error in the backends check with a critical,
     rather than a generic error (Greg, idea by Jürgen Schulz-Brüssel)
+  Do not allow perflimit to interfere with exclusion rules in the vacuum and 
+    analyze tests. (Greg, bug reported by Jeff Frost)
 
 =item B<Version 2.9.1> (June 12, 2009)
 
