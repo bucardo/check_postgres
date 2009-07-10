@@ -72,7 +72,7 @@ sub test_database_handle {
 	ref $arg eq 'HASH' or die qq{Must pass a hashref (or nothing) to test_database_handle\n};
 
 	## Create the test database directory if it does not exist
-	my $dbdir = $self->{dbdir};
+	my $dbdir = $arg->{dbdir} || $self->{dbdir};
 	if (! -d $dbdir) {
 
 		-e $dbdir and die qq{Oops: I cannot create "$dbdir", there is already a file there!\n};
@@ -286,6 +286,8 @@ sub test_database_handle {
 		}
 	}
 	$dbh->ping() or die qq{Failed to ping!\n};
+
+	return $dbh if $arg->{quickreturn};
 
 	$dbh->{AutoCommit} = 1;
 	$dbh->{RaiseError} = 0;

@@ -84,6 +84,7 @@ our @get_methods = (
 ## no critic (RequireInterpolationOfMetachars)
 our %msg = (
 'en' => {
+	'backends-fatal'     => q{Could not connect: too many connections},
 	'backends-mrtg'      => q{DB=$1 Max connections=$2},
 	'backends-msg'       => q{$1 of $2 connections ($3%)},
 	'backends-nomax'     => q{Could not determine max_connections},
@@ -277,14 +278,15 @@ our %msg = (
 	'version-ok'         => q{version $1},
 },
 'fr' => {
+'backends-fatal'     => q{Could not connect: too many connections},
 	'backends-mrtg'      => q{DB=$1 Connexions maximum=$2},
 	'backends-msg'       => q{$1 connexions sur $2 ($3%)},
 	'backends-nomax'     => q{N'a pas pu déterminer max_connections},
 	'backends-oknone'    => q{Aucune connexion},
 	'backends-users'     => q{$1 pour le nombre d'utilisateurs doit être un nombre ou un pourcentage},
-'bloat-index'        => q{(db $1) index $2 lignes:$3 pages:$4 devrait être:$5 ($6X) octets perdus:$7 ($8)},
+	'bloat-index'        => q{(db $1) index $2 lignes:$3 pages:$4 devrait être:$5 ($6X) octets perdus:$7 ($8)},
 	'bloat-nomin'        => q{aucune relation n'atteint le critère minimum de fragmentation},
-'bloat-table'        => q{(db $1) table $2.$3 lignes:$4 pages:$5 devrait être:$6 ($7X) place perdue:$8 ($9)},
+	'bloat-table'        => q{(db $1) table $2.$3 lignes:$4 pages:$5 devrait être:$6 ($7X) place perdue:$8 ($9)},
 	'checkpoint-baddir'  => q{data_directory invalide : "$1"},
 'checkpoint-baddir2' => q{pg_controldata could not read the given data directory: "$1"},
 'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version},
@@ -1396,6 +1398,7 @@ sub run_command {
 	## Run a command string against each of our databases using psql
 	## Optional args in a hashref:
 	## "failok" - don't report if we failed
+	## "fatalregex" - allow this FATAL regex through
 	## "target" - use this targetlist instead of generating one
 	## "timeout" - change the timeout from the default of $opt{timeout}
 	## "regex" - the query must match this or we throw an error
@@ -1627,7 +1630,7 @@ sub run_command {
 			if ($err =~ /Timed out/) {
 				ndie msg('runcommand-timeout', $timeout);
 			}
-			else {ndie $res;
+			else {
 				ndie msg('runcommand-err');
 			}
 		}
@@ -1647,7 +1650,13 @@ sub run_command {
 			}
 
 			if ($db->{error} =~ /FATAL/) {
-				ndie "$db->{error}";
+				if ($db->{error} =~ /$arg->{fatalregex}/) {
+					$info->{fatalregex} = $db->{error};
+					next;
+				}
+				else {
+					ndie "$db->{error}";
+				}
 			}
 
 			elsif ($db->{error} =~ /statement timeout/) {
@@ -2237,7 +2246,13 @@ sub check_backends {
 	my $GROUPBY = q{GROUP BY 2,3};
 	$SQL = "SELECT COUNT(datid), ($MAXSQL), d.datname FROM pg_database d ".
 		"LEFT JOIN pg_stat_activity s ON (s.datid = d.oid) $NOIDLE $GROUPBY ORDER BY datname";
-	my $info = run_command($SQL, {regex => qr[\s*\d+ \| \d+\s+\|] } );
+	my $info = run_command($SQL, {regex => qr[\s*\d+ \| \d+\s+\|], fatalregex => 'too many clients' } );
+
+	## If we cannot connect because of too many clients, we treat as a critical error
+	if (exists $info->{fatalregex} and $info->{fatalregex} =~ /too many clients/) {
+		add_critical msg('backends-fatal');
+		return;
+	}
 
 	## There may be no entries returned if we catch pg_stat_activity at the right
 	## moment in older versions of Postgres

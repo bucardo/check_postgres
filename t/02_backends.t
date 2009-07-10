@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 52;
+use Test::More tests => 53;
 use lib 't','.';
 use CP_Testing;
 
@@ -33,7 +33,6 @@ pass $t;
 $host = $cp->get_host();
 
 $result = $cp->run();
-
 
 $t=qq{$S returned expected text and OK value};
 like ($result, qr{^$label OK:}, $t);
@@ -177,6 +176,14 @@ SKIP: {
 	$t=qq{$S returned correct performance data with include};
 	like ($cp->run('--include=postgres'), qr{ \| time=(\d\.\d\d)  ardala=0 beedeebeedee=0 postgres=3}, $t);
 }
+
+my %dbh;
+for my $num (1..8) {
+	$dbh{$num} = $cp->test_database_handle({quickreturn=>1});
+}
+
+$t=qq{$S returns critical when too many clients to even connect};
+like ($cp->run('-w -10'), qr{^$label CRITICAL: .+too many connections}, $t);
 
 $cp->drop_schema_if_exists();
 
