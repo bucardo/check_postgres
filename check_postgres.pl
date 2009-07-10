@@ -1650,7 +1650,7 @@ sub run_command {
 			}
 
 			if ($db->{error} =~ /FATAL/) {
-				if ($db->{error} =~ /$arg->{fatalregex}/) {
+				if (exists $arg->{fatalregex} and $db->{error} =~ /$arg->{fatalregex}/) {
 					$info->{fatalregex} = $db->{error};
 					next;
 				}
