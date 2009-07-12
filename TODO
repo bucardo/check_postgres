@@ -21,8 +21,6 @@ Quick list of outstanding items / bugs / feature requests for CP:
 * Full and correct support for Nagios, e.g.
   http://nagiosplug.sourceforge.net/developer-guidelines.html#AEN203
 
-* Fix last_analyze, etc. with perflimit - can lead to no results due to filtering
-
 * For last_analyze and last_vacuum, way to skip null (never been hit)
 
 * Check at least one table has been vacuumed/analyzed since X time
@@ -38,5 +36,4 @@ Quick list of outstanding items / bugs / feature requests for CP:
 * Make the bloat estimation more accurate (lots of small bad assumptions in there)
 
 * Consider a more accurate bloat check, using the expensive pg_stattuple function
-
 
