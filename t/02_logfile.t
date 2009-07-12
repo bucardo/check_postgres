@@ -38,7 +38,7 @@ like ($result, qr{host:$host}, $t);
 $t = qq{$S correctly identifies logfile};
 like ($result, qr{logs to: $logfile}, $t);
 
-$t = qq{$S correcly identifies host};
+$t = qq{$S correctly identifies host};
 like ($result, qr{host:$host}, $t);
 
 $t = qq{$S returned expected text};
