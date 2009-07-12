@@ -89,6 +89,7 @@ our %msg = (
 	'backends-msg'       => q{$1 of $2 connections ($3%)},
 	'backends-nomax'     => q{Could not determine max_connections},
 	'backends-oknone'    => q{No connections},
+	'backends-po'        => q{sorry, too many clients already},
 	'backends-users'     => q{$1 for number of users must be a number or percentage},
 	'bloat-index'        => q{(db $1) index $2 rows:$3 pages:$4 shouldbe:$5 ($6X) wasted bytes:$7 ($8)},
 	'bloat-nomin'        => q{no relations meet the minimum bloat criteria},
@@ -282,6 +283,7 @@ our %msg = (
 	'backends-msg'       => q{$1 connexions sur $2 ($3%)},
 	'backends-nomax'     => q{N'a pas pu dÃ©terminer max_connections},
 	'backends-oknone'    => q{Aucune connexion},
+	'backends-po'        => q{désolé, trop de clients sont déjà connectés},
 	'backends-users'     => q{$1 pour le nombre d'utilisateurs doit Ãªtre un nombre ou un pourcentage},
 	'bloat-index'        => q{(db $1) index $2 lignes:$3 pages:$4 devrait Ãªtre:$5 ($6X) octets perdus:$7 ($8)},
 	'bloat-nomin'        => q{aucune relation n'atteint le critÃ¨re minimum de fragmentation},
@@ -475,15 +477,18 @@ our %msg = (
 	'checkpoint-po' => q{Èas posledního kontrolního bodu:},
 },
 'de' => {
+	'backends-po'   => q{tut mir leid, schon zu viele Verbindungen},
 	'checkpoint-po' => q{Zeit des letzten Checkpoints:},
 },
 'es' => {
+	'backends-po'   => q{lo siento, ya tenemos demasiados clientes},
 	'checkpoint-po' => q{Instante de último checkpoint:},
 },
 'fa' => {
 	'checkpoint-po' => q{Ø²Ù…Ø§Ù† Ø¢Ø®Ø±ÛŒÙ† ÙˆØ§Ø±Ø³ÛŒ:},
 },
 'hr' => {
+	'backends-po' => q{naÅ¾alost, veÄ‡ je otvoreno previÅ¡e klijentskih veza},
 },
 'hu' => {
 	'checkpoint-po' => q{A legutóbbi ellenõrzõpont ideje:},
@@ -492,12 +497,15 @@ our %msg = (
 	'checkpoint-po' => q{Orario ultimo checkpoint:},
 },
 'ja' => {
+	'backends-po'   => q{ç¾åœ¨ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆæ•°ãŒå¤šã™ãŽã¾ã™},
 	'checkpoint-po' => q{æœ€çµ‚ãƒã‚§ãƒƒã‚¯ãƒã‚¤ãƒ³ãƒˆæ™‚åˆ»:},
 },
 'ko' => {
+	'backends-po'   => q{ìµœëŒ€ ë™ì‹œ ì ‘ì†ìž ìˆ˜ë¥¼ ì´ˆê³¼í–ˆìŠµë‹ˆë‹¤.},
 	'checkpoint-po' => q{¸¶Áö¸· Ã¼Å©Æ÷ÀÎÆ® ½Ã°£:},
 },
 'nb' => {
+	'backends-po'   => q{beklager, for mange klienter},
 	'checkpoint-po' => q{Tidspunkt for nyeste kontrollpunkt:},
 },
 'nl' => {
@@ -506,33 +514,41 @@ our %msg = (
 	'checkpoint-po' => q{Czas najnowszego punktu kontrolnego:},
 },
 'pt_BR' => {
+	'backends-po'   => q{desculpe, muitos clientes conectados},
 	'checkpoint-po' => q{Hora do Ãºltimo ponto de controle:},
 },
 'ro' => {
 	'checkpoint-po' => q{Timpul ultimului punct de control:},
 },
 'ru' => {
+	'backends-po'   => q{ÉÚ×ÉÎÉÔÅ, ÕÖÅ ÓÌÉÛËÏÍ ÍÎÏÇÏ ËÌÉÅÎÔÏ×},
 	'checkpoint-po' => q{÷ÒÅÍÑ ÐÏÓÌÅÄÎÅÊ checkpoint:},
 },
 'sk' => {
+	'backends-po'   => q{je mi µúto, je u¾ príli¹ veµa klientov},
 	'checkpoint-po' => q{ÄŒas poslednÃ©ho kontrolnÃ©ho bodu:},
 },
 'sl' => {
+	'backends-po'   => q{povezanih je ¾e preveè odjemalcev},
 	'checkpoint-po' => q{Èas zadnje kontrolne toèke ............},
 },
 'sv' => {
+	'backends-po'   => q{ledsen, för många klienter},
 	'checkpoint-po' => q{Tidpunkt för senaste kontrollpunkt:},
 },
 'ta' => {
 	'checkpoint-po' => q{à®¨à®µà¯€à®© à®šà¯‹à®¤à®©à¯ˆ à®®à¯ˆà®¯à®¤à¯à®¤à®¿à®©à¯ à®¨à¯‡à®°à®®à¯:},
 },
 'tr' => {
+	'backends-po'   => q{Ã¼zgÃ¼nÃ¼m, istemci sayÄ±sÄ± Ã§ok fazla},
 	'checkpoint-po' => q{En son checkpoint'in zamanÄ±:},
 },
 'zh_CN' => {
+	'backends-po'   => q{¶Ô²»Æð, ÒÑ¾­ÓÐÌ«¶àµÄ¿Í»§},
 	'checkpoint-po' => q{×îÐÂ¼ì²éµãµÄÊ±¼ä:},
 },
 'zh_TW' => {
+	'backends-po'   => q{å°ä¸èµ·ï¼Œç”¨æˆ¶ç«¯éŽå¤š},
 	'checkpoint-po' => q{æœ€æ–°çš„æª¢æŸ¥é»žæ™‚é–“:},
 },
 );
@@ -2292,9 +2308,13 @@ sub check_backends {
 	my $info = run_command($SQL, {regex => qr[\s*\d+ \| \d+\s+\|], fatalregex => 'too many clients' } );
 
 	## If we cannot connect because of too many clients, we treat as a critical error
-	if (exists $info->{fatalregex} and $info->{fatalregex} =~ /too many clients/) {
-		add_critical msg('backends-fatal');
-		return;
+	if (exists $info->{fatalregex}) {
+		my $regmsg = msg('backends-po');
+		my $regmsg2 = msg('backends-po', 'en');
+		if ($info->{fatalregex} =~ /$regmsg/ or $info->{fatalregex} =~ /$regmsg2/) {
+			add_critical msg('backends-fatal');
+			return;
+		}
 	}
 
 	## There may be no entries returned if we catch pg_stat_activity at the right

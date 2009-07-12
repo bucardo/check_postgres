@@ -39,8 +39,4 @@ Quick list of outstanding items / bugs / feature requests for CP:
 
 * Consider a more accurate bloat check, using the expensive pg_stattuple function
 
-* Make the "too many clients" backend regex do i18n somehow.
-
-* Consider an automated parser of the Postgres source code to pre-populate some of 
-  the error message strings.
 
