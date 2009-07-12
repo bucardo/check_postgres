@@ -846,6 +846,14 @@ sub msgn { ## no critic
 	return msg(@_) . "\n";
 }
 
+sub msg_en {
+
+	my $name = shift || '?';
+
+	return $msg{'en'}{$name};
+
+} ## end of msg_en
+
 ## Everything from here on out needs psql, so find and verify a working version:
 if ($NO_PSQL_OPTION) {
 	delete $opt{PSQL} and ndie msg('opt-psql-restrict');
@@ -2310,7 +2318,7 @@ sub check_backends {
 	## If we cannot connect because of too many clients, we treat as a critical error
 	if (exists $info->{fatalregex}) {
 		my $regmsg = msg('backends-po');
-		my $regmsg2 = msg('backends-po', 'en');
+		my $regmsg2 = msg_en('backends-po');
 		if ($info->{fatalregex} =~ /$regmsg/ or $info->{fatalregex} =~ /$regmsg2/) {
 			add_critical msg('backends-fatal');
 			return;
@@ -5688,7 +5696,7 @@ sub check_checkpoint {
 	my $regex = msg('checkpoint-po');
 	if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
 		## Just in case, check the English one as well
-		$regex = msg('checkpoint-po', 'en');
+		$regex = msg_en('checkpoint-po');
 		if ($res !~ /$regex\s*(.+)/) {
 			ndie msg('checkpoint-noregex', $dir);
 		}
