@@ -5665,11 +5665,11 @@ sub check_checkpoint {
 		ndie msg('checkpoint-badver2');
 	}
 
-	## See pgsql/src/bin/pg_controldata/po/*
 	my $regex = msg('checkpoint-po');
 	if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
 		## Just in case, check the English one as well
-		if ($res !~ /Time of latest checkpoint:\s*(.+)/) {
+		$regex = msg('checkpoint-po', 'en');
+		if ($res !~ /$regex\s*(.+)/) {
 			ndie msg('checkpoint-noregex', $dir);
 		}
 	}
