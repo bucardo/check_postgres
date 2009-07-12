@@ -104,7 +104,7 @@ our %msg = (
 	'checkpoint-nosys'   => q{Could not call pg_controldata: $1},
 	'checkpoint-ok'      => q{Last checkpoint was 1 second ago},
 	'checkpoint-ok2'     => q{Last checkpoint was $1 seconds ago},
-	'checkpoint-regex'   => q{Time of latest checkpoint:},
+	'checkpoint-po'      => q{Time of latest checkpoint:},
 	'checksum-badline'   => q{Invalid pg_setting line: $1},
 	'checksum-msg'       => q{checksum: $1},
 	'checksum-nomd'      => q{Must install the Perl module Digest::MD5 to use the checksum action},
@@ -297,7 +297,7 @@ our %msg = (
 	'checkpoint-nosys'   => q{N'a pas pu appeler pg_controldata : $1},
 	'checkpoint-ok'      => q{Le dernier CHECKPOINT est survenu il y a une seconde},
 	'checkpoint-ok2'     => q{Le dernier CHECKPOINT est survenu il y a $1 secondes},
-	'checkpoint-regex'   => q{Heure du dernier point de contrÃ´le :},
+	'checkpoint-po'      => q{Heure du dernier point de contrôle :},
 	'checksum-badline'   => q{Ligne pg_setting invalide : $1},
 	'checksum-msg'       => q{somme de contrÃ´le : $1},
 	'checksum-nomd'      => q{Vous devez installer le module Perl Digest::MD5 pour utiliser l'action checksum},
@@ -469,26 +469,71 @@ our %msg = (
 	'version-fail'       => q{version $1, alors que la version attendue est $2},
 	'version-ok'         => q{version $1},
 },
+'af' => {
+},
+'cs' => {
+	'checkpoint-po' => q{Èas posledního kontrolního bodu:},
+},
 'de' => {
-	'checkpoint-regex' => q{Zeit des letzten Checkpoints:},
-},
-'ru' => {
-	'checkpoint-regex' => q{Ð’Ñ€ÐµÐ¼Ñ Ð¿Ð¾ÑÐ»ÐµÐ´Ð½ÐµÐ¹ checkpoint:},
-},
-'pl' => {
-	'checkpoint-regex' => q{Czas najnowszego punktu kontrolnego:},
+	'checkpoint-po' => q{Zeit des letzten Checkpoints:},
 },
 'es' => {
-	'checkpoint-regex' => q{Instante de Ãºltimo checkpoint:},
+	'checkpoint-po' => q{Instante de último checkpoint:},
+},
+'fa' => {
+	'checkpoint-po' => q{Ø²Ù…Ø§Ù† Ø¢Ø®Ø±ÛŒÙ† ÙˆØ§Ø±Ø³ÛŒ:},
+},
+'hr' => {
+},
+'hu' => {
+	'checkpoint-po' => q{A legutóbbi ellenõrzõpont ideje:},
 },
 'it' => {
-	'checkpoint-regex' => q{Orario ultimo checkpoint:},
+	'checkpoint-po' => q{Orario ultimo checkpoint:},
 },
-'tr' => {
-	'checkpoint-regex' => q{En son checkpoint'in zamanÄ±:},
+'ja' => {
+	'checkpoint-po' => q{æœ€çµ‚ãƒã‚§ãƒƒã‚¯ãƒã‚¤ãƒ³ãƒˆæ™‚åˆ»:},
+},
+'ko' => {
+	'checkpoint-po' => q{¸¶Áö¸· Ã¼Å©Æ÷ÀÎÆ® ½Ã°£:},
+},
+'nb' => {
+	'checkpoint-po' => q{Tidspunkt for nyeste kontrollpunkt:},
+},
+'nl' => {
+},
+'pl' => {
+	'checkpoint-po' => q{Czas najnowszego punktu kontrolnego:},
+},
+'pt_BR' => {
+	'checkpoint-po' => q{Hora do Ãºltimo ponto de controle:},
+},
+'ro' => {
+	'checkpoint-po' => q{Timpul ultimului punct de control:},
+},
+'ru' => {
+	'checkpoint-po' => q{÷ÒÅÍÑ ÐÏÓÌÅÄÎÅÊ checkpoint:},
+},
+'sk' => {
+	'checkpoint-po' => q{ÄŒas poslednÃ©ho kontrolnÃ©ho bodu:},
+},
+'sl' => {
+	'checkpoint-po' => q{Èas zadnje kontrolne toèke ............},
 },
 'sv' => {
-	'checkpoint-regex' => q{Tidpunkt fÃ¶r senaste kontrollpunkt:},
+	'checkpoint-po' => q{Tidpunkt för senaste kontrollpunkt:},
+},
+'ta' => {
+	'checkpoint-po' => q{à®¨à®µà¯€à®© à®šà¯‹à®¤à®©à¯ˆ à®®à¯ˆà®¯à®¤à¯à®¤à®¿à®©à¯ à®¨à¯‡à®°à®®à¯:},
+},
+'tr' => {
+	'checkpoint-po' => q{En son checkpoint'in zamanÄ±:},
+},
+'zh_CN' => {
+	'checkpoint-po' => q{×îÐÂ¼ì²éµãµÄÊ±¼ä:},
+},
+'zh_TW' => {
+	'checkpoint-po' => q{æœ€æ–°çš„æª¢æŸ¥é»žæ™‚é–“:},
 },
 );
 ## use critic
@@ -5621,7 +5666,7 @@ sub check_checkpoint {
 	}
 
 	## See pgsql/src/bin/pg_controldata/po/*
-	my $regex = msg('checkpoint-regex');
+	my $regex = msg('checkpoint-po');
 	if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
 		## Just in case, check the English one as well
 		if ($res !~ /Time of latest checkpoint:\s*(.+)/) {
