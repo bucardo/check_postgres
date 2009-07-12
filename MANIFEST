@@ -10,7 +10,6 @@ MANIFEST.SKIP
 .perlcriticrc
 META.yml
 TODO
-set_translations.pl
 
 t/00_basic.t
 t/00_signature.t

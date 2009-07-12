@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.9.1';
+our $VERSION = '2.9.2';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -6040,7 +6040,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.9.1
+This documents describes check_postgres.pl version 2.9.2
 
 =head1 SYNOPSIS
 
@@ -7450,7 +7450,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.9.2>
+=item B<Version 2.9.2> (July 12, 2009)
 
   Allow dots and dashes in database name for the backends check (Davide Abrigo)
   Check and display the database for each match in the bloat check (Cédric Villemain)

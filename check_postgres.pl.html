@@ -101,7 +101,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.9.1</p>
+<p>This documents describes check_postgres.pl version 2.9.2</p>
 <p>
 </p>
 <hr />
@@ -1386,12 +1386,24 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="2" class="item"><strong>Version 2.9.2</strong> (July 12, 2009)</a></strong></dt>
+
+<dd>
+<pre>
+  Allow dots and dashes in database name for the backends check (Davide Abrigo)
+  Check and display the database for each match in the bloat check (Cédric Villemain)
+  Handle 'too many connections' FATAL error in the backends check with a critical,
+    rather than a generic error (Greg, idea by Jürgen Schulz-Brüssel)
+  Do not allow perflimit to interfere with exclusion rules in the vacuum and 
+    analyze tests. (Greg, bug reported by Jeff Frost)</pre>
+</dd>
 <dt><strong><a name="1" class="item"><strong>Version 2.9.1</strong> (June 12, 2009)</a></strong></dt>
 
 <dd>
 <pre>
   Fix for multiple databases with the check_bloat action (Mark Kirkwood)
-  Tests for same_schema, other minor test fixes (Jeff Boes)</pre>
+  Fixes and improvements to the same_schema action (Jeff Boes)
+  Write tests for same_schema, other minor test fixes (Jeff Boes)</pre>
 </dd>
 <dt><strong><a name="0" class="item"><strong>Version 2.9.0</strong> (May 28, 2009)</a></strong></dt>
 
@@ -1438,7 +1450,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
   Make the sequence action check if sequence being used for a int4 column and
   react appropriately. (Michael Glaesemann)</pre>
 </dd>
-<dt><strong><a name="2" class="item"><strong>Version 2.7.2</strong> (February 9, 2009)</a></strong></dt>
+<dt><strong><strong>Version 2.7.2</strong> (February 9, 2009)</strong></dt>
 
 <dd>
 <pre>
