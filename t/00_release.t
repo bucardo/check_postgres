@@ -72,7 +72,7 @@ if ($good) {
 	pass "All version numbers are the same ($lastver)";
 }
 else {
-	fail "All version numbers were not the same!";
+	fail 'All version numbers were not the same!';
 	for my $filename (sort keys %v) {
 		for my $glob (@{$v{$filename}}) {
 			my ($ver,$line) = @$glob;
