@@ -11,3 +11,4 @@ blib/*
 *.tar.gz
 test_database_check_postgres*
 *.tmp
+cover_db/
