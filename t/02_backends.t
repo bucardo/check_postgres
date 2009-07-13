@@ -51,7 +51,7 @@ SKIP: {
 	like ($result, qr{^$label OK: \(host:$host\) 2 of 10 connections \(20%\)}, $t);
 
 	$t=qq{$S returned correct performance data};
-	like ($result, qr{ \| time=(\d\.\d\d)  ardala=0 beedeebeedee=0 postgres=2 template0=0 template1=0\s$}, $t);
+	like ($result, qr{ \| time=(\d\.\d\d)  'ardala'=0 'beedeebeedee'=0 'postgres'=2 'template0'=0 'template1'=0\s$}, $t);
 }
 
 $t=qq{$S fails when called with an invalid option};
@@ -174,7 +174,7 @@ SKIP: {
 	like ($cp->run('--include=postgres --exclude=postgres'), qr{^$label OK: .+3 of 10}, $t);
 
 	$t=qq{$S returned correct performance data with include};
-	like ($cp->run('--include=postgres'), qr{ \| time=(\d\.\d\d)  ardala=0 beedeebeedee=0 postgres=3}, $t);
+	like ($cp->run('--include=postgres'), qr{ \| time=(\d\.\d\d)  'ardala'=0 'beedeebeedee'=0 'postgres'=3}, $t);
 }
 
 my %dbh;
