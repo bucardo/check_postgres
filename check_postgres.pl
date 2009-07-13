@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.9.2';
+our $VERSION = '2.9.3';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2351,7 +2351,7 @@ sub check_backends {
 			$limit ||= $2;
 			my ($current,$dbname) = ($1,$3);
 			## Always want perf to show all
-			$db->{perf} .= " $dbname=$current";
+			$db->{perf} .= " '$dbname'=$current";
 			next SLURP if skip_item($dbname);
 			$total += $current;
 		}
@@ -6040,7 +6040,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.9.2
+This documents describes check_postgres.pl version 2.9.3
 
 =head1 SYNOPSIS
 
@@ -7449,6 +7449,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.9.3>
+
+  Quote dbname in perf output for the backends check. (Davide Abrigo)
 
 =item B<Version 2.9.2> (July 12, 2009)
 
