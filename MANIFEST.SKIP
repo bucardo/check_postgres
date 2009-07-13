@@ -11,3 +11,4 @@ test_database_check_postgres*
 \.git/*
 \.tmp$
 set_translations.pl
+t/00_release.t
