@@ -7451,7 +7451,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.9.3>
+=item B<Version 2.9.3> (July 14, 2009)
 
   Quote dbname in perf output for the backends check. (Davide Abrigo)
   Add 'fetch' as an alternative method for new_version checks, as this 
