@@ -69,6 +69,7 @@ our $get_method_timeout = 30;
 our @get_methods = (
 	"GET -t $get_method_timeout",
 	"wget --quiet --timeout=$get_method_timeout -O -",
+    "fetch -q -T $get_method_timeout -o -",
 	"curl --silent --max-time=$get_method_timeout",
 	"lynx --connect-timeout=$get_method_timeout --dump",
 	'links -dump',
@@ -7453,6 +7454,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.9.3>
 
   Quote dbname in perf output for the backends check. (Davide Abrigo)
+  Add 'fetch' as an alternative method for new_version checks, as this 
+    comes by default with FreeBSD. (Hywell Mallett)
 
 =item B<Version 2.9.2> (July 12, 2009)
 
