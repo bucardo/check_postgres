@@ -12,3 +12,4 @@ blib/*
 test_database_check_postgres*
 *.tmp
 cover_db/
+check_postgres-
