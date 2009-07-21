@@ -119,12 +119,13 @@ sub test_database_handle {
 		}
 
 		## >= 8.3
-		if ($imaj > 8 or ($imaj==8 and $imin >= 4)) {
+		if ($imaj > 8 or ($imaj==8 and $imin >= 3)) {
 			print $cfh qq{logging_collector = off\n};
 		}
 
 		## <= 8.2
 		if ($imaj < 8 or ($imaj==8 and $imin <= 2)) {
+			print $cfh qq{redirect_stderr = off\n};
 			print $cfh qq{stats_block_level = on\n};
 			print $cfh qq{stats_row_level = on\n};
 		}
