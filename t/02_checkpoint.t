@@ -47,6 +47,15 @@ my $dbh = $cp->get_dbh();
 $dbh->do('CHECKPOINT');
 $dbh->commit();
 $host =~ s/socket$//;
+my $result = $cp->run(qq{-w 20 --datadir="$host"});
+
+SKIP:
+{
+
+if ($result =~ /Date::Parse/) {
+	skip 'Cannot test checkpoint action unless Date::Parse module is installed', 6;
+}
+
 like ($cp->run(qq{-w 20 --datadir="$host"}), qr{^$label OK}, $t);
 
 $t=qq{$S returns a warning when checkpoint older than warning option};
@@ -64,5 +73,7 @@ like ($cp->run(qq{-c 1 --output=MRTG --datadir="$host"}), qr{^\d\n0\n\nLast chec
 
 $t=qq{$S returns the expected output for MRTG};
 like ($cp->run(qq{-c 199 --output=MRTG --datadir="$host"}), qr{^\d\n0\n\nLast checkpoint was \d seconds ago}, $t);
+
+}
 
 exit;
