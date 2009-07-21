@@ -112,18 +112,18 @@ sub test_database_handle {
 			print $cfh qq{stats_command_string = on\n};
 		}
 
-		## ## >= 8.1
+		## >= 8.1
 		if ($imaj > 8 or ($imaj==8 and $imin >= 1)) {
 			print $cfh qq{autovacuum = off\n};
 			print $cfh qq{max_prepared_transactions = 5\n};
 		}
 
-		## ## >= 8.2
-		if ($imaj > 8 or ($imaj==8 and $imin >= 2)) {
+		## >= 8.3
+		if ($imaj > 8 or ($imaj==8 and $imin >= 4)) {
 			print $cfh qq{logging_collector = off\n};
 		}
 
-		## ## <= 8.2
+		## <= 8.2
 		if ($imaj < 8 or ($imaj==8 and $imin <= 2)) {
 			print $cfh qq{stats_block_level = on\n};
 			print $cfh qq{stats_row_level = on\n};
