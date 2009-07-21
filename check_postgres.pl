@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.9.3';
+our $VERSION = '2.9.4';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -279,20 +279,20 @@ our %msg = (
 	'version-ok'         => q{version $1},
 },
 'fr' => {
-'backends-fatal'     => q{Could not connect: too many connections},
+	'backends-fatal'     => q{N'a pas pu se connecter : trop de connexions},
 	'backends-mrtg'      => q{DB=$1 Connexions maximum=$2},
 	'backends-msg'       => q{$1 connexions sur $2 ($3%)},
 	'backends-nomax'     => q{N'a pas pu dÃ©terminer max_connections},
 	'backends-oknone'    => q{Aucune connexion},
-	'backends-po'        => q{désolé, trop de clients sont déjà connectés},
+	'backends-po'        => q{dÃ©solÃ©, trop de clients sont dÃ©jÃ  connectÃ©s},
 	'backends-users'     => q{$1 pour le nombre d'utilisateurs doit Ãªtre un nombre ou un pourcentage},
 	'bloat-index'        => q{(db $1) index $2 lignes:$3 pages:$4 devrait Ãªtre:$5 ($6X) octets perdus:$7 ($8)},
 	'bloat-nomin'        => q{aucune relation n'atteint le critÃ¨re minimum de fragmentation},
 	'bloat-table'        => q{(db $1) table $2.$3 lignes:$4 pages:$5 devrait Ãªtre:$6 ($7X) place perdue:$8 ($9)},
 	'checkpoint-baddir'  => q{data_directory invalide : "$1"},
-'checkpoint-baddir2' => q{pg_controldata could not read the given data directory: "$1"},
-'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version},
-'checkpoint-badver2' => q{Failed to run pg_controldata - is it the correct version?},
+	'checkpoint-baddir2' => q{pg_controldata n'a pas pu lire le rÃ©pertoire des donnÃ©es indiquÃ© : Â« $1 Â»},
+	'checkpoint-badver'  => q{Ã‰chec lors de l'exÃ©cution de pg_controldata - probablement la mauvaise version},
+	'checkpoint-badver2' => q{Ã‰chec lors de l'exÃ©cution de pg_controldata - est-ce la bonne version ?},
 	'checkpoint-nodir'   => q{Vous devez fournir un argument --datadir ou configurer la variable d'environnement PGDATA},
 	'checkpoint-nodp'    => q{Vous devez installer le module Perl Date::Parse pour utiliser l'action checkpoint},
 	'checkpoint-noparse' => q{Incapable d'analyser le rÃ©sultat de la commande pg_controldata : "$1"},
@@ -300,7 +300,7 @@ our %msg = (
 	'checkpoint-nosys'   => q{N'a pas pu appeler pg_controldata : $1},
 	'checkpoint-ok'      => q{Le dernier CHECKPOINT est survenu il y a une seconde},
 	'checkpoint-ok2'     => q{Le dernier CHECKPOINT est survenu il y a $1 secondes},
-	'checkpoint-po'      => q{Heure du dernier point de contrôle :},
+	'checkpoint-po'      => q{Heure du dernier point de contrï¿½le :},
 	'checksum-badline'   => q{Ligne pg_setting invalide : $1},
 	'checksum-msg'       => q{somme de contrÃ´le : $1},
 	'checksum-nomd'      => q{Vous devez installer le module Perl Digest::MD5 pour utiliser l'action checksum},
@@ -320,13 +320,13 @@ our %msg = (
 	'diskspace-nodf'     => q{N'a pas pu trouver l'exÃ©cutable /bin/df},
 	'diskspace-nodir'    => q{N'a pas pu trouver le rÃ©pertoire des donnÃ©es Â« $1 Â»},
 	'file-noclose'       => q{N'a pas pu fermer $1 : $2},
-'fsm-page-highver'   => q{Cannot check on fsm_pages on servers version 8.4 or greater},
+	'fsm-page-highver'   => q{Ne peut pas vÃ©rifier fsm_pages sur des serveurs en version 8.4 ou ultÃ©rieure},
 	'fsm-page-msg'       => q{emplacements de pages utilisÃ©s par la FSM : $1 sur $2 ($3%)},
-'fsm-rel-highver'    => q{Cannot check on fsm_relations on servers version 8.4 or greater},
+	'fsm-rel-highver'    => q{Ne peut pas vÃ©rifier fsm_relations sur des serveurs en version 8.4 ou ultÃ©rieure},
 	'fsm-rel-msg'        => q{relations tracÃ©es par la FSM : $1 sur $2 ($3%)},
 	'invalid-option'     => q{Option invalide},
 	'invalid-query'      => q{Une requÃªte invalide a renvoyÃ© : $1},
-'listener-count'     => q{ listening=$1}, ## needs leading space
+	'listener-count'     => q{ en Ã©coute=$1}, ## needs leading space
 	'listener-msg'       => q{processus LISTEN trouvÃ©s : $1},
 	'locks-msg'          => q{total des verrous Â« $1 Â» : $2},
 	'locks-msg2'         => q{total des verrous : $1},
@@ -343,7 +343,7 @@ our %msg = (
 	'logfile-syslog'     => q{La base de donnÃ©es utiliser syslog, merci de spÃ©cifier le chemin avec l'option --logfile (fac=$1)},
 	'maxtime'            => q{ maxtime=$1}, ## needs leading space
 	'mrtg-fail'          => q{Ã‰chec de l'action $1 : $2},
-'new-cp-fail'        => q{Unable to determine the current version of check_postgres.pl},
+	'new-cp-fail'        => q{Incapable de dÃ©terminer la version actuelle de check_postgres.pl},
 	'new-cp-ok'          => q{La version $1 est la derniÃ¨re pour check_postgres.pl},
 	'new-cp-warn'        => q{La version $1 de check_postgres.pl existe (ceci est la version $2)},
 	'new-pg-badver'      => q{N'a pas pu dÃ©terminer la rÃ©vision de Postgres (la version Ã©tait $1)},
@@ -379,7 +379,7 @@ our %msg = (
 	'range-int'          => q{Argument invalide pour l'option Â« $1 Â» : doit Ãªtre un entier},
 	'range-int-pos'      => q{Argument invalide pour l'option Â« $1 Â» : doit Ãªtre un entier positif},
 	'range-neg-percent'  => q{Ne peut pas indiquer un pourcentage nÃ©gatif !},
-'range-none'         => q{No warning or critical options are needed},
+	'range-none'         => q{Les options warning et critical ne sont pas nÃ©cessaires},
 	'range-noopt-both'   => q{Doit fournir les options warning et critical},
 	'range-noopt-one'    => q{Doit fournir une option warning ou critical},
 	'range-noopt-only'   => q{Peut seulement fournir une option warning ou critical},
@@ -419,8 +419,8 @@ our %msg = (
 	'runtime-badmrtg'    => q{queryname invalide ?},
 	'runtime-badname'    => q{Option invalide pour queryname option : doit Ãªtre le nom d'une vue},
 	'runtime-msg'        => q{durÃ©e d'exÃ©cution de la requÃªte : $1 secondes},
-'same-failed'        => q{Databases were different. Items not matched: $1},
-'same-matched'       => q{Both databases have identical items},
+	'same-failed'        => q{Les bases de donnÃ©es sont diffÃ©rentes. Ã‰lÃ©ments diffÃ©rents : $1},
+	'same-matched'       => q{Les bases de donnÃ©es ont les mÃªmes Ã©lÃ©ments},
 	'seq-die'            => q{N'a pas pu rÃ©cupÃ©rer d'informations sur la sÃ©quence $1},
 	'seq-msg'            => q{$1=$2% (appels restant=$3)},
 	'seq-none'           => q{Aucune sequences trouvÃ©e},
@@ -455,13 +455,13 @@ our %msg = (
 	'timesync-diff'      => q{ diff=$1}, ## needs leading space
 	'timesync-msg'       => q{timediff=$1 Base de donnÃ©es=$2 Local=$3},
 	'trigger-msg'        => q{Triggers dÃ©sactivÃ©s : $1},
-'txnidle-msg'        => q{longest idle in txn: $1s},
+	'txnidle-msg'        => q{transaction en attente la plus longue : $1s},
 	'txnidle-none'       => q{Aucun processus en attente dans une transaction},
 	'txntime-fail'       => q{Ã‰chec de la requÃªte},
 	'txntime-msg'        => q{Transaction la plus longue : $1s},
 	'txntime-none'       => q{Aucune transaction},
-'txnwrap-cbig'       => q{The 'critical' value must be less than 2 billion},
-'txnwrap-wbig'       => q{The 'warning' value must be less than 2 billion},
+	'txnwrap-cbig'       => q{La valeur critique doit Ãªtre infÃ©rieure Ã  2 milliards},
+	'txnwrap-wbig'       => q{La valeur d'avertissement doit Ãªtre infÃ©rieure Ã  2 milliards},
 	'unknown-error'      => q{erreur inconnue},
 	'usage'              => qq{\nUsage: \$1 <options>\n Essayez Â« \$1 --help Â» pour liste complÃ¨te des options\n\n},
 	'vac-msg'            => q{Base de donnÃ©es : $1 Table : $2},
@@ -475,7 +475,7 @@ our %msg = (
 'af' => {
 },
 'cs' => {
-	'checkpoint-po' => q{Èas posledního kontrolního bodu:},
+	'checkpoint-po' => q{ï¿½as poslednï¿½ho kontrolnï¿½ho bodu:},
 },
 'de' => {
 	'backends-po'   => q{tut mir leid, schon zu viele Verbindungen},
@@ -483,7 +483,7 @@ our %msg = (
 },
 'es' => {
 	'backends-po'   => q{lo siento, ya tenemos demasiados clientes},
-	'checkpoint-po' => q{Instante de último checkpoint:},
+	'checkpoint-po' => q{Instante de ï¿½ltimo checkpoint:},
 },
 'fa' => {
 	'checkpoint-po' => q{Ø²Ù…Ø§Ù† Ø¢Ø®Ø±ÛŒÙ† ÙˆØ§Ø±Ø³ÛŒ:},
@@ -492,7 +492,7 @@ our %msg = (
 	'backends-po' => q{naÅ¾alost, veÄ‡ je otvoreno previÅ¡e klijentskih veza},
 },
 'hu' => {
-	'checkpoint-po' => q{A legutóbbi ellenõrzõpont ideje:},
+	'checkpoint-po' => q{A legutï¿½bbi ellenï¿½rzï¿½pont ideje:},
 },
 'it' => {
 	'checkpoint-po' => q{Orario ultimo checkpoint:},
@@ -503,7 +503,7 @@ our %msg = (
 },
 'ko' => {
 	'backends-po'   => q{ìµœëŒ€ ë™ì‹œ ì ‘ì†ì ìˆ˜ë¥¼ ì´ˆê³¼í–ˆìŠµë‹ˆë‹¤.},
-	'checkpoint-po' => q{¸¶Áö¸· Ã¼Å©Æ÷ÀÎÆ® ½Ã°£:},
+	'checkpoint-po' => q{ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ã¼Å©ï¿½ï¿½ï¿½ï¿½Æ® ï¿½Ã°ï¿½:},
 },
 'nb' => {
 	'backends-po'   => q{beklager, for mange klienter},
@@ -522,20 +522,20 @@ our %msg = (
 	'checkpoint-po' => q{Timpul ultimului punct de control:},
 },
 'ru' => {
-	'backends-po'   => q{ÉÚ×ÉÎÉÔÅ, ÕÖÅ ÓÌÉÛËÏÍ ÍÎÏÇÏ ËÌÉÅÎÔÏ×},
-	'checkpoint-po' => q{÷ÒÅÍÑ ĞÏÓÌÅÄÎÅÊ checkpoint:},
+	'backends-po'   => q{ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½},
+	'checkpoint-po' => q{ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ checkpoint:},
 },
 'sk' => {
-	'backends-po'   => q{je mi µúto, je u¾ príli¹ veµa klientov},
+	'backends-po'   => q{je mi ï¿½ï¿½to, je uï¿½ prï¿½liï¿½ veï¿½a klientov},
 	'checkpoint-po' => q{ÄŒas poslednÃ©ho kontrolnÃ©ho bodu:},
 },
 'sl' => {
-	'backends-po'   => q{povezanih je ¾e preveè odjemalcev},
-	'checkpoint-po' => q{Èas zadnje kontrolne toèke ............},
+	'backends-po'   => q{povezanih je ï¿½e preveï¿½ odjemalcev},
+	'checkpoint-po' => q{ï¿½as zadnje kontrolne toï¿½ke ............},
 },
 'sv' => {
-	'backends-po'   => q{ledsen, för många klienter},
-	'checkpoint-po' => q{Tidpunkt för senaste kontrollpunkt:},
+	'backends-po'   => q{ledsen, fï¿½r mï¿½nga klienter},
+	'checkpoint-po' => q{Tidpunkt fï¿½r senaste kontrollpunkt:},
 },
 'ta' => {
 	'checkpoint-po' => q{à®¨à®µà¯€à®© à®šà¯‹à®¤à®©à¯ˆ à®®à¯ˆà®¯à®¤à¯à®¤à®¿à®©à¯ à®¨à¯‡à®°à®®à¯:},
@@ -545,8 +545,8 @@ our %msg = (
 	'checkpoint-po' => q{En son checkpoint'in zamanÄ±:},
 },
 'zh_CN' => {
-	'backends-po'   => q{¶Ô²»Æğ, ÒÑ¾­ÓĞÌ«¶àµÄ¿Í»§},
-	'checkpoint-po' => q{×îĞÂ¼ì²éµãµÄÊ±¼ä:},
+	'backends-po'   => q{ï¿½Ô²ï¿½ï¿½ï¿½, ï¿½Ñ¾ï¿½ï¿½ï¿½Ì«ï¿½ï¿½ï¿½Ä¿Í»ï¿½},
+	'checkpoint-po' => q{ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½:},
 },
 'zh_TW' => {
 	'backends-po'   => q{å°ä¸èµ·ï¼Œç”¨æˆ¶ç«¯éå¤š},
@@ -6041,7 +6041,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.9.3
+This documents describes check_postgres.pl version 2.9.4
 
 =head1 SYNOPSIS
 
@@ -7450,6 +7450,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.9.4> (July 21, 2009)
+
+  More French translations (Guillaume Lelarge)
 
 =item B<Version 2.9.3> (July 14, 2009)
 
