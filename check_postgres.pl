@@ -5387,9 +5387,8 @@ SQL
 				for my $cname (sort keys %{$fail{columns}{diff}{$tname}}) {
 					for my $var (sort keys %{$fail{columns}{diff}{$tname}{$cname}}) {
 						my ($v1,$v2) = @{$fail{columns}{diff}{$tname}{$cname}{$var}};
-						$db->{perf} .= " Column $cname of $tname: $var is $v1 on 1, but $v2 on 2";
+						$db->{perf} .= " Column $cname of $tname: $var is $v1 on 1, but $v2 on 2. ";
 					}
-					$db->{perf} .= '. ';
 				}
 			}
 		}
