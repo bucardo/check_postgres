@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.9.4';
+our $VERSION = '2.9.5';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2495,8 +2495,12 @@ FROM (
   LEFT JOIN pg_class c2 ON c2.oid = i.indexrelid
 ) AS sml
 WHERE sml.relpages - otta > $MINPAGES OR ipages - iotta > $MINIPAGES
-ORDER BY wastedbytes DESC LIMIT $LIMIT
+ORDER BY wastedbytes DESC
 };
+
+	if (! defined $opt{include}) {
+		$SQL .= " LIMIT $LIMIT";
+	}
 
 	my $info = run_command($SQL);
 
@@ -6040,7 +6044,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.9.4
+This documents describes check_postgres.pl version 2.9.5
 
 =head1 SYNOPSIS
 
@@ -7449,6 +7453,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.9.5>
+
+  Don't use a LIMIT in check_bloat if --include is used. Per complaint from Jeff Frost.
 
 =item B<Version 2.9.4> (July 21, 2009)
 
