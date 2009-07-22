@@ -2494,13 +2494,13 @@ FROM (
   LEFT JOIN pg_index i ON indrelid = cc.oid
   LEFT JOIN pg_class c2 ON c2.oid = i.indexrelid
 ) AS sml
-WHERE sml.relpages - otta > $MINPAGES OR ipages - iotta > $MINIPAGES
-ORDER BY wastedbytes DESC
 };
 
 	if (! defined $opt{include}) {
+		$SQL .= "WHERE sml.relpages - otta > $MINPAGES OR ipages - iotta > $MINIPAGES";
 		$SQL .= " LIMIT $LIMIT";
 	}
+	$SQL .= "ORDER BY wastedbytes DESC";
 
 	my $info = run_command($SQL);
 
