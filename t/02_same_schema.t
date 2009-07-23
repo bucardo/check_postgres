@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 35;
+use Test::More tests => 39;
 use lib 't','.';
 use CP_Testing;
 
@@ -74,7 +74,7 @@ $t = qq{$S fails when schemas have different owners};
 $dbh1->do(q{ALTER SCHEMA schema_1_only OWNER TO alternate_owner});
 $dbh2->do(q{CREATE SCHEMA schema_1_only});
 like ($cp1->run($stdargs),
-      qr{^$label CRITICAL.*Items not matched: 1\b.*Schema schema_1_only owned by alternate_owner},
+      qr{^$label CRITICAL.*Items not matched: 1\b.*Schema "schema_1_only" owned by "alternate_owner"},
       $t);
 
 $dbh1->do(q{DROP SCHEMA schema_1_only});
@@ -94,7 +94,7 @@ $t = qq{$S fails when schemas have different owners};
 $dbh2->do(q{ALTER SCHEMA schema_2_only OWNER TO alternate_owner});
 $dbh1->do(q{CREATE SCHEMA schema_2_only});
 like ($cp1->run($stdargs),
-      qr{^$label CRITICAL.*Items not matched: 1\b.*Schema schema_2_only owned by check_postgres_testing},
+      qr{^$label CRITICAL.*Items not matched: 1\b.*Schema "schema_2_only" owned by "check_postgres_testing"},
       $t);
 $dbh1->do(q{DROP SCHEMA schema_2_only});
 $dbh2->do(q{DROP SCHEMA schema_2_only});
@@ -115,7 +115,7 @@ $t = qq{$S fails when tables have different owners};
 $dbh1->do(q{ALTER TABLE table_1_only OWNER TO alternate_owner});
 $dbh2->do(q{CREATE TABLE table_1_only (a int)});
 like ($cp1->run($stdargs),
-      qr{^$label CRITICAL.*Items not matched: 1\b.*Table public.table_1_only owned by alternate_owner},
+      qr{^$label CRITICAL.*Items not matched: 1\b.*Table "public.table_1_only" owned by "alternate_owner"},
       $t);
 $dbh1->do(q{DROP TABLE table_1_only});
 $dbh2->do(q{DROP TABLE table_1_only});
@@ -134,7 +134,7 @@ $t = qq{$S fails when tables have different owners};
 $dbh2->do(q{ALTER TABLE table_2_only OWNER TO alternate_owner});
 $dbh1->do(q{CREATE TABLE table_2_only (a int)});
 like ($cp1->run($stdargs),
-      qr{^$label CRITICAL.*Items not matched: 1\b.*Table public.table_2_only owned by check_postgres_testing},
+      qr{^$label CRITICAL.*Items not matched: 1\b.*Table "public.table_2_only" owned by "check_postgres_testing"},
       $t);
 $dbh1->do(q{DROP TABLE table_2_only});
 $dbh2->do(q{DROP TABLE table_2_only});
@@ -219,7 +219,7 @@ $dbh1->do(q{ALTER TABLE table_w_constraint ADD CONSTRAINT constraint_of_a CHECK(
 
 $t = qq{$S fails when first schema has an extra constraint};
 like ($cp1->run($stdargs),
-      qr{^$label CRITICAL.*?Table public.table_w_constraint on 1 has constraint public.constraint_of_a on column a, but 2 does not},
+      qr{^$label CRITICAL.*?Table "public.table_w_constraint" on 1 has constraint "public.constraint_of_a" on column "a", but 2 does not},
       $t);
 
 $dbh2->do(q{ALTER TABLE table_w_constraint ADD CONSTRAINT constraint_of_a CHECK(a < 0)});
@@ -233,7 +233,7 @@ $dbh2->do(q{ALTER TABLE table_w_constraint DROP CONSTRAINT constraint_of_a});
 
 $t = qq{$S fails when one table is missing a constraint};
 like ($cp1->run($stdargs),
-      qr{^$label CRITICAL.*?Table public.table_w_constraint on 1 has constraint public.constraint_of_a on column a, but 2 does not},
+      qr{^$label CRITICAL.*?Table "public.table_w_constraint" on 1 has constraint "public.constraint_of_a" on column "a", but 2 does not},
       $t);
 
 $dbh1->do(q{CREATE TABLE table_w_another_cons (a int)});
@@ -242,7 +242,7 @@ $dbh2->do(q{ALTER TABLE table_w_another_cons ADD CONSTRAINT constraint_of_a CHEC
 
 $t = qq{$S fails when similar constraints are attached to differing tables};
 like ($cp1->run($stdargs),
-      qr{^$label CRITICAL.*?Constraint public.constraint_of_a is applied to public.table_w_constraint on 1, but to public.table_w_another_cons on 2},
+      qr{^$label CRITICAL.*?Constraint "public.constraint_of_a" is applied to "public.table_w_constraint" on 1, but to "public.table_w_another_cons" on 2},
       $t);
 
 $dbh1->do(q{DROP TABLE table_w_another_cons});
@@ -289,5 +289,38 @@ like ($cp1->run($stdargs),
 $dbh1->do(q{DROP FUNCTION f4()});
 $dbh2->do(q{DROP FUNCTION f4()});
 
+
+#/////////// Columns
+
+$dbh1->do(q{CREATE TABLE table_1_only (a int)});
+$dbh2->do(q{CREATE TABLE table_1_only (a int)});
+
+$t = qq{$S fails when first table has an extra column};
+$dbh1->do(q{ALTER TABLE table_1_only ADD COLUMN extra bigint});
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL.*Items not matched: 1\b.*Table "public.table_1_only" on 1 has column "extra", but 2 does not},
+      $t);
+
+$t = qq{$S fails when tables have different column types};
+$dbh2->do(q{ALTER TABLE table_1_only ADD COLUMN extra int});
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL.*Items not matched: 1\b.*type is bigint on 1, but integer on 2},
+      $t);
+
+$t = qq{$S fails when tables have different column lengths};
+$dbh1->do(q{ALTER TABLE table_1_only ALTER COLUMN extra TYPE varchar(20)});
+$dbh2->do(q{ALTER TABLE table_1_only ALTER COLUMN extra TYPE varchar(40)});
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL.*Items not matched: 1\b.*length is 20 on 1, but 40 on 2},
+      $t);
+
+$t = qq{$S fails when tables have columns in different orders};
+$dbh1->do(q{ALTER TABLE table_1_only ADD COLUMN buzz date});
+$dbh2->do(q{ALTER TABLE table_1_only DROP COLUMN extra});
+$dbh2->do(q{ALTER TABLE table_1_only ADD COLUMN buzz date});
+$dbh2->do(q{ALTER TABLE table_1_only ADD COLUMN extra varchar(20)});
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL.*Items not matched: 1\b.*position is 2 on 1, but 4 on 2},
+      $t);
 
 exit;
