@@ -2497,10 +2497,10 @@ FROM (
 };
 
 	if (! defined $opt{include}) {
-		$SQL .= "WHERE sml.relpages - otta > $MINPAGES OR ipages - iotta > $MINIPAGES";
+		$SQL .= " WHERE sml.relpages - otta > $MINPAGES OR ipages - iotta > $MINIPAGES";
 		$SQL .= " LIMIT $LIMIT";
 	}
-	$SQL .= "ORDER BY wastedbytes DESC";
+	$SQL .= " ORDER BY wastedbytes DESC";
 
 	my $info = run_command($SQL);
 
