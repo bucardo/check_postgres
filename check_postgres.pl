@@ -5253,13 +5253,13 @@ SQL
 		if (exists $fail{schemas}{diffowners}) {
 			for my $item (@{$fail{schemas}{diffowners}}) {
 				my ($name,$owner1,$owner2) = @$item;
-				$db->{perf} .= " Schema $name owned by $owner1 on 1, but by $owner2 on 2. ";
+				$db->{perf} .= qq{ Schema "$name" owned by "$owner1" on 1, but by "$owner2" on 2. };
 			}
 		}
 		if (exists $fail{schemas}{diffacls}) {
 			for my $item (@{$fail{schemas}{diffacls}}) {
 				my ($name,$acl1,$acl2) = @$item;
-				$db->{perf} .= " Schema $name has $acl1 perms on 1, but $acl2 perms on 2. ";
+				$db->{perf} .= qq{ Schema "$name" has $acl1 perms on 1, but $acl2 perms on 2. };
 			}
 		}
 	}
@@ -5281,13 +5281,13 @@ SQL
 		if (exists $fail{tables}{diffowners}) {
 			for my $item (@{$fail{tables}{diffowners}}) {
 				my ($name,$owner1,$owner2) = @$item;
-				$db->{perf} .= " Table $name owned by $owner1 on 1, but by $owner2 on 2. ";
+				$db->{perf} .= qq{ Table "$name" owned by "$owner1" on 1, but by "$owner2" on 2. };
 			}
 		}
 		if (exists $fail{tables}{diffacls}) {
 			for my $item (@{$fail{tables}{diffacls}}) {
 				my ($name,$acl1,$acl2) = @$item;
-				$db->{perf} .= " Table $name has $acl1 perms on 1, but $acl2 perms on 2. ";
+				$db->{perf} .= qq{ Table "$name" has $acl1 perms on 1, but $acl2 perms on 2. };
 			}
 		}
 	}
@@ -5309,13 +5309,13 @@ SQL
 		if (exists $fail{sequences}{diffowners}) {
 			for my $item (@{$fail{sequences}{diffowners}}) {
 				my ($name,$owner1,$owner2) = @$item;
-				$db->{perf} .= " Sequence $name owned by $owner1 on 1, but by $owner2 on 2. ";
+				$db->{perf} .= qq{ Sequence "$name" owned by "$owner1" on 1, but by "$owner2" on 2. };
 			}
 		}
 		if (exists $fail{sequences}{diffacls}) {
 			for my $item (@{$fail{sequences}{diffacls}}) {
 				my ($name,$acl1,$acl2) = @$item;
-				$db->{perf} .= " Sequence $name has $acl1 perms on 1, but $acl2 perms on 2. ";
+				$db->{perf} .= qq{ Sequence "$name" has $acl1 perms on 1, but $acl2 perms on 2. };
 			}
 		}
 	}
@@ -5337,13 +5337,13 @@ SQL
 		if (exists $fail{views}{diffowners}) {
 			for my $item (@{$fail{views}{diffowners}}) {
 				my ($name,$owner1,$owner2) = @$item;
-				$db->{perf} .= " View $name owned by $owner1 on 1, but by $owner2 on 2. ";
+				$db->{perf} .= qq{ View "$name" owned by "$owner1" on 1, but by "$owner2" on 2. };
 			}
 		}
 		if (exists $fail{views}{diffacls}) {
 			for my $item (@{$fail{views}{diffacls}}) {
 				my ($name,$acl1,$acl2) = @$item;
-				$db->{perf} .= " View $name has $acl1 perms on 1, but $acl2 perms on 2. ";
+				$db->{perf} .= qq{ View "$name" has $acl1 perms on 1, but $acl2 perms on 2. };
 			}
 		}
 	}
@@ -5365,7 +5365,7 @@ SQL
 		if (exists $fail{triggers}{difffunc}) {
 			for my $item (@{$fail{triggers}{diffowners}}) {
 				my ($name,$func1,$func2) = @$item;
-				$db->{perf} .= " Trigger $name calls function $func1 on 1, but function $func2 on 2. ";
+				$db->{perf} .= qq{ Trigger "$name" calls function "$func1" on 1, but function "$func2" on 2. };
 			}
 		}
 	}
@@ -5376,13 +5376,13 @@ SQL
 			if (exists $fail{columns}{notexist}{1}) {
 				for my $row (@{$fail{columns}{notexist}{1}}) {
 					my ($tname,$cname) = @$row;
-					$db->{perf} .= " Table $tname on 1 has column $cname, but 2 does not. ";
+					$db->{perf} .= qq{ Table "$tname" on 1 has column "$cname", but 2 does not. };
 				}
 			}
 			if (exists $fail{columns}{notexist}{2}) {
 				for my $row (@{$fail{columns}{notexist}{2}}) {
 					my ($tname,$cname) = @$row;
-					$db->{perf} .= " Table $tname on 2 has column $cname, but 1 does not. ";
+					$db->{perf} .= qq{ Table "$tname" on 2 has column "$cname", but 1 does not. };
 				}
 			}
 		}
@@ -5391,7 +5391,7 @@ SQL
 				for my $cname (sort keys %{$fail{columns}{diff}{$tname}}) {
 					for my $var (sort keys %{$fail{columns}{diff}{$tname}{$cname}}) {
 						my ($v1,$v2) = @{$fail{columns}{diff}{$tname}{$cname}{$var}};
-						$db->{perf} .= " Column $cname of $tname: $var is $v1 on 1, but $v2 on 2. ";
+						$db->{perf} .= qq{ Column "$cname" of "$tname": $var is $v1 on 1, but $v2 on 2. };
 					}
 				}
 			}
@@ -5406,14 +5406,14 @@ SQL
 			if (exists $fail{constraints}{notexist}{1}) {
 				for my $row (@{$fail{constraints}{notexist}{1}}) {
 					my ($cname,$tname) = @$row;
-					$db->{perf} .= " Table $tname on 1 has constraint $cname, but 2 does not. ";
+					$db->{perf} .= qq{ Table "$tname" on 1 has constraint "$cname", but 2 does not. };
 					$doublec{$cname}++;
 				}
 			}
 			if (exists $fail{constraints}{notexist}{2}) {
 				for my $row (@{$fail{constraints}{notexist}{2}}) {
 					my ($cname,$tname) = @$row;
-					$db->{perf} .= " Table $tname on 2 has constraint $cname, but 1 does not. ";
+					$db->{perf} .= qq{ Table "$tname" on 2 has constraint "$cname", but 1 does not. };
 					$doublec{$cname}++;
 				}
 			}
@@ -5421,7 +5421,7 @@ SQL
 		if (exists $fail{constraints}{tablediff}) {
 			for my $row (@{$fail{constraints}{tablediff}}) {
 				my ($cname,$t1,$t2) = @$row;
-				$db->{perf} .= " Constraint $cname is applied to $t1 on 1, but to $t2 on 2. ";
+				$db->{perf} .= qq{ Constraint "$cname" is applied to "$t1" on 1, but to "$t2" on 2. };
 				$doublec{$cname}++;
 			}
 		}
@@ -5434,7 +5434,7 @@ SQL
 				for my $row (@{$fail{colconstraints}{notexist}{1}}) {
 					my ($name,$tname,$cname) = @$row;
 					if (! exists $doublec{$name}) {
-						$db->{perf} .= " Table $tname on 1 has constraint $name on column $cname, but 2 does not. ";
+						$db->{perf} .= qq{ Table "$tname" on 1 has constraint "$name" on column "$cname", but 2 does not. };
 					}
 				}
 			}
@@ -5442,7 +5442,7 @@ SQL
 				for my $row (@{$fail{colconstraints}{notexist}{2}}) {
 					my ($name,$tname,$cname) = @$row;
 					if (! exists $doublec{$name}) {
-						$db->{perf} .= " Table $tname on 2 has constraint $name on column $cname, but 1 does not. ";
+						$db->{perf} .= qq{ Table "$tname" on 2 has constraint "$name" on column "$cname", but 1 does not. };
 					}
 				}
 			}
@@ -5451,7 +5451,7 @@ SQL
 			for my $row (@{$fail{colconstraints}{tablediff}}) {
 				my ($name,$t1,$t2) = @$row;
 				if (! exists $doublec{$name}) {
-					$db->{perf} .= " Constraint $name is applied to $t1 on 1, but to $t2 on 2. ";
+					$db->{perf} .= qq{ Constraint "$name" is applied to "$t1" on 1, but to "$t2" on 2. };
 				}
 			}
 		}
@@ -5459,7 +5459,7 @@ SQL
 			for my $row (@{$fail{colconstraints}{columndiff}}) {
 				my ($name,$t1,$c1,$t2,$c2) = @$row;
 				if (! exists $doublec{$name}) {
-					$db->{perf} .= " Constraint $name on 1 is applied to $t1.$c1, but to $t2.$c2 on 2. ";
+					$db->{perf} .= qq{ Constraint "$name" on 1 is applied to $t1.$c1, but to $t2.$c2 on 2. };
 				}
 			}
 		}
@@ -5467,7 +5467,7 @@ SQL
 			for my $row (@{$fail{colconstraints}{defdiff}}) {
 				my ($name,$t1,$c1,$d1,$t2,$c2,$d2) = @$row;
 				if (! exists $doublec{$name}) {
-					$db->{perf} .= qq{ Constraint $name on 1 differs from 2 ("$d1" vs. "$d2")};
+					$db->{perf} .= qq{ Constraint "$name" on 1 differs from 2 ("$d1" vs. "$d2")};
 				}
 			}
 		}
