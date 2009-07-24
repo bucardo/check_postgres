@@ -7456,7 +7456,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.9.5>
+=item B<Version 2.9.5> (July 24, 2009)
 
   Don't use a LIMIT in check_bloat if --include is used. Per complaint from Jeff Frost.
 
