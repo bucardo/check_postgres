@@ -53,7 +53,7 @@ my %opts =
 	 NO_META        => 1,
      NORECURS       => 1,
      MAN1PODS       => {},
-	 clean          => { FILES => 'test_database_check_postgres/ /tmp/cptesting_socket' },
+	 clean          => { FILES => 'test_database_check_postgres/ test_database_check_postgres2/ /tmp/cptesting_socket' },
 );
 
 {
