@@ -4417,11 +4417,12 @@ sub check_same_schema {
 
 		## Get a list of all relations
         if (! exists $filter{notables}) {
-            $SQL = q{SELECT relkind, quote_ident(nspname), quote_ident(relname), quote_ident(usename), relacl }
+            $SQL = q{SELECT relkind, quote_ident(nspname), quote_ident(relname), quote_ident(usename), relacl, }
+				. q{CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid) ELSE '' END }
                 . q{FROM pg_class c }
-                    . q{JOIN pg_namespace n ON (n.oid = c.relnamespace) }
-                        . q{JOIN pg_user u ON (u.usesysid = c.relowner) }
-                            . q{WHERE nspname !~ '^pg_t'};
+                . q{JOIN pg_namespace n ON (n.oid = c.relnamespace) }
+                . q{JOIN pg_user u ON (u.usesysid = c.relowner) }
+                . q{WHERE nspname !~ '^pg_t'};
             exists $filter{notriggers}  and $SQL .= q{ AND relkind <> 'r'};
             exists $filter{noviews}     and $SQL .= q{ AND relkind <> 'v'};
             exists $filter{noindexes}   and $SQL .= q{ AND relkind <> 'i'};
@@ -4429,12 +4430,13 @@ sub check_same_schema {
             $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
             for $db (@{$info->{db}}) {
                 for my $line (split /\n/, $db->{slurp}) {
-                    unless ($line =~ /^\s*(\w)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (\S*).*/gmo) {
+                    unless ($line =~ /^\s*(\w)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.*?)\s*\| (.*)/gmo) {
                         warn "Query processing failed:\n$line\nfrom $SQL\n";
                         next;
                     }
 
-                    my ($kind,$schema,$name,$owner,$acl) = ($1,$2,$3,$4,$5);
+                    my ($kind,$schema,$name,$owner,$acl,$def) = ($1,$2,$3,$4,$5,$6);
+
                     if ($kind eq 'r') {
                         $thing{$x}{tables}{"$schema.$name"} =
 						{
@@ -4443,7 +4445,7 @@ sub check_same_schema {
                     elsif ($kind eq 'v') {
                         $thing{$x}{views}{"$schema.$name"} =
 						{
-                         schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
+                         schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)', def=>$def };
                     }
                     elsif ($kind eq 'i') {
                         $thing{$x}{indexes}{"$schema.$name"} =
@@ -4915,6 +4917,13 @@ SQL
 			$failcount++;
 		}
 
+		## Do the views have same definitions?
+		if ($thing{1}{views}{$name}{def} ne $thing{2}{views}{$name}{def}) {
+			push @{$fail{views}{diffdef}} => $name;
+			$failcount++;
+		}
+
+
 	}
 
 	## Compare triggers
@@ -5352,6 +5361,11 @@ SQL
 			for my $item (@{$fail{views}{diffacls}}) {
 				my ($name,$acl1,$acl2) = @$item;
 				$db->{perf} .= qq{ View "$name" has $acl1 perms on 1, but $acl2 perms on 2. };
+			}
+		}
+		if (exists $fail{views}{diffdef}) {
+			for my $item (@{$fail{views}{diffdef}}) {
+				$db->{perf} .= qq{ View "$item" is different on 1 and 2. };
 			}
 		}
 	}

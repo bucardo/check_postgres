@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 39;
+use Test::More tests => 41;
 use lib 't','.';
 use CP_Testing;
 
@@ -179,6 +179,23 @@ like ($cp1->run(qq{--warning=noviews $stdargs}),
 
 $dbh1->do(q{DROP VIEW view_1_only});
 
+$dbh1->do(q{CREATE VIEW view_both_same AS SELECT 1});
+$dbh2->do(q{CREATE VIEW view_both_same AS SELECT 1});
+$t = qq{$S succeeds when views are the same};
+like ($cp1->run($stdargs),
+      qr{^$label OK},
+	  $t);
+
+$dbh1->do(q{CREATE VIEW view_both_diff AS SELECT 123});
+$dbh2->do(q{CREATE VIEW view_both_diff AS SELECT 456});
+$t = qq{$S succeeds when views are the same};
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL.*Items not matched: 1\b.*is different on 1 and 2},
+	  $t);
+
+$dbh1->do(q{DROP VIEW view_both_diff});
+$dbh2->do(q{DROP VIEW view_both_diff});
+
 $t = qq{$S fails when second schema has an extra view};
 $dbh2->do(q{CREATE VIEW view_2_only AS SELECT 1});
 like ($cp1->run($stdargs),
@@ -190,6 +207,7 @@ like ($cp1->run(qq{--warning=noviews $stdargs}),
       qr{^$label OK}, $t);
 
 $dbh2->do(q{DROP VIEW view_2_only});
+
 
 #/////////// Triggers
 
