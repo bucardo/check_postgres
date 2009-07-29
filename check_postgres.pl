@@ -5438,6 +5438,9 @@ SQL
 					if (! exists $doublec{$name}) {
 						$db->{perf} .= qq{ Table "$tname" on 1 has constraint "$name" on column "$cname", but 2 does not. };
 					}
+					else {
+						$failcount--;
+					}
 				}
 			}
 			if (exists $fail{colconstraints}{notexist}{2}) {
@@ -5445,6 +5448,9 @@ SQL
 					my ($name,$tname,$cname) = @$row;
 					if (! exists $doublec{$name}) {
 						$db->{perf} .= qq{ Table "$tname" on 2 has constraint "$name" on column "$cname", but 1 does not. };
+					}
+					else {
+						$failcount--;
 					}
 				}
 			}
@@ -5455,6 +5461,9 @@ SQL
 				if (! exists $doublec{$name}) {
 					$db->{perf} .= qq{ Constraint "$name" is applied to "$t1" on 1, but to "$t2" on 2. };
 				}
+				else {
+					$failcount--;
+				}
 			}
 		}
 		if (exists $fail{colconstraints}{columndiff}) {
@@ -5463,6 +5472,9 @@ SQL
 				if (! exists $doublec{$name}) {
 					$db->{perf} .= qq{ Constraint "$name" on 1 is applied to $t1.$c1, but to $t2.$c2 on 2. };
 				}
+				else {
+					$failcount--;
+				}
 			}
 		}
 		if (exists $fail{colconstraints}{defdiff}) {
@@ -5470,6 +5482,9 @@ SQL
 				my ($name,$t1,$c1,$d1,$t2,$c2,$d2) = @$row;
 				if (! exists $doublec{$name}) {
 					$db->{perf} .= qq{ Constraint "$name" on 1 differs from 2 ("$d1" vs. "$d2")};
+				}
+				else {
+					$failcount--;
 				}
 			}
 		}
