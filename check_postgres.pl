@@ -888,11 +888,17 @@ sub add_response {
 
 	$db->{host} ||= '';
 
-	if (defined $opt{host2} and defined $opt{host2}->[0] and length $opt{host2}->[0]) {
+	if (defined $opt{dbname2} and defined $opt{dbname2}->[0] and length $opt{dbname2}->[0]
+		and $opt{dbname}->[0] ne $opt{dbname2}->[0]) {
+		$db->{dbname} .= " => $opt{dbname2}->[0]";
+	}
+	if (defined $opt{host2} and defined $opt{host2}->[0] and length $opt{host2}->[0]
+		and $opt{host}->[0] ne $opt{host2}->[0]) {
 		$db->{host} .= " => $opt{host2}->[0]";
 	}
-	if (defined $opt{port2} and defined $opt{port2}->[0] and length $opt{port2}->[0]) {
-		$db->{port} .= " => $opt{port2}->[0]";
+	if (defined $opt{port2} and defined $opt{port2}->[0] and length $opt{port2}->[0]
+		and $opt{port}->[0] ne $opt{port2}->[0]) {
+		$db->{port} .= " => $opt{port2}->[0]) ";
 	}
 	if ($nohost) {
 		push @{$type->{''}} => [$msg, length $nohost > 1 ? $nohost : ''];
