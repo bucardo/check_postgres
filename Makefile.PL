@@ -41,18 +41,19 @@ print "Configuring check_postgres $VERSION\n";
 my %opts =
 	(
 	 NAME           => 'check_postgres',
-	 VERSION_FROM   => 'check_postgres.pl',
-	 AUTHOR         => 'Greg Sabino Mullane <greg@endpoint.com>',
 	 ABSTRACT       => 'Postgres monitoring script',
+	 AUTHOR         => 'Greg Sabino Mullane <greg@endpoint.com>',
 	 PREREQ_PM      => {
 						'ExtUtils::MakeMaker' => '6.11',
 						'Test::More'          => '0.61',
 						'version'             => '0',
 					   },
-	 NEEDS_LINKING  => 0,
 	 NO_META        => 1,
-     NORECURS       => 1,
+	 VERSION_FROM   => 'check_postgres.pl',
+     EXE_FILES      => ['check_postgres.pl'],
      MAN1PODS       => {},
+	 NEEDS_LINKING  => 0,
+     NORECURS       => 1,
 	 clean          => { FILES => 'test_database_check_postgres/ test_database_check_postgres2/ /tmp/cptesting_socket' },
 );
 
