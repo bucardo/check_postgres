@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.9.5';
+our $VERSION = '2.10.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2240,7 +2240,7 @@ sub check_autovac_freeze {
 				next;
 			}
 
-			my $msg = "$dbname=$percent\% ($age)";
+			my $msg = "'$dbname'=$percent\%;$w;$c";
 			$db->{perf} .= " $msg";
 			if (length $critical and $percent >= $c) {
 				push @crit => $msg;
@@ -6147,7 +6147,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.9.5
+This documents describes check_postgres.pl version 2.10.0
 
 =head1 SYNOPSIS
 
@@ -7557,11 +7557,12 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.10.0>
+=item B<Version 2.10.0> (July 25, 2009)
 
   For same_schema, compare view definitions, and compare languages.
   Make script into a global executable via the Makefile.PL file.
   Better output when comparing two databases.
+  Proper Nagios output syntax for autovac_freeze (Cédric Villemain)
 
 =item B<Version 2.9.5> (July 24, 2009)
 
