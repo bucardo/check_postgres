@@ -18,20 +18,20 @@ SHA1 de1474d7cbc69698971954ffb80760269b218e1f .gitignore
 SHA1 e14d35b60158528c0df790a818f22deab1fb29dd .perlcriticrc
 SHA1 902994783e0b80da76d02dff10978a3ef6645f7c MANIFEST
 SHA1 6d3f28c3cea9cd1353ec9521939c5f95a8318e93 MANIFEST.SKIP
-SHA1 a76d8234146de025248121926fef1b31cd9b18af META.yml
-SHA1 ee0eb4da0234d0abc21b943b9d677165facd1310 Makefile.PL
+SHA1 1ad96bb91ce1ca89a7dd87b5a502f9b530e36588 META.yml
+SHA1 1ef71b37a64c87b2329c214184a1e2dfe6b23ffe Makefile.PL
 SHA1 439030be7d36d3a7d3480d4ff6abda13c9030101 README
 SHA1 402367c7263659173171c17093d1356a06375ac4 TODO
-SHA1 67507ba11e1b7b75ac7c94afbae8358c5d8081a5 check_postgres.pl
-SHA1 c4f0a6835ae04e526fa1b8721c65380d1e37167e check_postgres.pl.asc
-SHA1 31de946801eb5735781b83a97183a320c363c6a3 check_postgres.pl.html
+SHA1 35854baec49461833d2cdedfb032f1931276231a check_postgres.pl
+SHA1 c5d3f3a4ef646b27b77d0404bbee4c9f0e7097be check_postgres.pl.asc
+SHA1 604796e17dfc2a9f4de0f54cedc3dea46adddfff check_postgres.pl.html
 SHA1 c3d239c75a507a0b4d5a245ea82fb2e7fe2869cd t/00_basic.t
 SHA1 dc767132e602a61990c69082f27650e533db53c1 t/00_signature.t
 SHA1 b3b833488dca6a766aa185c2457d361a978103cb t/00_test_tester.t
-SHA1 da2a58efa0652058e81fee150b6f5c7c0a973a73 t/02_autovac_freeze.t
-SHA1 e822c916c6ec6909ceba148a8d6ff0dfbcbcd8e1 t/02_backends.t
+SHA1 483328fb68bdda73b7bf04394d017d931d59b57c t/02_autovac_freeze.t
+SHA1 67bf18a081a3c877bab044a52dc97d3afe269f1d t/02_backends.t
 SHA1 4e5630e7aa41398cd614dbdad79e3ae97109ff9b t/02_bloat.t
-SHA1 34439e9edf332707983aa90c33c99bcd9157f73e t/02_checkpoint.t
+SHA1 2704ec3ebb0e9d80489c8e5fa177ebb9bd90041d t/02_checkpoint.t
 SHA1 8194ea76cca596ea9605674df8c531c7ed751c4e t/02_connection.t
 SHA1 df14451d998ebfb27df20cc03881ac2460957594 t/02_custom_query.t
 SHA1 891aa165757d9d226254ad49cbd4b28642556907 t/02_database_size.t
@@ -52,7 +52,7 @@ SHA1 2706f51b92149330f123e174ad009ada0124a538 t/02_query_runtime.t
 SHA1 957728641da08e8b3b74653f96bcd55447afdd43 t/02_query_time.t
 SHA1 fc900d41c371685d074c7603430e9672dc0b20ef t/02_relation_size.t
 SHA1 e1943ee0a4c939c4ac0f1b660e2329c1d4c5bed3 t/02_replicate_row.t
-SHA1 287df704db90fb6f9315050f9d8a33df4c8b324f t/02_same_schema.t
+SHA1 4b274c012bafaf58614a44b122ebfcfae1f4a5db t/02_same_schema.t
 SHA1 921e5627011cfaa923ee9df26e8bb90c16cb1dd0 t/02_sequence.t
 SHA1 f498f14c7b05792e18b99ef7d6c91592682d29b6 t/02_settings_checksum.t
 SHA1 4c14da6c23eb14e450bd7b0af722fdc0cb97aae7 t/02_timesync.t
@@ -67,7 +67,7 @@ SHA1 96e6e5da3e1f6753a469e7afc8cf070024b33b23 t/99_cleanup.t
 SHA1 526e68a2f793ab1f08db50c1dbe4fe5f2d281e5f t/CP_Testing.pm
 -----BEGIN PGP SIGNATURE-----
 
-iEYEAREDAAYFAkpqFBEACgkQvJuQZxSWSsivIwCfc53DqT2FCEazA9tHZKbgqcqL
-u7oAnjPZ5Xa/Uesp3ZXW+6vovV3dpLFa
-=XhTp
+iEYEAREDAAYFAkp3CekACgkQvJuQZxSWSshvwQCgyd1upeoJlTCPgQwuzmHaC+AA
+EWYAoORDtMseco97h/CMCDjeN+debBqi
+=IDAz
 -----END PGP SIGNATURE-----
