@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 41;
+use Test::More tests => 45;
 use lib 't','.';
 use CP_Testing;
 
@@ -307,7 +307,6 @@ like ($cp1->run($stdargs),
 $dbh1->do(q{DROP FUNCTION f4()});
 $dbh2->do(q{DROP FUNCTION f4()});
 
-
 #/////////// Columns
 
 $dbh1->do(q{CREATE TABLE table_1_only (a int)});
@@ -339,6 +338,35 @@ $dbh2->do(q{ALTER TABLE table_1_only ADD COLUMN buzz date});
 $dbh2->do(q{ALTER TABLE table_1_only ADD COLUMN extra varchar(20)});
 like ($cp1->run($stdargs),
       qr{^$label CRITICAL.*Items not matched: 1\b.*position is 2 on 1, but 4 on 2},
+      $t);
+
+$dbh1->do('DROP TABLE table_1_only');
+$dbh2->do('DROP TABLE table_1_only');
+
+
+#/////////// Languages
+
+$t = qq{$S works when languages are the same};
+like ($cp1->run($stdargs),
+      qr{^$label OK:},
+      $t);
+
+$t = qq{$S fails when database 1 has a language that 2 does not};
+$dbh1->do('create language plpgsql');
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL:.*Items not matched: 1 .*Language on 1 but not 2: plpgsql},
+      $t);
+
+$t = qq{$S works when languages are the same};
+$dbh2->do('create language plpgsql');
+like ($cp1->run($stdargs),
+      qr{^$label OK:},
+      $t);
+
+$t = qq{$S fails when database 2 has a language that 1 does not};
+$dbh1->do('drop language plpgsql');
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL:.*Items not matched: 1 .*Language on 2 but not 1: plpgsql},
       $t);
 
 exit;

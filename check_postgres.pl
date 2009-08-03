@@ -4625,7 +4625,23 @@ SQL
                                                            };
 			}
 		}
-	}
+
+		## Get a list of all languages
+		$SQL = q{SELECT lanname FROM pg_language};
+		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
+		for $db (@{$info->{db}}) {
+            for my $line (split /\n/, $db->{slurp}) {
+                unless ($line =~ /^\s*(\w+)\s*/gmo) {
+                    warn "Query processing failed:\n$line\nfrom $SQL\n";
+                    next;
+                }
+				my ($lang) = ($1);
+				$thing{$x}{language}{$lang} = 1;
+			}
+		}
+
+
+	} ## end each database to query
 
 	$db = $saved_db;
 
@@ -5134,6 +5150,22 @@ SQL
 		}
 	}
 
+	## Compare languages
+	for my $name (sort keys %{$thing{1}{language}}) {
+		if (!exists $thing{2}{language}{$name}) {
+			push @{$fail{language}{notexist}{1}} => $name;
+			$failcount++;
+			next;
+		}
+	}
+	for my $name (sort keys %{$thing{2}{language}}) {
+		if (!exists $thing{1}{language}{$name}) {
+			push @{$fail{language}{notexist}{2}} => $name;
+			$failcount++;
+			next;
+		}
+	}
+
 	## Compare functions
 
 	## Functions on 1 but not 2?
@@ -5145,6 +5177,14 @@ SQL
 			for my $regex (@{$filter{nofunction_regex}}) {
 				next FUNCTION if $name =~ /$regex/;
 			}
+		}
+
+		## Skip if these are a side effect of having a language
+		for my $lang (@{$fail{language}{notexist}{1}}) {
+			$lang =~ s/u$//;
+			next FUNCTION if
+				$name eq "pg_catalog.${lang}_call_handler()"
+				or $name eq "pg_catalog.${lang}_validator(oid)";
 		}
 
 		push @{$fail{functions}{notexist}{1}} => $name;
@@ -5159,6 +5199,14 @@ SQL
 			for my $regex (@{$filter{nofunction_regex}}) {
 				next FUNCTION if $name =~ /$regex/;
 			}
+		}
+
+		## Skip if these are a side effect of having a language
+		for my $lang (@{$fail{language}{notexist}{2}}) {
+			$lang =~ s/u$//;
+			next FUNCTION if
+				$name =~ "pg_catalog.${lang}_call_handler()"
+				or $name eq "pg_catalog.${lang}_validator(oid)";
 		}
 
 		if (! exists $thing{1}{functions}{$name}) {
@@ -5195,6 +5243,7 @@ SQL
 			}
 		}
 	}
+
 
 	##
 	## Comparison is done, let's report the results
@@ -5545,6 +5594,23 @@ SQL
 			}
 		}
 	}
+
+	## Language differences
+	if (exists $fail{language}) {
+		if (exists $fail{language}{notexist}) {
+			if (exists $fail{language}{notexist}{1}) {
+				for my $name (@{$fail{language}{notexist}{1}}) {
+					$db->{perf} .= " Language on 1 but not 2: $name ";
+				}
+			}
+			if (exists $fail{language}{notexist}{2}) {
+				for my $name (@{$fail{language}{notexist}{2}}) {
+					$db->{perf} .= " Language on 2 but not 1: $name ";
+				}
+			}
+		}
+	}
+
 
 	add_critical msg('same-failed', $failcount);
 
@@ -7490,6 +7556,12 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.10.0>
+
+  For same_schema, compare view definitions, and compare languages.
+  Make script into a global executable via the Makefile.PL file.
+  Better output when comparing two databases.
 
 =item B<Version 2.9.5> (July 24, 2009)
 
