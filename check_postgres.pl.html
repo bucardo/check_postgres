@@ -101,7 +101,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.9.5</p>
+<p>This documents describes check_postgres.pl version 2.10.0</p>
 <p>
 </p>
 <hr />
@@ -1386,6 +1386,14 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="0" class="item"><strong>Version 2.10.0</strong> (July 25, 2009)</a></strong></dt>
+
+<dd>
+<pre>
+  For same_schema, compare view definitions, and compare languages.
+  Make script into a global executable via the Makefile.PL file.
+  Better output when comparing two databases.</pre>
+</dd>
 <dt><strong><a name="5" class="item"><strong>Version 2.9.5</strong> (July 24, 2009)</a></strong></dt>
 
 <dd>
@@ -1425,7 +1433,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
   Fixes and improvements to the same_schema action (Jeff Boes)
   Write tests for same_schema, other minor test fixes (Jeff Boes)</pre>
 </dd>
-<dt><strong><a name="0" class="item"><strong>Version 2.9.0</strong> (May 28, 2009)</a></strong></dt>
+<dt><strong><strong>Version 2.9.0</strong> (May 28, 2009)</strong></dt>
 
 <dd>
 <pre>
