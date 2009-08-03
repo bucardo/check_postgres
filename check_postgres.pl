@@ -2451,7 +2451,7 @@ sub check_bloat {
 		  });
 
 	## This was fun to write
-	$SQL = qq{
+	$SQL = q{
 SELECT
   current_database(), schemaname, tablename, reltuples::bigint, relpages::bigint, otta,
   ROUND(CASE WHEN otta=0 THEN 0.0 ELSE sml.relpages/otta::numeric END,1) AS tbloat,
@@ -2507,7 +2507,7 @@ FROM (
 		$SQL .= " ORDER BY wastedbytes DESC LIMIT $LIMIT";
 	}
 	else {
-		$SQL .= " ORDER BY wastedbytes DESC";
+		$SQL .= ' ORDER BY wastedbytes DESC';
 	}
 
 	my $info = run_command($SQL);
@@ -4635,8 +4635,7 @@ SQL
                     warn "Query processing failed:\n$line\nfrom $SQL\n";
                     next;
                 }
-				my ($lang) = ($1);
-				$thing{$x}{language}{$lang} = 1;
+				$thing{$x}{language}{$1} = 1;
 			}
 		}
 
@@ -5180,11 +5179,11 @@ SQL
 		}
 
 		## Skip if these are a side effect of having a language
-		for my $lang (@{$fail{language}{notexist}{1}}) {
-			$lang =~ s/u$//;
+		for my $l (@{$fail{language}{notexist}{1}}) {
+			$l =~ s/u$//;
 			next FUNCTION if
-				$name eq "pg_catalog.${lang}_call_handler()"
-				or $name eq "pg_catalog.${lang}_validator(oid)";
+				$name eq "pg_catalog.${l}_call_handler()"
+				or $name eq "pg_catalog.${l}_validator(oid)";
 		}
 
 		push @{$fail{functions}{notexist}{1}} => $name;
@@ -5202,11 +5201,11 @@ SQL
 		}
 
 		## Skip if these are a side effect of having a language
-		for my $lang (@{$fail{language}{notexist}{2}}) {
-			$lang =~ s/u$//;
+		for my $l (@{$fail{language}{notexist}{2}}) {
+			$l =~ s/u$//;
 			next FUNCTION if
-				$name =~ "pg_catalog.${lang}_call_handler()"
-				or $name eq "pg_catalog.${lang}_validator(oid)";
+				$name =~ "pg_catalog.${l}_call_handler()"
+				or $name eq "pg_catalog.${l}_validator(oid)";
 		}
 
 		if (! exists $thing{1}{functions}{$name}) {
