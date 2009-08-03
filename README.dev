@@ -18,10 +18,12 @@ Quick notes on the current release process:
 * git commit as needed
 * Run: make dist
 * git push
+* Add a new tag: git tag -u 14964ac8 1.2.3 -m "Version 1.2.3, released August 3, 2009" <commit>
+* git push --tags
 
 Login to the bucardo.org box, and then:
 
-* cd tmp/check_postgres
+* cd code/check_postgres
 * git pull
 * make distclean; perl Makefile.PL; make disttest; make dist
 * prove -v t/00_release.t
@@ -31,5 +33,4 @@ Login to the bucardo.org box, and then:
 * edit index.html
 
 * Email to check_postgres-announce with summary of changes
-
 
