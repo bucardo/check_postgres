@@ -69,10 +69,10 @@ $t=qq{$S returns the correct number of seconds};
 like ($cp->run(qq{-c 1 --datadir="$host"}), qr{was \d+ seconds ago}, $t);
 
 $t=qq{$S returns the expected output for MRTG};
-like ($cp->run(qq{-c 1 --output=MRTG --datadir="$host"}), qr{^\d\n0\n\nLast checkpoint was \d+ seconds ago}, $t);
+like ($cp->run(qq{-c 1 --output=MRTG --datadir="$host"}), qr{^\d+\n0\n\nLast checkpoint was \d+ seconds ago}, $t);
 
 $t=qq{$S returns the expected output for MRTG};
-like ($cp->run(qq{-c 199 --output=MRTG --datadir="$host"}), qr{^\d\n0\n\nLast checkpoint was \d+ seconds ago}, $t);
+like ($cp->run(qq{-c 199 --output=MRTG --datadir="$host"}), qr{^\d+\n0\n\nLast checkpoint was \d+ seconds ago}, $t);
 
 }
 
