@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 45;
+use Test::More tests => 46;
 use lib 't','.';
 use CP_Testing;
 
@@ -138,6 +138,17 @@ like ($cp1->run($stdargs),
       $t);
 $dbh1->do(q{DROP TABLE table_2_only});
 $dbh2->do(q{DROP TABLE table_2_only});
+
+$t = qq{$S fails when tables have different permissions};
+$dbh1->do(q{CREATE TABLE table_permtest (a int)});
+$dbh2->do(q{CREATE TABLE table_permtest (a int)});
+$dbh1->do(q{REVOKE insert ON table_permtest FROM public});
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL.*Items not matched: 1 .*Table "public.table_permtest" .* but \(none\) perms on 2},
+      $t);
+
+$dbh1->do(q{DROP TABLE table_permtest});
+$dbh2->do(q{DROP TABLE table_permtest});
 
 #/////////// Sequences
 
