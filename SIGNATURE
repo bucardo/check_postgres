@@ -22,9 +22,9 @@ SHA1 1ad96bb91ce1ca89a7dd87b5a502f9b530e36588 META.yml
 SHA1 1ef71b37a64c87b2329c214184a1e2dfe6b23ffe Makefile.PL
 SHA1 439030be7d36d3a7d3480d4ff6abda13c9030101 README
 SHA1 402367c7263659173171c17093d1356a06375ac4 TODO
-SHA1 35854baec49461833d2cdedfb032f1931276231a check_postgres.pl
-SHA1 c5d3f3a4ef646b27b77d0404bbee4c9f0e7097be check_postgres.pl.asc
-SHA1 604796e17dfc2a9f4de0f54cedc3dea46adddfff check_postgres.pl.html
+SHA1 d0342dd9e4858bb741bf3489d00319df206d3c40 check_postgres.pl
+SHA1 5cafafe0cbad700c13956fa1009339ac5d6ca9a8 check_postgres.pl.asc
+SHA1 a71b9bdac63c5d7d41965bed48a8a4c3423e7645 check_postgres.pl.html
 SHA1 c3d239c75a507a0b4d5a245ea82fb2e7fe2869cd t/00_basic.t
 SHA1 dc767132e602a61990c69082f27650e533db53c1 t/00_signature.t
 SHA1 b3b833488dca6a766aa185c2457d361a978103cb t/00_test_tester.t
@@ -67,7 +67,7 @@ SHA1 96e6e5da3e1f6753a469e7afc8cf070024b33b23 t/99_cleanup.t
 SHA1 526e68a2f793ab1f08db50c1dbe4fe5f2d281e5f t/CP_Testing.pm
 -----BEGIN PGP SIGNATURE-----
 
-iEYEAREDAAYFAkp3CekACgkQvJuQZxSWSshvwQCgyd1upeoJlTCPgQwuzmHaC+AA
-EWYAoORDtMseco97h/CMCDjeN+debBqi
-=IDAz
+iEUEAREDAAYFAkp3EAAACgkQvJuQZxSWSsgTnwCYh3He2g6Wds8qYfggCHmfcX8a
+xgCffF4OSxp2AFN/HdQTAkA4yzjPEDw=
+=tnxI
 -----END PGP SIGNATURE-----
