@@ -28,7 +28,7 @@ Login to the bucardo.org box, and then:
 * make distclean; perl Makefile.PL; make disttest; make dist
 * prove -v t/00_release.t
 * cd ~/htdocs/check_postgres
-* cp -i ~/tmp/check_postgres/check_postgres* .
+* cp -i ~/code/check_postgres/check_postgres* .
 * edit latest_version.txt
 * edit index.html
 
