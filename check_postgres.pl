@@ -7570,7 +7570,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.10.0> (July 25, 2009)
+=item B<Version 2.10.0> (August 3, 2009)
 
   For same_schema, compare view definitions, and compare languages.
   Make script into a global executable via the Makefile.PL file.
