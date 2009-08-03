@@ -2358,7 +2358,21 @@ sub check_backends {
 			$limit ||= $2;
 			my ($current,$dbname) = ($1,$3);
 			## Always want perf to show all
-			$db->{perf} .= " '$dbname'=$current";
+			my $nwarn=$w2;
+			my $ncrit=$e2;
+			if ($e1){
+				$ncrit = $limit-$e2;
+			}
+			elsif ($e3) {
+				$ncrit = (int $e2*$limit/100)
+			}
+			if ($w1){
+				$nwarn = $limit-$w2;
+			}
+			elsif ($w3) {
+				$nwarn = (int $w2*$limit/100)
+			}
+			$db->{perf} .= " '$dbname'=$current;$nwarn;$ncrit;0;$limit";
 			next SLURP if skip_item($dbname);
 			$total += $current;
 		}
@@ -7561,7 +7575,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   For same_schema, compare view definitions, and compare languages.
   Make script into a global executable via the Makefile.PL file.
   Better output when comparing two databases.
-  Proper Nagios output syntax for autovac_freeze (Cédric Villemain)
+  Proper Nagios output syntax for autovac_freeze and backends checks (Cédric Villemain)
 
 =item B<Version 2.9.5> (July 24, 2009)
 
