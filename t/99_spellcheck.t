@@ -132,6 +132,7 @@ login
 perl
 postgres
 runtime
+Schemas
 selectall
 stderr
 syslog
