@@ -7666,6 +7666,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.10.1>
 
   Add Nagios perf output to the wal_files check (Cédric Villemain)
+  Add support for .check_postgresrc, per request from Albe Laurenz.
+  Allow list of web fetch methods to be changed with the --get_method option.
 
 =item B<Version 2.10.0> (August 3, 2009)
 
