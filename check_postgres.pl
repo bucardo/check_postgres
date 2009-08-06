@@ -579,14 +579,14 @@ $opt{timeout} = 30;
 ## Format of these files is simply name=val
 
 my $rcfile;
-if (-e '.checkpostgresrc') {
-	$rcfile = '.checkpostgresrc';
+if (-e '.check_postgresrc') {
+	$rcfile = '.check_postgresrc';
 }
-elsif (-e "$ENV{HOME}/.checkpostgresrc") {
-	$rcfile = "$ENV{HOME}/.checkpostgresrc";
+elsif (-e "$ENV{HOME}/.check_postgresrc") {
+	$rcfile = "$ENV{HOME}/.check_postgresrc";
 }
-elsif (-e '/etc/checkpostgresrc') {
-	$rcfile = '/etc/checkpostgresrc';
+elsif (-e '/etc/check_postgresrc') {
+	$rcfile = '/etc/check_postgresrc';
 }
 if (defined $rcfile) {
 	open my $rc, '<', $rcfile or die qq{Could not open "$rcfile": $!\n};
@@ -6504,7 +6504,7 @@ and C<new_version_pg> checks. The following programs are tried, in order, to gra
 information from the web: GET, wget, fetch, curl, lynx, links. To force the use of just 
 one (and thus remove the overhead of trying all the others until one of those works), 
 enter one of the names as the argument to get_method. For example, a BSD box might enter 
-the folling line in their C<.checkpostgresrc> file:
+the folling line in their C<.check_postgresrc> file:
 
   get_method=fetch
 
