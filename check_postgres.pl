@@ -674,6 +674,7 @@ die $USAGE unless
 			   'PSQL=s',
 
 			   'get_method=s',
+			   'language=s',
 			   'mrtg=s',      ## used by MRTG checks only
 			   'logfile=s',   ## used by check_logfile only
 			   'queryname=s', ## used by query_runtime only
@@ -708,6 +709,11 @@ if ($opt{get_method}) {
 		print "\n";
 		exit;
 	}
+}
+
+## Allow the language to be changed by an explicit option
+if ($opt{language}) {
+	$lang = substr($opt{language},0,2);
 }
 
 ## Output the actual string returned by psql in the normal output
@@ -6508,8 +6514,13 @@ the folling line in their C<.check_postgresrc> file:
 
   get_method=fetch
 
-=back
+=item B<--language=VAL>
 
+Set the language to use for all output messages. Normally, this is detected by examining 
+the environment variables LC_ALL, LC_MESSAGES, and LANG, but setting this option 
+will override any such detection.
+
+=back
 
 
 =head1 ACTIONS
@@ -7668,6 +7679,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Add Nagios perf output to the wal_files check (Cédric Villemain)
   Add support for .check_postgresrc, per request from Albe Laurenz.
   Allow list of web fetch methods to be changed with the --get_method option.
+  Add support for the --language argument, which overrides any ENV.
 
 =item B<Version 2.10.0> (August 3, 2009)
 
