@@ -574,6 +574,65 @@ our $ERROR = '';
 $opt{test} = 0;
 $opt{timeout} = 30;
 
+## Look for any rc files to control additional parameters
+## Command line options always overwrite these
+## Format of these files is simply name=val
+
+my $rcfile;
+if (-e '.checkpostgresrc') {
+	$rcfile = '.checkpostgresrc';
+}
+elsif (-e "$ENV{HOME}/.checkpostgresrc") {
+	$rcfile = "$ENV{HOME}/.checkpostgresrc";
+}
+elsif (-e '/etc/checkpostgresrc') {
+	$rcfile = '/etc/checkpostgresrc';
+}
+if (defined $rcfile) {
+	open my $rc, '<', $rcfile or die qq{Could not open "$rcfile": $!\n};
+	RCLINE:
+	while (<$rc>) {
+		next if /^\s*#/;
+		next unless /^\s*(\w+)\s*=\s*(.+?)\s*$/o;
+		my ($name,$value) = ($1,$2); ## no critic (ProhibitCaptureWithoutTest)
+		## Map alternate option spellings to preferred names
+		if ($name eq 'dbport' or $name eq 'p') {
+			$name = 'port';
+		}
+		elsif ($name eq 'dbhost' or $name eq 'H') {
+			$name = 'host';
+		}
+		elsif ($name eq 'db') {
+			$name = 'dbname';
+		}
+		elsif ($name eq 'u') {
+			$name = 'dbuser';
+		}
+		if ($name eq 'dbport2' or $name eq 'p2') {
+			$name = 'port2';
+		}
+		elsif ($name eq 'dbhost2' or $name eq 'H2') {
+			$name = 'host2';
+		}
+		elsif ($name eq 'db2') {
+			$name = 'dbname2';
+		}
+		elsif ($name eq 'u2') {
+			$name = 'dbuser2';
+		}
+
+		## These options are multiples ('@s')
+		for my $arr (qw/include exclude includeuser excludeuser host port dbname dbpass dbservice/) {
+			if ($name eq $arr or $name eq "${arr}2") {
+				push @{$opt{$name}} => $value;
+				next RCLINE;
+			}
+		}
+		$opt{$name} = $value;
+	}
+	close $rc or die;
+}
+
 die $USAGE unless
 	GetOptions(
 			   \%opt,
