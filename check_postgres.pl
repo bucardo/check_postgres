@@ -673,6 +673,7 @@ die $USAGE unless
 
 			   'PSQL=s',
 
+			   'get_method=s',
 			   'mrtg=s',      ## used by MRTG checks only
 			   'logfile=s',   ## used by check_logfile only
 			   'queryname=s', ## used by query_runtime only
@@ -689,6 +690,25 @@ die $USAGE unless
 our $VERBOSE = $opt{verbose} || 0;
 
 our $OUTPUT = lc $opt{output} || '';
+
+## Allow the optimization of the get_methods list by an argument
+if ($opt{get_method}) {
+	my $found = 0;
+	for my $meth (@get_methods) {
+		if ($meth =~ /^$opt{get_method}/io) {
+			@get_methods = ($meth);
+			$found = 1;
+			last;
+		}
+	}
+	if (!$found) {
+		print "Unknown value for get_method: $opt{get_method}\n";
+		print "Valid choices are:\n";
+		print (join "\n" => map { s/(\w+).*/$1/; $_ } @get_methods);
+		print "\n";
+		exit;
+	}
+}
 
 ## Output the actual string returned by psql in the normal output
 ## Argument is 'a' for all, 'w' for warning, 'c' for critical, 'u' for unknown
@@ -6477,7 +6497,19 @@ Outputs the exact string returned by psql, for use in debugging. The value is on
 which determine if the output is displayed or not, where 'a' = all, 'c' = critical, 'w' = warning,
 'o' = ok, and 'u' = unknown. Letters can be combined.
 
+=item B<--get_method=VAL>
+
+Allows specification of the method used to fetch information for the C<new_version_cp> 
+and C<new_version_pg> checks. The following programs are tried, in order, to grab the 
+information from the web: GET, wget, fetch, curl, lynx, links. To force the use of just 
+one (and thus remove the overhead of trying all the others until one of those works), 
+enter one of the names as the argument to get_method. For example, a BSD box might enter 
+the folling line in their C<.checkpostgresrc> file:
+
+  get_method=fetch
+
 =back
+
 
 
 =head1 ACTIONS
@@ -7078,7 +7110,7 @@ failure, the fourth line will provide more detail on the failure encountered.
 (check_postgres.pl) is available, by grabbing the version from a small text file 
 on the main page of the home page for the project. Returns a warning if the returned 
 version does not match the one you are running. Recommended interval to check is 
-once a day.
+once a day. See also the information on the C<--get_method> option.
 
 =head2 B<new_version_pg>
 
@@ -7087,7 +7119,8 @@ exists for each database connected to. Note that this only checks for revision, 
 going from 8.3.6 to 8.3.7. Revisions are always 100% binary compatible and involve no 
 dump and restore to upgrade. Revisions are made to address bugs, so upgrading as soon 
 as possible is always recommended. Returns a warning if you do not have the latest revision.
-It is recommended this check is run at least once a day.
+It is recommended this check is run at least once a day. See also the information on 
+the C<--get_method> option.
 
 =head2 B<prepared_txns>
 
