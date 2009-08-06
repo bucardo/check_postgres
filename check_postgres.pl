@@ -3113,6 +3113,7 @@ sub check_wal_files {
 			next;
 		}
 		my $msg = qq{$numfiles};
+		$db->{perf} .= " '$db->{host}'=$numfiles;$warning;$critical";
 		if (length $critical and $numfiles > $critical) {
 			add_critical $msg;
 		}
@@ -7569,6 +7570,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.10.1>
+
+  Add Nagios perf output to the wal_files check (Cédric Villemain)
 
 =item B<Version 2.10.0> (August 3, 2009)
 
