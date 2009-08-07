@@ -622,7 +622,7 @@ if (defined $rcfile) {
 		}
 
 		## These options are multiples ('@s')
-		for my $arr (qw/include exclude includeuser excludeuser host port dbname dbpass dbservice/) {
+		for my $arr (qw/include exclude includeuser excludeuser host port dbuser dbname dbpass dbservice/) {
 			if ($name eq $arr or $name eq "${arr}2") {
 				push @{$opt{$name}} => $value;
 				next RCLINE;
