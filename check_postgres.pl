@@ -8080,7 +8080,7 @@ The index bloat size optimization is rough.
 
 Some actions may not work on older versions of Postgres (before 8.0).
 
-Please report any problems to greg@endpoint.com.
+Please report any problems to check_postgres@bucardo.org
 
 =head1 AUTHOR
 
