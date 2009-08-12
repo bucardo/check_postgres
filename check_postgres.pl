@@ -598,6 +598,8 @@ if (! $opt{'no-check_postgresrc'}) {
 		$rcfile = '/etc/check_postgresrc';
 	}
 }
+## We need a temporary hash so that multi-value options can be overriden on the command line
+my %tempopt;
 if (defined $rcfile) {
 	open my $rc, '<', $rcfile or die qq{Could not open "$rcfile": $!\n};
 	RCLINE:
@@ -633,10 +635,10 @@ if (defined $rcfile) {
 
 		## These options are multiples ('@s')
 		for my $arr (qw/include exclude includeuser excludeuser host port dbuser dbname dbpass dbservice/) {
-			if ($name eq $arr or $name eq "${arr}2") {
-				push @{$opt{$name}} => $value;
-				next RCLINE;
-			}
+			next if $name ne $arr and $name ne "${arr}2";
+			push @{$tempopt{$name}} => $value;
+			## Don't set below as a normal value
+			next RCLINE;
 		}
 		$opt{$name} = $value;
 	}
@@ -698,6 +700,11 @@ die $USAGE unless
 			   )
 	and keys %opt
 	and ! @ARGV;
+
+## Put multi-val options from check_postgresrc in place, only if no command-line args!
+for my $mv (keys %tempopt) {
+	$opt{$mv} ||= delete $tempopt{$mv};
+}
 
 our $VERBOSE = $opt{verbose} || 0;
 
@@ -7701,6 +7708,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.11.0>
 
   Add the --no-check_postgresrc flag.
+  Ensure check_postgresrc options are completely overriden by command-line options.
 
 =item B<Version 2.10.1>
 
