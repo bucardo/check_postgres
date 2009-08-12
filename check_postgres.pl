@@ -578,15 +578,25 @@ $opt{timeout} = 30;
 ## Command line options always overwrite these
 ## Format of these files is simply name=val
 
+## This option must come before the GetOptions call
+for my $arg (@ARGV) {
+	if ($arg eq '--no-check_postgresrc') {
+		$opt{'no-check_postgresrc'} = 1;
+		last;
+	}
+}
+
 my $rcfile;
-if (-e '.check_postgresrc') {
-	$rcfile = '.check_postgresrc';
-}
-elsif (-e "$ENV{HOME}/.check_postgresrc") {
-	$rcfile = "$ENV{HOME}/.check_postgresrc";
-}
-elsif (-e '/etc/check_postgresrc') {
-	$rcfile = '/etc/check_postgresrc';
+if (! $opt{'no-check_postgresrc'}) {
+	if (-e '.check_postgresrc') {
+		$rcfile = '.check_postgresrc';
+	}
+	elsif (-e "$ENV{HOME}/.check_postgresrc") {
+		$rcfile = "$ENV{HOME}/.check_postgresrc";
+	}
+	elsif (-e '/etc/check_postgresrc') {
+		$rcfile = '/etc/check_postgresrc';
+	}
 }
 if (defined $rcfile) {
 	open my $rc, '<', $rcfile or die qq{Could not open "$rcfile": $!\n};
@@ -648,6 +658,7 @@ die $USAGE unless
 			   'test',
 			   'symlinks',
 			   'debugoutput=s',
+			   'no-check_postgresrc',
 
 			   'action=s',
 			   'warning=s',
@@ -7673,6 +7684,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.11.0>
+
+  Add the --no-check_postgresrc flag.
 
 =item B<Version 2.10.1>
 
