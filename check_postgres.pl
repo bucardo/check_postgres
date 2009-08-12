@@ -7621,6 +7621,19 @@ make sure that the databases can be contacted, and that certain per-action
 prerequisites are met, such as whether the user is a superuser, if the version 
 of Postgres is new enough, and if stats_row_level is enabled.
 
+=head1 FILES
+
+In addition to command-line configurations, you can put any options inside of a file. The file 
+F<.check_postgresrc> in the current directory will be used if found. If not found, then the file 
+F<~/.check_postgresrc> will be used. Finally, the file /etc/check_postgresrc will be used if available. 
+The format of the file is option = value, one per line. Any line starting with a '#' will be skipped. 
+Any values loaded from a check_postgresrc file will be overwritten by command-line options. All 
+check_postgresrc files can be ignored by supplying a C<--no-checkpostgresrc> argument.
+
+=head1 ENVIRONMENT VARIABLES
+
+The encironment variable I<$ENV{HOME}> is used to look for a F<.check_postgresrc> file.
+
 =head1 TIPS AND TRICKS
 
 Since this program uses the B<psql> program, make sure it is accessible to the 
