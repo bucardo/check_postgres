@@ -402,7 +402,7 @@ sub run {
 	my $dbhost = $self->{shorthost} || $self->{dbhost}   || die 'No dbhost?';
 	my $dbuser = $self->{testuser} || die 'No testuser?';
 	my $dbname = $self->{dbname}   || die 'No dbname?';
-	my $com = qq{perl check_postgres.pl --action=$action --dbhost="$dbhost" --dbuser=$dbuser};
+	my $com = qq{perl check_postgres.pl --no-check_postgresrc --action=$action --dbhost="$dbhost" --dbuser=$dbuser};
     if ($extra =~ s/--nodbname//) {
     }
 	elsif ($extra !~ /dbname=/) {
