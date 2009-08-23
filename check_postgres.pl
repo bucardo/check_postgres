@@ -2109,7 +2109,7 @@ sub validate_range {
 	my $arg = shift;
 	defined $arg and ref $arg eq 'HASH' or ndie qq{validate_range must be called with a hashref\n};
 
-	return ('','','','') if $MRTG and !$arg->{forcemrtg};
+	return ('','') if $MRTG and !$arg->{forcemrtg};
 
 	my $type = $arg->{type} or ndie qq{validate_range must be provided a 'type'\n};
 
@@ -2120,10 +2120,6 @@ sub validate_range {
 	my $critical = exists $opt{critical} ? $opt{critical} :
 		exists $opt{warning} ? '' : $arg->{default_critical} || '';
 
-	# We need the extension : KB,GB, etc... or % for cleaner nagios output
-	my $wuom;
-	my $cuom;
-
 	if ('string' eq $type) {
 		## Don't use this unless you have to
 	}
@@ -2133,14 +2129,12 @@ sub validate_range {
 				ndie msg('range-seconds', 'warning');
 			}
 			$warning = $1;
-			$wuom = 's';
 		}
 		if (length $critical) {
 			if ($critical !~ $timesecre) {
 				ndie msg('range-seconds', 'critical')
 			}
 			$critical = $1;
-			$cuom = 's';
 			if (length $warning and $warning > $critical) {
 				ndie msg('range-warnbigtime', $warning, $critical);
 			}
@@ -2155,8 +2149,6 @@ sub validate_range {
 		if (length $warning and length $critical and $warning > $critical) {
 			ndie msg('range-warnbigtime', $warning, $critical);
 		}
-		$wuom = 's';
-		$cuom = 's';
 	}
 	elsif ('version' eq $type) {
 		my $msg = msg('range-version');
@@ -2176,17 +2168,12 @@ sub validate_range {
 				ndie msg('range-badsize', 'critical');
 			}
 			$critical = size_in_bytes($1,$2);
-			$cuom=uc "$2b";
 		}
 		if (length $warning) {
 			if ($warning !~ $sizere) {
 				ndie msg('range-badsize', 'warning');
 			}
-die "Got $1 and $2\n";
-
-$wuom = "$1";
 			$warning = size_in_bytes($1,$2);
-			$wuom=uc "$2b";
 			if (length $critical and $warning > $critical) {
 				ndie msg('range-warnbigsize', $warning, $critical);
 			}
@@ -2233,38 +2220,28 @@ $wuom = "$1";
 			if ($critical !~ /^\d+\%$/) {
 				ndie msg('range-badpercent', 'critical');
 			}
-			$cuom = '%';
 		}
 		if (length $warning) {
 			if ($warning !~ /^\d+\%$/) {
 				ndie msg('range-badpercent', 'warning');
 			}
-			$wuom = '%';
 		}
 	}
 	elsif ('size or percent' eq $type) {
 		if (length $critical) {
 			if ($critical =~ $sizere) {
 				$critical = size_in_bytes($1,$2);
-				$cuom=uc "$2b";
 			}
 			elsif ($critical !~ /^\d+\%$/) {
 				ndie msg('range-badpercsize', 'critical');
-			}
-			else {
-			  $cuom = '%';
 			}
 		}
 		if (length $warning) {
 			if ($warning =~ $sizere) {
 				$warning = size_in_bytes($1,$2);
-				$wuom=uc "$2b";
 			}
 			elsif ($warning !~ /^\d+\%$/) {
 				ndie msg('range-badpercsize', 'warning');
-			}
-			else {
-			  $wuom = '%';
 			}
 		}
 		elsif (! length $critical) {
@@ -2333,7 +2310,7 @@ $wuom = "$1";
 		}
 	}
 
-	return ($warning,$critical, $wuom, $cuom);
+	return ($warning,$critical);
 
 } ## end of validate_range
 
@@ -2346,7 +2323,7 @@ sub check_autovac_freeze {
 	## Warning and criticals are percentages
 	## Can also ignore databases with exclude, and limit with include
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
 		  type              => 'percent',
 		  default_warning   => '90%',
@@ -2598,7 +2575,7 @@ sub check_bloat {
 		$LIMIT = $opt{perflimit};
 	}
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
 		  type               => 'size or percent',
 		  default_warning    => '1 GB',
@@ -2855,7 +2832,7 @@ sub check_database_size {
 	## Limit to a specific user (db owner) with the includeuser option
 	## Exclude users with the excludeuser option
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range({type => 'size'});
+	my ($warning, $critical) = validate_range({type => 'size'});
 
 	$USERWHERECLAUSE =~ s/AND/WHERE/;
 
@@ -2896,16 +2873,9 @@ sub check_database_size {
 		}
 
 		my $msg = '';
-		my ($nwarn, $ncrit)= ('', '');
-		$nwarn = bytes_in_size($warning,$wuom) if ($warning);
-		$ncrit = bytes_in_size($critical,$wuom) if ($critical);
-
 		for (sort {$s{$b}[0] <=> $s{$a}[0] or $a cmp $b } keys %s) {
 			$msg .= "$_: $s{$_}[0] ($s{$_}[1]) ";
-			$wuom=$cuom if (!$wuom);
-			$db->{perf} .= " '$_'="
-						  .bytes_in_size($s{$_}[0],$wuom)."$wuom"
-						  .";$nwarn".";$ncrit";
+			$db->{perf} .= " $_=$s{$_}[0]";
 		}
 		if (length $critical and $max >= $critical) {
 			add_critical $msg;
@@ -2942,7 +2912,7 @@ sub check_disk_space {
 	## NOTE: Needs to run on the same system (for now)
 	## XXX Allow custom ssh commands for remote df and the like
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
 		  type             => 'size or percent',
 		  default_warning  => '90%',
@@ -3120,7 +3090,7 @@ sub check_fsm_pages {
 	## Critical and warning are a percentage of max_fsm_pages
 	## Example: --critical=95
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
 		  type              => 'percent',
 		  default_warning   => '85%',
@@ -3181,7 +3151,7 @@ sub check_fsm_relations {
 	## Critical and warning are a percentage of max_fsm_relations
 	## Example: --critical=95
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
 		  type              => 'percent',
 		  default_warning   => '85%',
@@ -3240,7 +3210,7 @@ sub check_wal_files {
 	## Critical and warning are the number of files
 	## Example: --critical=40
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range({type => 'integer', leastone => 1});
+	my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
 
 	## Figure out where the pg_xlog directory is
 	$SQL = q{SELECT count(*) FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$'}; ## no critic (RequireInterpolationOfMetachars)
@@ -3293,7 +3263,7 @@ sub check_relation_size {
 	## Limit to a specific user (relation owner) with the includeuser option
 	## Exclude users with the excludeuser option
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range({type => 'size'});
+	my ($warning, $critical) = validate_range({type => 'size'});
 
 	$SQL = q{SELECT pg_relation_size(c.oid), pg_size_pretty(pg_relation_size(c.oid)), relkind, relname, nspname };
 	$SQL .= sprintf 'FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace',
@@ -3399,7 +3369,7 @@ sub check_last_vacuum_analyze {
 	## Example:
 	## --exclude=~pg_ --include=pg_class,pg_attribute
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
 		 type              => 'time',
 		  default_warning  => '1 day',
@@ -3515,7 +3485,7 @@ sub check_listener {
 		$opt{critical} = $opt{mrtg};
 	}
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range({type => 'restringex', forcemrtg => 1});
+	my ($warning, $critical) = validate_range({type => 'restringex', forcemrtg => 1});
 
 	my $string = length $critical ? $critical : $warning;
 	my $regex = ($string =~ s/^~//) ? '~' : '=';
@@ -3562,7 +3532,7 @@ sub check_locks {
 	## Lock names are case-insensitive, and do not need the "lock" at the end.
 	## Example: --warning=100 --critical="total=200;exclusive=20;waiting=5"
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
 		  type             => 'multival',
 		  default_warning  => 100,
@@ -3803,7 +3773,7 @@ sub check_query_runtime {
 	## --warning="100s" --critical="120s" --queryname="speedtest1"
 	## --warning="5min" --critical="15min" --queryname="speedtest()"
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range({type => 'time'});
+	my ($warning, $critical) = validate_range({type => 'time'});
 
 	my $queryname = $opt{queryname} || '';
 
@@ -3857,7 +3827,7 @@ sub check_query_time {
 	## Limit to a specific user with the includeuser option
 	## Exclude users with the excludeuser option
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
 		  type             => 'time',
 		  default_warning  => '2 minutes',
@@ -3898,7 +3868,10 @@ sub check_query_time {
 			$stats{$db->{dbname}} = $max;
 			next;
 		}
-		$db->{perf} .= msg('maxtime', $max);
+		$db->{perf} .= "maxtime=$max;";
+		$db->{perf} .= "$warning" if length $warning;
+		$db->{perf} .= ";";
+		$db->{perf} .= "$critical" if length $critical;
 
 		my $msg = msg('qtime-msg', $max);
 		if (length $critical and $max >= $critical) {
@@ -3929,9 +3902,9 @@ sub check_txn_time {
 	## Limit to a specific user with the includeuser option
 	## Exclude users with the excludeuser option
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
-		  type             => 'time',
+		  type => 'time',
 		  });
 
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-xact_start)),0)) }.
@@ -4002,9 +3975,9 @@ sub check_txn_idle {
 	## Limit to a specific user with the includeuser option
 	## Exclude users with the excludeuser option
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
-		  type             => 'time',
+		  type => 'time',
 		  });
 
 
@@ -4085,7 +4058,7 @@ sub check_settings_checksum {
 	## Example:
 	##  check_postgres_settings_checksum --critical="4e7ba68eb88915d3d1a36b2009da4acd"
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range({type => 'checksum', onlyone => 1});
+	my ($warning, $critical) = validate_range({type => 'checksum', onlyone => 1});
 
 	eval {
 		require Digest::MD5;
@@ -4144,7 +4117,7 @@ sub check_timesync {
 	## Supports: Nagios, MRTG
 	## Warning and critical are given in number of seconds difference
 
-	my ($warning,$critical, $wuom, $cuom) = validate_range
+	my ($warning,$critical) = validate_range
 		({
 		  type             => 'seconds',
 		  default_warning  => 2,
@@ -4196,7 +4169,7 @@ sub check_txn_wraparound {
 	## See: http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND
 	## It makes no sense to run this more than once on the same cluster
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
 		  type             => 'positive integer',
 		  default_warning  => 1_300_000_000,
@@ -4265,7 +4238,7 @@ sub check_version {
 		}
 	}
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range({type => 'version', forcemrtg => 1});
+	my ($warning, $critical) = validate_range({type => 'version', forcemrtg => 1});
 
 	my ($warnfull, $critfull) = (($warning =~ /^\d+\.\d+$/ ? 0 : 1),($critical =~ /^\d+\.\d+$/ ? 0 : 1));
 
@@ -4317,7 +4290,7 @@ sub check_custom_query {
 
 	my $valtype = $opt{valtype} || 'integer';
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range({type => $valtype, leastone => 1});
+	my ($warning, $critical) = validate_range({type => $valtype, leastone => 1});
 
 	my $query = $opt{query} or ndie msg('custom-nostring');
 
@@ -4379,7 +4352,7 @@ sub check_replicate_row {
 	## Supports: Nagios, MRTG
 	## Warning and critical are time to replicate to all slaves
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range({type => 'time', leastone => 1, forcemrtg => 1});
+	my ($warning, $critical) = validate_range({type => 'time', leastone => 1, forcemrtg => 1});
 
 	if ($warning and $critical and $warning > $critical) {
 		ndie msg('range-warnbig');
@@ -5788,7 +5761,7 @@ sub check_sequence {
 	## Warning and critical are percentages
 	## Can exclude and include sequences
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
 		  type              => 'percent',
 		  default_warning   => '85%',
@@ -5917,7 +5890,7 @@ sub check_checkpoint {
 	## Warning and critical are seconds
 	## Requires $ENV{PGDATA} or --datadir
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
 		  type              => 'time',
 		  leastone          => 1,
@@ -6014,7 +5987,7 @@ sub check_disabled_triggers {
 	## Supports: Nagios, MRTG
 	## Warning and critical are integers, defaults to 1
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
 		  type              => 'positive integer',
 		  default_warning   => 1,
@@ -6180,7 +6153,7 @@ sub check_prepared_txns {
 	## Most installations probably want no prepared_transactions
 	## Supports: Nagios, MRTG
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
 		  type              => 'seconds',
 		  default_warning   => '1',
@@ -6256,7 +6229,7 @@ sub show_dbstats {
 	## Supports: Cacti
 	## Assumes psql and target are the same version for the 8.3 check
 
-	my ($warning, $critical, $wuom, $cuom) = validate_range
+	my ($warning, $critical) = validate_range
 		({
 		  type => 'cacti',
 	  });
@@ -6573,7 +6546,7 @@ and C<new_version_pg> checks. The following programs are tried, in order, to gra
 information from the web: GET, wget, fetch, curl, lynx, links. To force the use of just 
 one (and thus remove the overhead of trying all the others until one of those works), 
 enter one of the names as the argument to get_method. For example, a BSD box might enter 
-the folling line in their C<.check_postgresrc> file:
+the following line in their C<.check_postgresrc> file:
 
   get_method=fetch
 
@@ -7684,7 +7657,7 @@ check_postgresrc files can be ignored by supplying a C<--no-checkpostgresrc> arg
 
 =head1 ENVIRONMENT VARIABLES
 
-The encironment variable I<$ENV{HOME}> is used to look for a F<.check_postgresrc> file.
+The environment variable I<$ENV{HOME}> is used to look for a F<.check_postgresrc> file.
 
 =head1 TIPS AND TRICKS
 
