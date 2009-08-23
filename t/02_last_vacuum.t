@@ -26,7 +26,7 @@ my $label = 'POSTGRES_LAST_VACUUM';
 
 SKIP:
 {
-	$ver < 80200 and skip 'Cannot test autovac_freeze on old Postgres versions', 14;
+	$ver < 80200 and skip 'Cannot test last_vacuum on old Postgres versions', 14;
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(q{-w 0});
