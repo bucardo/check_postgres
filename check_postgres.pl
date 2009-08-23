@@ -7708,7 +7708,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.11.0>
+=item B<Version 2.11.0> (August 23, 2009)
 
   Add Nagios perf output to the wal_files check (Cédric Villemain)
   Add support for .check_postgresrc, per request from Albe Laurenz.
