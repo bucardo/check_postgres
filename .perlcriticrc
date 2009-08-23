@@ -10,6 +10,7 @@ stop_words = Mullane Nagios Slony nols salesrep psql dbname postgres USERNAME us
 [-Bangs::ProhibitFlagComments]
 [-Bangs::ProhibitNumberedNames]
 [-Bangs::ProhibitVagueNames]
+[-BuiltinFunctions::ProhibitComplexMappings]
 [-BuiltinFunctions::ProhibitReverseSortBlock]
 [-CodeLayout::ProhibitParensWithBuiltins]
 [-CodeLayout::ProhibitQuotedWordLists]
@@ -18,6 +19,7 @@ stop_words = Mullane Nagios Slony nols salesrep psql dbname postgres USERNAME us
 [-CodeLayout::RequireUseUTF8]
 [-ControlStructures::ProhibitCascadingIfElse]
 [-ControlStructures::ProhibitDeepNests]
+[-ControlStructures::ProhibitMutatingListFunctions]
 [-ControlStructures::ProhibitNegativeExpressionsInUnlessAndUntilConditions] 
 [-ControlStructures::ProhibitPostfixControls]
 [-ControlStructures::ProhibitUnlessBlocks]
@@ -72,3 +74,4 @@ stop_words = Mullane Nagios Slony nols salesrep psql dbname postgres USERNAME us
 [-Variables::RequireInitializationForLocalVars]
 [-Variables::RequireLocalizedPunctuationVars]
 [-Variables::RequireLexicalLoopIterators]
+
