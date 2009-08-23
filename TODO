@@ -21,6 +21,8 @@ Quick list of outstanding items / bugs / feature requests for CP:
 * Full and correct support for Nagios, e.g.
   http://nagiosplug.sourceforge.net/developer-guidelines.html#AEN203
 
+* Test for all the Nagios output of each action.
+
 * For last_analyze and last_vacuum, way to skip null (never been hit)
 
 * Check at least one table has been vacuumed/analyzed since X time
