@@ -1998,21 +1998,6 @@ sub size_in_bytes { ## no critic (RequireArgUnpacking)
 } ## end of size_in_bytes
 
 
-sub bytes_in_size {
-
-	## Given a number in bytes and a unit, return the number in the unit.
-	## Defaults to bytes
-
-	my ($val,$unit) = ($_[0],lc substr($_[1]||'s',0,1));
-	$val=0 if (!$val);
-	return sprintf("%.3f", $val / ($unit eq 'b' ? 1 : $unit eq 'k' ? 1024 : $unit eq 'm' ? 1024**2 :
-					  $unit eq 'g' ? 1024**3 : $unit eq 't' ? 1024**4 :
-					  $unit eq 'p' ? 1024**5 : $unit eq 'e' ? 1024**6 :
-					  $unit eq 'z' ? 1024**7 : 1));
-
-} ## end of bytes_in_size
-
-
 sub size_in_seconds {
 
 	my ($string,$type) = @_;
@@ -3870,7 +3855,7 @@ sub check_query_time {
 		}
 		$db->{perf} .= "maxtime=$max;";
 		$db->{perf} .= "$warning" if length $warning;
-		$db->{perf} .= ";";
+		$db->{perf} .= ';';
 		$db->{perf} .= "$critical" if length $critical;
 
 		my $msg = msg('qtime-msg', $max);
