@@ -13,12 +13,12 @@ Quick notes on the current release process:
 * Run: make html
 * Run: make signature_asc
 * Run: make signature
+* Add a new tag: git tag -u 14964ac8 1.2.3 -m "Version 1.2.3, released August 3, 2009" <commit>
 * Run: export TEST_SIGNATURE=1 TEST_CRITIC=1 TEST_SPELL=1 TEST_POD=1 TEST_AUTHOR=1
 * Run: make distclean; perl Makefile.PL; make disttest
 * git commit as needed
 * Run: make dist
 * git push
-* Add a new tag: git tag -u 14964ac8 1.2.3 -m "Version 1.2.3, released August 3, 2009" <commit>
 * git push --tags
 
 Login to the bucardo.org box, and then:
