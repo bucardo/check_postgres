@@ -1,6 +1,8 @@
 #!perl
 
-## Make sure the version number is consistent in all places
+## Pre-release checks
+## 1. Make sure the version number is consistent in all places
+## 2. Make sure we have a valid tag for this release
 
 use 5.006;
 use strict;
@@ -12,7 +14,7 @@ use lib 't','.';
 if (!$ENV{TEST_AUTHOR}) {
 	plan skip_all => 'Set the environment variable TEST_AUTHOR to enable this test';
 }
-plan tests => 1;
+plan tests => 2;
 
 my %v;
 my $vre = qr{(\d+\.\d+\.\d+)};
@@ -70,6 +72,16 @@ for my $filename (keys %v) {
 
 if ($good) {
 	pass "All version numbers are the same ($lastver)";
+	my $taginfo = qx{git tag -v $lastver 2>&1};
+	if ($taginfo =~ /not exist/) {
+		fail "No such tag: $lastver";
+	}
+	elsif ($taginfo !~ /Good signature from/) {
+		fail "The git tag $lastver does not have a valid signature";
+	}
+	else {
+		pass "The git tag $lastver appears correct";
+	}
 }
 else {
 	fail 'All version numbers were not the same!';
@@ -79,6 +91,7 @@ else {
 			diag "File: $filename. Line: $line. Version: $ver\n";
 		}
 	}
+	fail 'Cannot check git tag until we have a single version number!';
 }
 
 exit;
