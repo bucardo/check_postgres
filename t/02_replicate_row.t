@@ -52,8 +52,8 @@ like ($cp->run('-w foo'), qr{ERROR:.+'warning' must be a valid time}, $t);
 $t=qq{$S fails when called with invalid critical};
 like ($cp->run('-c foo'), qr{ERROR:.+'critical' must be a valid time}, $t);
 
-$t=qq{$S fails when critical is greater than warning time};
-like ($cp->run('-w 22 -c 44'), qr{ERROR:.+'warning' option cannot be less}, $t);
+$t=qq{$S fails when warning is greater than critical time};
+like ($cp->run('-w 44 -c 22'), qr{ERROR:.+'warning' option .+ cannot be larger}, $t);
 
 $t=qq{$S fails when called with no repinfo argument};
 like ($cp->run('-w 2'), qr{ERROR: Need a repinfo}, $t);
