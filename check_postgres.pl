@@ -598,7 +598,7 @@ if (! $opt{'no-check_postgresrc'}) {
 		$rcfile = '/etc/check_postgresrc';
 	}
 }
-## We need a temporary hash so that multi-value options can be overriden on the command line
+## We need a temporary hash so that multi-value options can be overridden on the command line
 my %tempopt;
 if (defined $rcfile) {
 	open my $rc, '<', $rcfile or die qq{Could not open "$rcfile": $!\n};

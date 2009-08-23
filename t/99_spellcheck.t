@@ -175,6 +175,7 @@ xmlns
 
 ## check_postgres.pl:
 
+args
 artemus
 Astill
 AUTOanalyze
@@ -208,6 +209,7 @@ finishup
 flagg
 franklin
 fsm
+GetOptions
 garrett
 greg
 grimm
@@ -225,6 +227,7 @@ morpork
 mrtg
 MRTG
 msg
+multi
 nagios
 NAGIOS
 nextval
@@ -240,11 +243,13 @@ perflimit
 pgpass
 pluto
 Postgres
+postgresrc
 prepend
 psql
 PSQL
 queryname
 quirm
+rc
 refactoring
 ret
 robert
@@ -279,3 +284,4 @@ WAL
 watson
 wilkins
 RequireInterpolationOfMetachars
+
