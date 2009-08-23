@@ -81,6 +81,8 @@
 	<li><a href="#basic_filtering">BASIC FILTERING</a></li>
 	<li><a href="#user_name_filtering">USER NAME FILTERING</a></li>
 	<li><a href="#test_mode">TEST MODE</a></li>
+	<li><a href="#files">FILES</a></li>
+	<li><a href="#environment_variables">ENVIRONMENT VARIABLES</a></li>
 	<li><a href="#tips_and_tricks">TIPS AND TRICKS</a></li>
 	<li><a href="#dependencies">DEPENDENCIES</a></li>
 	<li><a href="#development">DEVELOPMENT</a></li>
@@ -101,7 +103,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.10.0</p>
+<p>This documents describes check_postgres.pl version 2.11.0</p>
 <p>
 </p>
 <hr />
@@ -376,6 +378,25 @@ other systems are supported yet.</p>
 <p>Outputs the exact string returned by psql, for use in debugging. The value is one or more letters,
 which determine if the output is displayed or not, where 'a' = all, 'c' = critical, 'w' = warning,
 'o' = ok, and 'u' = unknown. Letters can be combined.</p>
+</dd>
+<dt><strong><a name="get_method_val" class="item"><strong>--get_method=VAL</strong></a></strong></dt>
+
+<dd>
+<p>Allows specification of the method used to fetch information for the <code>new_version_cp</code> 
+and <code>new_version_pg</code> checks. The following programs are tried, in order, to grab the 
+information from the web: GET, wget, fetch, curl, lynx, links. To force the use of just 
+one (and thus remove the overhead of trying all the others until one of those works), 
+enter one of the names as the argument to get_method. For example, a BSD box might enter 
+the folling line in their <code>.check_postgresrc</code> file:</p>
+<pre>
+  get_method=fetch</pre>
+</dd>
+<dt><strong><a name="language_val" class="item"><strong>--language=VAL</strong></a></strong></dt>
+
+<dd>
+<p>Set the language to use for all output messages. Normally, this is detected by examining 
+the environment variables LC_ALL, LC_MESSAGES, and LANG, but setting this option 
+will override any such detection.</p>
 </dd>
 </dl>
 <p>
@@ -912,7 +933,7 @@ failure, the fourth line will provide more detail on the failure encountered.</p
 (check_postgres.pl) is available, by grabbing the version from a small text file 
 on the main page of the home page for the project. Returns a warning if the returned 
 version does not match the one you are running. Recommended interval to check is 
-once a day.</p>
+once a day. See also the information on the <code>--get_method</code> option.</p>
 <p>
 </p>
 <h2><a name="new_version_pg"><strong>new_version_pg</strong></a></h2>
@@ -921,7 +942,8 @@ exists for each database connected to. Note that this only checks for revision, 
 going from 8.3.6 to 8.3.7. Revisions are always 100% binary compatible and involve no 
 dump and restore to upgrade. Revisions are made to address bugs, so upgrading as soon 
 as possible is always recommended. Returns a warning if you do not have the latest revision.
-It is recommended this check is run at least once a day.</p>
+It is recommended this check is run at least once a day. See also the information on 
+the <code>--get_method</code> option.</p>
 <p>
 </p>
 <h2><a name="prepared_txns"><strong>prepared_txns</strong></a></h2>
@@ -1332,6 +1354,21 @@ of Postgres is new enough, and if stats_row_level is enabled.</p>
 <p>
 </p>
 <hr />
+<h1><a name="files">FILES</a></h1>
+<p>In addition to command-line configurations, you can put any options inside of a file. The file 
+<em class="file">.check_postgresrc</em> in the current directory will be used if found. If not found, then the file 
+<em class="file">~/.check_postgresrc</em> will be used. Finally, the file /etc/check_postgresrc will be used if available. 
+The format of the file is option = value, one per line. Any line starting with a '#' will be skipped. 
+Any values loaded from a check_postgresrc file will be overwritten by command-line options. All 
+check_postgresrc files can be ignored by supplying a <code>--no-checkpostgresrc</code> argument.</p>
+<p>
+</p>
+<hr />
+<h1><a name="environment_variables">ENVIRONMENT VARIABLES</a></h1>
+<p>The encironment variable <em>$ENV{HOME}</em> is used to look for a <em class="file">.check_postgresrc</em> file.</p>
+<p>
+</p>
+<hr />
 <h1><a name="tips_and_tricks">TIPS AND TRICKS</a></h1>
 <p>Since this program uses the <strong>psql</strong> program, make sure it is accessible to the 
 user running the script. If run as a cronjob, this often means modifying the 
@@ -1386,6 +1423,18 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="version_2_11_0" class="item"><strong>Version 2.11.0</strong></a></strong></dt>
+
+<dd>
+<pre>
+  Add Nagios perf output to the wal_files check (Cédric Villemain)
+  Add support for .check_postgresrc, per request from Albe Laurenz.
+  Allow list of web fetch methods to be changed with the --get_method option.
+  Add support for the --language argument, which overrides any ENV.
+  Add the --no-check_postgresrc flag.
+  Ensure check_postgresrc options are completely overriden by command-line options.
+  Fix incorrect warning &gt; critical logic in replicate_rows (Glyn Astill)</pre>
+</dd>
 <dt><strong><a name="0" class="item"><strong>Version 2.10.0</strong> (August 3, 2009)</a></strong></dt>
 
 <dd>
@@ -1915,7 +1964,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="bugs_and_limitations">BUGS AND LIMITATIONS</a></h1>
 <p>The index bloat size optimization is rough.</p>
 <p>Some actions may not work on older versions of Postgres (before 8.0).</p>
-<p>Please report any problems to <a href="mailto:greg@endpoint.com.">greg@endpoint.com.</a></p>
+<p>Please report any problems to <a href="mailto:check_postgres@bucardo.org">check_postgres@bucardo.org</a></p>
 <p>
 </p>
 <hr />

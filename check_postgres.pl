@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.10.1';
+our $VERSION = '2.11.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -6309,7 +6309,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.10.1
+This documents describes check_postgres.pl version 2.11.0
 
 =head1 SYNOPSIS
 
