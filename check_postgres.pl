@@ -2463,13 +2463,13 @@ sub check_backends {
 			## Always want perf to show all
 			my $nwarn=$w2;
 			my $ncrit=$e2;
-			if ($e1){
+			if ($e1) {
 				$ncrit = $limit-$e2;
 			}
 			elsif ($e3) {
 				$ncrit = (int $e2*$limit/100)
 			}
-			if ($w1){
+			if ($w1) {
 				$nwarn = $limit-$w2;
 			}
 			elsif ($w3) {
