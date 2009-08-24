@@ -2242,6 +2242,7 @@ sub validate_range {
 		}
 	}
 	elsif ('multival' eq $type) { ## Simple number, or foo=#;bar=#
+		## Note: only used for check_locks
 		my %err;
 		while ($critical =~ /(\w+)\s*=\s*(\d+)/gi) {
 			my ($name,$val) = (lc $1,$2);
@@ -2251,7 +2252,11 @@ sub validate_range {
 		if (keys %err) {
 			$critical = \%err;
 		}
-		elsif (length $critical and $critical !~ /^\d+$/) {
+		elsif (length $critical and $critical =~ /^(\d+)$/) {
+			$err{total} = $1;
+			$critical = \%err;
+		}
+		elsif (length $critical) {
 			ndie msg('range-badlock', 'critical');
 		}
 		my %warn;
@@ -2263,7 +2268,11 @@ sub validate_range {
 		if (keys %warn) {
 			$warning = \%warn;
 		}
-		elsif (length $warning and $warning !~ /^\d+$/) {
+		elsif (length $warning and $warning =~ /^(\d+)$/) {
+			$warn{total} = $1;
+			$warning = \%warn;
+		}
+		elsif (length $warning) {
 			ndie msg('range-badlock', 'warning');
 		}
 	}
@@ -3527,27 +3536,60 @@ sub check_locks {
 	$SQL = q{SELECT granted, mode, datname FROM pg_locks l JOIN pg_database d ON (d.oid=l.database)};
 	my $info = run_command($SQL, { regex => qr[\s*\w+\s*\|\s*] });
 
+	# Locks are counted globally not by db.
+	# add a limit by db ? (--critical='foodb.total=30 foodb.exclusive=3 postgres.total=3')
+	# end remove the -db option ?
+	# we output for each db, following the specific warning and critical :
+	# time=00.1 foodb.exclusive=2;;3 foodb.total=10;;30 postgres.exclusive=0;;3 postgres.total=1;;3
 	for $db (@{$info->{db}}) {
 		my $gotone = 0;
-		my %lock = (total => 0);
 		my %dblock;
+		my %totallock = (total => 0);
 	  SLURP: while ($db->{slurp} =~ /([tf])\s*\|\s*(\w+)\s*\|\s*(\w+)\s+/gsm) {
 			my ($granted,$mode,$dbname) = ($1,lc $2,$3);
 			next SLURP if skip_item($dbname);
 			$gotone = 1;
-			$lock{total}++;
 			$mode =~ s{lock$}{};
-			$lock{$mode}++;
-			$lock{waiting}++ if $granted ne 't';
-			$lock{$dbname}++; ## We assume nobody names their db 'rowexclusivelock'
-			$dblock{$dbname}++;
+			$dblock{$dbname}{total}++;
+			$dblock{$dbname}{$mode}++;
+			$dblock{$dbname}{waiting}++ if $granted ne 't';
 		}
+		# Compute total, add hash key for critical and warning specific check
+		for my $k (keys %dblock) {
+			if ($warning) {
+				for my $l (keys %{$warning}) {
+					$dblock{$k}{$l} = 0 if ! exists $dblock{$k}{$l};
+				}
+			}
+			if ($critical) {
+				for my $l (keys %{$critical}) {
+					$dblock{$k}{$l} = 0 if ! exists $dblock{$k}{$l};
+				}
+			}
+			for my $m (keys %{$dblock{$k}}){
+				$totallock{$m} += $dblock{$k}{$m};
+			}
+		}
+
 		if ($MRTG) {
-			$stats{$db->{dbname}} = $gotone ? $lock{total} : 0;
+			$stats{$db->{dbname}} = $totallock{total};
 			next;
 		}
-		for (sort keys %dblock) {
-			$db->{perf} .= " $_=$dblock{$_}";
+
+		# Nagios perfdata output
+		for my $dbname (sort keys %dblock) {
+			for my $type (sort keys %{ $dblock{$dbname} }) {
+				next if ((! $critical or ! exists $critical->{$type})
+							 and (!$warning  or ! exists $warning->{$type}));
+				$db->{perf} .= " '$dbname.$type'=$dblock{$dbname}{$type};";
+				if ($warning and exists $warning->{$type}) {
+					$db->{perf} .= $warning->{$type};
+				}
+				$db->{perf} .= ";";
+				if ($critical and $critical->{$type}) {
+					$db->{perf} .= $critical->{$type};
+				}
+			}
 		}
 
 		if (!$gotone) {
@@ -3557,31 +3599,19 @@ sub check_locks {
 
 		## If not specific errors, just use the total
 		my $ok = 1;
-		if (ref $critical) {
-			for my $type (keys %lock) {
-				next if ! exists $critical->{$type};
-				if ($lock{$type} >= $critical->{$type}) {
-					add_critical msg('locks-msg', $type, $lock{$type});
-					$ok = 0;
-				}
+		for my $type (keys %totallock) {
+			if ($critical and exists $critical->{$type} and $totallock{$type} >= $critical->{$type}) {
+				($type eq 'total')
+					? add_critical msg('locks-msg2', $totallock{total})
+					: add_critical msg('locks-msg', $type, $totallock{$type});
+				$ok = 0;
 			}
-		}
-		elsif (length $critical and $lock{total} >= $critical) {
-			add_critical msg('locks-msg2', $lock{total});
-			$ok = 0;
-		}
-		if (ref $warning) {
-			for my $type (keys %lock) {
-				next if ! exists $warning->{$type};
-				if ($lock{$type} >= $warning->{$type}) {
-					add_warning msg('locks-msg', $type, $lock{$type});
-					$ok = 0;
-				}
+			if ($warning and exists $warning->{$type} and $totallock{$type} >= $warning->{$type}) {
+				($type eq 'total')
+				  ? add_warning msg('locks-msg2', $totallock{total})
+				  : add_warning msg('locks-msg', $type, $totallock{$type});
+				$ok = 0;
 			}
-		}
-		elsif (length $warning and $lock{total} >= $warning) {
-			add_warning msg('locks-msg2', $lock{total});
-			$ok = 0;
 		}
 		if ($ok) {
 			my %show;
@@ -3596,7 +3626,7 @@ sub check_locks {
 			}
 			my $msg = '';
 			for (sort keys %show) {
-				$msg .= sprintf "$_=%d ", $lock{$_} || 0;
+				$msg .= sprintf "$_=%d ", $totallock{$_} || 0;
 			}
 			add_ok $msg;
 		}
@@ -7711,6 +7741,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.11.1>
 
   Proper Nagios output for last_vacuum|analyze actions. (Cédric Villemain)
+  Proper Nagios output for locks action. (Cédric Villemain)
 
 =item B<Version 2.11.0> (August 23, 2009)
 
