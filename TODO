@@ -39,3 +39,5 @@ Quick list of outstanding items / bugs / feature requests for CP:
 
 * Consider a more accurate bloat check, using the expensive pg_stattuple function
 
+* For the Nagios 'perf' output on last_analyze and last_vacuum (and other things with a time), 
+consider making a single global timing call.
