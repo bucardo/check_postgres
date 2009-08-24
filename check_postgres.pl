@@ -4206,7 +4206,11 @@ sub check_txn_wraparound {
 		my ($max,$msg) = (0,'?');
 	  SLURP: while ($db->{slurp} =~ /(\S.+?)\s+\|\s+(\d+)/gsm) {
 			my ($dbname,$dbtxns) = ($1,$2);
-			$db->{perf} .= " $dbname=$dbtxns";
+			$db->{perf} .= " '$dbname'=$dbtxns;";
+			$db->{perf} .= $warning if length $warning;
+			$db->{perf} .= ";";
+			$db->{perf} .= $critical if length $critical;
+			$db->{perf} .= ";0;2000000000";
 			next SLURP if skip_item($dbname);
 			if ($dbtxns > $max) {
                 $max = $dbtxns;
@@ -7742,6 +7746,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
   Proper Nagios output for last_vacuum|analyze actions. (Cédric Villemain)
   Proper Nagios output for locks action. (Cédric Villemain)
+  Proper Nagios output for txn_wraparound action. (Cédric Villemain)
 
 =item B<Version 2.11.0> (August 23, 2009)
 
