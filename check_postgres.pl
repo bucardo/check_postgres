@@ -3404,7 +3404,7 @@ sub check_last_vacuum_analyze {
 				$maxtime = -2 if $maxtime < 1;
 				next SLURP;
 			}
-			$db->{perf} .= " $schema.$name=$time" if $time >= 0;
+			$db->{perf} .= " $db->{dbname}.$schema.$name=${time}s;$warning;$critical" if $time >= 0;
 			if ($time > $maxtime) {
 				$maxtime = $time;
 				$maxrel = "$schema.$name";
@@ -7707,6 +7707,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.11.1>
+
+  Proper Nagios output for last_vacuum|analyze actions. (Cédric Villemain)
 
 =item B<Version 2.11.0> (August 23, 2009)
 
