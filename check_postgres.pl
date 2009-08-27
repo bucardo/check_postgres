@@ -4921,6 +4921,10 @@ SQL
 			}
 		}
 
+		for my $exclude (@{$opt{exclude}}) {
+			next TABLE if $name =~ /$exclude/;
+		}
+
 		push @{$fail{tables}{notexist}{1}} => $name;
 		$failcount++;
 	}
@@ -4933,6 +4937,10 @@ SQL
 			for my $regex (@{$filter{notable_regex}}) {
 				next TABLE if $name =~ /$regex/;
 			}
+		}
+
+		for my $exclude (@{$opt{exclude}}) {
+			next TABLE if $name =~ /$exclude/;
 		}
 
 		if (! exists $thing{1}{tables}{$name}) {
@@ -5044,6 +5052,10 @@ SQL
 			}
 		}
 
+		for my $exclude (@{$opt{exclude}}) {
+			next VIEW if $name =~ /$exclude/;
+		}
+
 		push @{$fail{views}{notexist}{1}} => $name;
 		$failcount++;
 	}
@@ -5056,6 +5068,10 @@ SQL
 			for my $regex (@{$filter{noview_regex}}) {
 				next VIEW if $name =~ /$regex/;
 			}
+		}
+
+		for my $exclude (@{$opt{exclude}}) {
+			next VIEW if $name =~ /$exclude/;
 		}
 
 		if (! exists $thing{1}{views}{$name}) {
@@ -5142,9 +5158,14 @@ SQL
 	## Compare columns
 
 	## Any columns on 1 but not 2, or 2 but not 1?
+  COLUMN:
 	for my $name (sort keys %{$thing{1}{columns}}) {
 		## Skip any mismatched tables - already handled above
 		next if ! exists $thing{2}{columns}{$name};
+
+		for my $exclude (@{$opt{exclude}}) {
+			next COLUMN if $name =~ /$exclude/;
+		}
 
 		my ($t1,$t2) = ($thing{1}{columns}{$name},$thing{2}{columns}{$name});
 		for my $col (sort keys %$t1) {
@@ -5196,6 +5217,10 @@ SQL
 			}
 		}
 
+		for my $exclude (@{$opt{exclude}}) {
+			next CONSTRAINT if $name =~ /$exclude/;
+		}
+
 		push @{$fail{constraints}{notexist}{1}} => [$name, $thing{1}{constraints}{$name}];
 		$failcount++;
 	}
@@ -5208,6 +5233,10 @@ SQL
 			for my $regex (@{$filter{noconstraint_regex}}) {
 				next CONSTRAINT if $name =~ /$regex/;
 			}
+		}
+
+		for my $exclude (@{$opt{exclude}}) {
+			next CONSTRAINT if $name =~ /$exclude/;
 		}
 
 		if (! exists $thing{1}{constraints}{$name}) {
@@ -5246,6 +5275,10 @@ SQL
 			}
 		}
 
+		for my $exclude (@{$opt{exclude}}) {
+			next CONSTRAINT if $name =~ /$exclude/;
+		}
+
 		push @{$fail{colconstraints}{notexist}{1}} => [$name, $tname, $cname];
 		$failcount++;
 	}
@@ -5258,6 +5291,10 @@ SQL
 			for my $regex (@{$filter{noconstraint_regex}}) {
 				next CONSTRAINT if $name =~ /$regex/;
 			}
+		}
+
+		for my $exclude (@{$opt{exclude}}) {
+			next CONSTRAINT if $name =~ /$exclude/;
 		}
 
 		if (! exists $thing{1}{colconstraints}{$name}) {
@@ -5333,6 +5370,10 @@ SQL
 			}
 		}
 
+		for my $exclude (@{$opt{exclude}}) {
+			next FUNCTION if $name =~ /$exclude/;
+		}
+
 		## Skip if these are a side effect of having a language
 		for my $l (@{$fail{language}{notexist}{1}}) {
 			$l =~ s/u$//;
@@ -5353,6 +5394,10 @@ SQL
 			for my $regex (@{$filter{nofunction_regex}}) {
 				next FUNCTION if $name =~ /$regex/;
 			}
+		}
+
+		for my $exclude (@{$opt{exclude}}) {
+			next FUNCTION if $name =~ /$exclude/;
 		}
 
 		## Skip if these are a side effect of having a language
