@@ -4707,7 +4707,7 @@ sub check_same_schema {
     current_database()::information_schema.sql_identifier AS constraint_catalog,
     x.cstrschema::information_schema.sql_identifier AS constraint_schema,
     x.cstrname::information_schema.sql_identifier AS constraint_name,
-    constrdef
+    REGEXP_REPLACE(constrdef, '\n', ' \\n ','g')
 FROM (( SELECT DISTINCT nr.nspname, r.relname, r.relowner, a.attname, nc.nspname, c.conname,
           pg_catalog.pg_get_constraintdef(c.oid, true)
           FROM pg_namespace nr, pg_class r, pg_attribute a, pg_depend d, pg_namespace nc, pg_constraint c
