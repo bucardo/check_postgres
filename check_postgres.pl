@@ -3585,7 +3585,7 @@ sub check_locks {
 				if ($warning and exists $warning->{$type}) {
 					$db->{perf} .= $warning->{$type};
 				}
-				$db->{perf} .= ";";
+				$db->{perf} .= ';';
 				if ($critical and $critical->{$type}) {
 					$db->{perf} .= $critical->{$type};
 				}
@@ -4208,9 +4208,9 @@ sub check_txn_wraparound {
 			my ($dbname,$dbtxns) = ($1,$2);
 			$db->{perf} .= " '$dbname'=$dbtxns;";
 			$db->{perf} .= $warning if length $warning;
-			$db->{perf} .= ";";
+			$db->{perf} .= ';';
 			$db->{perf} .= $critical if length $critical;
-			$db->{perf} .= ";0;2000000000";
+			$db->{perf} .= ';0;2000000000';
 			next SLURP if skip_item($dbname);
 			if ($dbtxns > $max) {
                 $max = $dbtxns;
