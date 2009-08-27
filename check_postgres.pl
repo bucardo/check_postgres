@@ -5757,7 +5757,7 @@ SQL
 			for my $row (@{$fail{colconstraints}{defdiff}}) {
 				my ($name,$t1,$c1,$d1,$t2,$c2,$d2) = @$row;
 				if (! exists $doublec{$name}) {
-					$db->{perf} .= qq{ Constraint "$name" on 1 differs from 2 ("$d1" vs. "$d2")};
+					$db->{perf} .= qq{ Constraint "$name" on 1 differs from 2 ("$d1" vs. "$d2") };
 				}
 				else {
 					$failcount--;
