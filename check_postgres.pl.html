@@ -1017,6 +1017,8 @@ provide a <code>--verbose</code> argument, which will output one item per line.<
 to the <code>--warning</code> option. To exclude a type of object, use &quot;noobjectnames&quot;. To exclude 
 objects of a certain type by a regular expression against their name, use &quot;noobjectname=regex&quot;. 
 See the examples for a better understanding.</p>
+<p>You may exclude all objects of a certain name by using the <code>exclude</code> option. It takes a Perl 
+regular expression as its argument.</p>
 <p>The types of objects that can be filtered are:</p>
 <dl>
 <dt><strong><a name="user" class="item">user</a></strong></dt>
@@ -1046,13 +1048,16 @@ functions.</p>
 parameter ending in the number 2, such as &quot;--dbport2=5543&quot;</p>
 <p>Example 1: Verify that two databases on hosts star and line are the same:</p>
 <pre>
-  check_postgres_same_schema --dbhost=star --dbhost=line</pre>
+  check_postgres_same_schema --dbhost=star --dbhost2=line</pre>
 <p>Example 2: Same as before, but exclude any triggers with &quot;slony&quot; in their name</p>
 <pre>
-  check_postgres_same_schema --dbhost=star --dbhost=line --warning=&quot;notrigger=slony&quot;</pre>
-<p>Example 2: Same as before, but also exclude all indexes</p>
+  check_postgres_same_schema --dbhost=star --dbhost2=line --warning=&quot;notrigger=slony&quot;</pre>
+<p>Example 3: Same as before, but also exclude all indexes</p>
 <pre>
-  check_postgres_same_schema --dbhost=star --dbhost=line --warning=&quot;notrigger=slony noindexes&quot;</pre>
+  check_postgres_same_schema --dbhost=star --dbhost2=line --warning=&quot;notrigger=slony noindexes&quot;</pre>
+<p>Example 3: Don't show anything starting with &quot;pg_catalog&quot;</p>
+<pre>
+  check_postgres_same_schema --dbhost=star --dbhost2=line --exclude=&quot;^pg_catalog&quot;</pre>
 <p>
 </p>
 <h2><a name="sequence"><strong>sequence</strong></a></h2>
@@ -1423,6 +1428,16 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="version_2_11_1" class="item"><strong>Version 2.11.1</strong></a></strong></dt>
+
+<dd>
+<pre>
+  Proper Nagios output for last_vacuum|analyze actions. (Cédric Villemain)
+  Proper Nagios output for locks action. (Cédric Villemain)
+  Proper Nagios output for txn_wraparound action. (Cédric Villemain)
+  Fix for constraints with embedded newlines for same_schema.
+  Allow --exclude for all items when using same_schema.</pre>
+</dd>
 <dt><strong><a name="0" class="item"><strong>Version 2.11.0</strong> (August 23, 2009)</a></strong></dt>
 
 <dd>
