@@ -5131,6 +5131,11 @@ SQL
 				next TRIGGER1 if $name =~ /$regex/;
 			}
 		}
+
+		for my $exclude (@{$opt{exclude}}) {
+			next TRIGGER1 if $name =~ /$exclude/;
+		}
+
 		push @{$fail{triggers}{notexist}{1}} => $name;
 		$failcount++;
 	}
@@ -5147,6 +5152,10 @@ SQL
 			push @{$fail{triggers}{notexist}{2}} => $name;
 			$failcount++;
 			next;
+		}
+
+		for my $exclude (@{$opt{exclude}}) {
+			next TRIGGER2 if $name =~ /$exclude/;
 		}
 
 		## Do the triggers call the same function?
