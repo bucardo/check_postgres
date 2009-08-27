@@ -7325,6 +7325,9 @@ to the C<--warning> option. To exclude a type of object, use "noobjectnames". To
 objects of a certain type by a regular expression against their name, use "noobjectname=regex". 
 See the examples for a better understanding.
 
+You may exclude all objects of a certain name by using the C<exclude> option. It takes a Perl 
+regular expression as its argument.
+
 The types of objects that can be filtered are:
 
 =over 4
@@ -7360,15 +7363,19 @@ parameter ending in the number 2, such as "--dbport2=5543"
 
 Example 1: Verify that two databases on hosts star and line are the same:
 
-  check_postgres_same_schema --dbhost=star --dbhost=line
+  check_postgres_same_schema --dbhost=star --dbhost2=line
 
 Example 2: Same as before, but exclude any triggers with "slony" in their name
 
-  check_postgres_same_schema --dbhost=star --dbhost=line --warning="notrigger=slony"
+  check_postgres_same_schema --dbhost=star --dbhost2=line --warning="notrigger=slony"
 
-Example 2: Same as before, but also exclude all indexes
+Example 3: Same as before, but also exclude all indexes
 
-  check_postgres_same_schema --dbhost=star --dbhost=line --warning="notrigger=slony noindexes"
+  check_postgres_same_schema --dbhost=star --dbhost2=line --warning="notrigger=slony noindexes"
+
+Example 3: Don't show anything starting with "pg_catalog"
+
+  check_postgres_same_schema --dbhost=star --dbhost2=line --exclude="^pg_catalog"
 
 =head2 B<sequence>
 
@@ -7801,6 +7808,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Proper Nagios output for locks action. (Cédric Villemain)
   Proper Nagios output for txn_wraparound action. (Cédric Villemain)
   Fix for constraints with embedded newlines for same_schema.
+  Allow --exclude for all items when using same_schema.
 
 =item B<Version 2.11.0> (August 23, 2009)
 
