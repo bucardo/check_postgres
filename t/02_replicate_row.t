@@ -140,7 +140,7 @@ else {
 $t=qq{$S works when rows match, with MRTG output};
 $dbh->commit();
 if (fork) {
-	is ($cp->run('DB2replicate-row', '-c 10 --output=MRTG -repinfo=reptest,id,1,foo,yin,yang'),
+	is ($cp->run('DB2replicate-row', '-c 20 --output=MRTG -repinfo=reptest,id,1,foo,yin,yang'),
 		qq{1\n0\n\n\n}, $t);
 }
 else {
@@ -154,7 +154,7 @@ else {
 $t=qq{$S works when rows match, with simple output};
 $dbh->commit();
 if (fork) {
-	$result = $cp->run('DB2replicate-row', '-c 10 --output=simple -repinfo=reptest,id,1,foo,yin,yang');
+	$result = $cp->run('DB2replicate-row', '-c 20 --output=simple -repinfo=reptest,id,1,foo,yin,yang');
 	$result =~ /^(\d+)/ or die 'No time?';
 	my $time = $1;
 	cmp_ok ($time, '>=', 3, $t);

@@ -3739,7 +3739,7 @@ sub check_logfile {
 		delete @{$db}{qw(ok slurp totaltime)};
 		my $badinfo = run_command("$funky", {failok => 1, target => $db} );
 
-		my $MAXSLEEPTIME = 6;
+		my $MAXSLEEPTIME = 10;
 		my $SLEEP = 1;
 		my $found = 0;
 	  LOGWAIT: {
