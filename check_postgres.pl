@@ -7747,6 +7747,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Proper Nagios output for last_vacuum|analyze actions. (Cédric Villemain)
   Proper Nagios output for locks action. (Cédric Villemain)
   Proper Nagios output for txn_wraparound action. (Cédric Villemain)
+  Fix for constraints with embedded newlines for same_schema.
 
 =item B<Version 2.11.0> (August 23, 2009)
 
