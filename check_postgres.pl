@@ -4806,13 +4806,13 @@ SQL
 	## Compare users
 
 	## Any users on 1 but not 2?
-  USER:
+  USER1:
 	for my $user (sort keys %{$thing{1}{users}}) {
 		next if exists $thing{2}{users}{$user};
 
 		if (exists $filter{nouser_regex}) {
 			for my $regex (@{$filter{nouser_regex}}) {
-				next USER if $user =~ /$regex/;
+				next USER1 if $user =~ /$regex/;
 			}
 		}
 
@@ -4821,12 +4821,12 @@ SQL
 	}
 
 	## Any users on 2 but not 1?
-  USER:
+  USER2:
 	for my $user (sort keys %{$thing{2}{users}}) {
 
 		if (exists $filter{nouser_regex}) {
 			for my $regex (@{$filter{nouser_regex}}) {
-				next USER if $user =~ /$regex/;
+				next USER2 if $user =~ /$regex/;
 			}
 		}
 
@@ -4851,13 +4851,13 @@ SQL
 	## Compare schemas
 
 	## Any schemas on 1 but not 2?
-  SCHEMA:
+  SCHEMA1:
 	for my $name (sort keys %{$thing{1}{schemas}}) {
 		next if exists $thing{2}{schemas}{$name};
 
 		if (exists $filter{noschema_regex}) {
 			for my $regex (@{$filter{noschema_regex}}) {
-				next SCHEMA if $name =~ /$regex/;
+				next SCHEMA1 if $name =~ /$regex/;
 			}
 		}
 
@@ -4866,12 +4866,12 @@ SQL
 	}
 
 	## Any schemas on 2 but not 1?
-  SCHEMA:
+  SCHEMA2:
 	for my $name (sort keys %{$thing{2}{schemas}}) {
 
 		if (exists $filter{noschema_regex}) {
 			for my $regex (@{$filter{noschema_regex}}) {
-				next SCHEMA if $name =~ /$regex/;
+				next SCHEMA2 if $name =~ /$regex/;
 			}
 		}
 
@@ -4908,7 +4908,7 @@ SQL
 
 	## Any tables on 1 but not 2?
 	## We treat the name as a unified "schema.relname"
-  TABLE:
+  TABLE1:
 	for my $name (sort keys %{$thing{1}{tables}}) {
 		next if exists $thing{2}{tables}{$name};
 
@@ -4917,12 +4917,12 @@ SQL
 
 		if (exists $filter{notable_regex}) {
 			for my $regex (@{$filter{notable_regex}}) {
-				next TABLE if $name =~ /$regex/;
+				next TABLE1 if $name =~ /$regex/;
 			}
 		}
 
 		for my $exclude (@{$opt{exclude}}) {
-			next TABLE if $name =~ /$exclude/;
+			next TABLE1 if $name =~ /$exclude/;
 		}
 
 		push @{$fail{tables}{notexist}{1}} => $name;
@@ -4930,17 +4930,17 @@ SQL
 	}
 
 	## Any tables on 2 but not 1?
-  TABLE:
+  TABLE2:
 	for my $name (sort keys %{$thing{2}{tables}}) {
 
 		if (exists $filter{notable_regex}) {
 			for my $regex (@{$filter{notable_regex}}) {
-				next TABLE if $name =~ /$regex/;
+				next TABLE2 if $name =~ /$regex/;
 			}
 		}
 
 		for my $exclude (@{$opt{exclude}}) {
-			next TABLE if $name =~ /$exclude/;
+			next TABLE2 if $name =~ /$exclude/;
 		}
 
 		if (! exists $thing{1}{tables}{$name}) {
@@ -4978,7 +4978,7 @@ SQL
 
 	## Any sequences on 1 but not 2?
 	## We treat the name as a unified "schema.relname"
-  SEQUENCE:
+  SEQUENCE1:
 	for my $name (sort keys %{$thing{1}{sequences}}) {
 		next if exists $thing{2}{sequences}{$name};
 
@@ -4987,8 +4987,12 @@ SQL
 
 		if (exists $filter{nosequence_regex}) {
 			for my $regex (@{$filter{nosequence_regex}}) {
-				next SEQUENCE if $name =~ /$regex/;
+				next SEQUENCE1 if $name =~ /$regex/;
 			}
+		}
+
+		for my $exclude (@{$opt{exclude}}) {
+			next SEQUENCE2 if $name =~ /$exclude/;
 		}
 
 		push @{$fail{sequences}{notexist}{1}} => $name;
@@ -4996,13 +5000,17 @@ SQL
 	}
 
 	## Any sequences on 2 but not 1?
-  SEQUENCE:
+  SEQUENCE2:
 	for my $name (sort keys %{$thing{2}{sequences}}) {
 
 		if (exists $filter{nosequence_regex}) {
 			for my $regex (@{$filter{nosequence_regex}}) {
-				next SEQUENCE if $name =~ /$regex/;
+				next SEQUENCE2 if $name =~ /$regex/;
 			}
+		}
+
+		for my $exclude (@{$opt{exclude}}) {
+			next SEQUENCE2 if $name =~ /$exclude/;
 		}
 
 		if (! exists $thing{1}{sequences}{$name}) {
@@ -5039,7 +5047,7 @@ SQL
 
 	## Any views on 1 but not 2?
 	## We treat the name as a unified "schema.relname"
-  VIEW:
+  VIEW1:
 	for my $name (sort keys %{$thing{1}{views}}) {
 		next if exists $thing{2}{views}{$name};
 
@@ -5048,12 +5056,12 @@ SQL
 
 		if (exists $filter{noview_regex}) {
 			for my $regex (@{$filter{noview_regex}}) {
-				next VIEW if $name =~ /$regex/;
+				next VIEW1 if $name =~ /$regex/;
 			}
 		}
 
 		for my $exclude (@{$opt{exclude}}) {
-			next VIEW if $name =~ /$exclude/;
+			next VIEW1 if $name =~ /$exclude/;
 		}
 
 		push @{$fail{views}{notexist}{1}} => $name;
@@ -5061,17 +5069,17 @@ SQL
 	}
 
 	## Any views on 2 but not 1?
-  VIEW:
+  VIEW2:
 	for my $name (sort keys %{$thing{2}{views}}) {
 
 		if (exists $filter{noview_regex}) {
 			for my $regex (@{$filter{noview_regex}}) {
-				next VIEW if $name =~ /$regex/;
+				next VIEW2 if $name =~ /$regex/;
 			}
 		}
 
 		for my $exclude (@{$opt{exclude}}) {
-			next VIEW if $name =~ /$exclude/;
+			next VIEW2 if $name =~ /$exclude/;
 		}
 
 		if (! exists $thing{1}{views}{$name}) {
@@ -5115,12 +5123,12 @@ SQL
 	## Compare triggers
 
 	## Any triggers on 1 but not 2?
-  TRIGGER:
+  TRIGGER1:
 	for my $name (sort keys %{$thing{1}{triggers}}) {
 		next if exists $thing{2}{triggers}{$name};
 		if (exists $filter{notrigger_regex}) {
 			for my $regex (@{$filter{notrigger_regex}}) {
-				next TRIGGER if $name =~ /$regex/;
+				next TRIGGER1 if $name =~ /$regex/;
 			}
 		}
 		push @{$fail{triggers}{notexist}{1}} => $name;
@@ -5128,12 +5136,12 @@ SQL
 	}
 
 	## Any triggers on 2 but not 1?
-  TRIGGER:
+  TRIGGER2:
 	for my $name (sort keys %{$thing{2}{triggers}}) {
 		if (! exists $thing{1}{triggers}{$name}) {
 			if (exists $filter{notrigger_regex}) {
 				for my $regex (@{$filter{notrigger_regex}}) {
-					next TRIGGER if $name =~ /$regex/;
+					next TRIGGER2 if $name =~ /$regex/;
 				}
 			}
 			push @{$fail{triggers}{notexist}{2}} => $name;
@@ -5158,13 +5166,13 @@ SQL
 	## Compare columns
 
 	## Any columns on 1 but not 2, or 2 but not 1?
-  COLUMN:
+  COLUMN1:
 	for my $name (sort keys %{$thing{1}{columns}}) {
 		## Skip any mismatched tables - already handled above
 		next if ! exists $thing{2}{columns}{$name};
 
 		for my $exclude (@{$opt{exclude}}) {
-			next COLUMN if $name =~ /$exclude/;
+			next COLUMN1 if $name =~ /$exclude/;
 		}
 
 		my ($t1,$t2) = ($thing{1}{columns}{$name},$thing{2}{columns}{$name});
@@ -5204,7 +5212,7 @@ SQL
 	## Compare constraints
 
 	## Table constraints - any exists on 1 but not 2?
-  CONSTRAINT:
+  CONSTRAINT1:
 	for my $name (sort keys %{$thing{1}{constraints}}) {
 		next if exists $thing{2}{constraints}{$name};
 
@@ -5213,12 +5221,12 @@ SQL
 
 		if (exists $filter{noconstraint_regex}) {
 			for my $regex (@{$filter{noconstraint_regex}}) {
-				next CONSTRAINT if $name =~ /$regex/;
+				next CONSTRAINT1 if $name =~ /$regex/;
 			}
 		}
 
 		for my $exclude (@{$opt{exclude}}) {
-			next CONSTRAINT if $name =~ /$exclude/;
+			next CONSTRAINT1 if $name =~ /$exclude/;
 		}
 
 		push @{$fail{constraints}{notexist}{1}} => [$name, $thing{1}{constraints}{$name}];
@@ -5226,17 +5234,17 @@ SQL
 	}
 
 	## Check exists on 2 but not 1, and make sure the schema/table matches
-  CONSTRAINT:
+  CONSTRAINT2:
 	for my $name (sort keys %{$thing{2}{constraints}}) {
 
 		if (exists $filter{noconstraint_regex}) {
 			for my $regex (@{$filter{noconstraint_regex}}) {
-				next CONSTRAINT if $name =~ /$regex/;
+				next CONSTRAINT2 if $name =~ /$regex/;
 			}
 		}
 
 		for my $exclude (@{$opt{exclude}}) {
-			next CONSTRAINT if $name =~ /$exclude/;
+			next CONSTRAINT2 if $name =~ /$exclude/;
 		}
 
 		if (! exists $thing{1}{constraints}{$name}) {
@@ -5261,7 +5269,7 @@ SQL
 	}
 
 	## Column constraints - any exists on 1 but not 2?
-  CONSTRAINT:
+  CONSTRAINT3:
 	for my $name (sort keys %{$thing{1}{colconstraints}}) {
 		next if exists $thing{2}{colconstraints}{$name};
 
@@ -5271,12 +5279,12 @@ SQL
 
 		if (exists $filter{noconstraint_regex}) {
 			for my $regex (@{$filter{noconstraint_regex}}) {
-				next CONSTRAINT if $name =~ /$regex/;
+				next CONSTRAINT3 if $name =~ /$regex/;
 			}
 		}
 
 		for my $exclude (@{$opt{exclude}}) {
-			next CONSTRAINT if $name =~ /$exclude/;
+			next CONSTRAINT3 if $name =~ /$exclude/;
 		}
 
 		push @{$fail{colconstraints}{notexist}{1}} => [$name, $tname, $cname];
@@ -5284,17 +5292,17 @@ SQL
 	}
 
 	## Check exists on 2 but not 1, and make sure the schema/table/column matches
-  CONSTRAINT:
+  CONSTRAINT4:
 	for my $name (sort keys %{$thing{2}{colconstraints}}) {
 
 		if (exists $filter{noconstraint_regex}) {
 			for my $regex (@{$filter{noconstraint_regex}}) {
-				next CONSTRAINT if $name =~ /$regex/;
+				next CONSTRAINT4 if $name =~ /$regex/;
 			}
 		}
 
 		for my $exclude (@{$opt{exclude}}) {
-			next CONSTRAINT if $name =~ /$exclude/;
+			next CONSTRAINT4 if $name =~ /$exclude/;
 		}
 
 		if (! exists $thing{1}{colconstraints}{$name}) {
@@ -5360,24 +5368,24 @@ SQL
 	## Compare functions
 
 	## Functions on 1 but not 2?
-  FUNCTION:
+  FUNCTION1:
 	for my $name (sort keys %{$thing{1}{functions}}) {
 		next if exists $thing{2}{functions}{$name};
 
 		if (exists $filter{nofunction_regex}) {
 			for my $regex (@{$filter{nofunction_regex}}) {
-				next FUNCTION if $name =~ /$regex/;
+				next FUNCTION1 if $name =~ /$regex/;
 			}
 		}
 
 		for my $exclude (@{$opt{exclude}}) {
-			next FUNCTION if $name =~ /$exclude/;
+			next FUNCTION1 if $name =~ /$exclude/;
 		}
 
 		## Skip if these are a side effect of having a language
 		for my $l (@{$fail{language}{notexist}{1}}) {
 			$l =~ s/u$//;
-			next FUNCTION if
+			next FUNCTION1 if
 				$name eq "pg_catalog.${l}_call_handler()"
 				or $name eq "pg_catalog.${l}_validator(oid)";
 		}
@@ -5387,23 +5395,23 @@ SQL
 	}
 
 	## Functions on 2 but not 1 and check for identity
-  FUNCTION:
+  FUNCTION2:
 	for my $name (sort keys %{$thing{2}{functions}}) {
 
 		if (exists $filter{nofunction_regex}) {
 			for my $regex (@{$filter{nofunction_regex}}) {
-				next FUNCTION if $name =~ /$regex/;
+				next FUNCTION2 if $name =~ /$regex/;
 			}
 		}
 
 		for my $exclude (@{$opt{exclude}}) {
-			next FUNCTION if $name =~ /$exclude/;
+			next FUNCTION2 if $name =~ /$exclude/;
 		}
 
 		## Skip if these are a side effect of having a language
 		for my $l (@{$fail{language}{notexist}{2}}) {
 			$l =~ s/u$//;
-			next FUNCTION if
+			next FUNCTION2 if
 				$name =~ "pg_catalog.${l}_call_handler()"
 				or $name eq "pg_catalog.${l}_validator(oid)";
 		}
