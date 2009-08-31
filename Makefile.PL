@@ -69,7 +69,7 @@ my %opts =
 		$string .= <<'EOM';
 	pod2html check_postgres.pl > check_postgres.pl.html
 	@ perl -pi -e "s/<link.*?>//" check_postgres.pl.html
-	@ perl -pi -e "s~ git clone.*~ git clone http://bucardo.org/check_postgres.git</pre>~" check_postgres.pl.html
+	@ perl -pi -e "s~ git clone.*~ git clone git://bucardo.org/check_postgres.git</pre>~" check_postgres.pl.html
 	@ perl -pi -e "s~<title>\S+(.+)~<title>check_postgres.pl\\1</TITLE>~" check_postgres.pl.html
 	@ perl -pi -e "s~.*</title>~~" check_postgres.pl.html
 	@ perl -pi -e "s~</TITLE>~</title>~" check_postgres.pl.html

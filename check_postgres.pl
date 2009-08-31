@@ -7786,7 +7786,7 @@ is needed by the L</disk_space> action.
 
 Development happens using the git system. You can clone the latest version by doing:
 
- git clone http://bucardo.org/check_postgres.git
+ git clone git://bucardo.org/check_postgres.git
 
 =head1 MAILING LIST
 
