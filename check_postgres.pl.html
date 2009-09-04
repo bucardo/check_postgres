@@ -61,6 +61,7 @@
 		<li><a href="#logfile"><strong>logfile</strong></a></li>
 		<li><a href="#new_version_cp"><strong>new_version_cp</strong></a></li>
 		<li><a href="#new_version_pg"><strong>new_version_pg</strong></a></li>
+		<li><a href="#new_version_bc"><strong>new_version_bc</strong></a></li>
 		<li><a href="#prepared_txns"><strong>prepared_txns</strong></a></li>
 		<li><a href="#query_runtime"><strong>query_runtime</strong></a></li>
 		<li><a href="#query_time"><strong>query_time</strong></a></li>
@@ -103,7 +104,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.11.1</p>
+<p>This documents describes check_postgres.pl version 2.12.0</p>
 <p>
 </p>
 <hr />
@@ -382,9 +383,9 @@ which determine if the output is displayed or not, where 'a' = all, 'c' = critic
 <dt><strong><a name="get_method_val" class="item"><strong>--get_method=VAL</strong></a></strong></dt>
 
 <dd>
-<p>Allows specification of the method used to fetch information for the <code>new_version_cp</code> 
-and <code>new_version_pg</code> checks. The following programs are tried, in order, to grab the 
-information from the web: GET, wget, fetch, curl, lynx, links. To force the use of just 
+<p>Allows specification of the method used to fetch information for the <code>new_version_cp</code>, 
+<code>new_version_pg</code>, and <code>new_version_bc</code> checks. The following programs are tried, in order, to 
+grab the information from the web: GET, wget, fetch, curl, lynx, links. To force the use of just 
 one (and thus remove the overhead of trying all the others until one of those works), 
 enter one of the names as the argument to get_method. For example, a BSD box might enter 
 the following line in their <code>.check_postgresrc</code> file:</p>
@@ -937,13 +938,22 @@ once a day. See also the information on the <code>--get_method</code> option.</p
 <p>
 </p>
 <h2><a name="new_version_pg"><strong>new_version_pg</strong></a></h2>
-<p>(<code>symlink: check_postgres_cp_new_version_pg</code>) Checks if a newer revision of Postgres 
+<p>(<code>symlink: check_postgres_new_version_pg</code>) Checks if a newer revision of Postgres 
 exists for each database connected to. Note that this only checks for revision, e.g. 
 going from 8.3.6 to 8.3.7. Revisions are always 100% binary compatible and involve no 
 dump and restore to upgrade. Revisions are made to address bugs, so upgrading as soon 
 as possible is always recommended. Returns a warning if you do not have the latest revision.
 It is recommended this check is run at least once a day. See also the information on 
 the <code>--get_method</code> option.</p>
+<p>
+</p>
+<h2><a name="new_version_bc"><strong>new_version_bc</strong></a></h2>
+<p>(<code>symlink: check_postgres_new_version_bc</code>) Checks if a newer version of the Bucardo 
+program is available. The current version is obtained by running <code>bucardo_ctl --version</code>.
+If a major upgrade is available, a warning is returned. If a revision upgrade is 
+available, a critical is returned. (Bucardo is a master to slave, and master to master 
+replication system for Postgres: see <a href="http://bucardo.org">http://bucardo.org</a> for more information).
+See also the information on the <code>--get_method</code> option.</p>
 <p>
 </p>
 <h2><a name="prepared_txns"><strong>prepared_txns</strong></a></h2>
@@ -1408,7 +1418,7 @@ is needed by the <a href="#disk_space">disk_space</a> action.</p>
 <h1><a name="development">DEVELOPMENT</a></h1>
 <p>Development happens using the git system. You can clone the latest version by doing:</p>
 <pre>
- git clone http://bucardo.org/check_postgres.git</pre>
+ git clone git://bucardo.org/check_postgres.git</pre>
 <p>
 </p>
 <hr />
@@ -1428,6 +1438,12 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="version_2_12_0" class="item"><strong>Version 2.12.0</strong></a></strong></dt>
+
+<dd>
+<pre>
+  Add the new_version_bc check for Bucardo version checking.</pre>
+</dd>
 <dt><strong><a name="1" class="item"><strong>Version 2.11.1</strong> (August 27, 2009)</a></strong></dt>
 
 <dd>
