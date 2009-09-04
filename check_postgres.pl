@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.11.1';
+our $VERSION = '2.12.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -149,6 +149,10 @@ our %msg = (
 	'logfile-syslog'     => q{Database is using syslog, please specify path with --logfile option (fac=$1)},
 	'maxtime'            => q{ maxtime=$1}, ## needs leading space
 	'mrtg-fail'          => q{Action $1 failed: $2},
+	'new-bc-badver'      => q{Could not determine the version of Bucardo},
+	'new-bc-fail'        => q{Could not find current version information for Bucardo},
+	'new-bc-ok'          => q{Version $1 is the latest for Bucardo},
+	'new-bc-warn'        => q{Please upgrade to version $1 of Bucardo. You are running $2},
 	'new-cp-fail'        => q{Unable to determine the current version of check_postgres.pl},
 	'new-cp-ok'          => q{Version $1 is the latest for check_postgres.pl},
 	'new-cp-warn'        => q{Version $1 of check_postgres.pl exists (this is version $2)},
@@ -343,6 +347,10 @@ our %msg = (
 	'logfile-syslog'     => q{La base de données utiliser syslog, merci de spécifier le chemin avec l'option --logfile (fac=$1)},
 	'maxtime'            => q{ maxtime=$1}, ## needs leading space
 	'mrtg-fail'          => q{Échec de l'action $1 : $2},
+'new-bc-badver'      => q{Could not determine the version of Bucardo},
+'new-bc-fail'        => q{Could not find current version information for Bucardo},
+'new-bc-ok'          => q{Version $1 is the latest for Bucardo},
+'new-bc-warn'        => q{Please upgrade to version $1 of Bucardo. You are running $2},
 	'new-cp-fail'        => q{Incapable de déterminer la version actuelle de check_postgres.pl},
 	'new-cp-ok'          => q{La version $1 est la dernière pour check_postgres.pl},
 	'new-cp-warn'        => q{La version $1 de check_postgres.pl existe (ceci est la version $2)},
@@ -812,6 +820,7 @@ our $action_info = {
  listener            => [0, 'Checks for specific listeners.'],
  locks               => [0, 'Checks the number of locks.'],
  logfile             => [1, 'Checks that the logfile is being written to correctly.'],
+ new_version_bc      => [0, 'Checks if a newer version of Bucardo is available.'],
  new_version_cp      => [0, 'Checks if a newer version of check_postgres.pl is available.'],
  new_version_pg      => [0, 'Checks if a newer version of Postgres is available.'],
  prepared_txns       => [1, 'Checks number and age of prepared transactions.'],
@@ -1432,6 +1441,9 @@ check_new_version_cp() if $action eq 'new_version_cp';
 
 ## Check for new versions of Postgres
 check_new_version_pg() if $action eq 'new_version_pg';
+
+## Check for new versions of Bucardo
+check_new_version_bc() if $action eq 'new_version_bc';
 
 finishup();
 
@@ -6228,6 +6240,66 @@ sub check_new_version_pg {
 } ## end of check_new_version_pg
 
 
+sub check_new_version_bc {
+
+	## Check if a new version of Bucardo is available
+
+	my $site = 'bucardo.org';
+	my $path = 'bucardo/latest_version.txt';
+	my $url = "http://$site/$path";
+	my ($newver,$maj,$rev,$message) = ('','','','');
+	my $versionre = qr{((\d+\.\d+)\.(\d+))\s+(.+)};
+
+	for my $meth (@get_methods) {
+		eval {
+			my $COM = "$meth $url";
+			$VERBOSE >= 1 and warn "TRYING: $COM\n";
+			my $info = qx{$COM 2>/dev/null};
+			if ($info =~ $versionre) {
+				($newver,$maj,$rev,$message) = ($1,$2,$3,$4);
+			}
+			$VERBOSE >=1 and warn "SET version to $newver\n";
+		};
+		last if length $newver;
+	}
+
+	if (! length $newver) {
+		add_unknown msg('new-bc-fail');
+		return;
+	}
+
+	my $BCVERSION = '?';
+	eval {
+		$BCVERSION = qx{bucardo_ctl --version 2>&1};
+	};
+	if ($@ or !$BCVERSION) {
+		add_unknown msg('new-bc-badver');
+		return;
+	}
+
+	if ($BCVERSION !~ s/.*((\d+\.\d+)\.(\d+)).*/$1/s) {
+		add_unknown msg('new-bc-fail');
+		return;
+	}
+	my ($cmaj,$crev) = ($2,$3);
+
+	if ($newver eq $BCVERSION) {
+		add_ok msg('new-bc-ok', $newver);
+		return;
+	}
+
+	$nohost = $message;
+	if ($cmaj eq $maj) {
+		add_critical msg('new-bc-warn', $newver, $BCVERSION);
+	}
+	else {
+		add_warning msg('new-bc-warn', $newver, $BCVERSION);
+	}
+	return;
+
+} ## end of check_new_version_bc
+
+
 sub check_prepared_txns {
 
 	## Checks age of prepared transactions
@@ -6363,7 +6435,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.11.1
+This documents describes check_postgres.pl version 2.12.0
 
 =head1 SYNOPSIS
 
@@ -6622,9 +6694,9 @@ which determine if the output is displayed or not, where 'a' = all, 'c' = critic
 
 =item B<--get_method=VAL>
 
-Allows specification of the method used to fetch information for the C<new_version_cp> 
-and C<new_version_pg> checks. The following programs are tried, in order, to grab the 
-information from the web: GET, wget, fetch, curl, lynx, links. To force the use of just 
+Allows specification of the method used to fetch information for the C<new_version_cp>, 
+C<new_version_pg>, and C<new_version_bc> checks. The following programs are tried, in order, to 
+grab the information from the web: GET, wget, fetch, curl, lynx, links. To force the use of just 
 one (and thus remove the overhead of trying all the others until one of those works), 
 enter one of the names as the argument to get_method. For example, a BSD box might enter 
 the following line in their C<.check_postgresrc> file:
@@ -7242,13 +7314,22 @@ once a day. See also the information on the C<--get_method> option.
 
 =head2 B<new_version_pg>
 
-(C<symlink: check_postgres_cp_new_version_pg>) Checks if a newer revision of Postgres 
+(C<symlink: check_postgres_new_version_pg>) Checks if a newer revision of Postgres 
 exists for each database connected to. Note that this only checks for revision, e.g. 
 going from 8.3.6 to 8.3.7. Revisions are always 100% binary compatible and involve no 
 dump and restore to upgrade. Revisions are made to address bugs, so upgrading as soon 
 as possible is always recommended. Returns a warning if you do not have the latest revision.
 It is recommended this check is run at least once a day. See also the information on 
 the C<--get_method> option.
+
+=head2 B<new_version_bc>
+
+(C<symlink: check_postgres_new_version_bc>) Checks if a newer version of the Bucardo 
+program is available. The current version is obtained by running C<bucardo_ctl --version>.
+If a major upgrade is available, a warning is returned. If a revision upgrade is 
+available, a critical is returned. (Bucardo is a master to slave, and master to master 
+replication system for Postgres: see http://bucardo.org for more information).
+See also the information on the C<--get_method> option.
 
 =head2 B<prepared_txns>
 
@@ -7810,6 +7891,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.12.0>
+
+  Add the new_version_bc check for Bucardo version checking.
 
 =item B<Version 2.11.1> (August 27, 2009)
 
