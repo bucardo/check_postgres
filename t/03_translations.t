@@ -13,7 +13,14 @@ BEGIN {
 		'fr' => 'French',
 		);
 }
-use Test::More tests => 3 + (5 * ((scalar keys %complete_langs)-1));
+use Test::More;
+
+if (!$ENV{RELEASE_TESTING}) {
+	plan (skip_all =>  'Test skipped unless environment variable RELEASE_TESTING is set');
+}
+else {
+	plan tests => 3 + (5 * ((scalar keys %complete_langs)-1));
+}
 
 my $file = 'check_postgres.pl';
 my ($fh, $slurp);
