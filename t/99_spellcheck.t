@@ -111,6 +111,7 @@ arrayref
 autovac
 Backends
 backends
+bc
 bucardo
 checksum
 cp
