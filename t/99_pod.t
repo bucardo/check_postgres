@@ -7,6 +7,10 @@ use strict;
 use warnings;
 use Test::More tests => 2;
 
+if (!$ENV{RELEASE_TESTING}) {
+	plan (skip_all =>  'Test skipped unless environment variable RELEASE_TESTING is set');
+}
+
 my $PODVERSION = '0.95';
 eval {
 	require Test::Pod;
