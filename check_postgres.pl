@@ -3387,7 +3387,7 @@ sub check_last_vacuum_analyze {
 			: qq{GREATEST(pg_stat_get_last_${type}_time(c.oid), pg_stat_get_last_auto${type}_time(c.oid))};
 
 	## Do include/exclude earlier for large pg_classes?
-	$SQL = q{SELECT nspname, relname, CASE WHEN v IS NULL THEN -1 ELSE round(extract(epoch FROM now()-v)) END, }
+	$SQL = q{SELECT current_database(), nspname, relname, CASE WHEN v IS NULL THEN -1 ELSE round(extract(epoch FROM now()-v)) END, }
 		   .qq{ CASE WHEN v IS NULL THEN '?' ELSE TO_CHAR(v, '$SHOWTIME') END FROM (}
 		   .qq{SELECT nspname, relname, $criteria AS v FROM pg_class c, pg_namespace n }
 		   .q{WHERE relkind = 'r' AND n.oid = c.relnamespace AND n.nspname <> 'information_schema' }
@@ -3418,14 +3418,14 @@ sub check_last_vacuum_analyze {
 		my ($minrel,$maxrel) = ('?','?'); ## no critic
 		my $mintime = 0; ## used for MRTG only
 		my $count = 0;
-		SLURP: while ($db->{slurp} =~ /(\S+)\s+\| (\S+)\s+\|\s+(\-?\d+) \| (.+)\s*$/gm) {
-			my ($schema,$name,$time,$ptime) = ($1,$2,$3,$4);
+		SLURP: while ($db->{slurp} =~ /(\S+)\s+\| (\S+)\s+\| (\S+)\s+\|\s+(\-?\d+) \| (.+)\s*$/gm) {
+			my ($dbname,$schema,$name,$time,$ptime) = ($1,$2,$3,$4,$5);
 			$maxtime = -3 if $maxtime == -1;
 			if (skip_item($name, $schema)) {
 				$maxtime = -2 if $maxtime < 1;
 				next SLURP;
 			}
-			$db->{perf} .= " $db->{dbname}.$schema.$name=${time}s;$warning;$critical" if $time >= 0;
+			$db->{perf} .= " $dbname.$schema.$name=${time}s;$warning;$critical" if $time >= 0;
 			if ($time > $maxtime) {
 				$maxtime = $time;
 				$maxrel = "$schema.$name";
@@ -7895,6 +7895,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.12.0>
 
   Add the new_version_bc check for Bucardo version checking.
+  Add database name to perf output for last_vacuum|analyze (Guillaume Lelarge)
 
 =item B<Version 2.11.1> (August 27, 2009)
 
