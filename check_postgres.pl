@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.12.0';
+our $VERSION = '2.12.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -5148,7 +5148,8 @@ SQL
 			next TRIGGER1 if $name =~ /$exclude/;
 		}
 
-		push @{$fail{triggers}{notexist}{1}} => $name;
+		my $tabname = $thing{1}{triggers}{$name}->{table};
+		push @{$fail{triggers}{notexist}{1}} => [$name,$tabname];
 		$failcount++;
 	}
 
@@ -5161,7 +5162,8 @@ SQL
 					next TRIGGER2 if $name =~ /$regex/;
 				}
 			}
-			push @{$fail{triggers}{notexist}{2}} => $name;
+			my $tabname = $thing{2}{triggers}{$name}->{table};
+			push @{$fail{triggers}{notexist}{2}} => [$name,$tabname];
 			$failcount++;
 			next;
 		}
@@ -5651,13 +5653,15 @@ SQL
 	if (exists $fail{triggers}) {
 		if (exists $fail{triggers}{notexist}) {
 			if (exists $fail{triggers}{notexist}{1}) {
-				for my $name (@{$fail{triggers}{notexist}{1}}) {
-					$db->{perf} .= " Trigger in 1 but not 2: $name ";
+				for my $row (@{$fail{triggers}{notexist}{1}}) {
+					my ($name,$tabname) = @$row;
+					$db->{perf} .= " Trigger in 1 but not 2: $name (on $tabname) ";
 				}
 			}
 			if (exists $fail{triggers}{notexist}{2}) {
-				for my $name (@{$fail{triggers}{notexist}{2}}) {
-					$db->{perf} .= " Trigger in 2 but not 1: $name ";
+				for my $row (@{$fail{triggers}{notexist}{2}}) {
+					my ($name,$tabname) = @$row;
+					$db->{perf} .= " Trigger in 2 but not 1: $name (on $tabname) ";
 				}
 			}
 		}
@@ -6435,7 +6439,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.12.0
+This documents describes check_postgres.pl version 2.12.1
 
 =head1 SYNOPSIS
 
@@ -7891,6 +7895,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.12.1>
+
+  For "same_schema" trigger mismatches, show the attached table.
 
 =item B<Version 2.12.0>
 
