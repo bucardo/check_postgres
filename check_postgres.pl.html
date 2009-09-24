@@ -104,7 +104,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.12.0</p>
+<p>This documents describes check_postgres.pl version 2.12.1</p>
 <p>
 </p>
 <hr />
@@ -1438,11 +1438,18 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="version_2_12_1" class="item"><strong>Version 2.12.1</strong></a></strong></dt>
+
+<dd>
+<pre>
+  For &quot;same_schema&quot; trigger mismatches, show the attached table.</pre>
+</dd>
 <dt><strong><a name="version_2_12_0" class="item"><strong>Version 2.12.0</strong></a></strong></dt>
 
 <dd>
 <pre>
-  Add the new_version_bc check for Bucardo version checking.</pre>
+  Add the new_version_bc check for Bucardo version checking.
+  Add database name to perf output for last_vacuum|analyze (Guillaume Lelarge)</pre>
 </dd>
 <dt><strong><a name="1" class="item"><strong>Version 2.11.1</strong> (August 27, 2009)</a></strong></dt>
 
