@@ -993,7 +993,7 @@ $psql_revision =~ s/\D//g;
 
 $VERBOSE >= 2 and warn qq{psql=$PSQL version=$psql_version\n};
 
-$opt{defaultdb} = $psql_version >= 7.4 ? 'postgres' : 'template1';
+$opt{defaultdb} = $psql_version >= 8.0 ? 'postgres' : 'template1';
 
 sub add_response {
 	my ($type,$msg) = @_;
@@ -7898,6 +7898,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.12.1>
 
+  Fix so old versions of Postgres (< 8.0) use the correct default database (Giles Westwood)
   For "same_schema" trigger mismatches, show the attached table.
 
 =item B<Version 2.12.0>
