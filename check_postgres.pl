@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.12.1';
+our $VERSION = '2.12.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -6439,7 +6439,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.12.1
+This documents describes check_postgres.pl version 2.12.0
 
 =head1 SYNOPSIS
 
@@ -7896,13 +7896,10 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.12.1>
+=item B<Version 2.12.0>
 
   Fix so old versions of Postgres (< 8.0) use the correct default database (Giles Westwood)
   For "same_schema" trigger mismatches, show the attached table.
-
-=item B<Version 2.12.0>
-
   Add the new_version_bc check for Bucardo version checking.
   Add database name to perf output for last_vacuum|analyze (Guillaume Lelarge)
 
