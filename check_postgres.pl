@@ -2625,7 +2625,7 @@ FROM (
         ) AS nullhdr
       FROM pg_stats s, (
         SELECT
-          (SELECT current_setting('block_size')::numeric) AS bs,
+          BLOCK_SIZE,
           CASE WHEN substring(v,12,3) IN ('8.0','8.1','8.2') THEN 27 ELSE 23 END AS hdr,
           CASE WHEN v ~ 'mingw32' THEN 8 ELSE 4 END AS ma
         FROM (SELECT version() AS v) AS foo
@@ -2646,6 +2646,13 @@ FROM (
 	}
 	else {
 		$SQL .= ' ORDER BY wastedbytes DESC';
+	}
+
+	if ($psql_version <= 7.4) {
+		$SQL =~ s/BLOCK_SIZE/(SELECT 8192) AS bs/;
+	}
+	else {
+		$SQL =~ s/BLOCK_SIZE/(SELECT current_setting('block_size')::numeric) AS bs/;
 	}
 
 	my $info = run_command($SQL);
@@ -7902,6 +7909,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   For "same_schema" trigger mismatches, show the attached table.
   Add the new_version_bc check for Bucardo version checking.
   Add database name to perf output for last_vacuum|analyze (Guillaume Lelarge)
+  Fix for bloat action against old versions of Postgres without the 'block_size' param.
 
 =item B<Version 2.11.1> (August 27, 2009)
 
