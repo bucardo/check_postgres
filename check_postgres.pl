@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.12.0';
+our $VERSION = '2.13.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -694,6 +694,7 @@ die $USAGE unless
 
 			   'PSQL=s',
 
+			   'tempdir=s',
 			   'get_method=s',
 			   'language=s',
 			   'mrtg=s',      ## used by MRTG checks only
@@ -1713,7 +1714,11 @@ sub run_command {
 	}
 
 	## Create a temp file to store our results
-	$tempdir = tempdir(CLEANUP => 1);
+	my @tempdirargs = (CLEANUP => 1);
+	if ($opt{tempdir}) {
+		push @tempdirargs => 'DIR', $opt{tempdir};
+	}
+	$tempdir = tempdir(@tempdirargs);
 	($tempfh,$tempfile) = tempfile('check_postgres_psql.XXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
 
 	## Create another one to catch any errors
@@ -6446,7 +6451,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.12.0
+This documents describes check_postgres.pl version 2.13.0
 
 =head1 SYNOPSIS
 
@@ -7902,6 +7907,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.13.0>
+
+  Allow the temporary directory to be specified via the "tempdir" argument, for 
+  systems that need it (e.g. /tmp is not owned by root).
 
 =item B<Version 2.12.0>
 
