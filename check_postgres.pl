@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.13.0';
+our $VERSION = '2.12.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -6451,7 +6451,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.13.0
+This documents describes check_postgres.pl version 2.12.0
 
 =head1 SYNOPSIS
 
@@ -7908,13 +7908,10 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.13.0>
+=item B<Version 2.12.0> (December 3, 2009)
 
-  Allow the temporary directory to be specified via the "tempdir" argument, for 
-  systems that need it (e.g. /tmp is not owned by root).
-
-=item B<Version 2.12.0>
-
+  Allow the temporary directory to be specified via the "tempdir" argument,
+    for systems that need it (e.g. /tmp is not owned by root).
   Fix so old versions of Postgres (< 8.0) use the correct default database (Giles Westwood)
   For "same_schema" trigger mismatches, show the attached table.
   Add the new_version_bc check for Bucardo version checking.
