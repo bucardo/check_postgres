@@ -43,7 +43,7 @@ keywords:
 resources:
   homepage                  : http://bucardo.org/check_postgres/
   license                   : http://bucardo.org/check_postgres/
-  bugtracker                : http://bucardo.org/check_postgres/
+  bugtracker                : http://bucardo.org/bugzilla/
   MailingList               : https://mail.endcrypt.com/mailman/listinfo/check_postgres
   Repository                : http://bucardo.org/check_postgres.git/
 
