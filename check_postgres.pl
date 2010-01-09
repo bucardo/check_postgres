@@ -4603,7 +4603,7 @@ sub check_same_schema {
 				. q{JOIN pg_user u ON (u.usesysid = c.relowner) }
 				. q{WHERE nspname !~ '^pg_t'};
 			exists $filter{notriggers}  and $SQL .= q{ AND relkind <> 'r'};
-			exists $filter{noviews}	 and $SQL .= q{ AND relkind <> 'v'};
+			exists $filter{noviews}     and $SQL .= q{ AND relkind <> 'v'};
 			exists $filter{noindexes}   and $SQL .= q{ AND relkind <> 'i'};
 			exists $filter{nosequences} and $SQL .= q{ AND relkind <> 'S'};
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
