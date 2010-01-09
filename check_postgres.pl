@@ -69,7 +69,7 @@ our $get_method_timeout = 30;
 our @get_methods = (
 	"GET -t $get_method_timeout",
 	"wget --quiet --timeout=$get_method_timeout -O -",
-    "fetch -q -T $get_method_timeout -o -",
+	"fetch -q -T $get_method_timeout -o -",
 	"curl --silent --max-time=$get_method_timeout",
 	"lynx --connect-timeout=$get_method_timeout --dump",
 	'links -dump',
@@ -347,10 +347,10 @@ our %msg = (
 	'logfile-syslog'     => q{La base de données utiliser syslog, merci de spécifier le chemin avec l'option --logfile (fac=$1)},
 	'maxtime'            => q{ maxtime=$1}, ## needs leading space
 	'mrtg-fail'          => q{Échec de l'action $1 : $2},
-    'new-bc-badver'      => q{N'a pas pu déterminer la version de Bucardo},
-    'new-bc-fail'        => q{N'a pas pu trouver la version actuelle pour Bucardo},
-    'new-bc-ok'          => q{La version $1 est la dernière pour Bucardo},
-    'new-bc-warn'        => q{Merci de mettre à jour vers la version $1 de Bucardo. Vous utilisez actuellement la $2},
+	'new-bc-badver'      => q{N'a pas pu déterminer la version de Bucardo},
+	'new-bc-fail'        => q{N'a pas pu trouver la version actuelle pour Bucardo},
+	'new-bc-ok'          => q{La version $1 est la dernière pour Bucardo},
+	'new-bc-warn'        => q{Merci de mettre à jour vers la version $1 de Bucardo. Vous utilisez actuellement la $2},
 	'new-cp-fail'        => q{Incapable de déterminer la version actuelle de check_postgres.pl},
 	'new-cp-ok'          => q{La version $1 est la dernière pour check_postgres.pl},
 	'new-cp-warn'        => q{La version $1 de check_postgres.pl existe (ceci est la version $2)},
@@ -1594,7 +1594,7 @@ sub run_command {
 	## "regex" - the query must match this or we throw an error
 	## "emptyok" - it's okay to not match any rows at all
 	## "version" - alternate versions for different versions
-    ## "dbnumber" - connect with an alternate set of params, e.g. port2 dbname2
+	## "dbnumber" - connect with an alternate set of params, e.g. port2 dbname2
 
 	my $string = shift || '';
 	my $arg = shift || {};
@@ -1646,7 +1646,7 @@ sub run_command {
 		$conn->{dbuser} = [];
 	}
 	my $gbin = 0;
-  GROUP: {
+	GROUP: {
 		## This level controls a "group" of targets
 
 		## If we were passed in a target, use that and move on
@@ -1684,7 +1684,7 @@ sub run_command {
 
 		## Now break the newly created group into individual targets
 		my $tbin = 0;
-	  TARGET: {
+		TARGET: {
 			my $foundtarget = 0;
 			my %temptarget;
 			for my $g (keys %group) {
@@ -2008,9 +2008,9 @@ sub size_in_bytes { ## no critic (RequireArgUnpacking)
 
 	my ($val,$unit) = ($_[0],lc substr($_[1]||'s',0,1));
 	return $val * ($unit eq 'b' ? 1 : $unit eq 'k' ? 1024 : $unit eq 'm' ? 1024**2 :
-				   $unit eq 'g' ? 1024**3 : $unit eq 't' ? 1024**4 :
-				   $unit eq 'p' ? 1024**5 : $unit eq 'e' ? 1024**6 :
-				   $unit eq 'z' ? 1024**7 : 1);
+					$unit eq 'g' ? 1024**3 : $unit eq 't' ? 1024**4 :
+					$unit eq 'p' ? 1024**5 : $unit eq 'e' ? 1024**6 :
+					$unit eq 'z' ? 1024**7 : 1);
 
 } ## end of size_in_bytes
 
@@ -2027,12 +2027,12 @@ sub size_in_seconds {
 	my $tempval = sprintf '%.9f', $val * (
 		$unit eq 's' ?        1 :
 		$unit eq 'm' ?       60 :
-        $unit eq 'h' ?     3600 :
-        $unit eq 'd' ?    86400 :
-        $unit eq 'w' ?   604800 :
-        $unit eq 'y' ? 31536000 :
+		$unit eq 'h' ?     3600 :
+		$unit eq 'd' ?    86400 :
+		$unit eq 'w' ?   604800 :
+		$unit eq 'y' ? 31536000 :
 			ndie msg('die-badtime', $type, substr($type,0,1))
-    );
+	);
 	$tempval =~ s/0+$//;
 	$tempval = int $tempval if $tempval =~ /\.$/;
 	return $tempval;
@@ -2117,8 +2117,8 @@ sub validate_range {
 
 	## The 'default default' is an empty string, which should fail all mandatory tests
 	## We only set the 'arg' default if neither option is provided.
-	my $warning  = exists $opt{warning}  ? $opt{warning}  :
-		exists $opt{critical} ? '' : $arg->{default_warning}  || '';
+	my $warning  = exists $opt{warning}  ? $opt{warning} :
+		exists $opt{critical} ? '' : $arg->{default_warning} || '';
 	my $critical = exists $opt{critical} ? $opt{critical} :
 		exists $opt{warning} ? '' : $arg->{default_critical} || '';
 
@@ -2189,17 +2189,17 @@ sub validate_range {
 		if (length $warning and $warning !~ /^\d+$/) {
 			ndie $type =~ /positive/ ? msg('range-int-pos', 'warning') : msg('range-int', 'warning');
 		}
-        elsif (length $warning && $type =~ /positive/ && $warning <= 0) {
-            ndie msg('range-int-pos', 'warning');
-        }
+		elsif (length $warning && $type =~ /positive/ && $warning <= 0) {
+			ndie msg('range-int-pos', 'warning');
+		}
 
 		$critical =~ s/_//g;
 		if (length $critical and $critical !~ /^\d+$/) {
 			ndie $type =~ /positive/ ? msg('range-int-pos', 'critical') : msg('range-int', 'critical');
 		}
-        elsif (length $critical && $type =~ /positive/ && $critical <= 0) {
-            ndie msg('range-int-pos', 'critical');
-        }
+		elsif (length $critical && $type =~ /positive/ && $critical <= 0) {
+			ndie msg('range-int-pos', 'critical');
+		}
 
 		if (length $warning and length $critical and $warning > $critical) {
 			return if $opt{reverse};
@@ -2353,7 +2353,7 @@ sub check_autovac_freeze {
 	for $db (@{$info->{db}}) {
 		my (@crit,@warn,@ok);
 		my ($maxp,$maxt,$maxdb) = (0,0,''); ## used by MRTG only
-	  SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+) \| (.+?)$/gsm) {
+		SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+) \| (.+?)$/gsm) {
 			my ($freeze,$age,$percent,$dbname) = ($1,$2,$3,$4);
 			next SLURP if skip_item($dbname);
 
@@ -2482,7 +2482,7 @@ sub check_backends {
 
 	for $db (@{$info->{db}}) {
 		my ($limit,$total,$grandtotal) = (0,0,0);
-	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+)\s+\|\s+([\w\-\.]+)\s*/gsm) {
+		SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+)\s+\|\s+([\w\-\.]+)\s*/gsm) {
 			$grandtotal++;
 			$limit ||= $2;
 			my ($current,$dbname) = ($1,$3);
@@ -2681,7 +2681,7 @@ FROM (
 		$db->{slurp} =~ s/\| (\d+) bytes/'| ' . pretty_size($1,1)/ge;
 		my $max = -1;
 		my $maxmsg = '?';
-	  SLURP: for (split /\n/o => $db->{slurp}) {
+		SLURP: for (split /\n/o => $db->{slurp}) {
 			my ($dbname,$schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws,
 			 $index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws)
 				= split /\s*\|\s*/o;
@@ -2867,7 +2867,7 @@ sub check_database_size {
 		my $max = -1;
 		$found = 1;
 		my %s;
-	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\S+)/gsm) {
+		SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\S+)/gsm) {
 			my ($size,$psize,$name) = ($1,$2,$3);
 			next SLURP if skip_item($name);
 			if ($size >= $max) {
@@ -3132,7 +3132,7 @@ sub check_fsm_pages {
 			add_unknown msg('fsm-page-highver');
 			return;
 		}
-	  SLURP: while ($db->{slurp} =~ /\s*(\d*) \|\s+(\d+) \|\s+(\d*)$/gsm) {
+		SLURP: while ($db->{slurp} =~ /\s*(\d*) \|\s+(\d+) \|\s+(\d*)$/gsm) {
 			my ($pages,$max,$percent) = ($1||0,$2,$3||0);
 
 			if ($MRTG) {
@@ -3192,7 +3192,7 @@ sub check_fsm_relations {
 			add_unknown msg('fsm-rel-highver');
 			return;
 		}
-	  SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+)$/gsm) {
+		SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+)$/gsm) {
 			my ($max,$cur,$percent) = ($1,$2,$3);
 
 			if ($MRTG) {
@@ -3313,7 +3313,7 @@ sub check_relation_size {
 		}
 
 		my ($max,$pmax,$kmax,$nmax,$smax) = (-1,0,0,'?','?');
-	  SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\w)\s*\| (\S+)\s+\| (\S+)/gsm) {
+		SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\w)\s*\| (\S+)\s+\| (\S+)/gsm) {
 			my ($size,$psize,$kind,$name,$schema) = ($1,$2,$3,$4,$5);
 			next SLURP if skip_item($name, $schema);
 			$db->{perf} .= sprintf " %s$name=$size", $kind eq 'r' ? "$schema." : '';
@@ -3569,7 +3569,7 @@ sub check_locks {
 		my $gotone = 0;
 		my %dblock;
 		my %totallock = (total => 0);
-	  SLURP: while ($db->{slurp} =~ /([tf])\s*\|\s*(\w+)\s*\|\s*(\w+)\s+/gsm) {
+		SLURP: while ($db->{slurp} =~ /([tf])\s*\|\s*(\w+)\s*\|\s*(\w+)\s+/gsm) {
 			my ($granted,$mode,$dbname) = ($1,lc $2,$3);
 			next SLURP if skip_item($dbname);
 			$gotone = 1;
@@ -3604,7 +3604,7 @@ sub check_locks {
 		for my $dbname (sort keys %dblock) {
 			for my $type (sort keys %{ $dblock{$dbname} }) {
 				next if ((! $critical or ! exists $critical->{$type})
-							 and (!$warning  or ! exists $warning->{$type}));
+							 and (!$warning or ! exists $warning->{$type}));
 				$db->{perf} .= " '$dbname.$type'=$dblock{$dbname}{$type};";
 				if ($warning and exists $warning->{$type}) {
 					$db->{perf} .= $warning->{$type};
@@ -3632,8 +3632,8 @@ sub check_locks {
 			}
 			if ($warning and exists $warning->{$type} and $totallock{$type} >= $warning->{$type}) {
 				($type eq 'total')
-				  ? add_warning msg('locks-msg2', $totallock{total})
-				  : add_warning msg('locks-msg', $type, $totallock{$type});
+				? add_warning msg('locks-msg2', $totallock{total})
+				: add_warning msg('locks-msg', $type, $totallock{$type});
 				$ok = 0;
 			}
 		}
@@ -3738,7 +3738,7 @@ sub check_logfile {
 		if (! -e $logfile) {
 			my $msg = msg('logfile-dne', $logfile);
 			$MRTG and ndie $msg;
-			if ($critwarn)  {
+			if ($critwarn) {
 				add_unknown $msg;
 			}
 			else {
@@ -3766,7 +3766,7 @@ sub check_logfile {
 		my $MAXSLEEPTIME = 10;
 		my $SLEEP = 1;
 		my $found = 0;
-	  LOGWAIT: {
+		LOGWAIT: {
 			sleep $SLEEP;
 			seek $logfh, 0, 1 or ndie msg('logfile-seekfail', $logfile, $!);
 			while (<$logfh>) {
@@ -3898,7 +3898,7 @@ sub check_query_time {
 
 		$found = 1;
 		my $max = 0;
-	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
+		SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
 			my ($dbname,$current) = ($1, int $2);
 			next SLURP if skip_item($dbname);
 			$max = $current if $current > $max;
@@ -3943,8 +3943,8 @@ sub check_txn_time {
 
 	my ($warning, $critical) = validate_range
 		({
-		  type => 'time',
-		  });
+		type => 'time',
+		});
 
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-xact_start)),0)) }.
 		qq{FROM pg_stat_activity WHERE xact_start IS NOT NULL $USERWHERECLAUSE GROUP BY 1};
@@ -3965,7 +3965,7 @@ sub check_txn_time {
 		}
 		$found = 1;
 		my $max = -1;
-	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
+		SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
 			my ($dbname,$current) = ($1, int $2);
 			next SLURP if skip_item($dbname);
 			$max = $current if $current > $max;
@@ -4016,8 +4016,8 @@ sub check_txn_idle {
 
 	my ($warning, $critical) = validate_range
 		({
-		  type => 'time',
-		  });
+		type => 'time',
+		});
 
 
 	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) }.
@@ -4047,7 +4047,7 @@ sub check_txn_idle {
 		}
 
 		$found = 1;
-	  SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
+		SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
 			my ($dbname,$current) = ($1, int $2);
 			next SLURP if skip_item($dbname);
 			$max = $current if $current > $max;
@@ -4114,7 +4114,7 @@ sub check_settings_checksum {
 		(my $string = $db->{slurp}) =~ s/\s+$/\n/;
 
 		my $newstring = '';
-	  SLURP: for my $line (split /\n/ => $string) {
+		SLURP: for my $line (split /\n/ => $string) {
 			$line =~ /^\s*(\w+)/ or ndie msg('checksum-badline', $line);
 			my $name = $1;
 			next SLURP if skip_item($name);
@@ -4228,7 +4228,7 @@ sub check_txn_wraparound {
 	my ($mrtgmax,$mrtgmsg) = (0,'?');
 	for $db (@{$info->{db}}) {
 		my ($max,$msg) = (0,'?');
-	  SLURP: while ($db->{slurp} =~ /(\S.+?)\s+\|\s+(\d+)/gsm) {
+		SLURP: while ($db->{slurp} =~ /(\S.+?)\s+\|\s+(\d+)/gsm) {
 			my ($dbname,$dbtxns) = ($1,$2);
 			$db->{perf} .= " '$dbname'=$dbtxns;";
 			$db->{perf} .= $warning if length $warning;
@@ -4237,14 +4237,14 @@ sub check_txn_wraparound {
 			$db->{perf} .= ';0;2000000000';
 			next SLURP if skip_item($dbname);
 			if ($dbtxns > $max) {
-                $max = $dbtxns;
-                $msg = qq{$dbname: $dbtxns};
+				$max = $dbtxns;
+				$msg = qq{$dbname: $dbtxns};
 				if ($dbtxns > $mrtgmax) {
 					$mrtgmax = $dbtxns;
 					$mrtgmsg = "DB: $dbname";
 				}
-            }
-        }
+			}
+		}
 		if (length $critical and $max >= $critical) {
 			add_critical $msg;
 		}
@@ -4326,7 +4326,7 @@ sub check_version {
 
 sub check_custom_query {
 
-    ## Run a user-supplied query, then parse the results
+	## Run a user-supplied query, then parse the results
 	## If you end up using this to make a useful query, consider making it 
 	## into a specific action and sending in a patch!
 	## valtype must be one of: string, time, size, integer
@@ -4391,7 +4391,7 @@ sub check_custom_query {
 
 sub check_replicate_row {
 
-    ## Make an update on one server, make sure it propogates to others
+	## Make an update on one server, make sure it propogates to others
 	## Supports: Nagios, MRTG
 	## Warning and critical are time to replicate to all slaves
 
@@ -4416,7 +4416,7 @@ sub check_replicate_row {
 	$col   = qq{"$col"};
 
 	if ($val1 eq $val2) {
-	  ndie msg('rep-duh');
+		ndie msg('rep-duh');
 	}
 
 	$SQL = qq{UPDATE $table SET $col = 'X' WHERE $pk = '$id'};
@@ -4481,7 +4481,7 @@ sub check_replicate_row {
 	## Loop until we get a match, check each in turn
 	my %slave;
 	my $time = 0;
-  LOOP: {
+	LOOP: {
 		$info2 = run_command($select, { dbnumber => 2 } );
 		## Reset for final output
 		$db = $sourcedb;
@@ -4552,7 +4552,7 @@ sub check_same_schema {
 				$filter{nofuncbody} = 1;
 			}
 		}
-        $VERBOSE >= 3 and warn Dumper \%filter;
+		$VERBOSE >= 3 and warn Dumper \%filter;
 	}
 
 	my (%thing,$info);
@@ -4565,11 +4565,11 @@ sub check_same_schema {
 			$SQL = 'SELECT usesysid, quote_ident(usename), usecreatedb, usesuper FROM pg_user';
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-                for my $line (split /\n/, $db->{slurp}) {
-                    unless ($line =~ /^\s*(\d+)\s*\| (.+?)\s*\| ([t|f])\s*\| ([t|f]).*/gmo) {
-                        warn "Query processing failed:\n$line\nfrom $SQL\n";
-                        next;
-                    }
+				for my $line (split /\n/, $db->{slurp}) {
+					unless ($line =~ /^\s*(\d+)\s*\| (.+?)\s*\| ([t|f])\s*\| ([t|f]).*/gmo) {
+						warn "Query processing failed:\n$line\nfrom $SQL\n";
+						next;
+					}
 
 					$thing{$x}{users}{$2} = { oid=>$1, createdb=>$3, superuser=>$4 };
 					$thing{$x}{useroid}{$1} = $2;
@@ -4584,71 +4584,71 @@ sub check_same_schema {
 				. q{WHERE nspname !~ '^pg_t'};
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-                for my $line (split /\n/, $db->{slurp}) {
-                    unless ($line =~ /^\s*(.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (\S*).*/gmo) {
-                        warn "Query processing failed:\n$line\nfrom $SQL\n";
-                        next;
-                    }
+				for my $line (split /\n/, $db->{slurp}) {
+					unless ($line =~ /^\s*(.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (\S*).*/gmo) {
+						warn "Query processing failed:\n$line\nfrom $SQL\n";
+						next;
+					}
 					$thing{$x}{schemas}{$1} = { oid=>$2, owner=>$3, acl=>$4||'(none)' };
 				}
 			}
 		}
 
 		## Get a list of all relations
-        if (! exists $filter{notables}) {
-            $SQL = q{SELECT relkind, quote_ident(nspname), quote_ident(relname), quote_ident(usename), relacl, }
+		if (! exists $filter{notables}) {
+			$SQL = q{SELECT relkind, quote_ident(nspname), quote_ident(relname), quote_ident(usename), relacl, }
 				. q{CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid) ELSE '' END }
-                . q{FROM pg_class c }
-                . q{JOIN pg_namespace n ON (n.oid = c.relnamespace) }
-                . q{JOIN pg_user u ON (u.usesysid = c.relowner) }
-                . q{WHERE nspname !~ '^pg_t'};
-            exists $filter{notriggers}  and $SQL .= q{ AND relkind <> 'r'};
-            exists $filter{noviews}     and $SQL .= q{ AND relkind <> 'v'};
-            exists $filter{noindexes}   and $SQL .= q{ AND relkind <> 'i'};
-            exists $filter{nosequences} and $SQL .= q{ AND relkind <> 'S'};
-            $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
-            for $db (@{$info->{db}}) {
-                for my $line (split /\n/, $db->{slurp}) {
-                    unless ($line =~ /^\s*(\w)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.*?)\s*\| (.*)/gmo) {
-                        warn "Query processing failed:\n$line\nfrom $SQL\n";
-                        next;
-                    }
+				. q{FROM pg_class c }
+				. q{JOIN pg_namespace n ON (n.oid = c.relnamespace) }
+				. q{JOIN pg_user u ON (u.usesysid = c.relowner) }
+				. q{WHERE nspname !~ '^pg_t'};
+			exists $filter{notriggers}  and $SQL .= q{ AND relkind <> 'r'};
+			exists $filter{noviews}	 and $SQL .= q{ AND relkind <> 'v'};
+			exists $filter{noindexes}   and $SQL .= q{ AND relkind <> 'i'};
+			exists $filter{nosequences} and $SQL .= q{ AND relkind <> 'S'};
+			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
+			for $db (@{$info->{db}}) {
+				for my $line (split /\n/, $db->{slurp}) {
+					unless ($line =~ /^\s*(\w)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.*?)\s*\| (.*)/gmo) {
+						warn "Query processing failed:\n$line\nfrom $SQL\n";
+						next;
+					}
 
-                    my ($kind,$schema,$name,$owner,$acl,$def) = ($1,$2,$3,$4,$5,$6);
+					my ($kind,$schema,$name,$owner,$acl,$def) = ($1,$2,$3,$4,$5,$6);
 
-                    if ($kind eq 'r') {
-                        $thing{$x}{tables}{"$schema.$name"} =
+					if ($kind eq 'r') {
+						$thing{$x}{tables}{"$schema.$name"} =
 						{
-                         schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
-                    }
-                    elsif ($kind eq 'v') {
-                        $thing{$x}{views}{"$schema.$name"} =
+						 schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
+					}
+					elsif ($kind eq 'v') {
+						$thing{$x}{views}{"$schema.$name"} =
 						{
-                         schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)', def=>$def };
-                    }
-                    elsif ($kind eq 'i') {
-                        $thing{$x}{indexes}{"$schema.$name"} =
+						 schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)', def=>$def };
+					}
+					elsif ($kind eq 'i') {
+						$thing{$x}{indexes}{"$schema.$name"} =
 						{
-                         schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
-                    }
-                    elsif ($kind eq 'S') {
-                        $thing{$x}{sequences}{"$schema.$name"} =
+						 schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
+					}
+					elsif ($kind eq 'S') {
+						$thing{$x}{sequences}{"$schema.$name"} =
 						{
-                         schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
-                    }
-                }
-            }
-        }
+						 schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
+					}
+				}
+			}
+		}
 
 		## Get a list of all types
 		$SQL = q{SELECT typname, oid FROM pg_type};
 		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 		for $db (@{$info->{db}}) {
-            for my $line (split /\n/, $db->{slurp}) {
-                unless ($line =~ /^\s*(.+?)\s+\|\s+(\d+).*/gmo) {
-                    warn "Query processing failed:\n$line\nfrom $SQL\n";
-                    next;
-                }
+			for my $line (split /\n/, $db->{slurp}) {
+				unless ($line =~ /^\s*(.+?)\s+\|\s+(\d+).*/gmo) {
+					warn "Query processing failed:\n$line\nfrom $SQL\n";
+					next;
+				}
 				$thing{$x}{type}{$2} = $1;
 			}
 			$saved_db = $db if ! defined $saved_db;
@@ -4662,11 +4662,11 @@ sub check_same_schema {
 				. q{ WHERE NOT tgisconstraint}; ## constraints checked separately
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-                for my $line (split /\n/, $db->{slurp}) {
-                    unless ($line =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.*?)/gmo) {
-                        warn "Query processing failed:\n$line\nfrom $SQL\n";
-                        next;
-                    }
+				for my $line (split /\n/, $db->{slurp}) {
+					unless ($line =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.*?)/gmo) {
+						warn "Query processing failed:\n$line\nfrom $SQL\n";
+						next;
+					}
 					my ($name,$table,$func,$args) = ($1,$2,$3,$4);
 					$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
 					$args =~ s/^\s*(.*)\s*$/($1)/;
@@ -4686,11 +4686,11 @@ sub check_same_schema {
 			. q{FROM information_schema.columns};
 		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 		for $db (@{$info->{db}}) {
-            for my $line (split /\n/, $db->{slurp}) {
-                unless ($line =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \|\s+(\d+) \|\s+(\d+).*/gmo) {
-                    warn "Query processing failed:\n$line\nfrom $SQL\n";
-                    next;
-                }
+			for my $line (split /\n/, $db->{slurp}) {
+				unless ($line =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \|\s+(\d+) \|\s+(\d+).*/gmo) {
+					warn "Query processing failed:\n$line\nfrom $SQL\n";
+					next;
+				}
 
 				$thing{$x}{columns}{"$1.$2"}{$3} = {
 					schema     => $1,
@@ -4714,11 +4714,11 @@ sub check_same_schema {
 				. q{FROM information_schema.constraint_table_usage};
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-                for my $line (split /\n/, $db->{slurp}) {
-                    unless ($line =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gmo) {
-                        warn "Query processing failed:\n$line\nfrom $SQL\n";
-                        next;
-                    }
+				for my $line (split /\n/, $db->{slurp}) {
+					unless ($line =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gmo) {
+						warn "Query processing failed:\n$line\nfrom $SQL\n";
+						next;
+					}
 
 					$thing{$x}{constraints}{"$1.$2"} = "$3.$4";
 				}
@@ -4767,11 +4767,11 @@ WHERE pg_has_role(x.tblowner, 'USAGE'::text)
 SQL
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-                for my $line (split /\n/, $db->{slurp}) {
-                    unless ($line =~ /^ \s* (.+?) \s+\|  \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?)\s*$/gmox) {
-                        warn "Query processing failed:\n$line\nfrom $SQL\n";
-                        next;
-                    }
+				for my $line (split /\n/, $db->{slurp}) {
+					unless ($line =~ /^ \s* (.+?) \s+\|  \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?)\s*$/gmox) {
+						warn "Query processing failed:\n$line\nfrom $SQL\n";
+						next;
+					}
 					my ($cschema,$cname,$tschema,$tname,$col,$cdef) = ($6,$7,$2,$3,$4,$8);
 					if (exists $thing{$x}{colconstraints}{"$cschema.$cname"}) {
 						my @oldcols = split / / => $thing{$x}{colconstraints}{"$cschema.$cname"}->[1];
@@ -4785,23 +4785,24 @@ SQL
 
 		## Get a list of all functions
 		$SQL = q{SELECT quote_ident(nspname), quote_ident(proname), proargtypes, md5(prosrc), }
-            . q{proisstrict, proretset, provolatile }
+			. q{proisstrict, proretset, provolatile }
 			. q{FROM pg_proc JOIN pg_namespace n ON (n.oid = pronamespace)};
 		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 		for $db (@{$info->{db}}) {
-            for my $line (split /\n/, $db->{slurp}) {
-                unless ($line =~ /^\s*(.+?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s*/gmo) {
-                    warn "Query processing failed:\n$line\nfrom $SQL\n";
-                    next;
-                }
+			for my $line (split /\n/, $db->{slurp}) {
+				unless ($line =~ /^\s*(.+?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s*/gmo) {
+					warn "Query processing failed:\n$line\nfrom $SQL\n";
+					next;
+				}
 				my ($schema,$name,$args,$md5,$isstrict,$retset,$volatile) = ($1,$2,$3,$4,$5,$6,$7);
 				$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
 				$args =~ s/^\s*(.*)\s*$/($1)/;
-				$thing{$x}{functions}{"${schema}.${name}${args}"} = { md5 => $md5,
-                                                                isstrict => $isstrict,
-                                                                retset => $retset,
-                                                                volatile => $volatile,
-                                                           };
+				$thing{$x}{functions}{"${schema}.${name}${args}"} = {
+					md5 => $md5,
+					isstrict => $isstrict,
+					retset => $retset,
+					volatile => $volatile,
+				};
 			}
 		}
 
@@ -4809,11 +4810,11 @@ SQL
 		$SQL = q{SELECT lanname FROM pg_language};
 		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 		for $db (@{$info->{db}}) {
-            for my $line (split /\n/, $db->{slurp}) {
-                unless ($line =~ /^\s*(\w+)\s*/gmo) {
-                    warn "Query processing failed:\n$line\nfrom $SQL\n";
-                    next;
-                }
+			for my $line (split /\n/, $db->{slurp}) {
+				unless ($line =~ /^\s*(\w+)\s*/gmo) {
+					warn "Query processing failed:\n$line\nfrom $SQL\n";
+					next;
+				}
 				$thing{$x}{language}{$1} = 1;
 			}
 		}
@@ -4830,7 +4831,7 @@ SQL
 	## Compare users
 
 	## Any users on 1 but not 2?
-  USER1:
+	USER1:
 	for my $user (sort keys %{$thing{1}{users}}) {
 		next if exists $thing{2}{users}{$user};
 
@@ -4845,7 +4846,7 @@ SQL
 	}
 
 	## Any users on 2 but not 1?
-  USER2:
+	USER2:
 	for my $user (sort keys %{$thing{2}{users}}) {
 
 		if (exists $filter{nouser_regex}) {
@@ -4875,7 +4876,7 @@ SQL
 	## Compare schemas
 
 	## Any schemas on 1 but not 2?
-  SCHEMA1:
+	SCHEMA1:
 	for my $name (sort keys %{$thing{1}{schemas}}) {
 		next if exists $thing{2}{schemas}{$name};
 
@@ -4890,7 +4891,7 @@ SQL
 	}
 
 	## Any schemas on 2 but not 1?
-  SCHEMA2:
+	SCHEMA2:
 	for my $name (sort keys %{$thing{2}{schemas}}) {
 
 		if (exists $filter{noschema_regex}) {
@@ -4932,7 +4933,7 @@ SQL
 
 	## Any tables on 1 but not 2?
 	## We treat the name as a unified "schema.relname"
-  TABLE1:
+	TABLE1:
 	for my $name (sort keys %{$thing{1}{tables}}) {
 		next if exists $thing{2}{tables}{$name};
 
@@ -4954,7 +4955,7 @@ SQL
 	}
 
 	## Any tables on 2 but not 1?
-  TABLE2:
+	TABLE2:
 	for my $name (sort keys %{$thing{2}{tables}}) {
 
 		if (exists $filter{notable_regex}) {
@@ -5002,7 +5003,7 @@ SQL
 
 	## Any sequences on 1 but not 2?
 	## We treat the name as a unified "schema.relname"
-  SEQUENCE1:
+	SEQUENCE1:
 	for my $name (sort keys %{$thing{1}{sequences}}) {
 		next if exists $thing{2}{sequences}{$name};
 
@@ -5024,7 +5025,7 @@ SQL
 	}
 
 	## Any sequences on 2 but not 1?
-  SEQUENCE2:
+	SEQUENCE2:
 	for my $name (sort keys %{$thing{2}{sequences}}) {
 
 		if (exists $filter{nosequence_regex}) {
@@ -5071,7 +5072,7 @@ SQL
 
 	## Any views on 1 but not 2?
 	## We treat the name as a unified "schema.relname"
-  VIEW1:
+	VIEW1:
 	for my $name (sort keys %{$thing{1}{views}}) {
 		next if exists $thing{2}{views}{$name};
 
@@ -5093,7 +5094,7 @@ SQL
 	}
 
 	## Any views on 2 but not 1?
-  VIEW2:
+	VIEW2:
 	for my $name (sort keys %{$thing{2}{views}}) {
 
 		if (exists $filter{noview_regex}) {
@@ -5147,7 +5148,7 @@ SQL
 	## Compare triggers
 
 	## Any triggers on 1 but not 2?
-  TRIGGER1:
+	TRIGGER1:
 	for my $name (sort keys %{$thing{1}{triggers}}) {
 		next if exists $thing{2}{triggers}{$name};
 		if (exists $filter{notrigger_regex}) {
@@ -5166,7 +5167,7 @@ SQL
 	}
 
 	## Any triggers on 2 but not 1?
-  TRIGGER2:
+	TRIGGER2:
 	for my $name (sort keys %{$thing{2}{triggers}}) {
 		if (! exists $thing{1}{triggers}{$name}) {
 			if (exists $filter{notrigger_regex}) {
@@ -5201,7 +5202,7 @@ SQL
 	## Compare columns
 
 	## Any columns on 1 but not 2, or 2 but not 1?
-  COLUMN1:
+	COLUMN1:
 	for my $name (sort keys %{$thing{1}{columns}}) {
 		## Skip any mismatched tables - already handled above
 		next if ! exists $thing{2}{columns}{$name};
@@ -5247,7 +5248,7 @@ SQL
 	## Compare constraints
 
 	## Table constraints - any exists on 1 but not 2?
-  CONSTRAINT1:
+	CONSTRAINT1:
 	for my $name (sort keys %{$thing{1}{constraints}}) {
 		next if exists $thing{2}{constraints}{$name};
 
@@ -5269,7 +5270,7 @@ SQL
 	}
 
 	## Check exists on 2 but not 1, and make sure the schema/table matches
-  CONSTRAINT2:
+	CONSTRAINT2:
 	for my $name (sort keys %{$thing{2}{constraints}}) {
 
 		if (exists $filter{noconstraint_regex}) {
@@ -5304,7 +5305,7 @@ SQL
 	}
 
 	## Column constraints - any exists on 1 but not 2?
-  CONSTRAINT3:
+	CONSTRAINT3:
 	for my $name (sort keys %{$thing{1}{colconstraints}}) {
 		next if exists $thing{2}{colconstraints}{$name};
 
@@ -5327,7 +5328,7 @@ SQL
 	}
 
 	## Check exists on 2 but not 1, and make sure the schema/table/column matches
-  CONSTRAINT4:
+	CONSTRAINT4:
 	for my $name (sort keys %{$thing{2}{colconstraints}}) {
 
 		if (exists $filter{noconstraint_regex}) {
@@ -5403,7 +5404,7 @@ SQL
 	## Compare functions
 
 	## Functions on 1 but not 2?
-  FUNCTION1:
+	FUNCTION1:
 	for my $name (sort keys %{$thing{1}{functions}}) {
 		next if exists $thing{2}{functions}{$name};
 
@@ -5430,7 +5431,7 @@ SQL
 	}
 
 	## Functions on 2 but not 1 and check for identity
-  FUNCTION2:
+	FUNCTION2:
 	for my $name (sort keys %{$thing{2}{functions}}) {
 
 		if (exists $filter{nofunction_regex}) {
@@ -5876,7 +5877,7 @@ sub check_sequence {
 		  default_warning   => '85%',
 		  default_critical  => '95%',
 		  forcemrtg         => 1,
-	  });
+	});
 
 	(my $w = $warning) =~ s/\D//;
 	(my $c = $critical) =~ s/\D//;
@@ -5930,7 +5931,7 @@ sub check_sequence {
 		my %seqinfo;
 		my %seqperf;
 		my $multidb = @{$info->{db}} > 1 ? "$db->{dbname}." : '';
-	  SLURP: while ($db->{slurp} =~ /\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gsm) {
+		SLURP: while ($db->{slurp} =~ /\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gsm) {
 			my ($schema, $seq, $seqname, $typename) = ($1,$2,$3,$4);
 			next if skip_item($seq);
 			my $maxValue = $typename eq 'int2' ? $MAXINT2 : $typename eq 'int4' ? $MAXINT4 : $MAXINT8;
@@ -5964,7 +5965,7 @@ sub check_sequence {
 			do_mrtg({one => $maxp, msg => $msg});
 		}
 		my $limit = 0;
-	  PERF: for my $val (sort { $b <=> $a } keys %seqperf) {
+		PERF: for my $val (sort { $b <=> $a } keys %seqperf) {
 			for my $seq (sort { $seqperf{$val}{$a}->[0] <=> $seqperf{$val}{$b}->[0] or $a cmp $b } keys %{$seqperf{$val}}) {
 				last PERF if exists $opt{perflimit} and $limit++ >= $opt{perflimit};
 				$db->{perf} .= $seqperf{$val}{$seq}->[1];
@@ -6004,7 +6005,7 @@ sub check_checkpoint {
 		  type              => 'time',
 		  leastone          => 1,
 		  forcemrtg         => 1,
-	  });
+	});
 
 	## Find the data directory, make sure it exists
 	my $dir = $opt{datadir} || $ENV{PGDATA};
@@ -6102,7 +6103,7 @@ sub check_disabled_triggers {
 		  default_warning   => 1,
 		  default_critical  => 1,
 		  forcemrtg         => 1,
-	  });
+	});
 
 	$SQL = q{SELECT tgrelid::regclass, tgname, tgenabled FROM pg_trigger WHERE tgenabled IS NOT TRUE ORDER BY tgname};
 	my $SQL83 = q{SELECT tgrelid::regclass, tgname, tgenabled FROM pg_trigger WHERE tgenabled = 'D' ORDER BY tgname};
@@ -6327,7 +6328,7 @@ sub check_prepared_txns {
 		  type              => 'seconds',
 		  default_warning   => '1',
 		  default_critical  => '30',
-		  });
+		});
 
 	my $SQL = q{SELECT database, ROUND(EXTRACT(epoch FROM now()-prepared)), prepared}.
 		q{ FROM pg_prepared_xacts ORDER BY prepared ASC};
@@ -6339,7 +6340,7 @@ sub check_prepared_txns {
 	for $db (@{$info->{db}}) {
 		my (@crit,@warn,@ok);
 		my ($maxage,$maxdb) = (0,''); ## used by MRTG only
-	  SLURP: while ($db->{slurp} =~ /\s*(.+?) \|\s+(\d+) \|\s+(.+?)$/gsm) {
+		SLURP: while ($db->{slurp} =~ /\s*(.+?) \|\s+(\d+) \|\s+(.+?)$/gsm) {
 			my ($dbname,$age,$date) = ($1,$2,$3);
 			$found = 1 if ! $found;
 			next SLURP if skip_item($dbname);
@@ -6401,17 +6402,17 @@ sub show_dbstats {
 	my ($warning, $critical) = validate_range
 		({
 		  type => 'cacti',
-	  });
+	});
 
 	my $SQL = q{SELECT datname,numbackends,xact_commit,xact_rollback,blks_read,blks_hit};
 	if ($opt{dbname}) {
-	  $SQL .= q{,(SELECT SUM(idx_scan) FROM pg_stat_user_indexes) AS idx_scan};
-	  $SQL .= q{,COALESCE((SELECT SUM(idx_tup_read) FROM pg_stat_user_indexes),0) AS idx_tup_read};
-	  $SQL .= q{,COALESCE((SELECT SUM(idx_tup_fetch) FROM pg_stat_user_indexes),0) AS idx_tup_fetch};
-	  $SQL .= q{,COALESCE((SELECT SUM(idx_blks_read) FROM pg_statio_user_indexes),0) AS idx_blks_read};
-	  $SQL .= q{,COALESCE((SELECT SUM(idx_blks_hit) FROM pg_statio_user_indexes),0) AS idx_blks_hit};
-	  $SQL .= q{,COALESCE((SELECT SUM(seq_scan) FROM pg_stat_user_tables),0) AS seq_scan};
-	  $SQL .= q{,COALESCE((SELECT SUM(seq_tup_read) FROM pg_stat_user_tables),0) AS seq_tup_read};
+		$SQL .= q{,(SELECT SUM(idx_scan) FROM pg_stat_user_indexes) AS idx_scan};
+		$SQL .= q{,COALESCE((SELECT SUM(idx_tup_read) FROM pg_stat_user_indexes),0) AS idx_tup_read};
+		$SQL .= q{,COALESCE((SELECT SUM(idx_tup_fetch) FROM pg_stat_user_indexes),0) AS idx_tup_fetch};
+		$SQL .= q{,COALESCE((SELECT SUM(idx_blks_read) FROM pg_statio_user_indexes),0) AS idx_blks_read};
+		$SQL .= q{,COALESCE((SELECT SUM(idx_blks_hit) FROM pg_statio_user_indexes),0) AS idx_blks_hit};
+		$SQL .= q{,COALESCE((SELECT SUM(seq_scan) FROM pg_stat_user_tables),0) AS seq_scan};
+		$SQL .= q{,COALESCE((SELECT SUM(seq_tup_read) FROM pg_stat_user_tables),0) AS seq_tup_read};
 	}
 	$SQL .= q{ FROM pg_stat_database};
 	(my $SQL2 = $SQL) =~ s/AS seq_tup_read/AS seq_tup_read,tup_returned,tup_fetched,tup_inserted,tup_updated,tup_deleted/;
@@ -6419,9 +6420,9 @@ sub show_dbstats {
 	my $info = run_command($SQL, {regex => qr{\w}, version => [ ">8.2 $SQL2" ] } );
 
 	for $db (@{$info->{db}}) {
-	  SLURP: for my $row (split /\n/ => $db->{slurp}) {
+		SLURP: for my $row (split /\n/ => $db->{slurp}) {
 			my @stats = split /\s*\|\s*/ => $row;
-            ((defined($_) and length($_)) or $_ = 0) for @stats;
+			((defined($_) and length($_)) or $_ = 0) for @stats;
 			(my $dbname = shift @stats) =~ s/^\s*//;
 			next SLURP if skip_item($dbname);
 			## If dbnames were specififed, use those for filtering as well
