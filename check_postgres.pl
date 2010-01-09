@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.12.0';
+our $VERSION = '2.12.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2337,8 +2337,8 @@ sub check_autovac_freeze {
 	my ($warning, $critical) = validate_range
 		({
 		  type              => 'percent',
-		  default_warning   => '90%',
-		  default_critical  => '95%',
+		  default_warning   => '105%',
+		  default_critical  => '120%',
 		  forcemrtg         => 1,
 		  });
 
@@ -6761,13 +6761,14 @@ The current supported actions are:
 action will only work for databases version 8.2 or higher. The I<--warning> and 
 I<--critical> options should be expressed as percentages. The 'age' of the transactions 
 in each database is compared to the autovacuum_freeze_max_age setting (200 million by default) 
-to generate a rounded percentage. The default values are B<90%> for the warning and B<95%> for 
-the critical. Databases can be filtered by use of the I<--include> and I<--exclude> options. See 
-the L</"BASIC FILTERING"> section for more details.
+to generate a rounded percentage. The default values are B<105%> for the warning and B<120%> for 
+the critical. Since autovacuum does not vacuum tables before they reach this limit, setting 
+levels below 100% will return false positives. Databases can be filtered by use of the 
+I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section for more details.
 
-Example 1: Give a warning when any databases on port 5432 are above 80%
+Example 1: Give a warning when any databases on port 5432 are above 100%
 
-  check_postgres_autovac_freeze --port=5432 --warning="80%"
+  check_postgres_autovac_freeze --port=5432 --warning="100%"
 
 For MRTG output, the highest overall percentage is reported on the first line, and the highest age is 
 reported on the second line. All databases which have the percentage from the first line are reported 
@@ -7907,6 +7908,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.12.1>
+
+  Change autovac_freeze default warn/critical from 90%/95% to 105%/120% (Marti Raudsepp)
 
 =item B<Version 2.12.0> (December 3, 2009)
 
