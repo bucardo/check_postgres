@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.12.2';
+our $VERSION = '2.13.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -6472,7 +6472,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.12.2
+This documents describes check_postgres.pl version 2.13.0
 
 =head1 SYNOPSIS
 
@@ -7486,6 +7486,8 @@ columns within a table.
 The filter option "nofuncbody" prevents comparison of the bodies of all 
 functions.
 
+The filter option "noperms" prevents comparison of object permissions.
+
 You must provide information on how to reach the second database by a connection 
 parameter ending in the number 2, such as "--dbport2=5543"
 
@@ -7930,10 +7932,10 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.12.2>
+=item B<Version 2.13.0>
 
   Allow "nofunctions" as a filter for the same_schema option.
-  Allow "noperms" as a filter for the same_schema option.
+  Added "noperms" as a filter for the same_schema option.
   Ignore dropped columns when considered positions for same_schema (Guillaume Lelarge)
 
 =item B<Version 2.12.1>

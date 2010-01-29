@@ -104,7 +104,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.12.0</p>
+<p>This documents describes check_postgres.pl version 2.13.0</p>
 <p>
 </p>
 <hr />
@@ -430,12 +430,13 @@ critical is an effective way to turn warnings off and always give a critical.</p
 action will only work for databases version 8.2 or higher. The <em>--warning</em> and 
 <em>--critical</em> options should be expressed as percentages. The 'age' of the transactions 
 in each database is compared to the autovacuum_freeze_max_age setting (200 million by default) 
-to generate a rounded percentage. The default values are <strong>90%</strong> for the warning and <strong>95%</strong> for 
-the critical. Databases can be filtered by use of the <em>--include</em> and <em>--exclude</em> options. See 
-the <a href="#basic_filtering">BASIC FILTERING</a> section for more details.</p>
-<p>Example 1: Give a warning when any databases on port 5432 are above 80%</p>
+to generate a rounded percentage. The default values are <strong>105%</strong> for the warning and <strong>120%</strong> for 
+the critical. Since autovacuum does not vacuum tables before they reach this limit, setting 
+levels below 100% will return false positives. Databases can be filtered by use of the 
+<em>--include</em> and <em>--exclude</em> options. See the <a href="#basic_filtering">BASIC FILTERING</a> section for more details.</p>
+<p>Example 1: Give a warning when any databases on port 5432 are above 100%</p>
 <pre>
-  check_postgres_autovac_freeze --port=5432 --warning=&quot;80%&quot;</pre>
+  check_postgres_autovac_freeze --port=5432 --warning=&quot;100%&quot;</pre>
 <p>For MRTG output, the highest overall percentage is reported on the first line, and the highest age is 
 reported on the second line. All databases which have the percentage from the first line are reported 
 on the fourth line, separated by a pipe symbol.</p>
@@ -1054,6 +1055,7 @@ regular expression as its argument.</p>
 columns within a table.</p>
 <p>The filter option &quot;nofuncbody&quot; prevents comparison of the bodies of all 
 functions.</p>
+<p>The filter option &quot;noperms&quot; prevents comparison of object permissions.</p>
 <p>You must provide information on how to reach the second database by a connection 
 parameter ending in the number 2, such as &quot;--dbport2=5543&quot;</p>
 <p>Example 1: Verify that two databases on hosts star and line are the same:</p>
@@ -1438,6 +1440,20 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="version_2_13_0" class="item"><strong>Version 2.13.0</strong></a></strong></dt>
+
+<dd>
+<pre>
+  Allow &quot;nofunctions&quot; as a filter for the same_schema option.
+  Added &quot;noperms&quot; as a filter for the same_schema option.
+  Ignore dropped columns when considered positions for same_schema (Guillaume Lelarge)</pre>
+</dd>
+<dt><strong><a name="version_2_12_1" class="item"><strong>Version 2.12.1</strong></a></strong></dt>
+
+<dd>
+<pre>
+  Change autovac_freeze default warn/critical from 90%/95% to 105%/120% (Marti Raudsepp)</pre>
+</dd>
 <dt><strong><a name="0" class="item"><strong>Version 2.12.0</strong> (December 3, 2009)</a></strong></dt>
 
 <dd>
