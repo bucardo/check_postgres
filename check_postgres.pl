@@ -4537,7 +4537,7 @@ sub check_same_schema {
 	my %filter;
 	if (exists $opt{warning} and length $opt{warning}) {
 		for my $phrase (split /\s+/ => $opt{warning}) {
-			for my $type (qw/schema user table view index sequence constraint trigger function/) {
+			for my $type (qw/schema user table view index sequence constraint trigger function perm/) {
 				if ($phrase =~ /^no${type}s?$/i) {
 					$filter{"no${type}s"} = 1;
 				}
@@ -4589,7 +4589,11 @@ sub check_same_schema {
 						warn "Query processing failed:\n$line\nfrom $SQL\n";
 						next;
 					}
-					$thing{$x}{schemas}{$1} = { oid=>$2, owner=>$3, acl=>$4||'(none)' };
+					$thing{$x}{schemas}{$1} = {
+						oid   => $2,
+						owner => $3,
+						acl   => (exists $filter{noperms} or !$4) ? '(none)' : $4,
+					};
 				}
 			}
 		}
@@ -4616,6 +4620,7 @@ sub check_same_schema {
 
 					my ($kind,$schema,$name,$owner,$acl,$def) = ($1,$2,$3,$4,$5,$6);
 
+ 					$acl = '(none)' if exists $filter{noperms};
 					if ($kind eq 'r') {
 						$thing{$x}{tables}{"$schema.$name"} =
 						{
@@ -4797,7 +4802,7 @@ SQL
 		}
 
 		## Get a list of all functions
-		if (! exists $filter{notriggers}) {
+		if (! exists $filter{nofunctions}) {
 			$SQL = q{SELECT quote_ident(nspname), quote_ident(proname), proargtypes, md5(prosrc), }
 				. q{proisstrict, proretset, provolatile }
 				. q{FROM pg_proc JOIN pg_namespace n ON (n.oid = pronamespace)};
@@ -7928,6 +7933,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.12.2>
 
   Allow "nofunctions" as a filter for the same_schema option.
+  Allow "noperms" as a filter for the same_schema option.
   Ignore dropped columns when considered positions for same_schema (Guillaume Lelarge)
 
 =item B<Version 2.12.1>
