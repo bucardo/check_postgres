@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.12.1';
+our $VERSION = '2.12.2';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -4784,25 +4784,27 @@ SQL
 		}
 
 		## Get a list of all functions
-		$SQL = q{SELECT quote_ident(nspname), quote_ident(proname), proargtypes, md5(prosrc), }
-			. q{proisstrict, proretset, provolatile }
-			. q{FROM pg_proc JOIN pg_namespace n ON (n.oid = pronamespace)};
-		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
-		for $db (@{$info->{db}}) {
-			for my $line (split /\n/, $db->{slurp}) {
-				unless ($line =~ /^\s*(.+?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s*/gmo) {
-					warn "Query processing failed:\n$line\nfrom $SQL\n";
-					next;
+		if (! exists $filter{notriggers}) {
+			$SQL = q{SELECT quote_ident(nspname), quote_ident(proname), proargtypes, md5(prosrc), }
+				. q{proisstrict, proretset, provolatile }
+				. q{FROM pg_proc JOIN pg_namespace n ON (n.oid = pronamespace)};
+			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
+			for $db (@{$info->{db}}) {
+				for my $line (split /\n/, $db->{slurp}) {
+					unless ($line =~ /^\s*(.+?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s*/gmo) {
+						warn "Query processing failed:\n$line\nfrom $SQL\n";
+						next;
+					}
+					my ($schema,$name,$args,$md5,$isstrict,$retset,$volatile) = ($1,$2,$3,$4,$5,$6,$7);
+					$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
+					$args =~ s/^\s*(.*)\s*$/($1)/;
+					$thing{$x}{functions}{"${schema}.${name}${args}"} = {
+						md5 => $md5,
+						isstrict => $isstrict,
+						retset => $retset,
+						volatile => $volatile,
+					};
 				}
-				my ($schema,$name,$args,$md5,$isstrict,$retset,$volatile) = ($1,$2,$3,$4,$5,$6,$7);
-				$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
-				$args =~ s/^\s*(.*)\s*$/($1)/;
-				$thing{$x}{functions}{"${schema}.${name}${args}"} = {
-					md5 => $md5,
-					isstrict => $isstrict,
-					retset => $retset,
-					volatile => $volatile,
-				};
 			}
 		}
 
@@ -6452,7 +6454,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.12.0
+This documents describes check_postgres.pl version 2.12.2
 
 =head1 SYNOPSIS
 
@@ -7909,6 +7911,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.12.2>
+
+  Allow "nofunctions" as a filter for the same_schema option.
 
 =item B<Version 2.12.1>
 
