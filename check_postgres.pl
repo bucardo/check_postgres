@@ -7932,13 +7932,13 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.13.0>
+=item B<Version 2.13.0> (January 29, 2010)
 
   Allow "nofunctions" as a filter for the same_schema option.
   Added "noperms" as a filter for the same_schema option.
   Ignore dropped columns when considered positions for same_schema (Guillaume Lelarge)
 
-=item B<Version 2.12.1>
+=item B<Version 2.12.1> (December 3, 2009)
 
   Change autovac_freeze default warn/critical from 90%/95% to 105%/120% (Marti Raudsepp)
 
