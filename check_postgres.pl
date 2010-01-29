@@ -4684,7 +4684,7 @@ sub check_same_schema {
 			. q{COALESCE(numeric_precision, 0), }
 			. q{COALESCE(numeric_scale,0) }
 			. q{FROM information_schema.columns }
-			. q{ORDER BY table_schema, table_name, column_name, ordinal_position};
+			. q{ORDER BY table_schema, table_name, ordinal_position, column_name};
 		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 		my $oldrelation = '';
 		my $col = 0;

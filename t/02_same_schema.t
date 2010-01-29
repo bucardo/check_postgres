@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 46;
+use Test::More tests => 47;
 use lib 't','.';
 use CP_Testing;
 
@@ -342,13 +342,24 @@ like ($cp1->run($stdargs),
       qr{^$label CRITICAL.*Items not matched: 1\b.*length is 20 on 1, but 40 on 2},
       $t);
 
-$t = qq{$S fails when tables have columns in different orders};
-$dbh1->do(q{ALTER TABLE table_1_only ADD COLUMN buzz date});
+$t = qq{$S works when tables have columns in different orders due to dropped columns};
+$dbh1->do(q{ALTER TABLE table_1_only DROP COLUMN extra});
 $dbh2->do(q{ALTER TABLE table_1_only DROP COLUMN extra});
+$dbh1->do(q{ALTER TABLE table_1_only ADD COLUMN buzz date});
 $dbh2->do(q{ALTER TABLE table_1_only ADD COLUMN buzz date});
-$dbh2->do(q{ALTER TABLE table_1_only ADD COLUMN extra varchar(20)});
+$dbh2->do(q{ALTER TABLE table_1_only DROP COLUMN buzz});
+$dbh2->do(q{ALTER TABLE table_1_only ADD COLUMN buzz date});
 like ($cp1->run($stdargs),
-      qr{^$label CRITICAL.*Items not matched: 1\b.*position is 2 on 1, but 4 on 2},
+      qr{^$label OK:},
+      $t);
+
+$t = qq{$S fails when tables have columns in different orders};
+$dbh1->do(q{ALTER TABLE table_1_only ADD COLUMN paris TEXT});
+$dbh1->do(q{ALTER TABLE table_1_only ADD COLUMN rome TEXT});
+$dbh2->do(q{ALTER TABLE table_1_only ADD COLUMN rome TEXT});
+$dbh2->do(q{ALTER TABLE table_1_only ADD COLUMN paris TEXT});
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL.*Items not matched: 2\b.*position is 3 on 1, but 4 on 2},
       $t);
 
 $dbh1->do('DROP TABLE table_1_only');
