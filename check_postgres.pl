@@ -4683,8 +4683,12 @@ sub check_same_schema {
 			. q{COALESCE(character_maximum_length, 0), }
 			. q{COALESCE(numeric_precision, 0), }
 			. q{COALESCE(numeric_scale,0) }
-			. q{FROM information_schema.columns};
+			. q{FROM information_schema.columns }
+			. q{ORDER BY table_schema, table_name, column_name, ordinal_position};
 		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
+		my $oldrelation = '';
+		my $col = 0;
+		my $position;
 		for $db (@{$info->{db}}) {
 			for my $line (split /\n/, $db->{slurp}) {
 				unless ($line =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \|\s+(\d+) \|\s+(\d+).*/gmo) {
@@ -4692,11 +4696,20 @@ sub check_same_schema {
 					next;
 				}
 
+				## If this is a new relation, reset the column numbering
+				if ($oldrelation ne "$1.$2") {
+					$oldrelation = "$1.$2";
+					$col = 1;
+				}
+
+				## Rather than use ordinal_position directly, count the live columns
+				$position = $col++;
+
 				$thing{$x}{columns}{"$1.$2"}{$3} = {
 					schema     => $1,
 					table      => $2,
 					name       => $3,
-					position   => exists $filter{noposition} ?0 : $4,
+					position   => exists $filter{noposition} ? 0 : $position,
 					default    => $5,
 					nullable   => $6,
 					type       => $7,
@@ -7915,6 +7928,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.12.2>
 
   Allow "nofunctions" as a filter for the same_schema option.
+  Ignore dropped columns when considered positions for same_schema (Guillaume Lelarge)
 
 =item B<Version 2.12.1>
 
