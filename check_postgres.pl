@@ -4557,6 +4557,14 @@ sub check_same_schema {
 
 	my (%thing,$info);
 
+	## Do some synchronizations: assume db "1" is the default for "2" unless explicitly set
+	for my $setting (qw/ host port dbname dbuser dbpass dbservice /) {
+		my $two = "${setting}2";
+		if (exists $opt{$setting} and ! exists $opt{$two}) {
+			$opt{$two} = $opt{$setting};
+		}
+	}
+
 	my $saved_db;
 	for my $x (1..2) {
 
@@ -7489,7 +7497,9 @@ functions.
 The filter option "noperms" prevents comparison of object permissions.
 
 You must provide information on how to reach the second database by a connection 
-parameter ending in the number 2, such as "--dbport2=5543"
+parameter ending in the number 2, such as "--dbport2=5543". If if it not given, 
+it uses the the same information as database number 1, or the default if neither 
+is given.
 
 Example 1: Verify that two databases on hosts star and line are the same:
 
@@ -7503,9 +7513,13 @@ Example 3: Same as before, but also exclude all indexes
 
   check_postgres_same_schema --dbhost=star --dbhost2=line --warning="notrigger=slony noindexes"
 
-Example 3: Don't show anything starting with "pg_catalog"
+Example 4: Don't show anything starting with "pg_catalog"
 
   check_postgres_same_schema --dbhost=star --dbhost2=line --exclude="^pg_catalog"
+
+Example 5: Check differences for the database "battlestar" on different ports
+
+  check_postgres_same_schema --dbname=battlestar --dbport=5432 --dbport2=5544
 
 =head2 B<sequence>
 
