@@ -4537,7 +4537,7 @@ sub check_same_schema {
 	my %filter;
 	if (exists $opt{warning} and length $opt{warning}) {
 		for my $phrase (split /\s+/ => $opt{warning}) {
-			for my $type (qw/schema user table view index sequence constraint trigger function perm/) {
+			for my $type (qw/schema user table view index sequence constraint trigger function perm language/) {
 				if ($phrase =~ /^no${type}s?$/i) {
 					$filter{"no${type}s"} = 1;
 				}
@@ -4835,15 +4835,17 @@ SQL
 		}
 
 		## Get a list of all languages
-		$SQL = q{SELECT lanname FROM pg_language};
-		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
-		for $db (@{$info->{db}}) {
-			for my $line (split /\n/, $db->{slurp}) {
-				unless ($line =~ /^\s*(\w+)\s*/gmo) {
-					warn "Query processing failed:\n$line\nfrom $SQL\n";
-					next;
+		if (! exists $filter{nolanguages}) {
+			$SQL = q{SELECT lanname FROM pg_language};
+			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
+			for $db (@{$info->{db}}) {
+				for my $line (split /\n/, $db->{slurp}) {
+					unless ($line =~ /^\s*(\w+)\s*/gmo) {
+						warn "Query processing failed:\n$line\nfrom $SQL\n";
+						next;
+					}
+					$thing{$x}{language}{$1} = 1;
 				}
-				$thing{$x}{language}{$1} = 1;
 			}
 		}
 
@@ -5372,8 +5374,9 @@ SQL
 		if (! exists $thing{1}{colconstraints}{$name}) {
 
 			## If the table does not exist, we don't report it
-			if (exists $thing{1}{tables}{ $thing{2}{colconstraints}{$name} }) {
-				push @{$fail{colconstraints}{notexist}{2}} => [$name, $thing{2}{colconstraints}{$name}];
+			my ($tname,$cname) = @{$thing{2}{colconstraints}{$name}};
+			if (exists $thing{1}{tables}{ $tname }) {
+				push @{$fail{colconstraints}{notexist}{2}} => [$name, $tname, $cname];
 				$failcount++;
 			}
 			next;
@@ -7496,6 +7499,8 @@ functions.
 
 The filter option "noperms" prevents comparison of object permissions.
 
+The filter option "nolanguage" prevents comparison of language existence.
+
 You must provide information on how to reach the second database by a connection 
 parameter ending in the number 2, such as "--dbport2=5543". If if it not given, 
 it uses the the same information as database number 1, or the default if neither 
@@ -7948,12 +7953,14 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.13.1>
 
+  Fix bug preventing column constraint differences from 2 > 1 for same_schema from being shown.
   Allow aliases 'dbname1', 'dbhost1', 'dbport1',etc.
+  Added "nolanguage" as a filter for the same_schema option.
 
 =item B<Version 2.13.0> (January 29, 2010)
 
   Allow "nofunctions" as a filter for the same_schema option.
-  Added "noperms" as a filter for the same_schema option.
+  Added "noperm" as a filter for the same_schema option.
   Ignore dropped columns when considered positions for same_schema (Guillaume Lelarge)
 
 =item B<Version 2.12.1> (December 3, 2009)
