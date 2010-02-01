@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.13.0';
+our $VERSION = '2.13.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -616,16 +616,16 @@ if (defined $rcfile) {
 		next unless /^\s*(\w+)\s*=\s*(.+?)\s*$/o;
 		my ($name,$value) = ($1,$2); ## no critic (ProhibitCaptureWithoutTest)
 		## Map alternate option spellings to preferred names
-		if ($name eq 'dbport' or $name eq 'p') {
+		if ($name eq 'dbport' or $name eq 'p' or $name eq 'dbport1' or $name eq 'p1' or $name eq 'port1') {
 			$name = 'port';
 		}
-		elsif ($name eq 'dbhost' or $name eq 'H') {
+		elsif ($name eq 'dbhost' or $name eq 'H' or $name eq 'dbhost1' or $name eq 'H1' or $name eq 'host1') {
 			$name = 'host';
 		}
-		elsif ($name eq 'db') {
+		elsif ($name eq 'db' or $name eq 'db1' or $name eq 'dbname1') {
 			$name = 'dbname';
 		}
-		elsif ($name eq 'u') {
+		elsif ($name eq 'u' or $name eq 'u1' or $name eq 'dbuser1') {
 			$name = 'dbuser';
 		}
 		if ($name eq 'dbport2' or $name eq 'p2') {
@@ -678,12 +678,12 @@ die $USAGE unless
 			   'includeuser=s@',
 			   'excludeuser=s@',
 
-			   'host|dbhost|H=s@',
-			   'port|dbport|p=s@',
-			   'dbname|db=s@',
-			   'dbuser|u=s@',
-			   'dbpass=s@',
-			   'dbservice=s@',
+			   'host|dbhost|H|dbhost1|H1=s@',
+			   'port|dbport|p|port1|dbport1|p1=s@',
+			   'dbname|db|dbname1|db1=s@',
+			   'dbuser|u|dbuser1|u1=s@',
+			   'dbpass|dbpass1=s@',
+			   'dbservice|dbservice1=s@',
 
 			   'host2|dbhost2|H2=s@',
 			   'port2|dbport2|p2=s@',
@@ -6472,7 +6472,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.13.0
+This documents describes check_postgres.pl version 2.13.1
 
 =head1 SYNOPSIS
 
@@ -7931,6 +7931,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.13.1>
+
+  Allow aliases 'dbname1', 'dbhost1', 'dbport1',etc.
 
 =item B<Version 2.13.0> (January 29, 2010)
 
