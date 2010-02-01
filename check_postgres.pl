@@ -4803,12 +4803,15 @@ SQL
 						next;
 					}
 					my ($cschema,$cname,$tschema,$tname,$col,$cdef) = ($6,$7,$2,$3,$4,$8);
-					if (exists $thing{$x}{colconstraints}{"$cschema.$cname"}) {
-						my @oldcols = split / / => $thing{$x}{colconstraints}{"$cschema.$cname"}->[1];
-						push @oldcols => $col;
-						$col = join ' ' => sort @oldcols;
+					## No sense in grabbing "generic" constraints
+					if ($cname !~ /^\$\d+$/o) {
+						if (exists $thing{$x}{colconstraints}{"$cschema.$cname"}) {
+							my @oldcols = split / / => $thing{$x}{colconstraints}{"$cschema.$cname"}->[1];
+							push @oldcols => $col;
+							$col = join ' ' => sort @oldcols;
+						}
+						$thing{$x}{colconstraints}{"$cschema.$cname"} = ["$tschema.$tname", $col, $cdef];
 					}
-					$thing{$x}{colconstraints}{"$cschema.$cname"} = ["$tschema.$tname", $col, $cdef];
 				}
 			}
 		}
