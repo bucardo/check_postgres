@@ -4745,8 +4745,12 @@ sub check_same_schema {
 						warn "Query processing failed:\n$line\nfrom $SQL\n";
 						next;
 					}
+					my ($ichi,$ni,$san,$shi) = ($1,$2,$3,$4);
 
-					$thing{$x}{constraints}{"$1.$2"} = "$3.$4";
+					## No sense in grabbing "generic" constraints
+					next if $ni =~ /^\$\d+$/o;
+
+					$thing{$x}{constraints}{"$ichi.$ni"} = "$san.$shi";
 				}
 			}
 			$SQL = <<'SQL';  # cribbed from information_schema.constraint_column_usage
@@ -7956,6 +7960,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Fix bug preventing column constraint differences from 2 > 1 for same_schema from being shown.
   Allow aliases 'dbname1', 'dbhost1', 'dbport1',etc.
   Added "nolanguage" as a filter for the same_schema option.
+  Don't track "generic" table constraints (e.. $1, $2) using same_schema
 
 =item B<Version 2.13.0> (January 29, 2010)
 
