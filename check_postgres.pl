@@ -8425,7 +8425,7 @@ Some example Nagios configuration settings using this script:
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2007-2009 Greg Sabino Mullane <greg@endpoint.com>.
+Copyright (c) 2007-2010 Greg Sabino Mullane <greg@endpoint.com>.
 
 Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions are met:
