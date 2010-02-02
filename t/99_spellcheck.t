@@ -183,6 +183,7 @@ autovac
 autovacuum
 AUTOvacuum
 backends
+battlestar
 Bucardo
 burrick
 checksum
@@ -233,8 +234,10 @@ NAGIOS
 nextval
 nofuncbody
 noidle
+nolanguage
 noobjectnames
 nols
+noperms
 noposition
 ok
 oskar

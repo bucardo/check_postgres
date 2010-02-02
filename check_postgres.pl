@@ -4802,15 +4802,15 @@ SQL
 						warn "Query processing failed:\n$line\nfrom $SQL\n";
 						next;
 					}
-					my ($cschema,$cname,$tschema,$tname,$col,$cdef) = ($6,$7,$2,$3,$4,$8);
+					my ($cschema,$cname,$tschema,$tname,$ccol,$cdef) = ($6,$7,$2,$3,$4,$8);
 					## No sense in grabbing "generic" constraints
 					if ($cname !~ /^\$\d+$/o) {
 						if (exists $thing{$x}{colconstraints}{"$cschema.$cname"}) {
 							my @oldcols = split / / => $thing{$x}{colconstraints}{"$cschema.$cname"}->[1];
-							push @oldcols => $col;
-							$col = join ' ' => sort @oldcols;
+							push @oldcols => $ccol;
+							$ccol = join ' ' => sort @oldcols;
 						}
-						$thing{$x}{colconstraints}{"$cschema.$cname"} = ["$tschema.$tname", $col, $cdef];
+						$thing{$x}{colconstraints}{"$cschema.$cname"} = ["$tschema.$tname", $ccol, $cdef];
 					}
 				}
 			}
@@ -7958,7 +7958,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.13.1>
+=item B<Version 2.13.1> (February 2, 2010)
 
   Fix bug preventing column constraint differences from 2 > 1 for same_schema from being shown.
   Allow aliases 'dbname1', 'dbhost1', 'dbport1',etc.

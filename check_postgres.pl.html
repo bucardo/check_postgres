@@ -104,7 +104,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.13.0</p>
+<p>This documents describes check_postgres.pl version 2.13.1</p>
 <p>
 </p>
 <hr />
@@ -1056,8 +1056,11 @@ columns within a table.</p>
 <p>The filter option &quot;nofuncbody&quot; prevents comparison of the bodies of all 
 functions.</p>
 <p>The filter option &quot;noperms&quot; prevents comparison of object permissions.</p>
+<p>The filter option &quot;nolanguage&quot; prevents comparison of language existence.</p>
 <p>You must provide information on how to reach the second database by a connection 
-parameter ending in the number 2, such as &quot;--dbport2=5543&quot;</p>
+parameter ending in the number 2, such as &quot;--dbport2=5543&quot;. If if it not given, 
+it uses the the same information as database number 1, or the default if neither 
+is given.</p>
 <p>Example 1: Verify that two databases on hosts star and line are the same:</p>
 <pre>
   check_postgres_same_schema --dbhost=star --dbhost2=line</pre>
@@ -1067,9 +1070,12 @@ parameter ending in the number 2, such as &quot;--dbport2=5543&quot;</p>
 <p>Example 3: Same as before, but also exclude all indexes</p>
 <pre>
   check_postgres_same_schema --dbhost=star --dbhost2=line --warning=&quot;notrigger=slony noindexes&quot;</pre>
-<p>Example 3: Don't show anything starting with &quot;pg_catalog&quot;</p>
+<p>Example 4: Don't show anything starting with &quot;pg_catalog&quot;</p>
 <pre>
   check_postgres_same_schema --dbhost=star --dbhost2=line --exclude=&quot;^pg_catalog&quot;</pre>
+<p>Example 5: Check differences for the database &quot;battlestar&quot; on different ports</p>
+<pre>
+  check_postgres_same_schema --dbname=battlestar --dbport=5432 --dbport2=5544</pre>
 <p>
 </p>
 <h2><a name="sequence"><strong>sequence</strong></a></h2>
@@ -1440,21 +1446,30 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
-<dt><strong><a name="version_2_13_0" class="item"><strong>Version 2.13.0</strong></a></strong></dt>
+<dt><strong><a name="1" class="item"><strong>Version 2.13.1</strong> (February 2, 2010)</a></strong></dt>
+
+<dd>
+<pre>
+  Fix bug preventing column constraint differences from 2 &gt; 1 for same_schema from being shown.
+  Allow aliases 'dbname1', 'dbhost1', 'dbport1',etc.
+  Added &quot;nolanguage&quot; as a filter for the same_schema option.
+  Don't track &quot;generic&quot; table constraints (e.. $1, $2) using same_schema</pre>
+</dd>
+<dt><strong><a name="0" class="item"><strong>Version 2.13.0</strong> (January 29, 2010)</a></strong></dt>
 
 <dd>
 <pre>
   Allow &quot;nofunctions&quot; as a filter for the same_schema option.
-  Added &quot;noperms&quot; as a filter for the same_schema option.
+  Added &quot;noperm&quot; as a filter for the same_schema option.
   Ignore dropped columns when considered positions for same_schema (Guillaume Lelarge)</pre>
 </dd>
-<dt><strong><a name="version_2_12_1" class="item"><strong>Version 2.12.1</strong></a></strong></dt>
+<dt><strong><strong>Version 2.12.1</strong> (December 3, 2009)</strong></dt>
 
 <dd>
 <pre>
   Change autovac_freeze default warn/critical from 90%/95% to 105%/120% (Marti Raudsepp)</pre>
 </dd>
-<dt><strong><a name="0" class="item"><strong>Version 2.12.0</strong> (December 3, 2009)</a></strong></dt>
+<dt><strong><strong>Version 2.12.0</strong> (December 3, 2009)</strong></dt>
 
 <dd>
 <pre>
@@ -1466,7 +1481,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
   Add database name to perf output for last_vacuum|analyze (Guillaume Lelarge)
   Fix for bloat action against old versions of Postgres without the 'block_size' param.</pre>
 </dd>
-<dt><strong><a name="1" class="item"><strong>Version 2.11.1</strong> (August 27, 2009)</a></strong></dt>
+<dt><strong><strong>Version 2.11.1</strong> (August 27, 2009)</strong></dt>
 
 <dd>
 <pre>
