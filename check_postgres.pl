@@ -5963,6 +5963,8 @@ sub check_sequence {
 	my $MAXINT4 = 2147483647;
 	my $MAXINT8 = 9223372036854775807;
 
+	my $limit = 0;
+
 	for $db (@{$info->{db}}) {
 		my (@crit,@warn,@ok);
 		my $maxp = 0;
@@ -5987,7 +5989,9 @@ sub check_sequence {
 			$seqperf{$percent}{$seqname} = [$left, " $multidb$seqname=$percent|$slots|$used|$left"];
 			if ($percent >= $maxp) {
 				$maxp = $percent;
-				push @{$seqinfo{$percent}} => $MRTG ? [$seqname,$percent,$slots,$used,$left] : $msg;
+				if (! exists $opt{perflimit} or $limit++ < $opt{perflimit}) {
+					push @{$seqinfo{$percent}} => $MRTG ? [$seqname,$percent,$slots,$used,$left] : $msg;
+				}
 			}
 			next if $MRTG;
 
@@ -6002,7 +6006,7 @@ sub check_sequence {
 			my $msg = join ' | ' => map { $_->[0] } @{$seqinfo{$maxp}};
 			do_mrtg({one => $maxp, msg => $msg});
 		}
-		my $limit = 0;
+		$limit = 0;
 		PERF: for my $val (sort { $b <=> $a } keys %seqperf) {
 			for my $seq (sort { $seqperf{$val}{$a}->[0] <=> $seqperf{$val}{$b}->[0] or $a cmp $b } keys %{$seqperf{$val}}) {
 				last PERF if exists $opt{perflimit} and $limit++ >= $opt{perflimit};
