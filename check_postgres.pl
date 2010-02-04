@@ -3898,10 +3898,14 @@ sub check_query_time {
 
 		$found = 1;
 		my $max = 0;
-		SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
+		my $maxdb = '?';
+		SLURP: while ($db->{slurp} =~ /\s*(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
 			my ($dbname,$current) = ($1, int $2);
 			next SLURP if skip_item($dbname);
-			$max = $current if $current > $max;
+			if ($current > $max) {
+				$max = $current;
+				$maxdb = $dbname;
+			}
 		}
 		if ($MRTG) {
 			$stats{$db->{dbname}} = $max;
@@ -3913,6 +3917,8 @@ sub check_query_time {
 		$db->{perf} .= "$critical" if length $critical;
 
 		my $msg = msg('qtime-msg', $max);
+		$msg .= " db=$maxdb";
+
 		if (length $critical and $max >= $critical) {
 			add_critical $msg;
 		}
