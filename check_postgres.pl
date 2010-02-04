@@ -4537,7 +4537,7 @@ sub check_same_schema {
 	my %filter;
 	if (exists $opt{warning} and length $opt{warning}) {
 		for my $phrase (split /\s+/ => $opt{warning}) {
-			for my $type (qw/schema user table view index sequence constraint trigger function perm language/) {
+			for my $type (qw/schema user table view index sequence constraint trigger function perm language owner/) {
 				if ($phrase =~ /^no${type}s?$/i) {
 					$filter{"no${type}s"} = 1;
 				}
@@ -4944,14 +4944,16 @@ SQL
 		}
 
 		## Do the schemas have same owner and permissions?
-		if ($thing{1}{schemas}{$name}{owner} ne $thing{2}{schemas}{$name}{owner}) {
-			push @{$fail{schemas}{diffowners}} =>
-				[
-				$name,
-				 $thing{1}{schemas}{$name}{owner},
-				 $thing{2}{schemas}{$name}{owner},
+		if (! exists $filter{noowners}) {
+			if ($thing{1}{schemas}{$name}{owner} ne $thing{2}{schemas}{$name}{owner}) {
+				push @{$fail{schemas}{diffowners}} =>
+					[
+						$name,
+						$thing{1}{schemas}{$name}{owner},
+						$thing{2}{schemas}{$name}{owner},
 				];
-			$failcount++;
+				$failcount++;
+			}
 		}
 
 		if ($thing{1}{schemas}{$name}{acl} ne $thing{2}{schemas}{$name}{acl}) {
@@ -5015,13 +5017,16 @@ SQL
 		}
 
 		## Do the tables have same owner and permissions?
-		if ($thing{1}{tables}{$name}{owner} ne $thing{2}{tables}{$name}{owner}) {
-			push @{$fail{tables}{diffowners}} =>
-				[$name,
-				 $thing{1}{tables}{$name}{owner},
-				 $thing{2}{tables}{$name}{owner},
+		if (! exists $filter{noowners}) {
+			if ($thing{1}{tables}{$name}{owner} ne $thing{2}{tables}{$name}{owner}) {
+				push @{$fail{tables}{diffowners}} =>
+					[
+						$name,
+						$thing{1}{tables}{$name}{owner},
+						$thing{2}{tables}{$name}{owner},
 				];
-			$failcount++;
+				$failcount++;
+			}
 		}
 
 		if ($thing{1}{tables}{$name}{acl} ne $thing{2}{tables}{$name}{acl}) {
@@ -5085,13 +5090,16 @@ SQL
 		}
 
 		## Do the sequences have same owner and permissions?
-		if ($thing{1}{sequences}{$name}{owner} ne $thing{2}{sequences}{$name}{owner}) {
-			push @{$fail{sequences}{diffowners}} =>
-				[$name,
-				 $thing{1}{sequences}{$name}{owner},
-				 $thing{2}{sequences}{$name}{owner},
+		if (! exists $filter{noowners}) {
+			if ($thing{1}{sequences}{$name}{owner} ne $thing{2}{sequences}{$name}{owner}) {
+				push @{$fail{sequences}{diffowners}} =>
+					[
+						$name,
+						$thing{1}{sequences}{$name}{owner},
+						$thing{2}{sequences}{$name}{owner},
 				];
-			$failcount++;
+				$failcount++;
+			}
 		}
 
 		if ($thing{1}{sequences}{$name}{acl} ne $thing{2}{sequences}{$name}{acl}) {
@@ -5154,13 +5162,16 @@ SQL
 		}
 
 		## Do the views have same owner and permissions?
-		if ($thing{1}{views}{$name}{owner} ne $thing{2}{views}{$name}{owner}) {
-			push @{$fail{views}{diffowners}} =>
-				[$name,
-				 $thing{1}{views}{$name}{owner},
-				 $thing{2}{views}{$name}{owner},
+		if (! exists $filter{noowners}) {
+			if ($thing{1}{views}{$name}{owner} ne $thing{2}{views}{$name}{owner}) {
+				push @{$fail{views}{diffowners}} =>
+					[
+						$name,
+						$thing{1}{views}{$name}{owner},
+						$thing{2}{views}{$name}{owner},
 				];
-			$failcount++;
+				$failcount++;
+			}
 		}
 
 		if ($thing{1}{views}{$name}{acl} ne $thing{2}{views}{$name}{acl}) {
