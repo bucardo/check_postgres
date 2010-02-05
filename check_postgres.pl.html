@@ -104,7 +104,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.13.1</p>
+<p>This documents describes check_postgres.pl version 2.13.2</p>
 <p>
 </p>
 <hr />
@@ -1446,6 +1446,15 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="2" class="item"><strong>Version 2.13.2</strong> (February 4, 2010)</a></strong></dt>
+
+<dd>
+<pre>
+  Show offending database for query_time action.
+  Apply perflimit to main output for sequence action.
+  Add 'noowner' option to same_schema action.
+  Raise sleep timeout for logfile check to 15 seconds.</pre>
+</dd>
 <dt><strong><a name="1" class="item"><strong>Version 2.13.1</strong> (February 2, 2010)</a></strong></dt>
 
 <dd>
@@ -1532,7 +1541,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
   Add 'fetch' as an alternative method for new_version checks, as this 
     comes by default with FreeBSD. (Hywell Mallett)</pre>
 </dd>
-<dt><strong><a name="2" class="item"><strong>Version 2.9.2</strong> (July 12, 2009)</a></strong></dt>
+<dt><strong><strong>Version 2.9.2</strong> (July 12, 2009)</strong></dt>
 
 <dd>
 <pre>
