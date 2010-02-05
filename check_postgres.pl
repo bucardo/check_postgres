@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.13.2';
+our $VERSION = '2.13.3';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -3763,7 +3763,7 @@ sub check_logfile {
 		delete @{$db}{qw(ok slurp totaltime)};
 		my $badinfo = run_command("$funky", {failok => 1, target => $db} );
 
-		my $MAXSLEEPTIME = 30;
+		my $MAXSLEEPTIME = $opt{timeout} || 45;
 		my $SLEEP = 0.5;
 		my $found = 0;
 		LOGWAIT: {
@@ -6511,7 +6511,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.13.2
+This documents describes check_postgres.pl version 2.13.3
 
 =head1 SYNOPSIS
 
@@ -7978,6 +7978,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.13.2> (February 4, 2010)
+
+  Allow timeout option to be used for logtime 'sleep' time.
 
 =item B<Version 2.13.2> (February 4, 2010)
 
