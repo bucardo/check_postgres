@@ -31,6 +31,7 @@ t/02_last_vacuum.t
 t/02_listener.t
 t/02_locks.t
 t/02_logfile.t
+t/02_new_version_bc.t
 t/02_new_version_cp.t
 t/02_new_version_pg.t
 t/02_prepared_txns.t
