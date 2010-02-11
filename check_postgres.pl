@@ -3774,8 +3774,8 @@ sub check_logfile {
 		delete @{$db}{qw(ok slurp totaltime)};
 		my $badinfo = run_command("$funky", {failok => 1, target => $db} );
 
-		my $MAXSLEEPTIME = $opt{timeout} || 45;
-		my $SLEEP = 0.5;
+		my $MAXSLEEPTIME = $opt{timeout} || 20;
+		my $SLEEP = 1;
 		my $found = 0;
 		LOGWAIT: {
 			sleep $SLEEP;
@@ -8073,9 +8073,10 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.14.0>
+=item B<Version 2.14.0> (February 11, 2010)
 
   Added the 'slony_status' action.
+  Changed the logfile sleep from 0.5 to 1, as 0.5 gets rounded to 0 on some boxes!
 
 =item B<Version 2.13.2> (February 4, 2010)
 
