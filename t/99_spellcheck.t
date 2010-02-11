@@ -134,6 +134,8 @@ postgres
 runtime
 Schemas
 selectall
+Slony
+slony
 stderr
 syslog
 txn
@@ -265,6 +267,7 @@ Seklecki
 showperf
 slon
 Slony
+Slony's
 slony
 snazzo
 speedtest

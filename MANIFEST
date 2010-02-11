@@ -41,6 +41,7 @@ t/02_replicate_row.t
 t/02_same_schema.t
 t/02_sequence.t
 t/02_settings_checksum.t
+t/02_slony_status.t
 t/02_timesync.t
 t/02_txn_idle.t
 t/02_txn_time.t

@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.13.3';
+our $VERSION = '2.14.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -234,6 +234,9 @@ our %msg = (
 	'seq-die'            => q{Could not determine information about sequence $1},
 	'seq-msg'            => q{$1=$2% (calls left=$3)},
 	'seq-none'           => q{No sequences found},
+	'slony-noschema'     => q{Could not determine the schema for Slony},
+	'slony-nonumber'     => q{Call to sl_status did not return a number},
+	'slony-lagtime'      => q{Slony lag time: $1},
 	'symlink-create'     => q{Created "$1"},
 	'symlink-done'       => q{Not creating "$1": $2 already linked to "$3"},
 	'symlink-exists'     => q{Not creating "$1": $2 file already exists},
@@ -429,6 +432,9 @@ our %msg = (
 	'runtime-msg'        => q{durée d'exécution de la requête : $1 secondes},
 	'same-failed'        => q{Les bases de données sont différentes. Éléments différents : $1},
 	'same-matched'       => q{Les bases de données ont les mêmes éléments},
+'slony-noschema'     => q{Could not determine the schema for Slony},
+'slony-nonumber'     => q{Call to sl_status did not return a number},
+'slony-lagtime'      => q{Slony lag time: $1},
 	'seq-die'            => q{N'a pas pu récupérer d'informations sur la séquence $1},
 	'seq-msg'            => q{$1=$2% (appels restant=$3)},
 	'seq-none'           => q{Aucune sequences trouvée},
@@ -706,6 +712,7 @@ die $USAGE unless
 			   'repinfo=s',   ## used by replicate_row only
 			   'noidle',      ## used by backends only
 			   'datadir=s',   ## used by checkpoint only
+			   'schema=s',    ## used by slony_status only
 			   )
 	and keys %opt
 	and ! @ARGV;
@@ -831,6 +838,7 @@ our $action_info = {
  same_schema         => [0, 'Verify that two databases have the exact same tables, columns, etc.'],
  sequence            => [0, 'Checks remaining calls left in sequences.'],
  settings_checksum   => [0, 'Check that no settings have changed since the last check.'],
+ slony_status        => [1, 'Ensure Slony is up to date via sl_status.'],
  timesync            => [0, 'Compare database time to local system time.'],
  txn_idle            => [1, 'Checks the maximum "idle in transaction" time.'],
  txn_time            => [1, 'Checks the maximum open transaction time.'],
@@ -1431,6 +1439,9 @@ check_disabled_triggers() if $action eq 'disabled_triggers';
 
 ## Check for any prepared transactions
 check_prepared_txns() if $action eq 'prepared_txns';
+
+## Make sure Slony is behaving
+check_slony_status() if $action eq 'slony_status';
 
 ##
 ## Everything past here does not hit a Postgres database
@@ -6452,6 +6463,65 @@ sub check_prepared_txns {
 } ## end of check_prepared_txns
 
 
+sub check_slony_status {
+
+	## Checks the sl_status table
+	## Returns unknown if sl_status is not found
+	## Returns critical is status is not "good"
+	## Otherwise, returns based on time-based warning and critical options
+	## Supports: Nagios, MRTG
+
+	my ($warning, $critical) = validate_range
+		({
+		  type              => 'time',
+		  default_warning   => '60',
+		  default_critical  => '300',
+		});
+
+	my $schema = $opt{schema} || '';
+
+	if (!$schema) {
+		$SQL = q{SELECT quote_ident(nspname) FROM pg_namespace WHERE oid = }.
+			   q{(SELECT relnamespace FROM pg_class WHERE relkind = 'v' AND relname = 'sl_status' LIMIT 1)};
+		my $res = run_command($SQL);
+		if ($res->{db}[0]{slurp} =~ /^\s(\w.*?)\s*$/) {
+			$schema = $1;
+		}
+		else {
+			add_unknown msg('slony-noschema');
+			return;
+		}
+	}
+
+	my $SQL = qq{SELECT ROUND(EXTRACT(epoch FROM st_lag_time)) FROM $schema.sl_status};
+
+	my $info = run_command($SQL, {regex => qr[\d+] } );
+
+	$db = $info->{db}[0];
+	if ($db->{slurp} !~ /^\s*(\d+)/) {
+		add_unknown msg('slony-nonumber');
+		return;
+	}
+	my $lagtime = $1;
+	my $dbname = $db->{dbname};
+	$db->{perf} = "'$dbname'=$lagtime;$warning;$critical";
+	my $msg = msg('slony-lagtime', $lagtime);
+	$msg .= sprintf ' (%s)', pretty_time($lagtime, $lagtime > 500 ? 'S' : '');
+	if (length $critical and $lagtime >= $critical) {
+		add_critical $msg;
+	}
+	elsif (length $warning and $lagtime >= $warning) {
+		add_warning $msg;
+	}
+	else {
+		add_ok $msg;
+	}
+
+	return;
+
+} ## end of check_slony_status
+
+
 sub show_dbstats {
 
 	## Returns values from the pg_stat_database view
@@ -7478,6 +7548,48 @@ Example 3: Warn if user 'don' has a query running over 20 seconds
 For MRTG output, returns the length in seconds of the longest running query on the first line. The fourth 
 line gives the name of the database.
 
+=head2 B<replicate_row>
+
+(C<symlink: check_postgres_replicate_row>) Checks that master-slave replication is working to one or more slaves.
+The slaves are specified the same as the normal databases, except with 
+the number 2 at the end of them, so "--port2" instead of "--port", etc.
+The values or the I<--warning> and I<--critical> options are units of time, and 
+at least one must be provided (no defaults). Valid units are 'seconds', 'minutes', 'hours', 
+or 'days'. Each may be written singular or abbreviated to just the first letter. 
+If no units are given, the units are assumed to be seconds.
+
+This check updates a single row on the master, and then measures how long it 
+takes to be applied to the slaves. To do this, you need to pick a table that 
+is being replicated, then find a row that can be changed, and is not going 
+to be changed by any other process. A specific column of this row will be changed 
+from one value to another. All of this is fed to the C<repinfo> option, and should 
+contain the following options, separated by commas: table name, primary key, key id, 
+column, first value, second value.
+
+Example 1: Slony is replicating a table named 'orders' from host 'alpha' to 
+host 'beta', in the database 'sales'. The primary key of the table is named 
+id, and we are going to test the row with an id of 3 (which is historical and 
+never changed). There is a column named 'salesrep' that we are going to toggle 
+from a value of 'slon' to 'nols' to check on the replication. We want to throw 
+a warning if the replication does not happen within 10 seconds.
+
+  check_postgres_replicate_row --host=alpha --dbname=sales --host2=beta 
+  --dbname2=sales --warning=10 --repinfo=orders,id,3,salesrep,slon,nols
+
+Example 2: Bucardo is replicating a table named 'receipt' from host 'green' 
+to hosts 'red', 'blue', and 'yellow'. The database for both sides is 'public'. 
+The slave databases are running on port 5455. The primary key is named 'receipt_id', 
+the row we want to use has a value of 9, and the column we want to change for the 
+test is called 'zone'. We'll toggle between 'north' and 'south' for the value of 
+this column, and throw a critical if the change is not on all three slaves within 5 seconds.
+
+ check_postgres_replicate_row --host=green --port2=5455 --host2=red,blue,yellow
+  --critical=5 --repinfo=receipt,receipt_id,9,zone,north,south
+
+For MRTG output, returns on the first line the time in seconds the replication takes to finish. 
+The maximum time is set to 4 minutes 30 seconds: if no replication has taken place in that long 
+a time, an error is thrown.
+
 =head2 B<same_schema>
 
 (C<symlink: check_postgres_same_schema>) Verifies that two databases are identical as far as their 
@@ -7579,47 +7691,25 @@ Example 2: Check that the sequence named "orders_id_seq" is not more than half f
 
   check_postgres_sequence --dbport=5432 --critical=50% --include=orders_id_seq
 
-=head2 B<replicate_row>
 
-(C<symlink: check_postgres_replicate_row>) Checks that master-slave replication is working to one or more slaves.
-The slaves are specified the same as the normal databases, except with 
-the number 2 at the end of them, so "--port2" instead of "--port", etc.
-The values or the I<--warning> and I<--critical> options are units of time, and 
-at least one must be provided (no defaults). Valid units are 'seconds', 'minutes', 'hours', 
-or 'days'. Each may be written singular or abbreviated to just the first letter. 
-If no units are given, the units are assumed to be seconds.
+=head2 B<slony_status>
 
-This check updates a single row on the master, and then measures how long it 
-takes to be applied to the slaves. To do this, you need to pick a table that 
-is being replicated, then find a row that can be changed, and is not going 
-to be changed by any other process. A specific column of this row will be changed 
-from one value to another. All of this is fed to the C<repinfo> option, and should 
-contain the following options, separated by commas: table name, primary key, key id, 
-column, first value, second value.
+(C<symlink: check_postgres_slony_status>) Checks in the status of a Slony cluster by looking 
+at the results of Slony's sl_status view. This is returned as the number of seconds of "lag time". 
+The I<--warning> and I<--critical> options should be expressed as times. The default values 
+are B<60 seconds> for the warning and B<300 seconds> for the critical.
 
-Example 1: Slony is replicating a table named 'orders' from host 'alpha' to 
-host 'beta', in the database 'sales'. The primary key of the table is named 
-id, and we are going to test the row with an id of 3 (which is historical and 
-never changed). There is a column named 'salesrep' that we are going to toggle 
-from a value of 'slon' to 'nols' to check on the replication. We want to throw 
-a warning if the replication does not happen within 10 seconds.
+The optional argument I<--schema> indicated the schema that Slony is installed under. If it is 
+not given, the schema will be determined automatically each time this check is run.
 
-  check_postgres_replicate_row --host=alpha --dbname=sales --host2=beta 
-  --dbname2=sales --warning=10 --repinfo=orders,id,3,salesrep,slon,nols
+Example 1: Give a warning if any Slony is lagged by more than 20 seconds
 
-Example 2: Bucardo is replicating a table named 'receipt' from host 'green' 
-to hosts 'red', 'blue', and 'yellow'. The database for both sides is 'public'. 
-The slave databases are running on port 5455. The primary key is named 'receipt_id', 
-the row we want to use has a value of 9, and the column we want to change for the 
-test is called 'zone'. We'll toggle between 'north' and 'south' for the value of 
-this column, and throw a critical if the change is not on all three slaves within 5 seconds.
+  check_postgres_slony_status --warning 20
 
- check_postgres_replicate_row --host=green --port2=5455 --host2=red,blue,yellow
-  --critical=5 --repinfo=receipt,receipt_id,9,zone,north,south
+Example 2: Give a critical if Slony, installed under the schema "_slony", is over 10 minutes lagged
 
-For MRTG output, returns on the first line the time in seconds the replication takes to finish. 
-The maximum time is set to 4 minutes 30 seconds: if no replication has taken place in that long 
-a time, an error is thrown.
+  check_postgres_slony_sytatus --schema=_slony --critical=600
+
 
 =head2 B<txn_time>
 
@@ -7978,6 +8068,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.14.0>
+
+  Added the 'slony_status' action.
 
 =item B<Version 2.13.2> (February 4, 2010)
 
