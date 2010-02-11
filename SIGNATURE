@@ -15,16 +15,16 @@ not run its Makefile.PL or Build.PL.
 Hash: RIPEMD160
 
 SHA1 de1474d7cbc69698971954ffb80760269b218e1f .gitignore
-SHA1 8038f2f318fb0eedaf0f1431b44dd6ece5203d2f .perlcriticrc
-SHA1 902994783e0b80da76d02dff10978a3ef6645f7c MANIFEST
+SHA1 34704b2a862f8ea670ed335230affc9ef3e3acb9 .perlcriticrc
+SHA1 19f7436035c2dd1b1edc7bfdc138409d872338b0 MANIFEST
 SHA1 92f9e28d28d95763cce24d588b19262efc7218f7 MANIFEST.SKIP
-SHA1 7ed143ab707b5da4cf94ba646f3d75ec6e3c54d3 META.yml
-SHA1 945f5b414af3daa60bef2d92d6f18c9b071c4b31 Makefile.PL
+SHA1 a7836851e1b720d874ab1e3a3d8bfe292d823f36 META.yml
+SHA1 0ead49d130f1461a496f7229d7045ee4b9003121 Makefile.PL
 SHA1 709742a5933a43cc3e82ee935cd63a45f176adda README
 SHA1 6a627ce3f10fd9993b65210733d6098ef6a42dca TODO
-SHA1 b3321912976e65089d1639ad5836f154a4381419 check_postgres.pl
-SHA1 06d2a05f5d9848df12915c44ba3027fc27cdaa78 check_postgres.pl.asc
-SHA1 79dc27091ef50b620fd0489df7657d8f5bdbd357 check_postgres.pl.html
+SHA1 54fa182fe52823058cec64dcc7c3bd07cd09bf56 check_postgres.pl
+SHA1 8bdb1ecfb303944074adfec2ab07f8be28103963 check_postgres.pl.asc
+SHA1 d65da965fc3c42b101ffaf3c9f868a9b996d421a check_postgres.pl.html
 SHA1 c3d239c75a507a0b4d5a245ea82fb2e7fe2869cd t/00_basic.t
 SHA1 a29dcbcc2e34d409ad30e8f87b9c4c09db877c4e t/00_signature.t
 SHA1 b3b833488dca6a766aa185c2457d361a978103cb t/00_test_tester.t
@@ -45,6 +45,7 @@ SHA1 a83a869ac0d8a934b91a95b94c33b232a5d586ff t/02_last_vacuum.t
 SHA1 82faf8abcd0855361047154073f05111c9d0209f t/02_listener.t
 SHA1 ef95e89d40c052c240c77fbca654150480d61c08 t/02_locks.t
 SHA1 b948f94b3404b772d02850f48a70e19a76169791 t/02_logfile.t
+SHA1 aac72bd216c1914a5598d7f8008d45eab03dc288 t/02_new_version_bc.t
 SHA1 a4d49989f13ef9d13a89cdea869e10e5c59d3d1a t/02_new_version_cp.t
 SHA1 b01d529b9e61fbeb63a3ea41e33c308fe2df2be8 t/02_new_version_pg.t
 SHA1 1faaad7c164d9588e77afd64b8e6c3bbbd243f6e t/02_prepared_txns.t
@@ -55,6 +56,7 @@ SHA1 7f9e6725cba6c1418beb0847e49ab8eb9c409f60 t/02_replicate_row.t
 SHA1 c28d1dc9805201263409c393e6e0930424837791 t/02_same_schema.t
 SHA1 921e5627011cfaa923ee9df26e8bb90c16cb1dd0 t/02_sequence.t
 SHA1 f498f14c7b05792e18b99ef7d6c91592682d29b6 t/02_settings_checksum.t
+SHA1 a014c09fac27a23ddc81cda78e9b67defe0d3fd3 t/02_slony_status.t
 SHA1 4c14da6c23eb14e450bd7b0af722fdc0cb97aae7 t/02_timesync.t
 SHA1 da12da419f0adb356687ec1465ff7e32f2364c12 t/02_txn_idle.t
 SHA1 af3eb039379b29b9a88749f478299265a87fd084 t/02_txn_time.t
@@ -67,7 +69,7 @@ SHA1 96e6e5da3e1f6753a469e7afc8cf070024b33b23 t/99_cleanup.t
 SHA1 058e1b59e21c039b6c79f0be3e1a6c2dbcbd5add t/CP_Testing.pm
 -----BEGIN PGP SIGNATURE-----
 
-iEYEAREDAAYFAktrkPUACgkQvJuQZxSWSshg4gCfXMqu+IdklcHsoMnlRzPU2v8V
-6VUAnjCfgx73ekXmuImI3dmz2PuUI6Mf
-=ksvv
+iEYEAREDAAYFAkt0KGkACgkQvJuQZxSWSsiPMACggMzdzcdaElmcfE7piKySSyr3
+o74AoLNlFbNei7TcDEhD8UsLRbGv+qHQ
+=C/Xg
 -----END PGP SIGNATURE-----

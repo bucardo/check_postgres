@@ -6585,7 +6585,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.13.3
+This documents describes check_postgres.pl version 2.14.0
 
 =head1 SYNOPSIS
 

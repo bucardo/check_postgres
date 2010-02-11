@@ -65,9 +65,10 @@
 		<li><a href="#prepared_txns"><strong>prepared_txns</strong></a></li>
 		<li><a href="#query_runtime"><strong>query_runtime</strong></a></li>
 		<li><a href="#query_time"><strong>query_time</strong></a></li>
+		<li><a href="#replicate_row"><strong>replicate_row</strong></a></li>
 		<li><a href="#same_schema"><strong>same_schema</strong></a></li>
 		<li><a href="#sequence"><strong>sequence</strong></a></li>
-		<li><a href="#replicate_row"><strong>replicate_row</strong></a></li>
+		<li><a href="#slony_status"><strong>slony_status</strong></a></li>
 		<li><a href="#txn_time"><strong>txn_time</strong></a></li>
 		<li><a href="#txn_idle"><strong>txn_idle</strong></a></li>
 		<li><a href="#rebuild_symlinks"><strong>rebuild_symlinks</strong></a></li>
@@ -104,7 +105,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.13.2</p>
+<p>This documents describes check_postgres.pl version 2.14.0</p>
 <p>
 </p>
 <hr />
@@ -1017,6 +1018,44 @@ assumed to be seconds.</p>
 line gives the name of the database.</p>
 <p>
 </p>
+<h2><a name="replicate_row"><strong>replicate_row</strong></a></h2>
+<p>(<code>symlink: check_postgres_replicate_row</code>) Checks that master-slave replication is working to one or more slaves.
+The slaves are specified the same as the normal databases, except with 
+the number 2 at the end of them, so &quot;--port2&quot; instead of &quot;--port&quot;, etc.
+The values or the <em>--warning</em> and <em>--critical</em> options are units of time, and 
+at least one must be provided (no defaults). Valid units are 'seconds', 'minutes', 'hours', 
+or 'days'. Each may be written singular or abbreviated to just the first letter. 
+If no units are given, the units are assumed to be seconds.</p>
+<p>This check updates a single row on the master, and then measures how long it 
+takes to be applied to the slaves. To do this, you need to pick a table that 
+is being replicated, then find a row that can be changed, and is not going 
+to be changed by any other process. A specific column of this row will be changed 
+from one value to another. All of this is fed to the <code>repinfo</code> option, and should 
+contain the following options, separated by commas: table name, primary key, key id, 
+column, first value, second value.</p>
+<p>Example 1: Slony is replicating a table named 'orders' from host 'alpha' to 
+host 'beta', in the database 'sales'. The primary key of the table is named 
+id, and we are going to test the row with an id of 3 (which is historical and 
+never changed). There is a column named 'salesrep' that we are going to toggle 
+from a value of 'slon' to 'nols' to check on the replication. We want to throw 
+a warning if the replication does not happen within 10 seconds.</p>
+<pre>
+  check_postgres_replicate_row --host=alpha --dbname=sales --host2=beta 
+  --dbname2=sales --warning=10 --repinfo=orders,id,3,salesrep,slon,nols</pre>
+<p>Example 2: Bucardo is replicating a table named 'receipt' from host 'green' 
+to hosts 'red', 'blue', and 'yellow'. The database for both sides is 'public'. 
+The slave databases are running on port 5455. The primary key is named 'receipt_id', 
+the row we want to use has a value of 9, and the column we want to change for the 
+test is called 'zone'. We'll toggle between 'north' and 'south' for the value of 
+this column, and throw a critical if the change is not on all three slaves within 5 seconds.</p>
+<pre>
+ check_postgres_replicate_row --host=green --port2=5455 --host2=red,blue,yellow
+  --critical=5 --repinfo=receipt,receipt_id,9,zone,north,south</pre>
+<p>For MRTG output, returns on the first line the time in seconds the replication takes to finish. 
+The maximum time is set to 4 minutes 30 seconds: if no replication has taken place in that long 
+a time, an error is thrown.</p>
+<p>
+</p>
 <h2><a name="same_schema"><strong>same_schema</strong></a></h2>
 <p>(<code>symlink: check_postgres_same_schema</code>) Verifies that two databases are identical as far as their 
 schema (but not the data within). This is particularly handy for making sure your slaves have not 
@@ -1099,42 +1138,19 @@ if there are more than one sequence at that percentage.</p>
   check_postgres_sequence --dbport=5432 --critical=50% --include=orders_id_seq</pre>
 <p>
 </p>
-<h2><a name="replicate_row"><strong>replicate_row</strong></a></h2>
-<p>(<code>symlink: check_postgres_replicate_row</code>) Checks that master-slave replication is working to one or more slaves.
-The slaves are specified the same as the normal databases, except with 
-the number 2 at the end of them, so &quot;--port2&quot; instead of &quot;--port&quot;, etc.
-The values or the <em>--warning</em> and <em>--critical</em> options are units of time, and 
-at least one must be provided (no defaults). Valid units are 'seconds', 'minutes', 'hours', 
-or 'days'. Each may be written singular or abbreviated to just the first letter. 
-If no units are given, the units are assumed to be seconds.</p>
-<p>This check updates a single row on the master, and then measures how long it 
-takes to be applied to the slaves. To do this, you need to pick a table that 
-is being replicated, then find a row that can be changed, and is not going 
-to be changed by any other process. A specific column of this row will be changed 
-from one value to another. All of this is fed to the <code>repinfo</code> option, and should 
-contain the following options, separated by commas: table name, primary key, key id, 
-column, first value, second value.</p>
-<p>Example 1: Slony is replicating a table named 'orders' from host 'alpha' to 
-host 'beta', in the database 'sales'. The primary key of the table is named 
-id, and we are going to test the row with an id of 3 (which is historical and 
-never changed). There is a column named 'salesrep' that we are going to toggle 
-from a value of 'slon' to 'nols' to check on the replication. We want to throw 
-a warning if the replication does not happen within 10 seconds.</p>
+<h2><a name="slony_status"><strong>slony_status</strong></a></h2>
+<p>(<code>symlink: check_postgres_slony_status</code>) Checks in the status of a Slony cluster by looking 
+at the results of Slony's sl_status view. This is returned as the number of seconds of &quot;lag time&quot;. 
+The <em>--warning</em> and <em>--critical</em> options should be expressed as times. The default values 
+are <strong>60 seconds</strong> for the warning and <strong>300 seconds</strong> for the critical.</p>
+<p>The optional argument <em>--schema</em> indicated the schema that Slony is installed under. If it is 
+not given, the schema will be determined automatically each time this check is run.</p>
+<p>Example 1: Give a warning if any Slony is lagged by more than 20 seconds</p>
 <pre>
-  check_postgres_replicate_row --host=alpha --dbname=sales --host2=beta 
-  --dbname2=sales --warning=10 --repinfo=orders,id,3,salesrep,slon,nols</pre>
-<p>Example 2: Bucardo is replicating a table named 'receipt' from host 'green' 
-to hosts 'red', 'blue', and 'yellow'. The database for both sides is 'public'. 
-The slave databases are running on port 5455. The primary key is named 'receipt_id', 
-the row we want to use has a value of 9, and the column we want to change for the 
-test is called 'zone'. We'll toggle between 'north' and 'south' for the value of 
-this column, and throw a critical if the change is not on all three slaves within 5 seconds.</p>
+  check_postgres_slony_status --warning 20</pre>
+<p>Example 2: Give a critical if Slony, installed under the schema &quot;_slony&quot;, is over 10 minutes lagged</p>
 <pre>
- check_postgres_replicate_row --host=green --port2=5455 --host2=red,blue,yellow
-  --critical=5 --repinfo=receipt,receipt_id,9,zone,north,south</pre>
-<p>For MRTG output, returns on the first line the time in seconds the replication takes to finish. 
-The maximum time is set to 4 minutes 30 seconds: if no replication has taken place in that long 
-a time, an error is thrown.</p>
+  check_postgres_slony_sytatus --schema=_slony --critical=600</pre>
 <p>
 </p>
 <h2><a name="txn_time"><strong>txn_time</strong></a></h2>
@@ -1446,7 +1462,20 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="0" class="item"><strong>Version 2.14.0</strong> (February 11, 2010)</a></strong></dt>
+
+<dd>
+<pre>
+  Added the 'slony_status' action.
+  Changed the logfile sleep from 0.5 to 1, as 0.5 gets rounded to 0 on some boxes!</pre>
+</dd>
 <dt><strong><a name="2" class="item"><strong>Version 2.13.2</strong> (February 4, 2010)</a></strong></dt>
+
+<dd>
+<pre>
+  Allow timeout option to be used for logtime 'sleep' time.</pre>
+</dd>
+<dt><strong><strong>Version 2.13.2</strong> (February 4, 2010)</strong></dt>
 
 <dd>
 <pre>
@@ -1464,7 +1493,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
   Added &quot;nolanguage&quot; as a filter for the same_schema option.
   Don't track &quot;generic&quot; table constraints (e.. $1, $2) using same_schema</pre>
 </dd>
-<dt><strong><a name="0" class="item"><strong>Version 2.13.0</strong> (January 29, 2010)</a></strong></dt>
+<dt><strong><strong>Version 2.13.0</strong> (January 29, 2010)</strong></dt>
 
 <dd>
 <pre>
