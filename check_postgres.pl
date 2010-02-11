@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.14.0';
+our $VERSION = '2.14.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -3767,7 +3767,7 @@ sub check_logfile {
 		## Throw a custom error string.
 		## We do the number first as old versions only show part of the string.
 		my $random_number = int rand(999999999999);
-		my $funky = sprintf "$random_number $ME this_statement_will_fail DB=$db->{dbname} PID=$$ Time=%s",
+		my $funky = sprintf "check_postgres_logfile_error_$random_number $ME DB=$db->{dbname} PID=$$ Time=%s",
 			scalar localtime;
 
 		## Cause an error on just this target
@@ -3781,7 +3781,7 @@ sub check_logfile {
 			sleep $SLEEP;
 			seek $logfh, 0, 1 or ndie msg('logfile-seekfail', $logfile, $!);
 			while (<$logfh>) {
-				if (/$random_number/) { ## Some logs break things up, so we don't use funky
+				if (/logfile_error_$random_number/) { ## Some logs break things up, so we don't use funky
 					$found = 1;
 					last LOGWAIT;
 				}
@@ -6585,7 +6585,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.14.0
+This documents describes check_postgres.pl version 2.14.1
 
 =head1 SYNOPSIS
 
@@ -8072,6 +8072,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.14>
+
+  Change the error string for the logfile action for easier exclusion
+    by programs like tail_n_mail
 
 =item B<Version 2.14.0> (February 11, 2010)
 
