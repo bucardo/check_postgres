@@ -6503,6 +6503,10 @@ sub check_slony_status {
 		return;
 	}
 	my $lagtime = $1;
+	if ($MRTG) {
+		do_mrtg({one => $lagtime});
+		return;
+	}
 	my $dbname = $db->{dbname};
 	$db->{perf} = "'$dbname'=$lagtime;$warning;$critical";
 	my $msg = msg('slony-lagtime', $lagtime);
