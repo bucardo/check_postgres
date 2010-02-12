@@ -3733,7 +3733,7 @@ sub check_logfile {
 
 		## We now have a logfile (or a template)..parse it into pieces.
 		## We need at least hour, day, month, year
-		my @t = localtime $^T;
+		my @t = localtime;
 		my ($H,$d,$m,$Y) = (sprintf ('%02d',$t[2]),sprintf('%02d',$t[3]),sprintf('%02d',$t[4]+1),$t[5]+1900);
 		if ($logfile !~ $logfilere) {
 			ndie msg('logfile-bad',$logfile);
@@ -8073,8 +8073,9 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.14>
+=item B<Version 2.14.1>
 
+  Don't use $^T in logfile check, as script may be long-running
   Change the error string for the logfile action for easier exclusion
     by programs like tail_n_mail
 
