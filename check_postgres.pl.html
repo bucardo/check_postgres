@@ -105,7 +105,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.14.0</p>
+<p>This documents describes check_postgres.pl version 2.14.1</p>
 <p>
 </p>
 <hr />
@@ -1462,6 +1462,14 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="version_2_14_1" class="item"><strong>Version 2.14.1</strong></a></strong></dt>
+
+<dd>
+<pre>
+  Don't use $^T in logfile check, as script may be long-running
+  Change the error string for the logfile action for easier exclusion
+    by programs like tail_n_mail</pre>
+</dd>
 <dt><strong><a name="0" class="item"><strong>Version 2.14.0</strong> (February 11, 2010)</a></strong></dt>
 
 <dd>
