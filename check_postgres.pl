@@ -3327,7 +3327,9 @@ sub check_relation_size {
 		SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\w)\s*\| (\S+)\s+\| (\S+)/gsm) {
 			my ($size,$psize,$kind,$name,$schema) = ($1,$2,$3,$4,$5);
 			next SLURP if skip_item($name, $schema);
-			$db->{perf} .= sprintf " %s$name=$size", $kind eq 'r' ? "$schema." : '';
+			$db->{perf} .= sprintf "%s%s$name=$size",
+				$VERBOSE==1 ? "\n" : '',
+				$kind eq 'r' ? "$schema." : '';
 			($max=$size, $pmax=$psize, $kmax=$kind, $nmax=$name, $smax=$schema) if $size > $max;
 		}
 		if ($max < 0) {
@@ -8078,6 +8080,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Change the error string for the logfile action for easier exclusion
     by programs like tail_n_mail
   Change autovac_freeze default warn/critical back to 90%/95% (Robert Treat)
+  Put all items one-per-line for relation size actions if --verbose=1
 
 =item B<Version 2.14.0> (February 11, 2010)
 
