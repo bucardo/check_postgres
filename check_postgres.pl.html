@@ -105,7 +105,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.14.1</p>
+<p>This documents describes check_postgres.pl version 2.14.2</p>
 <p>
 </p>
 <hr />
@@ -431,13 +431,12 @@ critical is an effective way to turn warnings off and always give a critical.</p
 action will only work for databases version 8.2 or higher. The <em>--warning</em> and 
 <em>--critical</em> options should be expressed as percentages. The 'age' of the transactions 
 in each database is compared to the autovacuum_freeze_max_age setting (200 million by default) 
-to generate a rounded percentage. The default values are <strong>105%</strong> for the warning and <strong>120%</strong> for 
-the critical. Since autovacuum does not vacuum tables before they reach this limit, setting 
-levels below 100% will return false positives. Databases can be filtered by use of the 
-<em>--include</em> and <em>--exclude</em> options. See the <a href="#basic_filtering">BASIC FILTERING</a> section for more details.</p>
-<p>Example 1: Give a warning when any databases on port 5432 are above 100%</p>
+to generate a rounded percentage. The default values are <strong>90%</strong> for the warning and <strong>95%</strong> for 
+the critical. Databases can be filtered by use of the <em>--include</em> and <em>--exclude</em> options. 
+See the <a href="#basic_filtering">BASIC FILTERING</a> section for more details.</p>
+<p>Example 1: Give a warning when any databases on port 5432 are above 97%</p>
 <pre>
-  check_postgres_autovac_freeze --port=5432 --warning=&quot;100%&quot;</pre>
+  check_postgres_autovac_freeze --port=5432 --warning=&quot;97%&quot;</pre>
 <p>For MRTG output, the highest overall percentage is reported on the first line, and the highest age is 
 reported on the second line. All databases which have the percentage from the first line are reported 
 on the fourth line, separated by a pipe symbol.</p>
@@ -1462,7 +1461,14 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
-<dt><strong><a name="version_2_14_1" class="item"><strong>Version 2.14.1</strong></a></strong></dt>
+<dt><strong><a name="2" class="item"><strong>Version 2.14.2</strong> (February 18, 2010)</a></strong></dt>
+
+<dd>
+<pre>
+  Change autovac_freeze default warn/critical back to 90%/95% (Robert Treat)
+  Put all items one-per-line for relation size actions if --verbose=1</pre>
+</dd>
+<dt><strong><a name="1" class="item"><strong>Version 2.14.1</strong> (February 17, 2010)</a></strong></dt>
 
 <dd>
 <pre>
@@ -1477,7 +1483,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
   Added the 'slony_status' action.
   Changed the logfile sleep from 0.5 to 1, as 0.5 gets rounded to 0 on some boxes!</pre>
 </dd>
-<dt><strong><a name="2" class="item"><strong>Version 2.13.2</strong> (February 4, 2010)</a></strong></dt>
+<dt><strong><strong>Version 2.13.2</strong> (February 4, 2010)</strong></dt>
 
 <dd>
 <pre>
@@ -1492,7 +1498,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
   Add 'noowner' option to same_schema action.
   Raise sleep timeout for logfile check to 15 seconds.</pre>
 </dd>
-<dt><strong><a name="1" class="item"><strong>Version 2.13.1</strong> (February 2, 2010)</a></strong></dt>
+<dt><strong><strong>Version 2.13.1</strong> (February 2, 2010)</strong></dt>
 
 <dd>
 <pre>

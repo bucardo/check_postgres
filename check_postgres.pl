@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.14.1';
+our $VERSION = '2.14.2';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -6587,7 +6587,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.14.1
+This documents describes check_postgres.pl version 2.14.2
 
 =head1 SYNOPSIS
 
@@ -8074,13 +8074,16 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.14.1> (February 18, 2010)
+=item B<Version 2.14.2> (February 18, 2010)
+
+  Change autovac_freeze default warn/critical back to 90%/95% (Robert Treat)
+  Put all items one-per-line for relation size actions if --verbose=1
+
+=item B<Version 2.14.1> (February 17, 2010)
 
   Don't use $^T in logfile check, as script may be long-running
   Change the error string for the logfile action for easier exclusion
     by programs like tail_n_mail
-  Change autovac_freeze default warn/critical back to 90%/95% (Robert Treat)
-  Put all items one-per-line for relation size actions if --verbose=1
 
 =item B<Version 2.14.0> (February 11, 2010)
 
