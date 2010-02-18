@@ -3328,7 +3328,7 @@ sub check_relation_size {
 			my ($size,$psize,$kind,$name,$schema) = ($1,$2,$3,$4,$5);
 			next SLURP if skip_item($name, $schema);
 			$db->{perf} .= sprintf "%s%s$name=$size",
-				$VERBOSE==1 ? "\n" : '',
+				$VERBOSE==1 ? "\n" : ' ',
 				$kind eq 'r' ? "$schema." : '';
 			($max=$size, $pmax=$psize, $kmax=$kind, $nmax=$name, $smax=$schema) if $size > $max;
 		}
@@ -8074,7 +8074,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.14.1>
+=item B<Version 2.14.1> (February 18, 2010)
 
   Don't use $^T in logfile check, as script may be long-running
   Change the error string for the logfile action for easier exclusion
