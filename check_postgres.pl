@@ -2348,8 +2348,8 @@ sub check_autovac_freeze {
 	my ($warning, $critical) = validate_range
 		({
 		  type              => 'percent',
-		  default_warning   => '105%',
-		  default_critical  => '120%',
+		  default_warning   => '90%',
+		  default_critical  => '95%',
 		  forcemrtg         => 1,
 		  });
 
@@ -6895,14 +6895,13 @@ The current supported actions are:
 action will only work for databases version 8.2 or higher. The I<--warning> and 
 I<--critical> options should be expressed as percentages. The 'age' of the transactions 
 in each database is compared to the autovacuum_freeze_max_age setting (200 million by default) 
-to generate a rounded percentage. The default values are B<105%> for the warning and B<120%> for 
-the critical. Since autovacuum does not vacuum tables before they reach this limit, setting 
-levels below 100% will return false positives. Databases can be filtered by use of the 
-I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section for more details.
+to generate a rounded percentage. The default values are B<90%> for the warning and B<95%> for 
+the critical. Databases can be filtered by use of the I<--include> and I<--exclude> options. 
+See the L</"BASIC FILTERING"> section for more details.
 
-Example 1: Give a warning when any databases on port 5432 are above 100%
+Example 1: Give a warning when any databases on port 5432 are above 97%
 
-  check_postgres_autovac_freeze --port=5432 --warning="100%"
+  check_postgres_autovac_freeze --port=5432 --warning="97%"
 
 For MRTG output, the highest overall percentage is reported on the first line, and the highest age is 
 reported on the second line. All databases which have the percentage from the first line are reported 
@@ -8078,6 +8077,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Don't use $^T in logfile check, as script may be long-running
   Change the error string for the logfile action for easier exclusion
     by programs like tail_n_mail
+  Change autovac_freeze default warn/critical back to 90%/95% (Robert Treat)
 
 =item B<Version 2.14.0> (February 11, 2010)
 
