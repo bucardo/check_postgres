@@ -8454,7 +8454,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<NEXT>
+
+=item B<?>
 
   Add --man option to show the entire manual. (Andy Lester)
 
