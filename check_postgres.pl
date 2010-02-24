@@ -4848,6 +4848,7 @@ SQL
 						next;
 					}
 					my ($schema,$name,$args,$md5,$isstrict,$retset,$volatile) = ($1,$2,$3,$4,$5,$6,$7);
+					$args =~ s/ /,/g;
 					$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
 					$args =~ s/^\s*(.*)\s*$/($1)/;
 					$thing{$x}{functions}{"${schema}.${name}${args}"} = {
