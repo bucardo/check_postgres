@@ -276,7 +276,7 @@ our %msg = (
 	'txnwrap-cbig'       => q{The 'critical' value must be less than 2 billion},
 	'txnwrap-wbig'       => q{The 'warning' value must be less than 2 billion},
 	'unknown-error'      => q{Unknown error},
-	'usage'              => qq{\nUsage: \$1 <options>\n Try "\$1 --help" for a complete list of options\n\n},
+	'usage'              => qq{\nUsage: \$1 <options>\n Try "\$1 --help" for a complete list of options\n Try "\$1 --man" for the full manual\n},
 	'vac-msg'            => q{DB: $1 TABLE: $2},
 	'vac-nomatch-a'      => q{No matching tables have ever been analyzed},
 	'vac-nomatch-v'      => q{No matching tables have ever been vacuumed},
@@ -665,6 +665,7 @@ die $USAGE unless
 			   'version|V',
 			   'verbose|v+',
 			   'help|h',
+			   'man',
 			   'output=s',
 			   'simple',
 			   'showperf=i',
@@ -716,6 +717,12 @@ die $USAGE unless
 			   )
 	and keys %opt
 	and ! @ARGV;
+
+if ( $opt{man} ) {
+	require Pod::Usage;
+	Pod::Usage::pod2usage({-verbose => 2});
+	exit;
+}
 
 ## Put multi-val options from check_postgresrc in place, only if no command-line args!
 for my $mv (keys %tempopt) {
@@ -887,6 +894,7 @@ Other options:
   --PSQL=FILE        location of the psql executable; avoid using if possible
   -v, --verbose      verbosity level; can be used more than once to increase the level
   -h, --help         display this help information
+  --man              display the full manual
   -t X, --timeout=X  how long in seconds before we timeout. Defaults to 30 seconds.
   --symlinks         create named symlinks to the main program for each action
 
@@ -894,11 +902,11 @@ Actions:
 Which test is determined by the --action option, or by the name of the program
 $action_usage
 
-For a complete list of options and full documentation, please view the POD for this file.
-Two ways to do this is to run:
-pod2text $ME | less
-pod2man $ME | man -l -
-Or simply visit: http://bucardo.org/check_postgres/
+For a complete list of options and full documentation, view the manual.
+
+    $ME --man
+
+Or visit: http://bucardo.org/check_postgres/
 
 
 };
@@ -6781,6 +6789,10 @@ script. The default value is 10; the units are always in seconds.
 
 Displays a help screen with a summary of all actions and options.
 
+=item B<--man>
+
+Displays the entire manual.
+
 =item B<-V> or B<--version>
 
 Shows the current version.
@@ -6831,8 +6843,9 @@ Creates symlinks to the main program for each action.
 
 =item B<--output=VAL>
 
-Determines the format of the output, for use in various programs. The default is 'nagios'. No
-other systems are supported yet.
+Determines the format of the output, for use in various programs. The
+default is 'nagios'. Available options are 'nagios', 'mrtg', 'simple'
+and 'cacti'.
 
 =item B<--mrtg=VAL>
 
@@ -8073,6 +8086,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<?>
+
+  Add --man option to show the entire manual. (Andy Lester)
 
 =item B<Version 2.14.2> (February 18, 2010)
 
