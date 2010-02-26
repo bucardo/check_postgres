@@ -25,8 +25,6 @@ Quick list of outstanding items / bugs / feature requests for CP:
 
 * Check at least one table has been vacuumed/analyzed since X time
 
-* Put on CPAN
-
 * Check every table has been vacuum|analyze at least once. (no NULL)
 
 * Check at least one table has been vacuumed|analyzed since X hours/days/...
@@ -39,3 +37,10 @@ Quick list of outstanding items / bugs / feature requests for CP:
 
 * For the Nagios 'perf' output on last_analyze and last_vacuum (and other things with a time), 
 consider making a single global timing call.
+
+# Perl-specific
+
+* Put on CPAN
+
+* Create a Perl::Critic test suite
+
