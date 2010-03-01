@@ -6501,7 +6501,7 @@ sub check_slony_status {
 	my $SQL =
 qq{SELECT ROUND(EXTRACT(epoch FROM st_lag_time)),
 st_origin, st_received,
-COALESCE(n1.no_comment, ''), COALESCE(n1.no_comment, '')
+COALESCE(n1.no_comment, ''), COALESCE(n2.no_comment, '')
 FROM $schema.sl_status
 JOIN $schema.sl_node n1 ON (n1.no_id=st_origin)
 JOIN $schema.sl_node n2 ON (n2.no_id=st_received)};
