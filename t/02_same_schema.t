@@ -286,19 +286,19 @@ $dbh2->do(q{DROP TABLE table_w_constraint});
 
 #/////////// Functions
 
-$dbh1->do(q{CREATE FUNCTION f1() RETURNS INTEGER LANGUAGE SQL AS 'SELECT 1'});
+$dbh1->do(q{CREATE FUNCTION f1(int,int) RETURNS INTEGER LANGUAGE SQL AS 'SELECT 1'});
 $t = qq{$S fails when first schema has an extra function};
 like ($cp1->run($stdargs),
-      qr{^$label CRITICAL.*?\QFunction on 1 but not 2: public.f1()\E},
+      qr{^$label CRITICAL.*?\QFunction on 1 but not 2: public.f1(int4,int4)\E},
       $t);
-$dbh1->do(q{DROP FUNCTION f1()});
+$dbh1->do(q{DROP FUNCTION f1(int,int)});
 
-$dbh2->do(q{CREATE FUNCTION f2() RETURNS INTEGER LANGUAGE SQL AS 'SELECT 1'});
+$dbh2->do(q{CREATE FUNCTION f2(int,int) RETURNS INTEGER LANGUAGE SQL AS 'SELECT 1'});
 $t = qq{$S fails when second schema has an extra function};
 like ($cp1->run($stdargs),
-      qr{^$label CRITICAL.*?\QFunction on 2 but not 1: public.f2()\E},
+      qr{^$label CRITICAL.*?\QFunction on 2 but not 1: public.f2(int4,int4)\E},
       $t);
-$dbh2->do(q{DROP FUNCTION f2()});
+$dbh2->do(q{DROP FUNCTION f2(int,int)});
 
 $dbh1->do(q{CREATE FUNCTION f3(INTEGER) RETURNS INTEGER LANGUAGE SQL AS 'SELECT 1'});
 $dbh2->do(q{CREATE FUNCTION f3() RETURNS INTEGER LANGUAGE SQL AS 'SELECT 1'});
