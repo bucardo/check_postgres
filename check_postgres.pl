@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.14.2';
+our $VERSION = '2.14.3';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -236,6 +236,7 @@ our %msg = (
 	'seq-none'           => q{No sequences found},
 	'slony-noschema'     => q{Could not determine the schema for Slony},
 	'slony-nonumber'     => q{Call to sl_status did not return a number},
+	'slony-noparse'      => q{Could not parse call to sl_status},
 	'slony-lagtime'      => q{Slony lag time: $1},
 	'symlink-create'     => q{Created "$1"},
 	'symlink-done'       => q{Not creating "$1": $2 already linked to "$3"},
@@ -432,9 +433,10 @@ our %msg = (
 	'runtime-msg'        => q{durée d'exécution de la requête : $1 secondes},
 	'same-failed'        => q{Les bases de données sont différentes. Éléments différents : $1},
 	'same-matched'       => q{Les bases de données ont les mêmes éléments},
-    'slony-noschema'     => q{N'a pas pu déterminer le schéma de Slony},
-    'slony-nonumber'     => q{L'appel à sl_status n'a pas renvoyé un numéro},
-    'slony-lagtime'      => q{Durée de lag de Slony : $1},
+	'slony-noschema'     => q{N'a pas pu déterminer le schéma de Slony},
+	'slony-nonumber'     => q{L'appel à sl_status n'a pas renvoyé un numéro},
+'slony-noparse'      => q{Could not parse call to sl_status},
+	'slony-lagtime'      => q{Durée de lag de Slony : $1},
 	'seq-die'            => q{N'a pas pu récupérer d'informations sur la séquence $1},
 	'seq-msg'            => q{$1=$2% (appels restant=$3)},
 	'seq-none'           => q{Aucune sequences trouvée},
@@ -6496,28 +6498,45 @@ sub check_slony_status {
 		}
 	}
 
-	my $SQL = qq{SELECT ROUND(EXTRACT(epoch FROM st_lag_time)) FROM $schema.sl_status};
+	my $SQL =
+qq{SELECT ROUND(EXTRACT(epoch FROM st_lag_time)),
+st_origin, st_received,
+COALESCE(n1.no_comment, ''), COALESCE(n1.no_comment, '')
+FROM $schema.sl_status
+JOIN $schema.sl_node n1 ON (n1.no_id=st_origin)
+JOIN $schema.sl_node n2 ON (n2.no_id=st_received)};
 
 	my $info = run_command($SQL, {regex => qr[\d+] } );
-
 	$db = $info->{db}[0];
 	if ($db->{slurp} !~ /^\s*(\d+)/) {
 		add_unknown msg('slony-nonumber');
 		return;
 	}
-	my $lagtime = $1;
+	my $maxlagtime = 0;
+	my @perf;
+	for my $row (split /\n/ => $db->{slurp}) {
+		if ($row !~ /(\d+)\s+\|\s+(\d+)\s+\|\s+(\d+) \| (.*?)\s*\| (.*)/) {
+			add_unknown msg('slony-noparse');
+		}
+		my ($lag,$from,$to,$fromc,$toc) = ($1,$2,$3,$4,$5);
+		$maxlagtime = $lag if $lag > $maxlagtime;
+		push @perf => [
+			       $lag,
+			       $from,
+			       qq{'$db->{dbname} Node $from($fromc) -> Node $to($toc)'=$lag;$warning;$critical},
+			       ];
+	}
+	$db->{perf} = join "\n" => map { $_->[2] } sort { $b->[0]<=>$a->[0] or $a->[1]<=>$b->[1] } @perf;
 	if ($MRTG) {
-		do_mrtg({one => $lagtime});
+		do_mrtg({one => $maxlagtime});
 		return;
 	}
-	my $dbname = $db->{dbname};
-	$db->{perf} = "'$dbname'=$lagtime;$warning;$critical";
-	my $msg = msg('slony-lagtime', $lagtime);
-	$msg .= sprintf ' (%s)', pretty_time($lagtime, $lagtime > 500 ? 'S' : '');
-	if (length $critical and $lagtime >= $critical) {
+	my $msg = msg('slony-lagtime', $maxlagtime);
+	$msg .= sprintf ' (%s)', pretty_time($maxlagtime, $maxlagtime > 500 ? 'S' : '');
+	if (length $critical and $maxlagtime >= $critical) {
 		add_critical $msg;
 	}
-	elsif (length $warning and $lagtime >= $warning) {
+	elsif (length $warning and $maxlagtime >= $warning) {
 		add_warning $msg;
 	}
 	else {
@@ -6588,7 +6607,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.14.2
+This documents describes check_postgres.pl version 2.14.3
 
 =head1 SYNOPSIS
 
@@ -8074,6 +8093,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.14.3>
+
+  Allow slony_status action to handle more than one slave.
 
 =item B<Version 2.14.2> (February 18, 2010)
 
