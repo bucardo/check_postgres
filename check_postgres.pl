@@ -8094,7 +8094,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.14.3>
+=item B<Version 2.14.3> (March 2, 2010)
 
   Allow slony_status action to handle more than one slave.
 
