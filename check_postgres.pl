@@ -3975,7 +3975,7 @@ WHERE current_query <> '<IDLE>'$USERWHERECLAUSE
 
 	$MRTG and do_mrtg({one => $maxtime, msg => $whodunit});
 
-	$db->{perf} .= sprintf q{'%s'=%s;%d;%d},
+	$db->{perf} .= sprintf q{'%s'=%s;%s;%s},
 			$whodunit,
 			$maxtime,
 			$warning,
