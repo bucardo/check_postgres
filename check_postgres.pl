@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.14.4';
+our $VERSION = '2.15.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -85,6 +85,7 @@ our @get_methods = (
 ## no critic (RequireInterpolationOfMetachars)
 our %msg = (
 'en' => {
+	'address'            => q{address},
 	'backends-fatal'     => q{Could not connect: too many connections},
 	'backends-mrtg'      => q{DB=$1 Max connections=$2},
 	'backends-msg'       => q{$1 of $2 connections ($3%)},
@@ -114,6 +115,7 @@ our %msg = (
 	'custom-invalid'     => q{Invalid format returned by custom query},
 	'custom-norows'      => q{No rows returned},
 	'custom-nostring'    => q{Must provide a query string},
+	'database'           => q{database},
 	'dbsize-version'     => q{Target database must be version 8.1 or higher to run the database_size action},
 	'die-action-version' => q{Cannot run "$1": server version must be >= $2, but is $3},
 	'die-badtime'        => q{Value for '$1' must be a valid time. Examples: -$2 1s  -$2 "10 minutes"},
@@ -175,9 +177,12 @@ our %msg = (
 	'opt-psql-nofind'    => q{Could not find a suitable psql executable},
 	'opt-psql-nover'     => q{Could not determine psql version},
 	'opt-psql-restrict'  => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
+	'PID'                => q{PID},
+	'port'               => q{port},
 	'preptxn-none'       => q{No prepared transactions found},
 	'qtime-fail'         => q{Cannot run the txn_idle action unless stats_command_string is set to 'on'!},
 	'qtime-msg'          => q{longest query: $1s},
+	'qtime-nomatch'      => q{No matching entries were found},
 	'range-badcs'        => q{Invalid '$1' option: must be a checksum},
 	'range-badlock'      => q{Invalid '$1' option: must be number of locks, or "type1=#;type2=#"},
 	'range-badpercent'   => q{Invalid '$1' option: must be a percentage},
@@ -278,6 +283,7 @@ our %msg = (
 	'txnwrap-wbig'       => q{The 'warning' value must be less than 2 billion},
 	'unknown-error'      => q{Unknown error},
 	'usage'              => qq{\nUsage: \$1 <options>\n Try "\$1 --help" for a complete list of options\n\n},
+	'username'           => q{username},
 	'vac-msg'            => q{DB: $1 TABLE: $2},
 	'vac-nomatch-a'      => q{No matching tables have ever been analyzed},
 	'vac-nomatch-v'      => q{No matching tables have ever been vacuumed},
@@ -951,7 +957,8 @@ sub msg { ## no critic
 		$msg = $msg{'en'}{$name};
 	}
 	else {
-		return "Invalid message: $name";
+		my $line = (caller)[2];
+		die qq{Invalid message "$name" from line $line\n};
 	}
 
 	my $x=1;
@@ -1007,6 +1014,7 @@ $VERBOSE >= 2 and warn qq{psql=$PSQL version=$psql_version\n};
 $opt{defaultdb} = $psql_version >= 8.0 ? 'postgres' : 'template1';
 
 sub add_response {
+
 	my ($type,$msg) = @_;
 
 	$db->{host} ||= '';
@@ -1038,7 +1046,10 @@ sub add_response {
 		$perf .= " $db->{perf}";
 	}
 	push @{$type->{$header}} => [$msg,$perf];
-}
+
+	return;
+
+} ## end of add_response
 
 
 sub add_unknown {
@@ -3897,52 +3908,83 @@ sub check_query_time {
 		}
 	}
 
-	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) }.
-		qq{FROM pg_stat_activity WHERE current_query <> '<IDLE>'$USERWHERECLAUSE GROUP BY 1};
+	$SQL = qq{
+SELECT
+ client_addr,
+ client_port,
+ procpid,
+ COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0),
+ datname,
+ usename
+FROM pg_stat_activity
+WHERE current_query <> '<IDLE>'$USERWHERECLAUSE
+};
 
-	$info = run_command($SQL, { regex => qr{\s*.+?\s+\|\s+\-?\d+}, emptyok => 1 } );
+	$info = run_command($SQL, { regex => qr{\d+ \|\s+\d+}, emptyok => 1 } );
 
-	my $found = 0;
-	for $db (@{$info->{db}}) {
+	$db = $info->{db}[0];
+	my $slurp = $db->{slurp};
 
-		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
-			$stats{$db->{dbname}} = 0;
-			add_ok msg('no-match-user');
-			next;
-		}
+	## We may have gotten no matches die to exclusion rules
+	if ($slurp !~ /\w/ and $USERWHERECLAUSE) {
+		$stats{$db->{dbname}} = 0;
+		add_ok msg('no-match-user');
+		return;
+	}
 
-		$found = 1;
-		my $max = 0;
-		my $maxdb = '?';
-		SLURP: while ($db->{slurp} =~ /\s*(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
-			my ($dbname,$current) = ($1, int $2);
-			next SLURP if skip_item($dbname);
-			if ($current > $max) {
-				$max = $current;
-				$maxdb = $dbname;
-			}
-		}
-		if ($MRTG) {
-			$stats{$db->{dbname}} = $max;
-			next;
-		}
-		$db->{perf} .= "maxtime=$max;";
-		$db->{perf} .= "$warning" if length $warning;
-		$db->{perf} .= ';';
-		$db->{perf} .= "$critical" if length $critical;
+	## Default values for information gathered
+	my ($client_addr, $client_port, $procpid, $username, $maxtime, $maxdb) = ('0.0.0.0', 0, '?', 0, 0, '?');
 
-		my $msg = msg('qtime-msg', $max);
-		$msg .= " db=$maxdb";
+	## Read in and parse the psql output
+  SLURP: while ($slurp =~  /\s*(\S*) \|\s+(\-?\d+) \|\s+(\d+) \|\s+(\-?\d+) \| (.+?)\s+\| (.+?)\s/gsm) {
+		my ($add,$port,$pid,$time,$dbname,$user) = ($1,$2,$3,int $4,$5,$6);
+		next SLURP if skip_item($dbname);
 
-		if (length $critical and $max >= $critical) {
-			add_critical $msg;
+		if ($time >= $maxtime) {
+			$maxtime     = $time;
+			$maxdb       = $dbname;
+			$client_addr = $add;
+			$client_port = $port;
+			$procpid     = $pid;
+			$username    = $user;
 		}
-		elsif (length $warning and $max >= $warning) {
-			add_warning $msg;
-		}
-		else {
-			add_ok $msg;
-		}
+	}
+
+	## Use of skip_item means we may have no matches
+	if ($maxdb eq '?') {
+		add_unknown msg('qtime-nomatch');
+		return;
+	}
+
+	## Details on who the offender was
+	my $whodunit = sprintf q{%s:%s %s:%s%s%s %s:%s},
+		msg('database'),
+		$maxdb,
+		msg('PID'),
+		$procpid,
+		$client_port < 1 ? '' : (sprintf ' %s:%s', msg('port'), $client_port),
+		$client_addr eq '' ? '' : (sprintf ' %s:%s', msg('address'), $client_addr),
+		msg('username'),
+		$username;
+
+	$MRTG and do_mrtg({one => $maxtime, msg => $whodunit});
+
+	$db->{perf} .= sprintf q{'%s'=%s;%d;%d},
+			$whodunit,
+			$maxtime,
+			$warning,
+			$critical;
+
+	my $msg = sprintf '%s (%s)', msg('qtime-msg', $maxtime), $whodunit;
+
+	if (length $critical and $maxtime >= $critical) {
+		add_critical $msg;
+	}
+	elsif (length $warning and $maxtime >= $warning) {
+		add_warning $msg;
+	}
+	else {
+		add_ok $msg;
 	}
 
 	return;
@@ -6611,7 +6653,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.14.4
+This documents describes check_postgres.pl version 2.15.0
 
 =head1 SYNOPSIS
 
@@ -8098,8 +8140,9 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.14.4>
+=item B<Version 2.15.0>
 
+  Change the output of query_time to show pid,user,port, and address (Giles Westwood)
   Fix to show database properly when using slony_status (Guillaume Lelarge)
 
 =item B<Version 2.14.3> (March 1, 2010)
