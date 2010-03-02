@@ -2675,7 +2675,7 @@ FROM (
 ) AS sml
 };
 
-	if (! defined $opt{include}) {
+	if (! defined $opt{include} and ! defined $opt{exclude}) {
 		$SQL .= " WHERE sml.relpages - otta > $MINPAGES OR ipages - iotta > $MINIPAGES";
 		$SQL .= " ORDER BY wastedbytes DESC LIMIT $LIMIT";
 	}
@@ -8148,6 +8148,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.15.0>
 
+  Don't apply a LIMIT when using --exclude on the bloat action (Marti Raudsepp)
   Change the output of query_time to show pid,user,port, and address (Giles Westwood)
   Fix to show database properly when using slony_status (Guillaume Lelarge)
 
