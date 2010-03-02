@@ -8098,7 +8098,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.14.4
+=item B<Version 2.14.4>
 
   Fix to show database properly when using slony_status (Guillaume Lelarge)
 

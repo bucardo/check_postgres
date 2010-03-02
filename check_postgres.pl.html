@@ -105,7 +105,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.14.3</p>
+<p>This documents describes check_postgres.pl version 2.14.4</p>
 <p>
 </p>
 <hr />
@@ -1461,11 +1461,18 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
-<dt><strong><a name="3" class="item"><strong>Version 2.14.3</strong> (March 2, 2010)</a></strong></dt>
+<dt><strong><a name="version_2_14_4" class="item"><strong></strong>Version 2.14.4</a></strong></dt>
 
 <dd>
 <pre>
-  Allow slony_status action to handle more than one slave.</pre>
+  Fix to show database properly when using slony_status (Guillaume Lelarge)</pre>
+</dd>
+<dt><strong><a name="3" class="item"><strong>Version 2.14.3</strong> (March 1, 2010)</a></strong></dt>
+
+<dd>
+<pre>
+  Allow slony_status action to handle more than one slave.
+  Use commas to separate function args in same_schema output (Robert Treat)</pre>
 </dd>
 <dt><strong><a name="2" class="item"><strong>Version 2.14.2</strong> (February 18, 2010)</a></strong></dt>
 
