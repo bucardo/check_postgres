@@ -130,6 +130,8 @@ http
 logfile
 login
 perl
+pgbouncer
+pgBouncer
 postgres
 runtime
 Schemas

@@ -845,6 +845,7 @@ our $action_info = {
  new_version_bc      => [0, 'Checks if a newer version of Bucardo is available.'],
  new_version_cp      => [0, 'Checks if a newer version of check_postgres.pl is available.'],
  new_version_pg      => [0, 'Checks if a newer version of Postgres is available.'],
+ pgbouncer_checksum  => [0, 'Check that no pgbouncer settings have changed since the last check.'],
  prepared_txns       => [1, 'Checks number and age of prepared transactions.'],
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
@@ -1018,6 +1019,7 @@ $psql_revision =~ s/\D//g;
 $VERBOSE >= 2 and warn qq{psql=$PSQL version=$psql_version\n};
 
 $opt{defaultdb} = $psql_version >= 8.0 ? 'postgres' : 'template1';
+$opt{defaultdb} = 'pgbouncer' if $action eq 'pgbouncer_checksum';
 
 sub add_response {
 
@@ -1462,6 +1464,9 @@ check_prepared_txns() if $action eq 'prepared_txns';
 ## Make sure Slony is behaving
 check_slony_status() if $action eq 'slony_status';
 
+## Verify that the pgbouncer settings are what we think they should be
+check_pgbouncer_checksum() if $action eq 'pgbouncer_checksum';
+
 ##
 ## Everything past here does not hit a Postgres database
 ##
@@ -1833,7 +1838,9 @@ sub run_command {
 		my $dbtimeout = $timeout * 1000;
 		alarm 0;
 
-		$string = "BEGIN;SET statement_timeout=$dbtimeout;COMMIT;$string";
+		if ($action ne 'pgbouncer_checksum') {
+			$string = "BEGIN;SET statement_timeout=$dbtimeout;COMMIT;$string";
+		}
 
 		push @args, '-c', $string;
 
@@ -6560,7 +6567,7 @@ JOIN $schema.sl_node n2 ON (n2.no_id=st_received)};
 
 	my $info = run_command($SQL, {regex => qr[\d+] } );
 	$db = $info->{db}[0];
-	if ($db->{slurp} !~ /^\s*(\d+)/) {
+	if ($db->{slurp} !~ /^\s*\d+/) {
 		add_unknown msg('slony-nonumber');
 		return;
 	}
@@ -6651,6 +6658,71 @@ sub show_dbstats {
 	exit 0;
 
 } ## end of show_dbstats
+
+
+sub check_pgbouncer_checksum {
+
+	## Verify the checksum of all pgbouncer settings
+	## Supports: Nagios, MRTG
+	## Not that the connection will be done on the pgbouncer database
+	## One of warning or critical must be given (but not both)
+	## It should run one time to find out the expected checksum
+	## You can use --critical="0" to find out the checksum
+	## You can include or exclude settings as well
+	## Example:
+	##  check_postgres_pgbouncer_checksum --critical="4e7ba68eb88915d3d1a36b2009da4acd"
+
+	my ($warning, $critical) = validate_range({type => 'checksum', onlyone => 1});
+
+	eval {
+		require Digest::MD5;
+	};
+	if ($@) {
+		ndie msg('checksum-nomd');
+	}
+
+	$SQL = 'SHOW CONFIG';
+	my $info = run_command($SQL, { regex => qr[log_pooler_errors] });
+
+	for $db (@{$info->{db}}) {
+
+		(my $string = $db->{slurp}) =~ s/\s+$/\n/;
+
+		my $newstring = '';
+		SLURP: for my $line (split /\n/ => $string) {
+			$line =~ /^\s*(\w+)/ or ndie msg('unknown-error');
+			my $name = $1;
+			next SLURP if skip_item($name);
+			$newstring .= "$line\n";
+		}
+		if (! length $newstring) {
+			add_unknown msg('no-match-set');
+		}
+
+		my $checksum = Digest::MD5::md5_hex($newstring);
+
+		my $msg = msg('checksum-msg', $checksum);
+		if ($MRTG) {
+			$opt{mrtg} or ndie msg('checksum-nomrtg');
+			do_mrtg({one => $opt{mrtg} eq $checksum ? 1 : 0, msg => $checksum});
+		}
+		if ($critical and $critical ne $checksum) {
+			add_critical $msg;
+		}
+		elsif ($warning and $warning ne $checksum) {
+			add_warning $msg;
+		}
+		elsif (!$critical and !$warning) {
+			add_unknown $msg;
+		}
+		else {
+			add_ok $msg;
+		}
+	}
+
+	return;
+
+} ## end of check_pgbouncer_checksum
 
 
 =pod
@@ -7555,6 +7627,31 @@ available, a critical is returned. (Bucardo is a master to slave, and master to 
 replication system for Postgres: see http://bucardo.org for more information).
 See also the information on the C<--get_method> option.
 
+=head2 B<pgbouncer_checksum>
+
+(C<symlink: check_postgres_pgbouncer_checksum>) Checks that all the
+pgBouncer settings are the same as last time you checked. 
+This is done by generating a checksum of a sorted list of setting names and 
+their values. Note that you shouldn't specify the database name, it will
+automatically default to pgbouncer.  Either the I<--warning> or the I<--critical> option 
+should be given, but not both. The value of each one is the checksum, a 
+32-character hexadecimal value. You can run with the special C<--critical=0> option 
+to find out an existing checksum.
+
+This action requires the Digest::MD5 module.
+
+Example 1: Find the initial checksum for pgbouncer configuration on port 6432 using the default user (usually postgres)
+
+  check_postgres_pgbouncer_checksum --port=6432 --critical=0
+
+Example 2: Make sure no settings have changed and warn if so, using the checksum from above.
+
+  check_postgres_pgbouncer_checksum --port=6432 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231
+
+For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
+checksum must be provided as the C<--mrtg> argument. The fourth line always gives the 
+current checksum.
+
 =head2 B<prepared_txns>
 
 (C<symlink: check_postgres_prepared_txns>) Check on the age of any existing prepared transactions. 
@@ -8148,6 +8245,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.15.0>
 
+  Add the "pgbouncer_checksum" action (Guillaume Lelarge)
   Fix regex to work on WIN32 for check_fsm_relations and check_fsm_pages (Luke Koops)
   Don't apply a LIMIT when using --exclude on the bloat action (Marti Raudsepp)
   Change the output of query_time to show pid,user,port, and address (Giles Westwood)
