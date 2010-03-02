@@ -3162,7 +3162,7 @@ sub check_fsm_pages {
 			add_unknown msg('fsm-page-highver');
 			return;
 		}
-		SLURP: while ($db->{slurp} =~ /\s*(\d*) \|\s+(\d+) \|\s+(\d*)$/gsm) {
+		SLURP: while ($db->{slurp} =~ /\s*(\d*) \|\s+(\d+) \|\s+(\d*)\s*/gsm) {
 			my ($pages,$max,$percent) = ($1||0,$2,$3||0);
 
 			if ($MRTG) {
@@ -3222,7 +3222,7 @@ sub check_fsm_relations {
 			add_unknown msg('fsm-rel-highver');
 			return;
 		}
-		SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+)$/gsm) {
+		SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+)\s*/gsm) {
 			my ($max,$cur,$percent) = ($1,$2,$3);
 
 			if ($MRTG) {
@@ -8148,6 +8148,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.15.0>
 
+  Fix regex to work on WIN32 for check_fsm_relations and check_fsm_pages (Luke Koops)
   Don't apply a LIMIT when using --exclude on the bloat action (Marti Raudsepp)
   Change the output of query_time to show pid,user,port, and address (Giles Westwood)
   Fix to show database properly when using slony_status (Guillaume Lelarge)
