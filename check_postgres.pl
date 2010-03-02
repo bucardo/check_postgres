@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.14.3';
+our $VERSION = '2.14.4';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -6499,9 +6499,13 @@ sub check_slony_status {
 	}
 
 	my $SQL =
-qq{SELECT ROUND(EXTRACT(epoch FROM st_lag_time)),
-st_origin, st_received,
-COALESCE(n1.no_comment, ''), COALESCE(n2.no_comment, '')
+qq{SELECT
+ ROUND(EXTRACT(epoch FROM st_lag_time)),
+ st_origin,
+ st_received,
+ current_database(),
+ COALESCE(n1.no_comment, ''),
+ COALESCE(n2.no_comment, '')
 FROM $schema.sl_status
 JOIN $schema.sl_node n1 ON (n1.no_id=st_origin)
 JOIN $schema.sl_node n2 ON (n2.no_id=st_received)};
@@ -6515,15 +6519,15 @@ JOIN $schema.sl_node n2 ON (n2.no_id=st_received)};
 	my $maxlagtime = 0;
 	my @perf;
 	for my $row (split /\n/ => $db->{slurp}) {
-		if ($row !~ /(\d+)\s+\|\s+(\d+)\s+\|\s+(\d+) \| (.*?)\s*\| (.*)/) {
+		if ($row !~ /(\d+) \| +(\d+) \| +(\d+) \| (.*?) +\| (.*?) +\| (.+)/) {
 			add_unknown msg('slony-noparse');
 		}
-		my ($lag,$from,$to,$fromc,$toc) = ($1,$2,$3,$4,$5);
+		my ($lag,$from,$to,$dbname,$fromc,$toc) = ($1,$2,$3,$4,$5,$6);
 		$maxlagtime = $lag if $lag > $maxlagtime;
 		push @perf => [
 			       $lag,
 			       $from,
-			       qq{'$db->{dbname} Node $from($fromc) -> Node $to($toc)'=$lag;$warning;$critical},
+			       qq{'$dbname Node $from($fromc) -> Node $to($toc)'=$lag;$warning;$critical},
 			       ];
 	}
 	$db->{perf} = join "\n" => map { $_->[2] } sort { $b->[0]<=>$a->[0] or $a->[1]<=>$b->[1] } @perf;
@@ -6607,7 +6611,7 @@ sub show_dbstats {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.14.3
+This documents describes check_postgres.pl version 2.14.4
 
 =head1 SYNOPSIS
 
@@ -8094,9 +8098,14 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.14.3> (March 2, 2010)
+=item B<Version 2.14.4
+
+  Fix to show database properly when using slony_status (Guillaume Lelarge)
+
+=item B<Version 2.14.3> (March 1, 2010)
 
   Allow slony_status action to handle more than one slave.
+  Use commas to separate function args in same_schema output (Robert Treat)
 
 =item B<Version 2.14.2> (February 18, 2010)
 
