@@ -1,5 +1,9 @@
 Quick list of outstanding items / bugs / feature requests for CP:
 
+* Add a --output=plain, for simple human-readable output.
+
+* Add a --output=csv, for importing into various targets.
+
 * Make a (semi) automated way to allow non-superusers to run all actions
 
 * Put complete Nagios templates on a page somewhere
