@@ -29,7 +29,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.14.2';
+our $VERSION = '2.15.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -85,6 +85,7 @@ our @get_methods = (
 ## no critic (RequireInterpolationOfMetachars)
 our %msg = (
 'en' => {
+	'address'            => q{address},
 	'backends-fatal'     => q{Could not connect: too many connections},
 	'backends-mrtg'      => q{DB=$1 Max connections=$2},
 	'backends-msg'       => q{$1 of $2 connections ($3%)},
@@ -114,6 +115,7 @@ our %msg = (
 	'custom-invalid'     => q{Invalid format returned by custom query},
 	'custom-norows'      => q{No rows returned},
 	'custom-nostring'    => q{Must provide a query string},
+	'database'           => q{database},
 	'dbsize-version'     => q{Target database must be version 8.1 or higher to run the database_size action},
 	'die-action-version' => q{Cannot run "$1": server version must be >= $2, but is $3},
 	'die-badtime'        => q{Value for '$1' must be a valid time. Examples: -$2 1s  -$2 "10 minutes"},
@@ -175,9 +177,12 @@ our %msg = (
 	'opt-psql-nofind'    => q{Could not find a suitable psql executable},
 	'opt-psql-nover'     => q{Could not determine psql version},
 	'opt-psql-restrict'  => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
+	'PID'                => q{PID},
+	'port'               => q{port},
 	'preptxn-none'       => q{No prepared transactions found},
 	'qtime-fail'         => q{Cannot run the txn_idle action unless stats_command_string is set to 'on'!},
 	'qtime-msg'          => q{longest query: $1s},
+	'qtime-nomatch'      => q{No matching entries were found},
 	'range-badcs'        => q{Invalid '$1' option: must be a checksum},
 	'range-badlock'      => q{Invalid '$1' option: must be number of locks, or "type1=#;type2=#"},
 	'range-badpercent'   => q{Invalid '$1' option: must be a percentage},
@@ -236,6 +241,7 @@ our %msg = (
 	'seq-none'           => q{No sequences found},
 	'slony-noschema'     => q{Could not determine the schema for Slony},
 	'slony-nonumber'     => q{Call to sl_status did not return a number},
+	'slony-noparse'      => q{Could not parse call to sl_status},
 	'slony-lagtime'      => q{Slony lag time: $1},
 	'symlink-create'     => q{Created "$1"},
 	'symlink-done'       => q{Not creating "$1": $2 already linked to "$3"},
@@ -276,7 +282,12 @@ our %msg = (
 	'txnwrap-cbig'       => q{The 'critical' value must be less than 2 billion},
 	'txnwrap-wbig'       => q{The 'warning' value must be less than 2 billion},
 	'unknown-error'      => q{Unknown error},
+<<<<<<< HEAD:check_postgres.pl
 	'usage'              => qq{\nUsage: \$1 <options>\n Try "\$1 --help" for a complete list of options\n Try "\$1 --man" for the full manual\n},
+=======
+	'usage'              => qq{\nUsage: \$1 <options>\n Try "\$1 --help" for a complete list of options\n\n},
+	'username'           => q{username},
+>>>>>>> bucardo/master:check_postgres.pl
 	'vac-msg'            => q{DB: $1 TABLE: $2},
 	'vac-nomatch-a'      => q{No matching tables have ever been analyzed},
 	'vac-nomatch-v'      => q{No matching tables have ever been vacuumed},
@@ -286,6 +297,7 @@ our %msg = (
 	'version-ok'         => q{version $1},
 },
 'fr' => {
+	'address'            => q{adresse},
 	'backends-fatal'     => q{N'a pas pu se connecter : trop de connexions},
 	'backends-mrtg'      => q{DB=$1 Connexions maximum=$2},
 	'backends-msg'       => q{$1 connexions sur $2 ($3%)},
@@ -315,6 +327,7 @@ our %msg = (
 	'custom-invalid'     => q{Format invalide renvoyé par la requête personnalisée},
 	'custom-norows'      => q{Aucune ligne renvoyée},
 	'custom-nostring'    => q{Vous devez fournir une requête},
+	'database'           => q{base de données},
 	'dbsize-version'     => q{La base de données cible doit être une version 8.1 ou ultérieure pour exécuter l'action database_size},
 	'die-action-version' => q{Ne peut pas exécuter « $1 » : la version du serveur doit être supérieure ou égale à $2, alors qu'elle est $3},
 	'die-badtime'        => q{La valeur de « $1 » doit être une heure valide. Par exemple, -$2 1s  -$2 « 10 minutes »},
@@ -376,9 +389,12 @@ our %msg = (
 	'opt-psql-nofind'    => q{N'a pas pu trouver un psql exécutable},
 	'opt-psql-nover'     => q{N'a pas pu déterminer la version de psql},
 	'opt-psql-restrict'  => q{Ne peut pas utiliser l'option --PSQL si NO_PSQL_OPTION est activé},
+	'PID'                => q{PID},
+	'port'               => q{port},
 	'preptxn-none'       => q{Aucune transaction préparée trouvée},
 	'qtime-fail'         => q{Ne peut pas exécuter l'action txn_idle si stats_command_string est désactivé !},
 	'qtime-msg'          => q{requête la plus longue : $1s},
+	'qtime-nomatch'      => q{Aucune entrée correspondante n'a été trouvée},
 	'range-badcs'        => q{Option « $1 » invalide : doit être une somme de contrôle},
 	'range-badlock'      => q{Option « $1 » invalide : doit être un nombre de verrou ou « type1=#;type2=# »},
 	'range-badpercent'   => q{Option « $1 » invalide : doit être un pourcentage},
@@ -432,9 +448,10 @@ our %msg = (
 	'runtime-msg'        => q{durée d'exécution de la requête : $1 secondes},
 	'same-failed'        => q{Les bases de données sont différentes. Éléments différents : $1},
 	'same-matched'       => q{Les bases de données ont les mêmes éléments},
-    'slony-noschema'     => q{N'a pas pu déterminer le schéma de Slony},
-    'slony-nonumber'     => q{L'appel à sl_status n'a pas renvoyé un numéro},
-    'slony-lagtime'      => q{Durée de lag de Slony : $1},
+	'slony-noschema'     => q{N'a pas pu déterminer le schéma de Slony},
+	'slony-nonumber'     => q{L'appel à sl_status n'a pas renvoyé un numéro},
+	'slony-noparse'      => q{N'a pas pu analyser l'appel à sl_status},
+	'slony-lagtime'      => q{Durée de lag de Slony : $1},
 	'seq-die'            => q{N'a pas pu récupérer d'informations sur la séquence $1},
 	'seq-msg'            => q{$1=$2% (appels restant=$3)},
 	'seq-none'           => q{Aucune sequences trouvée},
@@ -478,6 +495,7 @@ our %msg = (
 	'txnwrap-wbig'       => q{La valeur d'avertissement doit être inférieure à 2 milliards},
 	'unknown-error'      => q{erreur inconnue},
 	'usage'              => qq{\nUsage: \$1 <options>\n Essayez « \$1 --help » pour liste complète des options\n\n},
+	'username'           => q{nom utilisateur},
 	'vac-msg'            => q{Base de données : $1 Table : $2},
 	'vac-nomatch-a'      => q{Aucune des tables correspondantes n'a eu d'opération ANALYZE},
 	'vac-nomatch-v'      => q{Aucune des tables correspondantes n'a eu d'opération VACUUM},
@@ -838,6 +856,7 @@ our $action_info = {
  new_version_bc      => [0, 'Checks if a newer version of Bucardo is available.'],
  new_version_cp      => [0, 'Checks if a newer version of check_postgres.pl is available.'],
  new_version_pg      => [0, 'Checks if a newer version of Postgres is available.'],
+ pgbouncer_checksum  => [0, 'Check that no pgbouncer settings have changed since the last check.'],
  prepared_txns       => [1, 'Checks number and age of prepared transactions.'],
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
@@ -957,7 +976,8 @@ sub msg { ## no critic
 		$msg = $msg{'en'}{$name};
 	}
 	else {
-		return "Invalid message: $name";
+		my $line = (caller)[2];
+		die qq{Invalid message "$name" from line $line\n};
 	}
 
 	my $x=1;
@@ -1011,8 +1031,10 @@ $psql_revision =~ s/\D//g;
 $VERBOSE >= 2 and warn qq{psql=$PSQL version=$psql_version\n};
 
 $opt{defaultdb} = $psql_version >= 8.0 ? 'postgres' : 'template1';
+$opt{defaultdb} = 'pgbouncer' if $action eq 'pgbouncer_checksum';
 
 sub add_response {
+
 	my ($type,$msg) = @_;
 
 	$db->{host} ||= '';
@@ -1044,7 +1066,10 @@ sub add_response {
 		$perf .= " $db->{perf}";
 	}
 	push @{$type->{$header}} => [$msg,$perf];
-}
+
+	return;
+
+} ## end of add_response
 
 
 sub add_unknown {
@@ -1451,6 +1476,9 @@ check_prepared_txns() if $action eq 'prepared_txns';
 ## Make sure Slony is behaving
 check_slony_status() if $action eq 'slony_status';
 
+## Verify that the pgbouncer settings are what we think they should be
+check_pgbouncer_checksum() if $action eq 'pgbouncer_checksum';
+
 ##
 ## Everything past here does not hit a Postgres database
 ##
@@ -1822,7 +1850,9 @@ sub run_command {
 		my $dbtimeout = $timeout * 1000;
 		alarm 0;
 
-		$string = "BEGIN;SET statement_timeout=$dbtimeout;COMMIT;$string";
+		if ($action ne 'pgbouncer_checksum') {
+			$string = "BEGIN;SET statement_timeout=$dbtimeout;COMMIT;$string";
+		}
 
 		push @args, '-c', $string;
 
@@ -2664,7 +2694,7 @@ FROM (
 ) AS sml
 };
 
-	if (! defined $opt{include}) {
+	if (! defined $opt{include} and ! defined $opt{exclude}) {
 		$SQL .= " WHERE sml.relpages - otta > $MINPAGES OR ipages - iotta > $MINIPAGES";
 		$SQL .= " ORDER BY wastedbytes DESC LIMIT $LIMIT";
 	}
@@ -3151,7 +3181,7 @@ sub check_fsm_pages {
 			add_unknown msg('fsm-page-highver');
 			return;
 		}
-		SLURP: while ($db->{slurp} =~ /\s*(\d*) \|\s+(\d+) \|\s+(\d*)$/gsm) {
+		SLURP: while ($db->{slurp} =~ /\s*(\d*) \|\s+(\d+) \|\s+(\d*)\s*/gsm) {
 			my ($pages,$max,$percent) = ($1||0,$2,$3||0);
 
 			if ($MRTG) {
@@ -3211,7 +3241,7 @@ sub check_fsm_relations {
 			add_unknown msg('fsm-rel-highver');
 			return;
 		}
-		SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+)$/gsm) {
+		SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+)\s*/gsm) {
 			my ($max,$cur,$percent) = ($1,$2,$3);
 
 			if ($MRTG) {
@@ -3903,52 +3933,83 @@ sub check_query_time {
 		}
 	}
 
-	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) }.
-		qq{FROM pg_stat_activity WHERE current_query <> '<IDLE>'$USERWHERECLAUSE GROUP BY 1};
+	$SQL = qq{
+SELECT
+ client_addr,
+ client_port,
+ procpid,
+ COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0),
+ datname,
+ usename
+FROM pg_stat_activity
+WHERE current_query <> '<IDLE>'$USERWHERECLAUSE
+};
 
-	$info = run_command($SQL, { regex => qr{\s*.+?\s+\|\s+\-?\d+}, emptyok => 1 } );
+	$info = run_command($SQL, { regex => qr{\d+ \|\s+\d+}, emptyok => 1 } );
 
-	my $found = 0;
-	for $db (@{$info->{db}}) {
+	$db = $info->{db}[0];
+	my $slurp = $db->{slurp};
 
-		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
-			$stats{$db->{dbname}} = 0;
-			add_ok msg('no-match-user');
-			next;
-		}
+	## We may have gotten no matches die to exclusion rules
+	if ($slurp !~ /\w/ and $USERWHERECLAUSE) {
+		$stats{$db->{dbname}} = 0;
+		add_ok msg('no-match-user');
+		return;
+	}
 
-		$found = 1;
-		my $max = 0;
-		my $maxdb = '?';
-		SLURP: while ($db->{slurp} =~ /\s*(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
-			my ($dbname,$current) = ($1, int $2);
-			next SLURP if skip_item($dbname);
-			if ($current > $max) {
-				$max = $current;
-				$maxdb = $dbname;
-			}
-		}
-		if ($MRTG) {
-			$stats{$db->{dbname}} = $max;
-			next;
-		}
-		$db->{perf} .= "maxtime=$max;";
-		$db->{perf} .= "$warning" if length $warning;
-		$db->{perf} .= ';';
-		$db->{perf} .= "$critical" if length $critical;
+	## Default values for information gathered
+	my ($client_addr, $client_port, $procpid, $username, $maxtime, $maxdb) = ('0.0.0.0', 0, '?', 0, 0, '?');
 
-		my $msg = msg('qtime-msg', $max);
-		$msg .= " db=$maxdb";
+	## Read in and parse the psql output
+  SLURP: while ($slurp =~  /\s*(\S*) \|\s+(\-?\d+) \|\s+(\d+) \|\s+(\-?\d+) \| (.+?)\s+\| (.+?)\s/gsm) {
+		my ($add,$port,$pid,$time,$dbname,$user) = ($1,$2,$3,int $4,$5,$6);
+		next SLURP if skip_item($dbname);
 
-		if (length $critical and $max >= $critical) {
-			add_critical $msg;
+		if ($time >= $maxtime) {
+			$maxtime     = $time;
+			$maxdb       = $dbname;
+			$client_addr = $add;
+			$client_port = $port;
+			$procpid     = $pid;
+			$username    = $user;
 		}
-		elsif (length $warning and $max >= $warning) {
-			add_warning $msg;
-		}
-		else {
-			add_ok $msg;
-		}
+	}
+
+	## Use of skip_item means we may have no matches
+	if ($maxdb eq '?') {
+		add_unknown msg('qtime-nomatch');
+		return;
+	}
+
+	## Details on who the offender was
+	my $whodunit = sprintf q{%s:%s %s:%s%s%s %s:%s},
+		msg('database'),
+		$maxdb,
+		msg('PID'),
+		$procpid,
+		$client_port < 1 ? '' : (sprintf ' %s:%s', msg('port'), $client_port),
+		$client_addr eq '' ? '' : (sprintf ' %s:%s', msg('address'), $client_addr),
+		msg('username'),
+		$username;
+
+	$MRTG and do_mrtg({one => $maxtime, msg => $whodunit});
+
+	$db->{perf} .= sprintf q{'%s'=%s;%s;%s},
+			$whodunit,
+			$maxtime,
+			$warning,
+			$critical;
+
+	my $msg = sprintf '%s (%s)', msg('qtime-msg', $maxtime), $whodunit;
+
+	if (length $critical and $maxtime >= $critical) {
+		add_critical $msg;
+	}
+	elsif (length $warning and $maxtime >= $warning) {
+		add_warning $msg;
+	}
+	else {
+		add_ok $msg;
 	}
 
 	return;
@@ -6504,28 +6565,49 @@ sub check_slony_status {
 		}
 	}
 
-	my $SQL = qq{SELECT ROUND(EXTRACT(epoch FROM st_lag_time)) FROM $schema.sl_status};
+	my $SQL =
+qq{SELECT
+ ROUND(EXTRACT(epoch FROM st_lag_time)),
+ st_origin,
+ st_received,
+ current_database(),
+ COALESCE(n1.no_comment, ''),
+ COALESCE(n2.no_comment, '')
+FROM $schema.sl_status
+JOIN $schema.sl_node n1 ON (n1.no_id=st_origin)
+JOIN $schema.sl_node n2 ON (n2.no_id=st_received)};
 
 	my $info = run_command($SQL, {regex => qr[\d+] } );
-
 	$db = $info->{db}[0];
-	if ($db->{slurp} !~ /^\s*(\d+)/) {
+	if ($db->{slurp} !~ /^\s*\d+/) {
 		add_unknown msg('slony-nonumber');
 		return;
 	}
-	my $lagtime = $1;
+	my $maxlagtime = 0;
+	my @perf;
+	for my $row (split /\n/ => $db->{slurp}) {
+		if ($row !~ /(\d+) \| +(\d+) \| +(\d+) \| (.*?) +\| (.*?) +\| (.+)/) {
+			add_unknown msg('slony-noparse');
+		}
+		my ($lag,$from,$to,$dbname,$fromc,$toc) = ($1,$2,$3,$4,$5,$6);
+		$maxlagtime = $lag if $lag > $maxlagtime;
+		push @perf => [
+			       $lag,
+			       $from,
+			       qq{'$dbname Node $from($fromc) -> Node $to($toc)'=$lag;$warning;$critical},
+			       ];
+	}
+	$db->{perf} = join "\n" => map { $_->[2] } sort { $b->[0]<=>$a->[0] or $a->[1]<=>$b->[1] } @perf;
 	if ($MRTG) {
-		do_mrtg({one => $lagtime});
+		do_mrtg({one => $maxlagtime});
 		return;
 	}
-	my $dbname = $db->{dbname};
-	$db->{perf} = "'$dbname'=$lagtime;$warning;$critical";
-	my $msg = msg('slony-lagtime', $lagtime);
-	$msg .= sprintf ' (%s)', pretty_time($lagtime, $lagtime > 500 ? 'S' : '');
-	if (length $critical and $lagtime >= $critical) {
+	my $msg = msg('slony-lagtime', $maxlagtime);
+	$msg .= sprintf ' (%s)', pretty_time($maxlagtime, $maxlagtime > 500 ? 'S' : '');
+	if (length $critical and $maxlagtime >= $critical) {
 		add_critical $msg;
 	}
-	elsif (length $warning and $lagtime >= $warning) {
+	elsif (length $warning and $maxlagtime >= $warning) {
 		add_warning $msg;
 	}
 	else {
@@ -6590,13 +6672,78 @@ sub show_dbstats {
 } ## end of show_dbstats
 
 
+sub check_pgbouncer_checksum {
+
+	## Verify the checksum of all pgbouncer settings
+	## Supports: Nagios, MRTG
+	## Not that the connection will be done on the pgbouncer database
+	## One of warning or critical must be given (but not both)
+	## It should run one time to find out the expected checksum
+	## You can use --critical="0" to find out the checksum
+	## You can include or exclude settings as well
+	## Example:
+	##  check_postgres_pgbouncer_checksum --critical="4e7ba68eb88915d3d1a36b2009da4acd"
+
+	my ($warning, $critical) = validate_range({type => 'checksum', onlyone => 1});
+
+	eval {
+		require Digest::MD5;
+	};
+	if ($@) {
+		ndie msg('checksum-nomd');
+	}
+
+	$SQL = 'SHOW CONFIG';
+	my $info = run_command($SQL, { regex => qr[log_pooler_errors] });
+
+	for $db (@{$info->{db}}) {
+
+		(my $string = $db->{slurp}) =~ s/\s+$/\n/;
+
+		my $newstring = '';
+		SLURP: for my $line (split /\n/ => $string) {
+			$line =~ /^\s*(\w+)/ or ndie msg('unknown-error');
+			my $name = $1;
+			next SLURP if skip_item($name);
+			$newstring .= "$line\n";
+		}
+		if (! length $newstring) {
+			add_unknown msg('no-match-set');
+		}
+
+		my $checksum = Digest::MD5::md5_hex($newstring);
+
+		my $msg = msg('checksum-msg', $checksum);
+		if ($MRTG) {
+			$opt{mrtg} or ndie msg('checksum-nomrtg');
+			do_mrtg({one => $opt{mrtg} eq $checksum ? 1 : 0, msg => $checksum});
+		}
+		if ($critical and $critical ne $checksum) {
+			add_critical $msg;
+		}
+		elsif ($warning and $warning ne $checksum) {
+			add_warning $msg;
+		}
+		elsif (!$critical and !$warning) {
+			add_unknown $msg;
+		}
+		else {
+			add_ok $msg;
+		}
+	}
+
+	return;
+
+} ## end of check_pgbouncer_checksum
+
+
 =pod
 
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.14.2
+This documents describes check_postgres.pl version 2.15.0
 
 =head1 SYNOPSIS
 
@@ -7497,6 +7644,31 @@ available, a critical is returned. (Bucardo is a master to slave, and master to 
 replication system for Postgres: see http://bucardo.org for more information).
 See also the information on the C<--get_method> option.
 
+=head2 B<pgbouncer_checksum>
+
+(C<symlink: check_postgres_pgbouncer_checksum>) Checks that all the
+pgBouncer settings are the same as last time you checked. 
+This is done by generating a checksum of a sorted list of setting names and 
+their values. Note that you shouldn't specify the database name, it will
+automatically default to pgbouncer.  Either the I<--warning> or the I<--critical> option 
+should be given, but not both. The value of each one is the checksum, a 
+32-character hexadecimal value. You can run with the special C<--critical=0> option 
+to find out an existing checksum.
+
+This action requires the Digest::MD5 module.
+
+Example 1: Find the initial checksum for pgbouncer configuration on port 6432 using the default user (usually postgres)
+
+  check_postgres_pgbouncer_checksum --port=6432 --critical=0
+
+Example 2: Make sure no settings have changed and warn if so, using the checksum from above.
+
+  check_postgres_pgbouncer_checksum --port=6432 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231
+
+For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
+checksum must be provided as the C<--mrtg> argument. The fourth line always gives the 
+current checksum.
+
 =head2 B<prepared_txns>
 
 (C<symlink: check_postgres_prepared_txns>) Check on the age of any existing prepared transactions. 
@@ -8088,9 +8260,19 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<?>
+=item B<Version 2.15.0>
 
   Add --man option to show the entire manual. (Andy Lester)
+  Add the "pgbouncer_checksum" action (Guillaume Lelarge)
+  Fix regex to work on WIN32 for check_fsm_relations and check_fsm_pages (Luke Koops)
+  Don't apply a LIMIT when using --exclude on the bloat action (Marti Raudsepp)
+  Change the output of query_time to show pid,user,port, and address (Giles Westwood)
+  Fix to show database properly when using slony_status (Guillaume Lelarge)
+
+=item B<Version 2.14.3> (March 1, 2010)
+
+  Allow slony_status action to handle more than one slave.
+  Use commas to separate function args in same_schema output (Robert Treat)
 
 =item B<Version 2.14.2> (February 18, 2010)
 

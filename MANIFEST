@@ -34,6 +34,7 @@ t/02_logfile.t
 t/02_new_version_bc.t
 t/02_new_version_cp.t
 t/02_new_version_pg.t
+t/02_pgbouncer_checksum.t
 t/02_prepared_txns.t
 t/02_query_runtime.t
 t/02_query_time.t
