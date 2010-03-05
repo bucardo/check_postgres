@@ -1051,9 +1051,11 @@ sub add_response {
 		push @{$type->{''}} => [$msg, length $nohost > 1 ? $nohost : ''];
 		return;
 	}
+	my $dbservice = $db->{dbservice};
+	my $dbname    = $db->{dbname};
 	my $header = sprintf q{%s%s%s},
-		$action_info->{$action}[0] ? '' : (defined $db->{dbservice} and length $db->{dbservice}) ?
-			qq{service=$db->{dbservice} } : qq{DB "$db->{dbname}" },
+		$action_info->{$action}[0] ? '' : (defined $dbservice and length $dbservice) ?
+			qq{service=$dbservice } : qq{DB "$dbname" },
 				$db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
 					defined $db->{port} ? ($db->{port} eq $opt{defaultport} ? '' : qq{(port=$db->{port}) }) : '';
 	$header =~ s/\s+$//;
