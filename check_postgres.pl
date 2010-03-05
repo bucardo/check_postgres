@@ -282,12 +282,8 @@ our %msg = (
 	'txnwrap-cbig'       => q{The 'critical' value must be less than 2 billion},
 	'txnwrap-wbig'       => q{The 'warning' value must be less than 2 billion},
 	'unknown-error'      => q{Unknown error},
-<<<<<<< HEAD:check_postgres.pl
 	'usage'              => qq{\nUsage: \$1 <options>\n Try "\$1 --help" for a complete list of options\n Try "\$1 --man" for the full manual\n},
-=======
-	'usage'              => qq{\nUsage: \$1 <options>\n Try "\$1 --help" for a complete list of options\n\n},
 	'username'           => q{username},
->>>>>>> bucardo/master:check_postgres.pl
 	'vac-msg'            => q{DB: $1 TABLE: $2},
 	'vac-nomatch-a'      => q{No matching tables have ever been analyzed},
 	'vac-nomatch-v'      => q{No matching tables have ever been vacuumed},
