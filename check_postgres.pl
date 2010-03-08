@@ -4622,7 +4622,7 @@ sub check_same_schema {
 	## Check for filtering rules
 	my %filter;
 	if (exists $opt{warning} and length $opt{warning}) {
-		for my $phrase (split /\s+/ => $opt{warning}) {
+		for my $phrase (split /[\s,]+/ => $opt{warning}) {
 			for my $type (qw/schema user table view index sequence constraint trigger function perm language owner/) {
 				if ($phrase =~ /^no${type}s?$/i) {
 					$filter{"no${type}s"} = 1;
@@ -8266,6 +8266,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Don't apply a LIMIT when using --exclude on the bloat action (Marti Raudsepp)
   Change the output of query_time to show pid,user,port, and address (Giles Westwood)
   Fix to show database properly when using slony_status (Guillaume Lelarge)
+  Allow warning items for same_schema to be comma-separated (Guillaume Lelarge)
 
 =item B<Version 2.14.3> (March 1, 2010)
 
