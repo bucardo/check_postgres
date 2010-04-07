@@ -282,6 +282,15 @@ sub test_database_handle {
 			$tempdbh->disconnect();
 			$dbh = DBI->connect(@superdsn);
 		}
+		elsif ($@ =~ /database "postgres" does not exist/) {
+			## We want the current user, not whatever this is set to:
+			(my $tempdsn = $dsn) =~ s/postgres/template1/;
+			my @tempdsn = ($tempdsn, '', '', {AutoCommit=>1,RaiseError=>1,PrintError=>0});
+			my $tempdbh = DBI->connect(@tempdsn);
+			$tempdbh->do('CREATE DATABASE postgres');
+			$tempdbh->disconnect();
+			$dbh = DBI->connect(@superdsn);
+		}
 		else {
 			die "Could not connect: $@\n";
 		}
@@ -303,8 +312,8 @@ sub test_database_handle {
 	}
 	$dbh->do('CREATE DATABASE beedeebeedee');
 	$dbh->do('CREATE DATABASE ardala');
-    $dbh->do('CREATE LANGUAGE plpgsql');
-    $dbh->do('CREATE LANGUAGE plperlu');
+	$dbh->do('CREATE LANGUAGE plpgsql');
+	$dbh->do('CREATE LANGUAGE plperlu');
 	$dbh->{AutoCommit} = 0;
 	$dbh->{RaiseError} = 1;
 
@@ -382,7 +391,7 @@ sub recreate_database {
 
 
 sub get_command {
-  return run('get_command', @_);
+	return run('get_command', @_);
 }
 
 sub run {
@@ -399,12 +408,12 @@ sub run {
 
 	my $double = $action =~ s/DB2// ? 1 : 0;
 
-	my $dbhost = $self->{shorthost} || $self->{dbhost}   || die 'No dbhost?';
+	my $dbhost = $self->{shorthost} || $self->{dbhost} || die 'No dbhost?';
 	my $dbuser = $self->{testuser} || die 'No testuser?';
-	my $dbname = $self->{dbname}   || die 'No dbname?';
+	my $dbname = $self->{dbname} || die 'No dbname?';
 	my $com = qq{perl check_postgres.pl --no-check_postgresrc --action=$action --dbhost="$dbhost" --dbuser=$dbuser};
-    if ($extra =~ s/--nodbname//) {
-    }
+	if ($extra =~ s/--nodbname//) {
+	}
 	elsif ($extra !~ /dbname=/) {
 		$com .= " --dbname=$dbname";
 	}
@@ -595,8 +604,8 @@ sub drop_table_if_exists {
 	my $safeschema = $dbh->quote($schema);
 	$SQL = $schema
 		? q{SELECT count(*) FROM pg_class c JOIN pg_namespace n ON (n.oid = c.relnamespace) }.
-		  qq{WHERE relkind = 'r' AND nspname = $safeschema AND relname = $safetable}
-        : qq{SELECT count(*) FROM pg_class WHERE relkind='r' AND relname = $safetable};
+		qq{WHERE relkind = 'r' AND nspname = $safeschema AND relname = $safetable}
+		: qq{SELECT count(*) FROM pg_class WHERE relkind='r' AND relname = $safetable};
 	my $count = $dbh->selectall_arrayref($SQL)->[0][0];
 	if ($count) {
 		$dbh->{Warn} = 0;
