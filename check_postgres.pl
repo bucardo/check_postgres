@@ -3541,7 +3541,7 @@ sub check_fsm_pages {
 
     (my $w = $warning) =~ s/\D//;
     (my $c = $critical) =~ s/\D//;
-    my $SQL = qq{
+    my $SQL = q{
 SELECT pages, maxx, ROUND(100*(pages/maxx)) AS percent
 FROM 
   (SELECT (sumrequests+numrels)*chunkpages AS pages
@@ -3603,7 +3603,7 @@ sub check_fsm_relations {
     (my $w = $warning) =~ s/\D//;
     (my $c = $critical) =~ s/\D//;
 
-    my $SQL = qq{
+    my $SQL = q{
 SELECT maxx, cur, ROUND(100*(cur/maxx)) AS percent
 FROM (SELECT 
     (SELECT COUNT(*) FROM pg_freespacemap_relations) AS cur,
@@ -4377,7 +4377,7 @@ ORDER BY xact_start, procpid DESC
         my $details = '';
         if ($VERBOSE >= 1 and $maxtime > 0) { ## >0 so we don't report ourselves
             $maxq =~ s/\n/\\n/g;
-            $details = " " . msg('Query', $maxq);
+            $details = ' ' . msg('Query', $maxq);
         }
 
         $MRTG and do_mrtg({one => $maxtime, msg => "$whodunit$details"});
