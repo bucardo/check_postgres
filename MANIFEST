@@ -6,8 +6,7 @@ SIGNATURE
 Makefile.PL
 MANIFEST
 MANIFEST.SKIP
-.gitignore
-.perlcriticrc
+perlcriticrc
 META.yml
 TODO
 
