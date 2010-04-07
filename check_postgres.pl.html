@@ -62,6 +62,7 @@
 		<li><a href="#new_version_cp"><strong>new_version_cp</strong></a></li>
 		<li><a href="#new_version_pg"><strong>new_version_pg</strong></a></li>
 		<li><a href="#new_version_bc"><strong>new_version_bc</strong></a></li>
+		<li><a href="#pgbouncer_checksum"><strong>pgbouncer_checksum</strong></a></li>
 		<li><a href="#prepared_txns"><strong>prepared_txns</strong></a></li>
 		<li><a href="#query_runtime"><strong>query_runtime</strong></a></li>
 		<li><a href="#query_time"><strong>query_time</strong></a></li>
@@ -105,7 +106,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.14.4</p>
+<p>This documents describes check_postgres.pl version 2.15.0</p>
 <p>
 </p>
 <hr />
@@ -518,10 +519,10 @@ times larger the relation is compared to how large it should be), just pass in <
 </p>
 <h2><a name="checkpoint"><strong>checkpoint</strong></a></h2>
 <p>(<code>symlink: check_postgres_checkpoint</code>) Determines how long since the last checkpoint has 
-been run. This must run on the same server as the database that is being checked. This check is 
-meant to run on a &quot;warm standby&quot; server that is actively processing shipped WAL files, and is meant 
-to check that your warm standby is truly 'warm'. The data directory must be set, either by the 
-environment variable <code>PGDATA</code>, or passing 
+been run. This must run on the same server as the database that is being checked (e.g. the -h 
+flag will not work). This check is meant to run on a &quot;warm standby&quot; server that is actively 
+processing shipped WAL files, and is meant to check that your warm standby is truly 'warm'. 
+The data directory must be set, either by the environment variable <code>PGDATA</code>, or passing 
 the <code>--datadir</code> argument. It returns the number of seconds since the last checkpoint 
 was run, as determined by parsing the call to <code>pg_controldata</code>. Because of this, the 
 pg_controldata executable must be available in the current path. Alternatively, you can 
@@ -542,7 +543,8 @@ Takes no <em>--warning</em> or <em>--critical</em> options.</p>
 <p>(<code>symlink: check_postgres_custom_query</code>) Runs a custom query of your choosing, and parses the results. The query itself is passed in through 
 the <code>custom_query</code> argument, and should be kept as simple as possible. If at all possible, wrap it in 
 a view or a function to keep things easier to manage. The query should return one or two columns: the first 
-is the result that will be checked, and the second is any performance data you want sent.</p>
+is the result that will be checked, and the second is any performance data you want sent. They must be returned 
+as columns named <em>result</em> and <em>data</em>.</p>
 <p>At least one warning or critical argument must be specified. What these are set to depends on the type of 
 query you are running. There are four types of custom_queries that can be run, specified by the <code>valtype</code> 
 argument. If none is specified, this action defaults to 'integer'. The four types are:</p>
@@ -955,6 +957,27 @@ If a major upgrade is available, a warning is returned. If a revision upgrade is
 available, a critical is returned. (Bucardo is a master to slave, and master to master 
 replication system for Postgres: see <a href="http://bucardo.org">http://bucardo.org</a> for more information).
 See also the information on the <code>--get_method</code> option.</p>
+<p>
+</p>
+<h2><a name="pgbouncer_checksum"><strong>pgbouncer_checksum</strong></a></h2>
+<p>(<code>symlink: check_postgres_pgbouncer_checksum</code>) Checks that all the
+pgBouncer settings are the same as last time you checked. 
+This is done by generating a checksum of a sorted list of setting names and 
+their values. Note that you shouldn't specify the database name, it will
+automatically default to pgbouncer.  Either the <em>--warning</em> or the <em>--critical</em> option 
+should be given, but not both. The value of each one is the checksum, a 
+32-character hexadecimal value. You can run with the special <code>--critical=0</code> option 
+to find out an existing checksum.</p>
+<p>This action requires the Digest::MD5 module.</p>
+<p>Example 1: Find the initial checksum for pgbouncer configuration on port 6432 using the default user (usually postgres)</p>
+<pre>
+  check_postgres_pgbouncer_checksum --port=6432 --critical=0</pre>
+<p>Example 2: Make sure no settings have changed and warn if so, using the checksum from above.</p>
+<pre>
+  check_postgres_pgbouncer_checksum --port=6432 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231</pre>
+<p>For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
+checksum must be provided as the <code>--mrtg</code> argument. The fourth line always gives the 
+current checksum.</p>
 <p>
 </p>
 <h2><a name="prepared_txns"><strong>prepared_txns</strong></a></h2>
@@ -1461,11 +1484,18 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
-<dt><strong><a name="version_2_14_4" class="item"><strong></strong>Version 2.14.4</a></strong></dt>
+<dt><strong><a name="version_2_15_0" class="item"><strong>Version 2.15.0</strong></a></strong></dt>
 
 <dd>
 <pre>
-  Fix to show database properly when using slony_status (Guillaume Lelarge)</pre>
+  Redo the internal run_command() sub to use -x and hashes instead of regexes.
+  Fix error in custom logic (Andreas Mager)
+  Add the &quot;pgbouncer_checksum&quot; action (Guillaume Lelarge)
+  Fix regex to work on WIN32 for check_fsm_relations and check_fsm_pages (Luke Koops)
+  Don't apply a LIMIT when using --exclude on the bloat action (Marti Raudsepp)
+  Change the output of query_time to show pid,user,port, and address (Giles Westwood)
+  Fix to show database properly when using slony_status (Guillaume Lelarge)
+  Allow warning items for same_schema to be comma-separated (Guillaume Lelarge)</pre>
 </dd>
 <dt><strong><a name="3" class="item"><strong>Version 2.14.3</strong> (March 1, 2010)</a></strong></dt>
 

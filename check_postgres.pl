@@ -8442,6 +8442,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.15.0>
 
+  Redo the internal run_command() sub to use -x and hashes instead of regexes.
+  Fix error in custom logic (Andreas Mager)
   Add the "pgbouncer_checksum" action (Guillaume Lelarge)
   Fix regex to work on WIN32 for check_fsm_relations and check_fsm_pages (Luke Koops)
   Don't apply a LIMIT when using --exclude on the bloat action (Marti Raudsepp)
