@@ -17,7 +17,7 @@ my $cp = CP_Testing->new( {default_action => 'replicate-row'} );
 $dbh = $cp->test_database_handle();
 $dbh2 = $cp->get_fresh_dbh({dbname=>'ardala'});
 
-my $S = q{Action 'replicate_rows'};
+my $S = q{Action 'replicate_row'};
 my $label = 'POSTGRES_REPLICATE_ROW';
 
 $SQL = q{CREATE TABLE reptest(id INT, foo TEXT)};
