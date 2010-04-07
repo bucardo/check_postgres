@@ -2238,8 +2238,14 @@ sub validate_range {
 			ndie msg('range-int-pos', 'critical');
 		}
 
-		if (length $warning and length $critical and $warning > $critical) {
-			return if $opt{reverse};
+		if (length $warning
+			and length $critical
+			and (
+				($opt{reverse} and $warning < $critical)
+				or
+				(!$opt{reverse} and $warning > $critical)
+				)
+			) {
 			ndie msg('range-warnbig');
 		}
 	}
