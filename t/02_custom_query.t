@@ -12,7 +12,7 @@ use CP_Testing;
 
 use vars qw/$dbh $result $t $host $dbname/;
 
-my $good_query = q{SELECT count(*) FROM pg_database};
+my $good_query = q{SELECT count(*) AS result FROM pg_database};
 my $bad_query  = q{THIS IS NOT A QUERY};
 
 my $cp = CP_Testing->new( {default_action => 'custom_query'} );
