@@ -1055,12 +1055,9 @@ sub add_response {
 		push @{$type->{''}} => [$msg, length $nohost > 1 ? $nohost : ''];
 		return;
 	}
-<<<<<<< HEAD:check_postgres.pl
 
-=======
 	my $dbservice = $db->{dbservice};
 	my $dbname    = $db->{dbname};
->>>>>>> petdance/master:check_postgres.pl
 	my $header = sprintf q{%s%s%s},
 		$action_info->{$action}[0] ? '' : (defined $dbservice and length $dbservice) ?
 			qq{service=$dbservice } : qq{DB "$dbname" },
@@ -2648,35 +2645,6 @@ ORDER BY datname
 	my $ok = 1;
 	if ($e1) { ## minus
 		$ok = 0 if $limit-$total >= $e2;
-<<<<<<< HEAD:check_postgres.pl
-=======
-	}
-	elsif ($e3) { ## percent
-		my $nowpercent = $total/$limit*100;
-		$ok = 0 if $nowpercent >= $e2;
-	}
-	else { ## raw number
-		$ok = 0 if $total >= $e2;
-	}
-	if (!$ok) {
-		add_critical $msg;
-		return;
-	}
-
-	if ($w1) {
-		$ok = 0 if $limit-$total >= $w2;
-	}
-	elsif ($w3) {
-		my $nowpercent = $total/$limit*100;
-		$ok = 0 if $nowpercent >= $w2;
-	}
-	else {
-		$ok = 0 if $total >= $w2;
-	}
-	if (!$ok) {
-		add_warning $msg;
-		return;
->>>>>>> petdance/master:check_postgres.pl
 	}
 	elsif ($e3) { ## percent
 		my $nowpercent = $total/$limit*100;
@@ -2704,8 +2672,6 @@ ORDER BY datname
 		add_warning $msg;
 		return;
 	}
-
-	add_ok $msg;
 
 	add_ok $msg;
 
@@ -3105,7 +3071,6 @@ sub check_custom_query {
 	my ($warning, $critical) = validate_range({type => $valtype, leastone => 1});
 
 	my $query = $opt{query} or ndie msg('custom-nostring');
-<<<<<<< HEAD:check_postgres.pl
 
 	my $reverse = $opt{reverse} || 0;
 
@@ -3173,75 +3138,6 @@ sub check_database_size {
 	## Limit to a specific user (db owner) with the includeuser option
 	## Exclude users with the excludeuser option
 
-=======
-
-	my $reverse = $opt{reverse} || 0;
-
-	my $info = run_command($query);
-
-	for $db (@{$info->{db}}) {
-
-		if (! @{$db->{slurp}}) {
-			add_unknown msg('custom-norows');
-			next;
-		}
-
-		my $goodrow = 0;
-
-		for my $r (@{$db->{slurp}}) {
-			my ($data,$msg) = ($r->{result}, $r->{data}||'');
-			$goodrow++;
-			$db->{perf} .= " $msg";
-			my $gotmatch = 0;
-			if (length $critical) {
-				if (($valtype eq 'string' and $data eq $critical)
-					or
-					($reverse ? $data <= $critical : $data >= $critical)) { ## covers integer, time, size
-					add_critical "$data";
-					$gotmatch = 1;
-				}
-			}
-
-			if (length $warning and ! $gotmatch) {
-				if (($valtype eq 'string' and $data eq $warning)
-					or
-					($reverse ? $data <= $warning : $data >= $warning)) {
-					add_warning "$data";
-					$gotmatch = 1;
-				}
-			}
-
-			if (! $gotmatch) {
-				add_ok "$data";
-			}
-
-		} ## end each row returned
-
-		if (!$goodrow) {
-			add_unknown msg('custom-invalid');
-		}
-	}
-
-	return;
-
-} ## end of check_custom_query
-
-
-sub check_database_size {
-
-	## Check the size of one or more databases
-	## Supports: Nagios, MRTG
-	## mrtg reports the largest two databases
-	## By default, checks all databases
-	## Can check specific one(s) with include
-	## Can ignore some with exclude
-	## Warning and critical are bytes
-	## Valid units: b, k, m, g, t, e
-	## All above may be written as plural or with a trailing 'b'
-	## Limit to a specific user (db owner) with the includeuser option
-	## Exclude users with the excludeuser option
-
->>>>>>> petdance/master:check_postgres.pl
 	my ($warning, $critical) = validate_range({type => 'size'});
 
 	$USERWHERECLAUSE =~ s/AND/WHERE/;
@@ -3259,15 +3155,8 @@ JOIN pg_user u ON (u.usesysid=d.datdba)$USERWHERECLAUSE
 	}
 
 	my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1, } );
-<<<<<<< HEAD:check_postgres.pl
-
 	my $found = 0;
 
-=======
-
-	my $found = 0;
-
->>>>>>> petdance/master:check_postgres.pl
 	for $db (@{$info->{db}}) {
 		my $max = -1;
 		$found = 1;
@@ -4606,15 +4495,9 @@ SELECT database, ROUND(EXTRACT(epoch FROM now()-prepared)) AS age, prepared
 FROM pg_prepared_xacts
 ORDER BY prepared ASC
 };
-<<<<<<< HEAD:check_postgres.pl
 
 	my $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
 
-=======
-
-	my $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
-
->>>>>>> petdance/master:check_postgres.pl
 	my $msg = msg('preptxn-none');
 	my $found = 0;
 	for $db (@{$info->{db}}) {
@@ -6753,18 +6636,7 @@ sub check_txn_idle {
 		}
 		else {
 			add_ok $msg;
-<<<<<<< HEAD:check_postgres.pl
 		}
-	}
-
-	## If no results, let's be paranoid and check their settings
-	if (!$found) {
-		if ($USERWHERECLAUSE) {
-			add_ok msg('no-match-user');
-=======
->>>>>>> petdance/master:check_postgres.pl
-		}
-		verify_version();
 	}
 
 	## If no results, let's be paranoid and check their settings
@@ -6808,7 +6680,6 @@ SELECT
 FROM pg_stat_activity
 WHERE xact_start IS NOT NULL $USERWHERECLAUSE
 };
-<<<<<<< HEAD:check_postgres.pl
 
 	my $info = run_command($SQL, { regex => qr{\d+ \|\s+\s+}, emptyok => 1 } );
 
@@ -6819,18 +6690,6 @@ WHERE xact_start IS NOT NULL $USERWHERECLAUSE
 		ndie msg('txntime-fail');
 	}
 
-=======
-
-	my $info = run_command($SQL, { regex => qr{\d+ \|\s+\s+}, emptyok => 1 } );
-
-	$db = $info->{db}[0];
-	my $slurp = $db->{slurp};
-
-	if (! exists $db->{ok}) {
-		ndie msg('txntime-fail');
-	}
-
->>>>>>> petdance/master:check_postgres.pl
 	if ($slurp !~ /\w/ and $USERWHERECLAUSE) {
 		$stats{$db->{dbname}} = 0;
 		add_ok msg('no-match-user');
@@ -8595,13 +8454,9 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-
-=item B<?>
-
-  Add --man option to show the entire manual. (Andy Lester)
-
 =item B<Version 2.15.0>
 
+  Add --man option to show the entire manual. (Andy Lester)
   Redo the internal run_command() sub to use -x and hashes instead of regexes.
   Fix error in custom logic (Andreas Mager)
   Add the "pgbouncer_checksum" action (Guillaume Lelarge)
