@@ -27,14 +27,14 @@ my $label = 'POSTGRES_DISABLED_TRIGGERS';
 my $ver = $dbh->{pg_server_version};
 if ($ver < 80100) {
 
-	$t=qq{$S gives an error when run against an old Postgres version};
-	like ($cp->run('--warning=99'), qr{ERROR.*server version must be >= 8.1}, $t);
+    $t=qq{$S gives an error when run against an old Postgres version};
+    like ($cp->run('--warning=99'), qr{ERROR.*server version must be >= 8.1}, $t);
 
   SKIP: {
-		skip 'Cannot test disabled_triggers completely on Postgres 8.0 or lower', 12;
-	}
+        skip 'Cannot test disabled_triggers completely on Postgres 8.0 or lower', 12;
+    }
 
-	exit;
+    exit;
 }
 
 $t = qq{$S self-identifies correctly};
@@ -65,8 +65,8 @@ for (-1, 0, 'a') {
 
 sub cleanup {
     $dbh->rollback;
-	$cp->drop_table_if_exists($testtbl);
-	$cp->drop_function_if_exists($testtrig_prefix.'func','');
+    $cp->drop_table_if_exists($testtbl);
+    $cp->drop_function_if_exists($testtrig_prefix.'func','');
 }
 END { cleanup(); }
 

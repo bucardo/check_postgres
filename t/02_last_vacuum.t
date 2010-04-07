@@ -26,7 +26,7 @@ my $label = 'POSTGRES_LAST_VACUUM';
 
 SKIP:
 {
-	$ver < 80200 and skip 'Cannot test last_vacuum on old Postgres versions', 14;
+    $ver < 80200 and skip 'Cannot test last_vacuum on old Postgres versions', 14;
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(q{-w 0});
@@ -64,7 +64,7 @@ $cp->drop_table_if_exists($testtbl);
 $dbh->do(qq{CREATE TABLE $testtbl AS SELECT 123::INTEGER AS a FROM generate_series(1,200000)});
 
 like ($cp->run("-w 0 --exclude=~.* --include=$testtbl"),
-	  qr{No matching tables found due to exclusion}, $t);
+      qr{No matching tables found due to exclusion}, $t);
 
 $t = qq{$S sees a recent VACUUM};
 $dbh->do("DELETE FROM $testtbl");
@@ -73,15 +73,15 @@ $dbh->do('VACUUM');
 sleep 1;
 
 like ($cp->run("-w 0 --exclude=~.* --include=$testtbl"),
-	  qr{^$label OK: DB "$dbname" \(host:$host\).*?\(\d+ second(?:s)?\)}, $t);
+      qr{^$label OK: DB "$dbname" \(host:$host\).*?\(\d+ second(?:s)?\)}, $t);
 
 $t = qq{$S returns correct MRTG information (OK case)};
 like ($cp->run("--output=mrtg -w 0 --exclude=~.* --include=$testtbl"),
-	  qr{\d+\n0\n\nDB: $dbname TABLE: public.$testtbl\n}, $t);
+      qr{\d+\n0\n\nDB: $dbname TABLE: public.$testtbl\n}, $t);
 
 $t = qq{$S returns correct MRTG information (fail case)};
 like ($cp->run('--output=mrtg -w 0 --exclude=~.* --include=no_such_table'),
-	  qr{0\n0\n\nDB: $dbname TABLE: \?\n}, $t);
+      qr{0\n0\n\nDB: $dbname TABLE: \?\n}, $t);
 
 }
 

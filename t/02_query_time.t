@@ -35,16 +35,16 @@ for ('1 second',
      '1 hour',
      '1 day',
      '1 week',
-	 ) {
-	like ($cp->run(qq{ -w "$_"}), qr/^$label/, $t . " ($_)");
+     ) {
+    like ($cp->run(qq{ -w "$_"}), qr/^$label/, $t . " ($_)");
 }
 
 $t = qq{$S rejects invalid -w input};
 for ('-1 second',
      '-1 week',
      'abc',
-	 '1 fortnight',
-	 ) {
+     '1 fortnight',
+     ) {
    like ($cp->run(qq{-w "$_"}), qr/^ERROR: Value for 'warning' must be a valid time/, $t . " ($_)");
 }
 
@@ -52,17 +52,17 @@ my $ver = $dbh->{pg_server_version};
 if ($ver < 80200) {
 
   SKIP: {
-		skip 'Cannot test query_time on Postgres 8.1 or lower', 1;
-	}
+        skip 'Cannot test query_time on Postgres 8.1 or lower', 1;
+    }
 
-	exit;
+    exit;
 }
 
 my $child = fork();
 if ($child == 0) {
     my $kiddbh = $cp->test_database_handle();
-	$cp->database_sleep($kiddbh, 3);
-	$kiddbh->rollback();
+    $cp->database_sleep($kiddbh, 3);
+    $kiddbh->rollback();
     $kiddbh->disconnect;
     exit;
 }

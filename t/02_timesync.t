@@ -56,7 +56,7 @@ $t = qq{$S rejects invalid -w input};
 for ('-1 second',
      'abc',
      '-0',
-	) {
+    ) {
    like ($cp->run(qq{-w "$_"}), qr/^ERROR:.*?must be number of seconds/, $t . " ($_)");
 }
 
@@ -64,7 +64,7 @@ $t = qq{$S rejects invalid -c input};
 for ('-1 second',
      'abc',
      '-0',
-	) {
+    ) {
    like ($cp->run(qq{-c "$_"}), qr/^ERROR:.*?must be number of seconds/, $t . " ($_)");
 }
 

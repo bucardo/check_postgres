@@ -61,6 +61,6 @@ is ($cp->run("--output=mrtg --warning=1 --logfile $logfile"), qq{1\n0\n\n\n}, $t
 
 $t = qq{$S returns correct MRTG (fail)};
 is ($cp->run("--output=mrtg --warning=1 --logfile $logfile" . 'x'),
-	qq{ERROR: logfile ${logfile}x does not exist!\n}, $t);
+    qq{ERROR: logfile ${logfile}x does not exist!\n}, $t);
 
 exit;

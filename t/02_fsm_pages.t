@@ -59,13 +59,13 @@ $dbh->commit();
 my $ver = $dbh->{pg_server_version};
 if ($ver >= 80400) {
   SKIP: {
-		skip 'Cannot test fsm_pages completely on Postgres 8.4 or higher', 3;
-	}
+        skip 'Cannot test fsm_pages completely on Postgres 8.4 or higher', 3;
+    }
 
-	$t=qq{$S gives an unknown when running against a 8.4 or higher version};
-	like ($cp->run('--warning=10%'), qr{^$label UNKNOWN.*Cannot check on fsm_pages}, $t);
+    $t=qq{$S gives an unknown when running against a 8.4 or higher version};
+    like ($cp->run('--warning=10%'), qr{^$label UNKNOWN.*Cannot check on fsm_pages}, $t);
 
-	exit;
+    exit;
 }
 
 $t=qq{$S gives normal output for empty tables};

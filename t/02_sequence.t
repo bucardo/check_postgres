@@ -31,14 +31,14 @@ like ($cp->run('--critical=80'), qr{ERROR:.+must be a percentage}, $t);
 my $ver = $dbh->{pg_server_version};
 if ($ver < 80100) {
 
-	$t=qq{$S gives an error when run against an old Postgres version};
-	like ($cp->run('--warning=1%'), qr{ERROR.*server version must be >= 8.1}, $t);
+    $t=qq{$S gives an error when run against an old Postgres version};
+    like ($cp->run('--warning=1%'), qr{ERROR.*server version must be >= 8.1}, $t);
 
   SKIP: {
-		skip 'Cannot test sequence completely on Postgres 8.0 or lower', 7;
-	}
+        skip 'Cannot test sequence completely on Postgres 8.0 or lower', 7;
+    }
 
-	exit;
+    exit;
 }
 
 

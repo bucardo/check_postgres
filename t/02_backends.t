@@ -43,15 +43,15 @@ like ($result, qr{^$label OK: \(host:$host\)}, $t);
 $t=qq{$S returned correct connection count};
 SKIP: {
 
-	$goodver or skip 'Cannot test backends completely with older versions of Postgres', 3;
+    $goodver or skip 'Cannot test backends completely with older versions of Postgres', 3;
 
-	like ($result, qr{^$label OK: \(host:$host\) 2 of 10 connections}, $t);
+    like ($result, qr{^$label OK: \(host:$host\) 2 of 10 connections}, $t);
 
-	$t=qq{$S returned correct percentage};
-	like ($result, qr{^$label OK: \(host:$host\) 2 of 10 connections \(20%\)}, $t);
+    $t=qq{$S returned correct percentage};
+    like ($result, qr{^$label OK: \(host:$host\) 2 of 10 connections \(20%\)}, $t);
 
-	$t=qq{$S returned correct performance data};
-	like ($result, qr{ \| time=(\d\.\d\d)  'ardala'=0;9;9;0;10 'beedeebeedee'=0;9;9;0;10 'postgres'=2;9;9;0;10 'template0'=0;9;9;0;10 'template1'=0;9;9;0;10\s$}, $t);
+    $t=qq{$S returned correct performance data};
+    like ($result, qr{ \| time=(\d\.\d\d)  'ardala'=0;9;9;0;10 'beedeebeedee'=0;9;9;0;10 'postgres'=2;9;9;0;10 'template0'=0;9;9;0;10 'template1'=0;9;9;0;10\s$}, $t);
 }
 
 $t=qq{$S fails when called with an invalid option};
@@ -148,13 +148,13 @@ like ($cp->run('--include=foobar'), qr{^$label OK: .+No connections}, $t);
 
 SKIP: {
 
-	$goodver or skip 'Cannot test backends completely with older versions of Postgres', 2;
+    $goodver or skip 'Cannot test backends completely with older versions of Postgres', 2;
 
-	$t=qq{$S returns correct MRTG output when rows found};
-	is ($cp->run('--output=MRTG'), qq{3\n0\n\nDB=postgres Max connections=10\n}, $t);
+    $t=qq{$S returns correct MRTG output when rows found};
+    is ($cp->run('--output=MRTG'), qq{3\n0\n\nDB=postgres Max connections=10\n}, $t);
 
-	$t=qq{$S works when include has valid database};
-	like ($cp->run('--include=postgres'), qr{^$label OK: .+3 of 10}, $t);
+    $t=qq{$S works when include has valid database};
+    like ($cp->run('--include=postgres'), qr{^$label OK: .+3 of 10}, $t);
 }
 
 $t=qq{$S works when exclude forces no matches};
@@ -162,24 +162,24 @@ like ($cp->run('--exclude=postgres'), qr{^$label OK: .+No connections}, $t);
 
 SKIP: {
 
-	$goodver or skip 'Cannot test backends completely with older versions of Postgres', 4;
+    $goodver or skip 'Cannot test backends completely with older versions of Postgres', 4;
 
-	$t=qq{$S works when exclude excludes nothing};
-	like ($cp->run('--exclude=foobar'), qr{^$label OK: .+3 of 10}, $t);
+    $t=qq{$S works when exclude excludes nothing};
+    like ($cp->run('--exclude=foobar'), qr{^$label OK: .+3 of 10}, $t);
 
-	$t=qq{$S works when include and exclude make a match};
-	like ($cp->run('--exclude=postgres --include=postgres'), qr{^$label OK: .+3 of 10}, $t);
+    $t=qq{$S works when include and exclude make a match};
+    like ($cp->run('--exclude=postgres --include=postgres'), qr{^$label OK: .+3 of 10}, $t);
 
-	$t=qq{$S works when include and exclude make a match};
-	like ($cp->run('--include=postgres --exclude=postgres'), qr{^$label OK: .+3 of 10}, $t);
+    $t=qq{$S works when include and exclude make a match};
+    like ($cp->run('--include=postgres --exclude=postgres'), qr{^$label OK: .+3 of 10}, $t);
 
-	$t=qq{$S returned correct performance data with include};
-	like ($cp->run('--include=postgres'), qr{ \| time=(\d\.\d\d)  'ardala'=0;9;9;0;10 'beedeebeedee'=0;9;9;0;10 'postgres'=3;9;9;0;10}, $t);
+    $t=qq{$S returned correct performance data with include};
+    like ($cp->run('--include=postgres'), qr{ \| time=(\d\.\d\d)  'ardala'=0;9;9;0;10 'beedeebeedee'=0;9;9;0;10 'postgres'=3;9;9;0;10}, $t);
 }
 
 my %dbh;
 for my $num (1..8) {
-	$dbh{$num} = $cp->test_database_handle({quickreturn=>1});
+    $dbh{$num} = $cp->test_database_handle({quickreturn=>1});
 }
 
 $t=qq{$S returns critical when too many clients to even connect};

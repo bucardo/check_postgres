@@ -195,14 +195,14 @@ $dbh2->do(q{CREATE VIEW view_both_same AS SELECT 1});
 $t = qq{$S succeeds when views are the same};
 like ($cp1->run($stdargs),
       qr{^$label OK},
-	  $t);
+      $t);
 
 $dbh1->do(q{CREATE VIEW view_both_diff AS SELECT 123});
 $dbh2->do(q{CREATE VIEW view_both_diff AS SELECT 456});
 $t = qq{$S succeeds when views are the same};
 like ($cp1->run($stdargs),
       qr{^$label CRITICAL.*Items not matched: 1\b.*is different on 1 and 2},
-	  $t);
+      $t);
 
 $dbh1->do(q{DROP VIEW view_both_diff});
 $dbh2->do(q{DROP VIEW view_both_diff});

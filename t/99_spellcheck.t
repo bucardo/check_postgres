@@ -10,93 +10,93 @@ use Test::More;
 my (@testfiles, $fh);
 
 if (!$ENV{RELEASE_TESTING}) {
-	plan (skip_all =>  'Test skipped unless environment variable RELEASE_TESTING is set');
+    plan (skip_all =>  'Test skipped unless environment variable RELEASE_TESTING is set');
 }
 elsif (!eval { require Text::SpellChecker; 1 }) {
-	plan skip_all => 'Could not find Text::SpellChecker';
+    plan skip_all => 'Could not find Text::SpellChecker';
 }
 else {
-	opendir my $dir, 't' or die qq{Could not open directory 't': $!\n};
-	@testfiles = map { "t/$_" } grep { /^.+\.(t|pl|pm)$/ } readdir $dir;
-	closedir $dir or die qq{Could not closedir "$dir": $!\n};
-	plan tests => 2+@testfiles;
+    opendir my $dir, 't' or die qq{Could not open directory 't': $!\n};
+    @testfiles = map { "t/$_" } grep { /^.+\.(t|pl|pm)$/ } readdir $dir;
+    closedir $dir or die qq{Could not closedir "$dir": $!\n};
+    plan tests => 2+@testfiles;
 }
 
 my %okword;
 my $filename = 'Common';
 while (<DATA>) {
-	if (/^## (.+):/) {
-		$filename = $1;
-		next;
-	}
-	next if /^#/ or ! /\w/;
-	for (split) {
-		$okword{$filename}{$_}++;
-	}
+    if (/^## (.+):/) {
+        $filename = $1;
+        next;
+    }
+    next if /^#/ or ! /\w/;
+    for (split) {
+        $okword{$filename}{$_}++;
+    }
 }
 
 
 sub spellcheck {
-	my ($desc, $text, $file) = @_;
-	my $check = Text::SpellChecker->new(text => $text);
-	my %badword;
-	while (my $word = $check->next_word) {
-		next if $okword{Common}{$word} or $okword{$file}{$word};
-		$badword{$word}++;
-	}
-	my $count = keys %badword;
-	if (! $count) {
-		pass("Spell check passed for $desc");
-		return;
-	}
-	fail ("Spell check failed for $desc. Bad words: $count");
-	for (sort keys %badword) {
-		diag "$_\n";
-	}
-	return;
+    my ($desc, $text, $file) = @_;
+    my $check = Text::SpellChecker->new(text => $text);
+    my %badword;
+    while (my $word = $check->next_word) {
+        next if $okword{Common}{$word} or $okword{$file}{$word};
+        $badword{$word}++;
+    }
+    my $count = keys %badword;
+    if (! $count) {
+        pass("Spell check passed for $desc");
+        return;
+    }
+    fail ("Spell check failed for $desc. Bad words: $count");
+    for (sort keys %badword) {
+        diag "$_\n";
+    }
+    return;
 }
 
 
 ## The embedded POD
 SKIP: {
-	if (!eval { require Pod::Spell; 1 }) {
-		skip 'Need Pod::Spell to test the spelling of embedded POD', 1;
-	}
+    if (!eval { require Pod::Spell; 1 }) {
+        skip 'Need Pod::Spell to test the spelling of embedded POD', 1;
+    }
 
-	for my $file (qw{check_postgres.pl}) {
-		if (! -e $file) {
-			fail(qq{Could not find the file "$file"!});
-		}
-		my $string = qx{podspell $file};
-		spellcheck("POD from $file" => $string, $file);
-	}
+    for my $file (qw{check_postgres.pl}) {
+        if (! -e $file) {
+            fail(qq{Could not find the file "$file"!});
+        }
+        my $string = qx{podspell $file};
+        spellcheck("POD from $file" => $string, $file);
+    }
 }
 
 ## Now the comments
 SKIP: {
-	if (!eval { require File::Comments; 1 }) {
-		skip 'Need File::Comments to test the spelling inside comments', 1+@testfiles;
-	}
-	my $fc = File::Comments->new();
+    if (!eval { require File::Comments; 1 }) {
+        skip 'Need File::Comments to test the spelling inside comments', 1+@testfiles;
+    }
+    my $fc = File::Comments->new();
 
-	my @files;
-	for (sort @testfiles) {
-		push @files, "$_";
-	}
+    my @files;
+    for (sort @testfiles) {
+        push @files, "$_";
+    }
 
-	for my $file (@testfiles, qw{check_postgres.pl}) {
-		if (! -e $file) {
-			fail(qq{Could not find the file "$file"!});
-		}
-		my $string = $fc->comments($file);
-		if (! $string) {
-			fail(qq{Could not get comments inside file $file});
-			next;
-		}
-		$string = join "\n" => @$string;
-		$string =~ s/=head1.+//sm;
-		spellcheck("comments from $file" => $string, $file);
-	}
+    for my $file (@testfiles, qw{check_postgres.pl}) {
+        if (! -e $file) {
+            fail(qq{Could not find the file "$file"!});
+        }
+        my $string = $fc->comments($file);
+        if (! $string) {
+            fail(qq{Could not get comments inside file $file});
+            next;
+        }
+        $string = join "\n" => @$string;
+        $string =~ s/=head1.+//sm;
+        spellcheck("comments from $file" => $string, $file);
+    }
 
 
 }

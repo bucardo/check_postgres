@@ -25,22 +25,22 @@ like ($cp->run(''), qr{^ERROR: Must provide a warning and/or critical size}, $t)
 my $ver = $dbh->{pg_server_version};
 if ($ver < 80100) {
 
-	$t=qq{$S gives an error when run against an old Postgres version};
-	like ($cp->run('--warning=99'), qr{ERROR.*server version must be >= 8.1}, $t);
+    $t=qq{$S gives an error when run against an old Postgres version};
+    like ($cp->run('--warning=99'), qr{ERROR.*server version must be >= 8.1}, $t);
 
   SKIP: {
-		skip 'Cannot test database_size completely on Postgres 8.0 or lower', 47;
-	}
+        skip 'Cannot test database_size completely on Postgres 8.0 or lower', 47;
+    }
 
-	exit;
+    exit;
 }
 
 $cp->drop_all_tables();
 
 for my $type (qw/b bs k kb kbs m mb mbs g gb gbs t tb tbs p pb pbs e eb ebs z zb zbs/) {
-	my $opt = "-w 9999999$type";
-	$t=qq{$S returned expected text when warning level is specified in $type};
-	like ($cp->run($opt), qr{^$label OK:}, $t);
+    my $opt = "-w 9999999$type";
+    $t=qq{$S returned expected text when warning level is specified in $type};
+    like ($cp->run($opt), qr{^$label OK:}, $t);
 }
 
 $t=qq{$S returned expected text when warning level is specified in nothing};

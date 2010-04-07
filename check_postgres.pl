@@ -6710,7 +6710,7 @@ WHERE xact_start IS NOT NULL $USERWHERECLAUSE
     ## Use of skip_item means we may have no matches
     if ($maxdb eq '?') {
         if ($USERWHERECLAUSE) { ## needed?
-            add_unknown msg('tttt-nomatch');
+            add_unknown msg('fixme-nomatch');
         }
         else {
             add_ok msg('txntime-none');

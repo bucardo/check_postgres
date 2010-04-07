@@ -109,16 +109,16 @@ exit;
 
 sub cleanup_schema {
 
-	$SQL = q{DROP VIEW slony_testing.sl_status};
-	eval { $dbh->do($SQL); };
-	$dbh->commit();
+    $SQL = q{DROP VIEW slony_testing.sl_status};
+    eval { $dbh->do($SQL); };
+    $dbh->commit();
 
-	$SQL = q{DROP TABLE slony_testing.sl_node};
-	eval { $dbh->do($SQL); };
-	$dbh->commit();
+    $SQL = q{DROP TABLE slony_testing.sl_node};
+    eval { $dbh->do($SQL); };
+    $dbh->commit();
 
-	$SQL = q{DROP SCHEMA slony_testing};
-	eval { $dbh->do($SQL); };
-	$dbh->commit();
+    $SQL = q{DROP SCHEMA slony_testing};
+    eval { $dbh->do($SQL); };
+    $dbh->commit();
 
 }

@@ -25,7 +25,7 @@ my $label = 'POSTGRES_AUTOVAC_FREEZE';
 
 SKIP:
 {
-	$ver < 80200 and skip 'Cannot test autovac_freeze on old Postgres versions', 8;
+    $ver < 80200 and skip 'Cannot test autovac_freeze on old Postgres versions', 8;
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(q{-w 0%});

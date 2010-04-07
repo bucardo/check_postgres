@@ -26,7 +26,7 @@ my $label = 'POSTGRES_LAST_ANALYZE';
 
 SKIP:
 {
-	$ver < 80200 and skip 'Cannot test last_analyze on old Postgres versions', 14;
+    $ver < 80200 and skip 'Cannot test last_analyze on old Postgres versions', 14;
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(q{-w 0});
@@ -43,14 +43,14 @@ for ('1 second',
      '1 minute',
      '1 hour',
      '1 day',
-	) {
+    ) {
    like ($cp->run(qq{-w "$_"}), qr/^$label/, $t . " ($_)");
 }
 
 $t = qq{$S rejects invalid -w input};
 for ('-1 second',
      'abc',
-	) {
+    ) {
    like ($cp->run(qq{-w "$_"}), qr/^ERROR:.*?must be a valid time/, $t . " ($_)");
 }
 
@@ -64,7 +64,7 @@ $dbh->commit();
 
 $t = qq{$S correctly finds no matching tables};
 like ($cp->run("-w 0 --include=$testtbl"),
-	  qr{No matching tables found due to exclusion}, $t);
+      qr{No matching tables found due to exclusion}, $t);
 
 $t = qq{$S sees a recent ANALYZE};
 $dbh->do(q{SET default_statistics_target = 1000});
