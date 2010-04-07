@@ -180,9 +180,13 @@ our %msg = (
 	'PID'                => q{PID},
 	'port'               => q{port},
 	'preptxn-none'       => q{No prepared transactions found},
+	'psa-nomatches'      => q{No queries were found},
+	'psa-nosuper'        => q{No matches - please run as a superuser},
+	'psa-skipped'        => q{No matching rows were found (skipped rows: $1)},
 	'qtime-fail'         => q{Cannot run the txn_idle action unless stats_command_string is set to 'on'!},
 	'qtime-msg'          => q{longest query: $1s},
-	'qtime-nomatch'      => q{No matching entries were found},
+	'qtime-nomatch'      => q{No queries were found},
+	'Query'              => q{Query: $1},
 	'range-badcs'        => q{Invalid '$1' option: must be a checksum},
 	'range-badlock'      => q{Invalid '$1' option: must be number of locks, or "type1=#;type2=#"},
 	'range-badpercent'   => q{Invalid '$1' option: must be a percentage},
@@ -1043,6 +1047,7 @@ sub add_response {
 		push @{$type->{''}} => [$msg, length $nohost > 1 ? $nohost : ''];
 		return;
 	}
+
 	my $header = sprintf q{%s%s%s},
 		$action_info->{$action}[0] ? '' : (defined $db->{dbservice} and length $db->{dbservice}) ?
 			qq{service=$db->{dbservice} } : qq{DB "$db->{dbname}" },
@@ -1800,6 +1805,7 @@ sub run_command {
 		}
 
 		push @args, '-o', $tempfile;
+		push @args => '-x';
 
 		## If we've got different SQL, use this first run to simply grab the version
 		## Then we'll use that info to pick the real query
@@ -1916,11 +1922,13 @@ sub run_command {
 			}
 			$db->{ok} = 1;
 
+			## Unfortunately, psql outputs "(No rows)" even with -t and -x
+			$db->{slurp} = '' if index($db->{slurp},'(')==0;
+
 			## Allow an empty query (no matching rows) if requested
 			if ($arg->{emptyok} and $db->{slurp} =~ /^\s*$/o) {
 				$arg->{emptyok2} = 1;
 			}
-
 			## If we just want a version, grab it and redo
 			if ($arg->{versiononly}) {
 				if ($db->{error}) {
@@ -1938,19 +1946,56 @@ sub run_command {
 			}
 
 			## If we were provided with a regex, check and bail if it fails
-			elsif ($arg->{regex} and ! $arg->{emptyok2}) {
+			if ($arg->{regex} and ! $arg->{emptyok2}) {
 				if ($db->{slurp} !~ $arg->{regex}) {
-
 					## Check if problem is due to backend being too old for this check
+
 					verify_version();
 
 					add_unknown msg('invalid-query', $db->{slurp});
-					## Remove it from the returned hash
-					pop @{$info->{db}};
+
+					finishup();
+					exit 0;
 				}
 			}
 
-		}
+			## Transform psql output into an arrayref of hashes
+			my @stuff;
+			my $num = 0;
+			my $lastval;
+			for my $line (split /\n/ => $db->{slurp}) {
+				if (index($line,'-')==0) {
+					$num++;
+					next;
+				}
+				if ($line =~ /^(\w+)\s+\| (.*)/) {
+					$stuff[$num]{$1} = $2;
+					$lastval = $1;
+				}
+				elsif ($line =~ /^QUERY PLAN\s+\| (.*)/) {
+					$stuff[$num]{queryplan} = $1;
+					$lastval = 'queryplan';
+				}
+				elsif ($line =~ /^\s+: (.*)/) {
+					$stuff[$num]{$lastval} .= "\n$1";
+				}
+				else {
+					### XXX msg these
+					warn "Could not parse psql output!\n";
+					warn "Please report these details to check_postgres\@bucardo.org:\n";
+					my $cline = (caller)[2];
+					my $args = join ' ' => @args;
+					warn "Version:      $VERSION\n";
+					warn "Action:       $action\n";
+					warn "Calling line: $cline\n";
+					warn "Output:       $line\n";
+					warn "Command:      $PSQL $args\n";
+					exit 1;
+				}
+			}
+			$db->{slurp} = \@stuff;
+
+		} ## end valid system call
 
 
 	} ## end each database
@@ -1997,7 +2042,7 @@ sub verify_version {
 		ndie $info->{db}[0]{error};
 	}
 
-	if (!defined $info->{db}[0] or $info->{db}[0]{slurp} !~ /((\d+)\.(\d+))/) {
+	if (!defined $info->{db}[0] or $info->{db}[0]{slurp}[0]{setting} !~ /((\d+)\.(\d+))/) {
 		ndie msg('die-badversion', $SQL);
 	}
 	my ($sver,$smaj,$smin) = ($1,$2,$3);
@@ -2080,7 +2125,7 @@ sub size_in_seconds {
 sub skip_item {
 
 	## Determine if something should be skipped due to inclusion/exclusion options
-	## Exclusion checked first: inclusion can pull it back out.
+	## Exclusion checked first: inclusion can pull it back in.
 	my $name = shift;
 	my $schema = shift || '';
 
@@ -2387,55 +2432,56 @@ sub check_autovac_freeze {
 
 	(my $w = $warning) =~ s/\D//;
 	(my $c = $critical) =~ s/\D//;
+
 	my $SQL = q{SELECT freez, txns, ROUND(100*(txns/freez::float)) AS perc, datname}.
 		q{ FROM (SELECT foo.freez::int, age(datfrozenxid) AS txns, datname}.
 		q{ FROM pg_database d JOIN (SELECT setting AS freez FROM pg_settings WHERE name = 'autovacuum_freeze_max_age') AS foo}.
 		q{ ON (true) WHERE d.datallowconn) AS foo2 ORDER BY 3 DESC, 4 ASC};
-	my $info = run_command($SQL, {regex => qr[\w+] } );
 
-	for $db (@{$info->{db}}) {
-		my (@crit,@warn,@ok);
-		my ($maxp,$maxt,$maxdb) = (0,0,''); ## used by MRTG only
-		SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+) \| (.+?)$/gsm) {
-			my ($freeze,$age,$percent,$dbname) = ($1,$2,$3,$4);
-			next SLURP if skip_item($dbname);
+	my $info = run_command($SQL, {regex => qr{\w+} } );
 
-			if ($MRTG) {
-				if ($percent > $maxp) {
-					$maxdb = $dbname;
-					$maxp = $percent;
-				}
-				elsif ($percent == $maxp) {
-					$maxdb .= sprintf "%s$dbname", length $maxdb ? ' | ' : '';
-				}
-				$maxt = $age if $age > $maxt;
-				next;
-			}
+	$db = $info->{db}[0];
 
-			my $msg = "'$dbname'=$percent\%;$w;$c";
-			$db->{perf} .= " $msg";
-			if (length $critical and $percent >= $c) {
-				push @crit => $msg;
-			}
-			elsif (length $warning and $percent >= $w) {
-				push @warn => $msg;
-			}
-			else {
-				push @ok => $msg;
-			}
-		}
+	my (@crit,@warn,@ok);
+	my ($maxp,$maxt,$maxdb) = (0,0,''); ## used by MRTG only
+  SLURP: for my $r (@{$db->{slurp}}) {
+		next SLURP if skip_item($r->{datname});
+
 		if ($MRTG) {
-			do_mrtg({one => $maxp, two => $maxt, msg => $maxdb});
+			if ($r->{perc} > $maxp) {
+				$maxdb = $r->{datname};
+				$maxp = $r->{perc};
+			}
+			elsif ($r->{perc} == $maxp) {
+				$maxdb .= sprintf '%s%s', (length $maxdb ? ' | ' : ''), $r->{datname};
+			}
+			$maxt = $r->{tnxs} if $r->{txns} > $maxt;
+			next SLURP;
 		}
-		if (@crit) {
-			add_critical join ' ' => @crit;
+
+		my $msg = "'$r->{datname}'=$r->{perc}\%;$w;$c";
+		$db->{perf} .= " $msg";
+		if (length $critical and $r->{perc} >= $c) {
+			push @crit => $msg;
 		}
-		elsif (@warn) {
-			add_warning join ' ' => @warn;
+		elsif (length $warning and $r->{perc} >= $w) {
+			push @warn => $msg;
 		}
 		else {
-			add_ok join ' ' => @ok;
+			push @ok => $msg;
 		}
+	}
+	if ($MRTG) {
+		do_mrtg({one => $maxp, two => $maxt, msg => $maxdb});
+	}
+	if (@crit) {
+		add_critical join ' ' => @crit;
+	}
+	elsif (@warn) {
+		add_warning join ' ' => @warn;
+	}
+	else {
+		add_ok join ' ' => @ok;
 	}
 
 	return;
@@ -2475,7 +2521,7 @@ sub check_backends {
 	}
 	my ($w1,$w2,$w3) = ($1,$2,$3);
 
-	## If number is greater, al else is same, and not minus
+	## If number is greater, all else is same, and not minus
 	if ($w2 > $e2 and $w1 eq $e1 and $w3 eq $e3 and $w1 eq '') {
 		ndie msg('range-warnbig');
 	}
@@ -2487,12 +2533,21 @@ sub check_backends {
 		ndie msg('range-neg-percent');
 	}
 
-	my $MAXSQL = q{SELECT setting FROM pg_settings WHERE name = 'max_connections'};
+	my $MAXSQL = q{SELECT setting AS mc FROM pg_settings WHERE name = 'max_connections'};
+
 	my $NOIDLE = $noidle ? q{WHERE current_query <> '<IDLE>'} : '';
-	my $GROUPBY = q{GROUP BY 2,3};
-	$SQL = "SELECT COUNT(datid), ($MAXSQL), d.datname FROM pg_database d ".
-		"LEFT JOIN pg_stat_activity s ON (s.datid = d.oid) $NOIDLE $GROUPBY ORDER BY datname";
-	my $info = run_command($SQL, {regex => qr[\s*\d+ \| \d+\s+\|], fatalregex => 'too many clients' } );
+	$SQL = qq{
+SELECT COUNT(datid) AS current,
+  ($MAXSQL) AS mc,
+  d.datname
+FROM pg_database d
+LEFT JOIN pg_stat_activity s ON (s.datid = d.oid) $NOIDLE
+GROUP BY 2,3
+ORDER BY datname
+};
+	my $info = run_command($SQL, {regex => qr{\d+}, fatalregex => 'too many clients' } );
+
+	$db = $info->{db}[0];
 
 	## If we cannot connect because of too many clients, we treat as a critical error
 	if (exists $info->{fatalregex}) {
@@ -2506,7 +2561,7 @@ sub check_backends {
 
 	## There may be no entries returned if we catch pg_stat_activity at the right
 	## moment in older versions of Postgres
-	if (!defined $info->{db}[0]) {
+	if (! defined $db) {
 		$info = run_command($MAXSQL, {regex => qr[\d] } );
 		$db = $info->{db}[0];
 		if (!defined $db->{slurp} or $db->{slurp} !~ /(\d+)/) {
@@ -2523,81 +2578,92 @@ sub check_backends {
 		return;
 	}
 
-	for $db (@{$info->{db}}) {
-		my ($limit,$total,$grandtotal) = (0,0,0);
-		SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+)\s+\|\s+([\w\-\.]+)\s*/gsm) {
-			$grandtotal++;
-			$limit ||= $2;
-			my ($current,$dbname) = ($1,$3);
-			## Always want perf to show all
-			my $nwarn=$w2;
-			my $ncrit=$e2;
-			if ($e1) {
-				$ncrit = $limit-$e2;
-			}
-			elsif ($e3) {
-				$ncrit = (int $e2*$limit/100)
-			}
-			if ($w1) {
-				$nwarn = $limit-$w2;
-			}
-			elsif ($w3) {
-				$nwarn = (int $w2*$limit/100)
-			}
-			$db->{perf} .= " '$dbname'=$current;$nwarn;$ncrit;0;$limit";
-			next SLURP if skip_item($dbname);
-			$total += $current;
-		}
-		if ($MRTG) {
-			$stats{$db->{dbname}} = $total;
-			$statsmsg{$db->{dbname}} = msg('backends-mrtg', $db->{dbname}, $limit);
-			next;
-		}
-		if (!$total) {
-			if ($grandtotal) {
-				## We assume that exclude/include rules are correct, and we simply had no entries 
-				## at all in the specific databases we wanted
-				add_ok msg('backends-oknone');
-			}
-			else {
-				add_unknown msg('no-match-db');
-			}
-			next;
-		}
-		my $percent = (int $total / $limit*100) || 1;
-		my $msg = msg('backends-msg', $total, $limit, $percent);
-		my $ok = 1;
-		if ($e1) { ## minus
-			$ok = 0 if $limit-$total >= $e2;
-		}
-		elsif ($e3) { ## percent
-			my $nowpercent = $total/$limit*100;
-			$ok = 0 if $nowpercent >= $e2;
-		}
-		else { ## raw number
-			$ok = 0 if $total >= $e2;
-		}
-		if (!$ok) {
-			add_critical $msg;
-			next;
-		}
+	my $total = 0;
+	my $grandtotal = @{$db->{slurp}};
 
+	## If no max_connections, something is wrong
+	if ($db->{slurp}[0]{mc} !~ /\d/) {
+		add_unknown msg('backends-nomax');
+		return;
+	}
+	my $limit = $db->{slurp}[0]{mc};
+
+	for my $r (@{$db->{slurp}}) {
+
+		## Always want perf to show all
+		my $nwarn=$w2;
+		my $ncrit=$e2;
+		if ($e1) {
+			$ncrit = $limit-$e2;
+		}
+		elsif ($e3) {
+			$ncrit = (int $e2*$limit/100);
+		}
 		if ($w1) {
-			$ok = 0 if $limit-$total >= $w2;
+			$nwarn = $limit-$w2;
 		}
 		elsif ($w3) {
-			my $nowpercent = $total/$limit*100;
-			$ok = 0 if $nowpercent >= $w2;
+			$nwarn = (int $w2*$limit/100)
+		}
+		$db->{perf} .= " '$r->{datname}'=$r->{current};$nwarn;$ncrit;0;$limit";
+
+		if (! skip_item($r->{datname})) {
+			$total += $r->{current};
+		}
+	}
+
+	if ($MRTG) {
+		$stats{$db->{dbname}} = $total;
+		$statsmsg{$db->{dbname}} = msg('backends-mrtg', $db->{dbname}, $limit);
+		return;
+	}
+
+	if (!$total) {
+		if ($grandtotal) {
+			## We assume that exclude/include rules are correct, and we simply had no entries
+			## at all in the specific databases we wanted
+			add_ok msg('backends-oknone');
 		}
 		else {
-			$ok = 0 if $total >= $w2;
+			add_unknown msg('no-match-db');
 		}
-		if (!$ok) {
-			add_warning $msg;
-			next;
-		}
-		add_ok $msg;
+		return;
 	}
+
+	my $percent = (int $total / $limit*100) || 1;
+	my $msg = msg('backends-msg', $total, $limit, $percent);
+	my $ok = 1;
+	if ($e1) { ## minus
+		$ok = 0 if $limit-$total >= $e2;
+	}
+	elsif ($e3) { ## percent
+		my $nowpercent = $total/$limit*100;
+		$ok = 0 if $nowpercent >= $e2;
+	}
+	else { ## raw number
+		$ok = 0 if $total >= $e2;
+	}
+	if (!$ok) {
+		add_critical $msg;
+		return;
+	}
+
+	if ($w1) {
+		$ok = 0 if $limit-$total >= $w2;
+	}
+	elsif ($w3) {
+		my $nowpercent = $total/$limit*100;
+		$ok = 0 if $nowpercent >= $w2;
+	}
+	else {
+		$ok = 0 if $total >= $w2;
+	}
+	if (!$ok) {
+		add_warning $msg;
+		return;
+	}
+
+	add_ok $msg;
 
 	return;
 
@@ -2639,12 +2705,12 @@ sub check_bloat {
 	## This was fun to write
 	$SQL = q{
 SELECT
-  current_database(), schemaname, tablename, reltuples::bigint, relpages::bigint, otta,
+  current_database() AS db, schemaname, tablename, reltuples::bigint AS tups, relpages::bigint AS pages, otta,
   ROUND(CASE WHEN otta=0 THEN 0.0 ELSE sml.relpages/otta::numeric END,1) AS tbloat,
   CASE WHEN relpages < otta THEN 0 ELSE relpages::bigint - otta END AS wastedpages,
   CASE WHEN relpages < otta THEN 0 ELSE bs*(sml.relpages-otta)::bigint END AS wastedbytes,
   CASE WHEN relpages < otta THEN '0 bytes'::text ELSE (bs*(relpages-otta))::bigint || ' bytes' END AS wastedsize,
-  iname, ituples::bigint, ipages::bigint, iotta,
+  iname, ituples::bigint AS itups, ipages::bigint AS ipages, iotta,
   ROUND(CASE WHEN iotta=0 OR ipages=0 THEN 0.0 ELSE ipages/iotta::numeric END,1) AS ibloat,
   CASE WHEN ipages < iotta THEN 0 ELSE ipages::bigint - iotta END AS wastedipages,
   CASE WHEN ipages < iotta THEN 0 ELSE bs*(ipages-iotta) END AS wastedibytes,
@@ -2711,28 +2777,34 @@ FROM (
 
 	my %seenit;
 	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /\w+\s+\|/o) {
+		if ($db->{slurp}[0] !~ /\w+/o) {
 			add_ok msg('bloat-nomin') unless $MRTG;
-			next;
+			return;
 		}
 		## Not a 'regex' to run_command as we need to check the above first.
-		if ($db->{slurp} !~ /\d+\s*\| \d+/) {
+		if ($db->{slurp}[0] !~ /\d+/) {
 			add_unknown msg('invalid-query', $db->{slurp}) unless $MRTG;
-			next;
+			return;
 		}
 
-		$db->{slurp} =~ s/\| (\d+) bytes/'| ' . pretty_size($1,1)/ge;
 		my $max = -1;
 		my $maxmsg = '?';
-		SLURP: for (split /\n/o => $db->{slurp}) {
-			my ($dbname,$schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws,
-			 $index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws)
-				= split /\s*\|\s*/o;
-			$dbname =~ s/^\s+//;
-			$schema =~ s/^\s+//;
-			next SLURP if skip_item($table, $schema);
+
+		for my $r (@{$db->{slurp}}) {
+
+			my ($dbname,$schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws) = @$r{
+				qw/ db schemaname tablename tups pages otta tbloat wastedpages wastedbytes wastedsize/};
+			my ($index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws) = @$r{
+					qw/ iname irows ipages iotta ibloat wastedipgaes wastedibytes wastedisize/};
+
+			next if skip_item($table, $schema);
+
 			## Made it past the exclusions
 			$max = -2 if $max == -1;
+
+			for my $v (values %$r) {
+				$v =~ s/\| (\d+) bytes/'| ' . pretty_size($1,1)/ge;
+			}
 
 			## Do the table first if we haven't seen it
 			if (! $seenit{"$dbname.$schema.$table"}++) {
@@ -2849,6 +2921,104 @@ FROM (
 } ## end of check_bloat
 
 
+sub check_checkpoint {
+
+	## Checks how long in seconds since the last checkpoint on a WAL slave
+	## Supports: Nagios, MRTG
+	## Warning and critical are seconds
+	## Requires $ENV{PGDATA} or --datadir
+
+	my ($warning, $critical) = validate_range
+		({
+		  type              => 'time',
+		  leastone          => 1,
+		  forcemrtg         => 1,
+	});
+
+	## Find the data directory, make sure it exists
+	my $dir = $opt{datadir} || $ENV{PGDATA};
+
+	if (!defined $dir or ! length $dir) {
+		ndie msg('checkpoint-nodir');
+	}
+
+	if (! -d $dir) {
+		ndie msg('checkpoint-baddir', $dir);
+	}
+
+	$db->{host} = '<none>';
+
+	## Run pg_controldata, grab the time
+	my $pgc
+		= $ENV{PGCONTROLDATA} ? $ENV{PGCONTROLDATA}
+		: $ENV{PGBINDIR}      ? "$ENV{PGBINDIR}/pg_controldata"
+		:                       'pg_controldata';
+	$COM = qq{$pgc "$dir"};
+	eval {
+		$res = qx{$COM 2>&1};
+	};
+	if ($@) {
+		ndie msg('checkpoint-nosys', $@);
+	}
+
+	## If the path is echoed back, we most likely have an invalid data dir
+	if ($res =~ /$dir/) {
+		ndie msg('checkpoint-baddir2', $dir);
+	}
+
+	if ($res =~ /WARNING: Calculated CRC checksum/) {
+		ndie msg('checkpoint-badver');
+	}
+	if ($res !~ /^pg_control.+\d+/) {
+		ndie msg('checkpoint-badver2');
+	}
+
+	my $regex = msg('checkpoint-po');
+	if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
+		## Just in case, check the English one as well
+		$regex = msg_en('checkpoint-po');
+		if ($res !~ /$regex\s*(.+)/) {
+			ndie msg('checkpoint-noregex', $dir);
+		}
+	}
+	my $last = $1;
+
+	## Convert to number of seconds
+	eval {
+		require Date::Parse;
+		import Date::Parse;
+	};
+	if ($@) {
+		ndie msg('checkpoint-nodp');
+	}
+	my $dt = str2time($last);
+	if ($dt !~ /^\d+$/) {
+		ndie msg('checkpoint-noparse', $last);
+	}
+	my $diff = $db->{perf} = time - $dt;
+	my $msg = $diff==1 ? msg('checkpoint-ok') : msg('checkpoint-ok2', $diff);
+
+	if ($MRTG) {
+		do_mrtg({one => $diff, msg => $msg});
+	}
+
+	if (length $critical and $diff >= $critical) {
+		add_critical $msg;
+		return;
+	}
+
+	if (length $warning and $diff >= $warning) {
+		add_warning $msg;
+		return;
+	}
+
+	add_ok $msg;
+
+	return;
+
+} ## end of check_checkpoint
+
+
 sub check_connection {
 
 	## Check the connection, get the connection time and version
@@ -2859,24 +3029,89 @@ sub check_connection {
 		ndie msg('range-none');
 	}
 
-	my $info = run_command('SELECT version()');
+	my $info = run_command('SELECT version() AS v');
 
-	## Parse it out and return our information
-	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /PostgreSQL (\d+\.\d+\S+)/o) { ## no critic (ProhibitUnusedCapture)
-			add_unknown msg('invalid-query', $db->{slurp});
-			next;
-		}
-		add_ok msg('version', $1);
+	$db = $info->{db}[0];
+
+	my $ver = ($db->{slurp}[0]{v} =~ /PostgreSQL (\d+\.\d+\S+)/o) ? $1 : '';
+
+	$MRTG and do_mrtg({one => $ver ? 1 : 0});
+
+	if ($ver) {
+		add_ok msg('version', $ver);
 	}
-
-	if ($MRTG) {
-		do_mrtg({one => keys %unknown ? 0 : 1});
+	else {
+		add_unknown msg('invalid-query', $db->{slurp}[0]{v});
 	}
 
 	return;
 
 } ## end of check_connection
+
+
+sub check_custom_query {
+
+	## Run a user-supplied query, then parse the results
+	## If you end up using this to make a useful query, consider making it
+	## into a specific action and sending in a patch!
+	## valtype must be one of: string, time, size, integer
+
+	my $valtype = $opt{valtype} || 'integer';
+
+	my ($warning, $critical) = validate_range({type => $valtype, leastone => 1});
+
+	my $query = $opt{query} or ndie msg('custom-nostring');
+
+	my $reverse = $opt{reverse} || 0;
+
+	my $info = run_command($query);
+
+	for $db (@{$info->{db}}) {
+
+		if (! @{$db->{slurp}}) {
+			add_unknown msg('custom-norows');
+			next;
+		}
+
+		my $goodrow = 0;
+
+		for my $r (@{$db->{slurp}}) {
+			my ($data,$msg) = ($r->{result}, $r->{data}||'');
+			$goodrow++;
+			$db->{perf} .= " $msg";
+			my $gotmatch = 0;
+			if (length $critical) {
+				if (($valtype eq 'string' and $data eq $critical)
+					or
+					($reverse ? $data <= $critical : $data >= $critical)) { ## covers integer, time, size
+					add_critical "$data";
+					$gotmatch = 1;
+				}
+			}
+
+			if (length $warning and ! $gotmatch) {
+				if (($valtype eq 'string' and $data eq $warning)
+					or
+					($reverse ? $data <= $warning : $data >= $warning)) {
+					add_warning "$data";
+					$gotmatch = 1;
+				}
+			}
+
+			if (! $gotmatch) {
+				add_ok "$data";
+			}
+
+		} ## end each row returned
+
+		if (!$goodrow) {
+			add_unknown msg('custom-invalid');
+		}
+	}
+
+	return;
+
+} ## end of check_custom_query
 
 
 sub check_database_size {
@@ -2897,27 +3132,36 @@ sub check_database_size {
 
 	$USERWHERECLAUSE =~ s/AND/WHERE/;
 
-	$SQL = q{SELECT pg_database_size(d.oid), pg_size_pretty(pg_database_size(d.oid)), datname, usename }.
-		qq{FROM pg_database d JOIN pg_user u ON (u.usesysid=d.datdba)$USERWHERECLAUSE};
+	$SQL = qq{
+SELECT pg_database_size(d.oid) AS dsize,
+  pg_size_pretty(pg_database_size(d.oid)) AS pdsize,
+  datname,
+  usename
+FROM pg_database d
+JOIN pg_user u ON (u.usesysid=d.datdba)$USERWHERECLAUSE
+};
 	if ($opt{perflimit}) {
 		$SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
 	}
 
-	my $info = run_command($SQL, { regex => qr{\d+ \|}, emptyok => 1, } );
+	my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1, } );
 
 	my $found = 0;
+
 	for $db (@{$info->{db}}) {
 		my $max = -1;
 		$found = 1;
 		my %s;
-		SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\S+)/gsm) {
-			my ($size,$psize,$name) = ($1,$2,$3);
-			next SLURP if skip_item($name);
-			if ($size >= $max) {
-				$max = $size;
+		for my $r (@{$db->{slurp}}) {
+
+			next if skip_item($r->{datname});
+
+			if ($r->{dsize} >= $max) {
+				$max = $r->{dsize};
 			}
-			$s{$name} = [$size,$psize];
+			$s{$r->{datname}} = [$r->{dsize},$r->{pdsize}];
 		}
+
 		if ($MRTG) {
 			$stats{$db->{dbname}} = $max;
 			next;
@@ -2962,6 +3206,134 @@ sub check_database_size {
 } ## end of check_database_size
 
 
+sub show_dbstats {
+
+	## Returns values from the pg_stat_database view
+	## Supports: Cacti
+	## Assumes psql and target are the same version for the 8.3 check
+
+	my ($warning, $critical) = validate_range
+		({
+		  type => 'cacti',
+	});
+
+	my $SQL = q{SELECT datname,
+  numbackends AS backends,xact_commit AS commits,xact_rollback AS rollbacks,
+  blks_read AS read, blks_hit AS hit};
+	if ($opt{dbname}) {
+		$SQL .= q{
+ ,(SELECT SUM(idx_scan) FROM pg_stat_user_indexes) AS idxscan
+ ,COALESCE((SELECT SUM(idx_tup_read) FROM pg_stat_user_indexes),0) AS idxtupread
+ ,COALESCE((SELECT SUM(idx_tup_fetch) FROM pg_stat_user_indexes),0) AS idxtupfetch
+ ,COALESCE((SELECT SUM(idx_blks_read) FROM pg_statio_user_indexes),0) AS idxblksread
+ ,COALESCE((SELECT SUM(idx_blks_hit) FROM pg_statio_user_indexes),0) AS idxblkshit
+ ,COALESCE((SELECT SUM(seq_scan) FROM pg_stat_user_tables),0) AS seqscan
+ ,COALESCE((SELECT SUM(seq_tup_read) FROM pg_stat_user_tables),0) AS seqtupread
+};
+	}
+	$SQL .= q{ FROM pg_stat_database};
+	(my $SQL2 = $SQL) =~ s/AS seq_tup_read/AS seq_tup_read, tup_returned AS ret, tup_fetched AS fetch, tup_inserted AS ins, tup_updated AS upd, tup_deleted AS del/;
+
+	my $info = run_command($SQL, {regex => qr{\w}, version => [ ">8.2 $SQL2" ] } );
+
+	for $db (@{$info->{db}}) {
+	  ROW: for my $r (@{$db->{slurp}}) {
+
+			my $dbname = $r->{datname};
+
+			next ROW if skip_item($dbname);
+
+			## If dbnames were specififed, use those for filtering as well
+			if (@{$opt{dbname}}) {
+				my $keepit = 0;
+				for my $drow (@{$opt{dbname}}) {
+					for my $d (split /,/ => $drow) {
+						$d eq $dbname and $keepit = 1;
+					}
+				}
+				next ROW unless $keepit;
+			}
+
+			my $msg = '';
+			for my $col (qw/
+backends commits rollbacks
+read hit
+idxscan idxtupread idxtupfetch idxblksread idxblkshit
+seqscan seqtupread
+ret fetch ins upd del/) {
+				$msg .= "$col:";
+				$msg .= (exists $r->{$col} and length $r->{$col}) ? $r->{$col} : 0;
+				$msg .=  ' ';
+			}
+			print "${msg}dbname:$dbname\n";
+		}
+	}
+
+	exit 0;
+
+} ## end of show_dbstats
+
+
+sub check_disabled_triggers {
+
+	## Checks how many disabled triggers are in the database
+	## Supports: Nagios, MRTG
+	## Warning and critical are integers, defaults to 1
+
+	my ($warning, $critical) = validate_range
+		({
+		  type              => 'positive integer',
+		  default_warning   => 1,
+		  default_critical  => 1,
+		  forcemrtg         => 1,
+	});
+
+	$SQL = q{
+SELECT tgrelid::regclass AS tname, tgname, tgenabled
+FROM pg_trigger
+WHERE tgenabled IS NOT TRUE ORDER BY tgname
+};
+	my $SQL83 = q{
+SELECT tgrelid::regclass AS tname, tgname, tgenabled
+FROM pg_trigger
+WHERE tgenabled = 'D' ORDER BY tgname
+};
+	my $SQLOLD = q{SELECT 'FAIL' AS fail};
+
+	my $info = run_command($SQL, { version => [ ">8.2 $SQL83", "<8.1 $SQLOLD" ] } );
+
+	if (exists $info->{db}[0]{fail}) {
+		ndie msg('die-action-version', $action, '8.1', $db->{version});
+	}
+
+	my $count = 0;
+	my $dislis = '';
+	for $db (@{$info->{db}}) {
+
+	  ROW: for my $r (@{$db->{slurp}}) {
+			$count++;
+			$dislis .= " $r->{tname}=>$r->{tgname}";
+		}
+		$MRTG and do_mrtg({one => $count});
+
+		my $msg = msg('trigger-msg', "$count$dislis");
+
+		if ($critical and $count >= $critical) {
+			add_critical $msg;
+		}
+		elsif ($warning and $count >= $warning) {
+			add_warning $msg;
+		}
+		else {
+			add_ok $msg;
+		}
+	}
+
+	return;
+
+} ## end of check_disabled_triggers
+
+
 sub check_disk_space {
 
 	## Check the available disk space used by postgres
@@ -2983,10 +3355,16 @@ sub check_disk_space {
 	-x '/bin/df' or ndie msg('diskspace-nodf');
 
 	## Figure out where everything is.
-	$SQL = q{SELECT 'S', name, setting FROM pg_settings WHERE name = 'data_directory' }
-		. q{ OR name ='log_directory' }
-		. q{ UNION ALL }
-		. q{ SELECT 'T', spcname, spclocation FROM pg_tablespace WHERE spclocation <> ''};
+	$SQL = q{
+SELECT 'S' AS syn, name AS nn, setting AS val
+FROM pg_settings
+WHERE name = 'data_directory'
+OR name ='log_directory'
+UNION ALL
+SELECT 'T' AS syn, spcname AS nn, spclocation AS val
+FROM pg_tablespace
+WHERE spclocation <> ''
+};
 
 	my $info = run_command($SQL);
 
@@ -2994,9 +3372,8 @@ sub check_disk_space {
 	my %seenfs;
 	for $db (@{$info->{db}}) {
 		my %i;
-		while ($db->{slurp} =~ /([ST])\s+\| (\w+)\s+\| (.*?)\n/g) {
-			my ($st,$name,$val) = ($1,$2,$3);
-			$i{$st}{$name} = $val;
+		for my $r (@{$db->{slurp}}) {
+			$i{$r->{syn}}{$r->{nn}} = $r->{val};
 		}
 		if (! exists $i{S}{data_directory}) {
 			add_unknown msg('diskspace-nodata');
@@ -3160,28 +3537,29 @@ sub check_fsm_pages {
 
 	(my $w = $warning) =~ s/\D//;
 	(my $c = $critical) =~ s/\D//;
-	my $SQL = qq{SELECT pages, maxx, ROUND(100*(pages/maxx)) AS percent\n}.
-	 		  qq{FROM (SELECT (sumrequests+numrels)*chunkpages AS pages\n}.
-			  qq{ FROM (SELECT SUM(CASE WHEN avgrequest IS NULL THEN interestingpages/32\n }.
-			  qq{ ELSE interestingpages/16 END) AS sumrequests,\n}.
-			  qq{ COUNT(relfilenode) AS numrels, 16 AS chunkpages FROM pg_freespacemap_relations) AS foo) AS foo2,\n}.
-			  q{ (SELECT setting::NUMERIC AS maxx FROM pg_settings WHERE name = 'max_fsm_pages') AS foo3};
-	my $SQLNOOP = q{SELECT 'FAIL'};
+	my $SQL = qq{
+SELECT pages, maxx, ROUND(100*(pages/maxx)) AS percent
+FROM 
+  (SELECT (sumrequests+numrels)*chunkpages AS pages
+   FROM (SELECT SUM(CASE WHEN avgrequest IS NULL 
+     THEN interestingpages/32 ELSE interestingpages/16 END) AS sumrequests,
+     COUNT(relfilenode) AS numrels, 16 AS chunkpages FROM pg_freespacemap_relations) AS foo) AS foo2,
+  (SELECT setting::NUMERIC AS maxx FROM pg_settings WHERE name = 'max_fsm_pages') AS foo3
+};
+	my $SQLNOOP = q{SELECT 'FAIL' AS fail};
 
 	my $info = run_command($SQL, { version => [ ">8.3 $SQLNOOP" ] } );
 
-	for $db (@{$info->{db}}) {
-		if ($db->{slurp} =~ /\s*FAIL/) {
-			add_unknown msg('fsm-page-highver');
-			return;
-		}
-		SLURP: while ($db->{slurp} =~ /\s*(\d*) \|\s+(\d+) \|\s+(\d*)\s*/gsm) {
-			my ($pages,$max,$percent) = ($1||0,$2,$3||0);
+	if (exists $info->{db}[0]{fail}) {
+		add_unknown msg('fsm-page-highver');
+		return;
+	}
 
-			if ($MRTG) {
-				do_mrtg({one => $percent, two => $pages});
-				return;
-			}
+	for $db (@{$info->{db}}) {
+		for my $r (@{$db->{slurp}}) {
+			my ($pages,$max,$percent) = ($r->{pages}||0,$r->{maxx},$r->{percent}||0);
+
+			$MRTG and do_mrtg({one => $percent, two => $pages});
 
 			my $msg = msg('fsm-page-msg', $pages, $max, $percent);
 
@@ -3195,7 +3573,6 @@ sub check_fsm_pages {
 				add_ok $msg;
 			}
 		}
-
 	}
 
 	return;
@@ -3222,26 +3599,27 @@ sub check_fsm_relations {
 	(my $w = $warning) =~ s/\D//;
 	(my $c = $critical) =~ s/\D//;
 
-	my $SQL = qq{SELECT maxx, cur, ROUND(100*(cur/maxx))\n}.
-			  qq{FROM (SELECT\n}.
-			  qq{ (SELECT COUNT(*) FROM pg_freespacemap_relations) AS cur,\n}.
-			  qq{ (SELECT setting::NUMERIC FROM pg_settings WHERE name='max_fsm_relations') AS maxx) x\n};
-	my $SQLNOOP = q{SELECT 'FAIL'};
+	my $SQL = qq{
+SELECT maxx, cur, ROUND(100*(cur/maxx)) AS percent
+FROM (SELECT 
+    (SELECT COUNT(*) FROM pg_freespacemap_relations) AS cur,
+    (SELECT setting::NUMERIC FROM pg_settings WHERE name='max_fsm_relations') AS maxx) x
+};
+	my $SQLNOOP = q{SELECT 'FAIL' AS fail};
 
 	my $info = run_command($SQL, { version => [ ">8.3 $SQLNOOP" ] } );
 
-	for $db (@{$info->{db}}) {
-		if ($db->{slurp} =~ /\s*FAIL/) {
-			add_unknown msg('fsm-rel-highver');
-			return;
-		}
-		SLURP: while ($db->{slurp} =~ /\s*(\d+) \|\s+(\d+) \|\s+(\d+)\s*/gsm) {
-			my ($max,$cur,$percent) = ($1,$2,$3);
+	if (exists $info->{db}[0]{fail}) {
+		add_unknown msg('fsm-rel-highver');
+		return;
+	}
 
-			if ($MRTG) {
-				do_mrtg({one => $percent, two => $cur});
-				return;
-			}
+	for $db (@{$info->{db}}) {
+
+		for my $r (@{$db->{slurp}}) {
+			my ($max,$cur,$percent) = ($r->{maxx},$r->{cur},$r->{percent});
+
+			$MRTG and do_mrtg({one => $percent, two => $cur});
 
 			my $msg = msg('fsm-rel-msg', $cur, $max, $percent);
 
@@ -3263,154 +3641,15 @@ sub check_fsm_relations {
 } ## end of check_fsm_relations
 
 
-sub check_wal_files {
-
-	## Check on the number of WAL files in use
-	## Supports: Nagios, MRTG
-	## Must run as a superuser
-	## Critical and warning are the number of files
-	## Example: --critical=40
-
-	my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
-
-	## Figure out where the pg_xlog directory is
-	$SQL = q{SELECT count(*) FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$'}; ## no critic (RequireInterpolationOfMetachars)
-
-	my $info = run_command($SQL, {regex => qr[\d] });
-
-	my $found = 0;
-	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /(\d+)/) {
-			add_unknown msg('invalid-query', $db->{slurp});
-			next;
-		}
-		$found = 1;
-		my $numfiles = $1;
-		if ($MRTG) {
-			$stats{$db->{dbname}} = $numfiles;
-			$statsmsg{$db->{dbname}} = '';
-			next;
-		}
-		my $msg = qq{$numfiles};
-		$db->{perf} .= " '$db->{host}'=$numfiles;$warning;$critical";
-		if (length $critical and $numfiles > $critical) {
-			add_critical $msg;
-		}
-		elsif (length $warning and $numfiles > $warning) {
-			add_warning $msg;
-		}
-		else {
-			add_ok $msg;
-		}
-	}
-
-	return;
-
-} ## end of check_wal_files
-
-
-sub check_relation_size {
-
-	my $relkind = shift || 'relation';
-
-	## Check the size of one or more relations
-	## Supports: Nagios, MRTG
-	## By default, checks all relations
-	## Can check specific one(s) with include
-	## Can ignore some with exclude
-	## Warning and critical are bytes
-	## Valid units: b, k, m, g, t, e
-	## All above may be written as plural or with a trailing 'g'
-	## Limit to a specific user (relation owner) with the includeuser option
-	## Exclude users with the excludeuser option
-
-	my ($warning, $critical) = validate_range({type => 'size'});
-
-	$SQL = q{SELECT pg_relation_size(c.oid), pg_size_pretty(pg_relation_size(c.oid)), relkind, relname, nspname };
-	$SQL .= sprintf 'FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace',
-		$relkind eq 'table' ? q{'r'} : $relkind eq 'index' ? q{'i'} : q{'r' OR relkind = 'i'};
-
-	if ($opt{perflimit}) {
-		$SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
-	}
-
-	if ($USERWHERECLAUSE) {
-		$SQL =~ s/ WHERE/, pg_user u WHERE u.usesysid=c.relowner$USERWHERECLAUSE AND/;
-	}
-
-	my $info = run_command($SQL, {emptyok => 1});
-
-	my $found = 0;
-	for $db (@{$info->{db}}) {
-
-		$found = 1;
-		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
-			$stats{$db->{dbname}} = 0;
-			add_ok msg('no-match-user');
-			next;
-		}
-
-		if ($db->{slurp} !~ /\d+\s+\|\s+\d+/) {
-			add_unknown msg('invalid-query', $db->{slurp});
-			next;
-		}
-
-		my ($max,$pmax,$kmax,$nmax,$smax) = (-1,0,0,'?','?');
-		SLURP: while ($db->{slurp} =~ /(\d+) \| (\d+ \w+)\s+\| (\w)\s*\| (\S+)\s+\| (\S+)/gsm) {
-			my ($size,$psize,$kind,$name,$schema) = ($1,$2,$3,$4,$5);
-			next SLURP if skip_item($name, $schema);
-			$db->{perf} .= sprintf "%s%s$name=$size",
-				$VERBOSE==1 ? "\n" : ' ',
-				$kind eq 'r' ? "$schema." : '';
-			($max=$size, $pmax=$psize, $kmax=$kind, $nmax=$name, $smax=$schema) if $size > $max;
-		}
-		if ($max < 0) {
-			add_unknown msg('no-match-rel');
-			next;
-		}
-		if ($MRTG) {
-			$stats{$db->{dbname}} = $max;
-			$statsmsg{$db->{dbname}} = sprintf "DB: $db->{dbname} %s %s$nmax",
-				$kmax eq 'i' ? 'INDEX:' : 'TABLE:', $kmax eq 'i' ? '' : "$smax.";
-			next;
-		}
-
-		my $msg;
-		if ($relkind eq 'relation') {
-			if ($kmax eq 'r') {
-				$msg = msg('relsize-msg-relt', "$smax.$nmax", $pmax);
-			}
-			else {
-				$msg = msg('relsize-msg-reli', $nmax, $pmax);
-			}
-		}
-		elsif ($relkind eq 'table') {
-			$msg = msg('relsize-msg-tab', "$smax.$nmax", $pmax);
-		}
-		else {
-			$msg = msg('relsize-msg-ind', $nmax, $pmax);
-		}
-		if (length $critical and $max >= $critical) {
-			add_critical $msg;
-		}
-		elsif (length $warning and $max >= $warning) {
-			add_warning $msg;
-		}
-		else {
-			add_ok $msg;
-		}
-	}
-
-	return;
-
-} ## end of check_relation_size
-
-
-sub check_table_size {
-	return check_relation_size('table');
+sub check_last_analyze {
+	my $auto = shift || '';
+	return check_last_vacuum_analyze('analyze', $auto);
 }
-sub check_index_size {
-	return check_relation_size('index');
+
+
+sub check_last_vacuum {
+	my $auto = shift || '';
+	return check_last_vacuum_analyze('vacuum', $auto);
 }
 
 
@@ -3444,11 +3683,17 @@ sub check_last_vacuum_analyze {
 			: qq{GREATEST(pg_stat_get_last_${type}_time(c.oid), pg_stat_get_last_auto${type}_time(c.oid))};
 
 	## Do include/exclude earlier for large pg_classes?
-	$SQL = q{SELECT current_database(), nspname, relname, CASE WHEN v IS NULL THEN -1 ELSE round(extract(epoch FROM now()-v)) END, }
-		   .qq{ CASE WHEN v IS NULL THEN '?' ELSE TO_CHAR(v, '$SHOWTIME') END FROM (}
-		   .qq{SELECT nspname, relname, $criteria AS v FROM pg_class c, pg_namespace n }
-		   .q{WHERE relkind = 'r' AND n.oid = c.relnamespace AND n.nspname <> 'information_schema' }
-		   .q{ORDER BY 3) AS foo};
+	$SQL = qq{
+SELECT current_database() AS datname, nspname AS sname, relname AS tname,
+  CASE WHEN v IS NULL THEN -1 ELSE round(extract(epoch FROM now()-v)) END AS ltime,
+  CASE WHEN v IS NULL THEN '?' ELSE TO_CHAR(v, '$SHOWTIME') END AS ptime
+FROM (SELECT nspname, relname, $criteria AS v
+      FROM pg_class c, pg_namespace n
+      WHERE relkind = 'r'
+      AND n.oid = c.relnamespace
+      AND n.nspname <> 'information_schema'
+      ORDER BY 3) AS foo
+};
 	if ($opt{perflimit}) {
 		$SQL .= ' ORDER BY 3 DESC';
 	}
@@ -3457,14 +3702,14 @@ sub check_last_vacuum_analyze {
 		$SQL =~ s/ WHERE/, pg_user u WHERE u.usesysid=c.relowner$USERWHERECLAUSE AND/;
 	}
 
-	my $info = run_command($SQL, { regex => qr{\S+\s+\| \S+\s+\|}, emptyok => 1 } );
+	my $info = run_command($SQL, { regex => qr{\w}, emptyok => 1 } );
 
 	for $db (@{$info->{db}}) {
 
-		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
+		if (! @{$db->{slurp}} and $USERWHERECLAUSE) {
 			$stats{$db->{dbname}} = 0;
 			add_ok msg('no-match-user');
-			next;
+			return;
 		}
 
 		## -1 means no tables found at all
@@ -3475,12 +3720,12 @@ sub check_last_vacuum_analyze {
 		my ($minrel,$maxrel) = ('?','?'); ## no critic
 		my $mintime = 0; ## used for MRTG only
 		my $count = 0;
-		SLURP: while ($db->{slurp} =~ /(\S+)\s+\| (\S+)\s+\| (\S+)\s+\|\s+(\-?\d+) \| (.+)\s*$/gm) {
-			my ($dbname,$schema,$name,$time,$ptime) = ($1,$2,$3,$4,$5);
+	  ROW: for my $r (@{$db->{slurp}}) {
+			my ($dbname,$schema,$name,$time,$ptime) = @$r{qw/ datname sname tname ltime ptime/};
 			$maxtime = -3 if $maxtime == -1;
 			if (skip_item($name, $schema)) {
 				$maxtime = -2 if $maxtime < 1;
-				next SLURP;
+				next ROW;
 			}
 			$db->{perf} .= " $dbname.$schema.$name=${time}s;$warning;$critical" if $time >= 0;
 			if ($time > $maxtime) {
@@ -3499,7 +3744,7 @@ sub check_last_vacuum_analyze {
 		if ($MRTG) {
 			$stats{$db->{dbname}} = $mintime;
 			$statsmsg{$db->{dbname}} = msg('vac-msg', $db->{dbname}, $minrel);
-			next;
+			return;
 		}
 
 		if ($maxtime == -2) {
@@ -3527,15 +3772,6 @@ sub check_last_vacuum_analyze {
 
 } ## end of check_last_vacuum_analyze
 
-sub check_last_vacuum {
-	my $auto = shift || '';
-	return check_last_vacuum_analyze('vacuum', $auto);
-}
-sub check_last_analyze {
-	my $auto = shift || '';
-	return check_last_vacuum_analyze('analyze', $auto);
-}
-
 
 sub check_listener {
 
@@ -3553,11 +3789,11 @@ sub check_listener {
 	my $string = length $critical ? $critical : $warning;
 	my $regex = ($string =~ s/^~//) ? '~' : '=';
 
-	$SQL = "SELECT count(*) FROM pg_listener WHERE relname $regex '$string'";
+	$SQL = "SELECT count(*) AS c FROM pg_listener WHERE relname $regex '$string'";
 	my $info = run_command($SQL);
 
 	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /(\d+)/) {
+		if ($db->{slurp}[0]{c} !~ /(\d+)/) {
 			add_unknown msg('invalid-query', $db->{slurp});
 			next;
 		}
@@ -3614,9 +3850,9 @@ sub check_locks {
 		my $gotone = 0;
 		my %dblock;
 		my %totallock = (total => 0);
-		SLURP: while ($db->{slurp} =~ /([tf])\s*\|\s*(\w+)\s*\|\s*(\w+)\s+/gsm) {
-			my ($granted,$mode,$dbname) = ($1,lc $2,$3);
-			next SLURP if skip_item($dbname);
+	  ROW: for my $r (@{$db->{slurp}}) {
+			my ($granted,$mode,$dbname) = ($r->{granted}, lc $r->{mode}, $r->{datname});
+			next ROW if skip_item($dbname);
 			$gotone = 1;
 			$mode =~ s{lock$}{};
 			$dblock{$dbname}{total}++;
@@ -3719,8 +3955,12 @@ sub check_logfile {
 
 	my $critwarn = $opt{warning} ? 0 : 1;
 
-	$SQL = q{SELECT CASE WHEN length(setting)<1 THEN '?' ELSE setting END FROM pg_settings WHERE name };
-	$SQL .= q{IN ('log_destination','log_directory','log_filename','redirect_stderr','syslog_facility') ORDER BY name};
+	$SQL = q{
+SELECT name, CASE WHEN length(setting)<1 THEN '?' ELSE setting END AS s
+FROM pg_settings
+WHERE name IN ('log_destination','log_directory','log_filename','redirect_stderr','syslog_facility')
+ORDER BY name
+};
 
 	my $logfilere = qr{^[\w_\s\/%\-\.]+$};
 	if (exists $opt{logfile} and $opt{logfile} !~ $logfilere) {
@@ -3731,35 +3971,36 @@ sub check_logfile {
 	$VERBOSE >= 3 and warn Dumper $info;
 
 	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /^\s*(\w+)\n\s*(.+?)\n\s*(.+?)\n\s*(\w*)\n\s*(\w*)/sm) {
-			add_unknown msg('invalid-query', $db->{slurp});
-			next;
+		my $i;
+		for my $r (@{$db->{slurp}}) {
+			$i->{$r->{name}} = $r->{s} || '?';
 		}
-		my ($dest,$dir,$file,$redirect,$facility) = ($1,$2,$3,$4,$5||'?');
+		for my $word (qw{ log_destination log_directory log_filename redirect_stderr syslog_facility }) {
+			$i->{$word} = '?' if ! exists $i->{$word};
+		}
 
-		$VERBOSE >=3 and msg('logfile-debug', $dest, $dir, $file, $facility);
 		## Figure out what we think the log file will be
 		my $logfile ='';
 		if (exists $opt{logfile} and $opt{logfile} =~ /\w/) {
 			$logfile = $opt{logfile};
 		}
 		else {
-			if ($dest eq 'syslog') {
+			if ($i->{log_destination} eq 'syslog') {
 				## We'll make a best effort to figure out where it is. Using the --logfile option is preferred.
 				$logfile = '/var/log/messages';
 				if (open my $cfh, '<', '/etc/syslog.conf') {
 					while (<$cfh>) {
-						if (/\b$facility\.(?!none).+?([\w\/]+)$/i) {
+						if (/\b$i->{syslog_facility}\.(?!none).+?([\w\/]+)$/i) {
 							$logfile = $1;
 						}
 					}
 				}
 				if (!$logfile or ! -e $logfile) {
-					ndie msg('logfile-syslog', $facility);
+					ndie msg('logfile-syslog', $i->{syslog_facility});
 				}
 			}
-			elsif ($dest eq 'stderr') {
-				if ($redirect ne 'yes') {
+			elsif ($i->{log_destination} eq 'stderr') {
+				if ($i->{redirect_stderr} ne 'yes') {
 					ndie msg('logfile-stderr');
 				}
 			}
@@ -3843,6 +4084,469 @@ sub check_logfile {
 } ## end of check_logfile
 
 
+sub check_new_version_bc {
+
+	## Check if a new version of Bucardo is available
+
+	my $site = 'bucardo.org';
+	my $path = 'bucardo/latest_version.txt';
+	my $url = "http://$site/$path";
+	my ($newver,$maj,$rev,$message) = ('','','','');
+	my $versionre = qr{((\d+\.\d+)\.(\d+))\s+(.+)};
+
+	for my $meth (@get_methods) {
+		eval {
+			my $COM = "$meth $url";
+			$VERBOSE >= 1 and warn "TRYING: $COM\n";
+			my $info = qx{$COM 2>/dev/null};
+			if ($info =~ $versionre) {
+				($newver,$maj,$rev,$message) = ($1,$2,$3,$4);
+			}
+			$VERBOSE >=1 and warn "SET version to $newver\n";
+		};
+		last if length $newver;
+	}
+
+	if (! length $newver) {
+		add_unknown msg('new-bc-fail');
+		return;
+	}
+
+	my $BCVERSION = '?';
+	eval {
+		$BCVERSION = qx{bucardo_ctl --version 2>&1};
+	};
+	if ($@ or !$BCVERSION) {
+		add_unknown msg('new-bc-badver');
+		return;
+	}
+
+	if ($BCVERSION !~ s/.*((\d+\.\d+)\.(\d+)).*/$1/s) {
+		add_unknown msg('new-bc-fail');
+		return;
+	}
+	my ($cmaj,$crev) = ($2,$3);
+
+	if ($newver eq $BCVERSION) {
+		add_ok msg('new-bc-ok', $newver);
+		return;
+	}
+
+	$nohost = $message;
+	if ($cmaj eq $maj) {
+		add_critical msg('new-bc-warn', $newver, $BCVERSION);
+	}
+	else {
+		add_warning msg('new-bc-warn', $newver, $BCVERSION);
+	}
+	return;
+
+} ## end of check_new_version_bc
+
+
+sub check_new_version_cp {
+
+	## Check if a new version of check_postgres.pl is available
+	## You probably don't want to run this one every five minutes. :)
+
+	my $site = 'bucardo.org';
+	my $path = 'check_postgres/latest_version.txt';
+	my $url = "http://$site/$path";
+	my ($newver,$maj,$rev,$message) = ('','','','');
+	my $versionre = qr{((\d+\.\d+)\.(\d+))\s+(.+)};
+
+	for my $meth (@get_methods) {
+		eval {
+			my $COM = "$meth $url";
+			$VERBOSE >= 1 and warn "TRYING: $COM\n";
+			my $info = qx{$COM 2>/dev/null};
+			if ($info =~ $versionre) {
+				($newver,$maj,$rev,$message) = ($1,$2,$3,$4);
+			}
+			$VERBOSE >=1 and warn "SET version to $newver\n";
+		};
+		last if length $newver;
+	}
+
+	if (! length $newver) {
+		add_unknown msg('new-cp-fail');
+		return;
+	}
+
+	if ($newver eq $VERSION) {
+		add_ok msg('new-cp-ok', $newver);
+		return;
+	}
+
+	if ($VERSION !~ /(\d+\.\d+)\.(\d+)/) {
+		add_unknown msg('new-cp-fail');
+		return;
+	}
+
+	$nohost = $message;
+	my ($cmaj,$crev) = ($1,$2);
+	if ($cmaj eq $maj) {
+		add_warning msg('new-cp-warn', $newver, $VERSION);
+	}
+	else {
+		add_critical msg('new-cp-warn', $newver, $VERSION);
+	}
+	return;
+
+} ## end of check_new_version_cp
+
+
+sub check_new_version_pg {
+
+	## Check if a new version of Postgres is available
+	## Note that we only check the revision
+	## This also depends highly on the web page at postgresql.org not changing format
+
+	my $url = 'http://www.postgresql.org/versions.rss';
+	my $versionre = qr{<title>(\d+)\.(\d+)\.(\d+)</title>};
+
+	my %newver;
+	for my $meth (@get_methods) {
+		eval {
+			my $COM = "$meth $url";
+			$VERBOSE >= 1 and warn "TRYING: $COM\n";
+			my $info = qx{$COM 2>/dev/null};
+			while ($info =~ /$versionre/g) {
+				my ($maj,$min,$rev) = ($1,$2,$3);
+				$newver{"$maj.$min"} = $rev;
+			}
+		};
+		last if %newver;
+	}
+
+	my $info = run_command('SELECT version() AS version');
+
+	$db = $info->{db}[0];
+
+	if ($db->{slurp}[0]{version} !~ /PostgreSQL (\S+)/o) { ## no critic (ProhibitUnusedCapture)
+		add_unknown msg('invalid-query', $db->{slurp});
+		return;
+	}
+
+	my $currver = $1;
+	if ($currver !~ /(\d+\.\d+)\.(\d+)/) {
+		add_unknown msg('new-pg-badver', $currver);
+		return;
+	}
+
+	my ($ver,$rev) = ($1,$2);
+	if (! exists $newver{$ver}) {
+		add_unknown msg('new-pg-badver2', $ver);
+		return;
+	}
+
+	my $newrev = $newver{$ver};
+	if ($newrev > $rev) {
+		add_warning msg('new-pg-big', "$ver.$newrev", $currver);
+	}
+	elsif ($newrev < $rev) {
+		add_critical msg('new-pg-small', "$ver.$newrev", $currver);
+	}
+	else {
+		add_ok msg('new-pg-match', $currver);
+	}
+
+	return;
+
+} ## end of check_new_version_pg
+
+
+sub check_pg_stat_activity {
+
+	## Common function to run various actions against the pg_stat_activity view
+	## Actions: txn_idle, txn_time, query_time
+	## Supports: Nagios, MRTG
+	## It makes no sense to run this more than once on the same cluster
+	## Warning and critical are time limits - defaults to seconds
+	## Valid units: s[econd], m[inute], h[our], d[ay]
+	## All above may be written as plural as well (e.g. "2 hours")
+	## Can also ignore databases with exclude and limit with include
+	## Limit to a specific user with the includeuser option
+	## Exclude users with the excludeuser option
+
+	my $arg = shift || {};
+
+	my ($warning, $critical) = validate_range
+		({
+		  type             => 'time',
+		  default_warning  => $arg->{default_warning},
+		  default_critical => $arg->{default_critical},
+		  });
+
+	## Grab information from the pg_stat_activity table
+	## Since we clobber old info on a qtime "tie", use an ORDER BY
+	$SQL = qq{
+SELECT
+ xact_start,
+ SUBSTR(current_query,0,100) AS current_query,
+ client_addr,
+ client_port,
+ procpid,
+ COALESCE(ROUND(EXTRACT(epoch FROM now()-$arg->{offsetcol})),0) AS qtime,
+ datname,
+ usename
+FROM pg_stat_activity
+WHERE $arg->{whereclause} $USERWHERECLAUSE
+ORDER BY xact_start, procpid DESC
+};
+
+	my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1 } );
+
+	## Default values for information gathered
+	my ($maxact, $maxtime, $client_addr, $client_port, $procpid, $username, $maxdb, $maxq) =
+		('?',0,'?','?','?','?','?','?');
+
+	for $db (@{$info->{db}}) {
+
+		## Parse the psql output and gather stats from the winning row
+		## Read in and parse the psql output
+		my $skipped = 0;
+	  ROW: for my $r (@{$db->{slurp}}) {
+
+			## Apply --exclude and --include arguments to the database name
+			if (skip_item($r->{datname})) {
+				$skipped++;
+				next ROW;
+			}
+
+			## Detect cases where pg_stat_activity is not fully populated
+			if ($r->{xact_start} !~ /\d/o) {
+				## Perhaps this is a non-superuser?
+				if ($r->{current_query} =~ /insufficient/) {
+					add_unknown msg('psa-nosuper');
+				}
+				## Perhaps stats_command_string / track_activities is off?
+				elsif ($r->{current_query} =~ /disabled/) {
+					add_unknown msg('psa-disabled');
+				}
+				## Something else is going on
+				else {
+					add_unknown msg('psa-noxact');
+				}
+				return;
+			}
+
+			## Assign stats if we have a new winner
+			if ($r->{qtime} >= $maxtime) {
+				$maxact      = $r->{xact_start};
+				$client_addr = $r->{client_addr};
+				$client_port = $r->{client_port};
+				$procpid     = $r->{procpid};
+				$maxtime     = $r->{qtime};
+				$maxdb       = $r->{datname};
+				$username    = $r->{usename};
+				$maxq        = $r->{current_query};
+			}
+		}
+
+		## We don't really care why things matches as far as the final output
+		## But it's nice to report what we can
+		if ($maxdb eq '?') {
+			$MRTG and do_mrtg({one => 0, msg => 'No rows'});
+			$db->{perf} = "0;$warning;$critical";
+
+			if ($skipped) {
+				add_ok msg('psa-skipped', $skipped);
+			}
+			else {
+				add_ok msg('psa-nomatches');
+			}
+			return;
+		}
+
+		## Details on who the offender was
+		my $whodunit = sprintf q{%s:%s %s:%s%s%s %s:%s},
+			msg('database'),
+			$maxdb,
+			msg('PID'),
+			$procpid,
+			$client_port < 1 ? '' : (sprintf ' %s:%s', msg('port'), $client_port),
+			$client_addr eq '' ? '' : (sprintf ' %s:%s', msg('address'), $client_addr),
+			msg('username'),
+			$username;
+
+		my $details = '';
+		if ($VERBOSE >= 1 and $maxtime > 0) { ## >0 so we don't report ourselves
+			$maxq =~ s/\n/\\n/g;
+			$details = " " . msg('Query', $maxq);
+		}
+
+		$MRTG and do_mrtg({one => $maxtime, msg => "$whodunit$details"});
+
+		$db->{perf} .= sprintf q{'%s'=%s;%s;%s},
+			$whodunit,
+			$maxtime,
+			$warning,
+			$critical;
+
+		my $m = $action eq 'query_time' ? msg('qtime-msg', $maxtime)
+			: $action eq 'txn_time'   ? msg('txntime-msg', $maxtime)
+		  	: $action eq 'txn_idle'   ? msg('txnidle-msg', $maxtime)
+		  	: die "Unkown action: $action\n";
+		my $msg = sprintf '%s (%s)%s', $m, $whodunit, $details;
+
+		if (length $critical and $maxtime >= $critical) {
+			add_critical $msg;
+		}
+		elsif (length $warning and $maxtime >= $warning) {
+			add_warning $msg;
+		}
+		else {
+			add_ok $msg;
+		}
+	}
+
+	return;
+
+} ## end of check_pg_stat_activity
+
+
+sub check_pgbouncer_checksum {
+
+	## Verify the checksum of all pgbouncer settings
+	## Supports: Nagios, MRTG
+	## Not that the connection will be done on the pgbouncer database
+	## One of warning or critical must be given (but not both)
+	## It should run one time to find out the expected checksum
+	## You can use --critical="0" to find out the checksum
+	## You can include or exclude settings as well
+	## Example:
+	##  check_postgres_pgbouncer_checksum --critical="4e7ba68eb88915d3d1a36b2009da4acd"
+
+	my ($warning, $critical) = validate_range({type => 'checksum', onlyone => 1});
+
+	eval {
+		require Digest::MD5;
+	};
+	if ($@) {
+		ndie msg('checksum-nomd');
+	}
+
+	$SQL = 'SHOW CONFIG';
+	my $info = run_command($SQL, { regex => qr[log_pooler_errors] });
+
+	$db = $info->{db};
+
+	my $newstring = '';
+	for my $r (@{$db->{slurp}}) {
+		my $key = $r->{key};
+		next if skip_item($key);
+		$newstring .= "$r->{key} = $r->{value}\n";
+	}
+
+	if (! length $newstring) {
+		add_unknown msg('no-match-set');
+	}
+
+	my $checksum = Digest::MD5::md5_hex($newstring);
+
+	my $msg = msg('checksum-msg', $checksum);
+	if ($MRTG) {
+		$opt{mrtg} or ndie msg('checksum-nomrtg');
+		do_mrtg({one => $opt{mrtg} eq $checksum ? 1 : 0, msg => $checksum});
+	}
+	if ($critical and $critical ne $checksum) {
+		add_critical $msg;
+	}
+	elsif ($warning and $warning ne $checksum) {
+		add_warning $msg;
+	}
+	elsif (!$critical and !$warning) {
+		add_unknown $msg;
+	}
+	else {
+		add_ok $msg;
+	}
+
+	return;
+
+} ## end of check_pgbouncer_checksum
+
+
+sub check_prepared_txns {
+
+	## Checks age of prepared transactions
+	## Most installations probably want no prepared_transactions
+	## Supports: Nagios, MRTG
+
+	my ($warning, $critical) = validate_range
+		({
+		  type              => 'seconds',
+		  default_warning   => '1',
+		  default_critical  => '30',
+		});
+
+	my $SQL = q{
+SELECT database, ROUND(EXTRACT(epoch FROM now()-prepared)) AS age, prepared
+FROM pg_prepared_xacts
+ORDER BY prepared ASC
+};
+
+	my $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
+
+	my $msg = msg('preptxn-none');
+	my $found = 0;
+	for $db (@{$info->{db}}) {
+		my (@crit,@warn,@ok);
+		my ($maxage,$maxdb) = (0,''); ## used by MRTG only
+	  ROW: for my $r (@{$db->{slurp}}) {
+			my ($dbname,$age,$date) = ($r->{database},$r->{age},$r->{prepared});
+			$found = 1 if ! $found;
+			next ROW if skip_item($dbname);
+			$found = 2;
+			if ($MRTG) {
+				if ($age > $maxage) {
+					$maxdb = $dbname;
+					$maxage = $age;
+				}
+				elsif ($age == $maxage) {
+					$maxdb .= sprintf "%s$dbname", length $maxdb ? ' | ' : '';
+				}
+				next;
+			}
+
+			$msg = "$dbname=$date ($age)";
+			$db->{perf} .= " $msg";
+			if (length $critical and $age >= $critical) {
+				push @crit => $msg;
+			}
+			elsif (length $warning and $age >= $warning) {
+				push @warn => $msg;
+			}
+			else {
+				push @ok => $msg;
+			}
+		}
+		if ($MRTG) {
+			do_mrtg({one => $maxage, msg => $maxdb});
+		}
+		elsif (0 == $found) {
+			add_ok msg('preptxn-none');
+		}
+		elsif (1 == $found) {
+			add_unknown msg('no-match-db');
+		}
+		elsif (@crit) {
+			add_critical join ' ' => @crit;
+		}
+		elsif (@warn) {
+			add_warning join ' ' => @warn;
+		}
+		else {
+			add_ok join ' ' => @ok;
+		}
+	}
+
+	return;
+
+} ## end of check_prepared_txns
+
+
 sub check_query_runtime {
 
 	## Make sure a known query runs at least as fast as we think it should
@@ -3869,12 +4573,17 @@ sub check_query_runtime {
 	my $info = run_command($SQL);
 
 	for $db (@{$info->{db}}) {
-
-		if ($db->{slurp} !~ /Total runtime: (\d+\.\d+) ms\s*$/s) {
+		if (! exists $db->{slurp}[0]{queryplan}) {
 			add_unknown msg('invalid-query', $db->{slurp});
 			next;
 		}
-		my $totalseconds = sprintf '%.2f', $1 / 1000.0;
+		my $totalms = -1;
+		for my $r (@{$db->{slurp}}) {
+			if ($r->{queryplan} =~ / (\d+\.\d+) ms/) {
+				$totalms = $1;
+			}
+		}
+		my $totalseconds = sprintf '%.2f', $totalms / 1000.0;
 		if ($MRTG) {
 			$stats{$db->{dbname}} = $totalseconds;
 			next;
@@ -3902,249 +4611,103 @@ sub check_query_runtime {
 sub check_query_time {
 
 	## Check the length of running queries
-	## Supports: Nagios, MRTG
-	## It makes no sense to run this more than once on the same cluster
-	## Warning and critical are time limits - defaults to seconds
-	## Valid units: s[econd], m[inute], h[our], d[ay]
-	## All above may be written as plural as well (e.g. "2 hours")
-	## Can also ignore databases with exclude and limit with include
-	## Limit to a specific user with the includeuser option
-	## Exclude users with the excludeuser option
 
-	my ($warning, $critical) = validate_range
-		({
-		  type             => 'time',
-		  default_warning  => '2 minutes',
-		  default_critical => '5 minutes',
-		  });
-
-	## Bail early if stats_command_string is off
-	$SQL = q{SELECT setting FROM pg_settings WHERE name = 'stats_command_string'};
-	my $info = run_command($SQL);
-	for my $db (@{$info->{db}}) {
-		if ($db->{slurp} =~ /off/) {
-			ndie msg('qtime-fail');
-		}
-	}
-
-	$SQL = qq{
-SELECT
- client_addr,
- client_port,
- procpid,
- COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0),
- datname,
- usename
-FROM pg_stat_activity
-WHERE current_query <> '<IDLE>'$USERWHERECLAUSE
-};
-
-	$info = run_command($SQL, { regex => qr{\d+ \|\s+\d+}, emptyok => 1 } );
-
-	$db = $info->{db}[0];
-	my $slurp = $db->{slurp};
-
-	## We may have gotten no matches die to exclusion rules
-	if ($slurp !~ /\w/ and $USERWHERECLAUSE) {
-		$stats{$db->{dbname}} = 0;
-		add_ok msg('no-match-user');
-		return;
-	}
-
-	## Default values for information gathered
-	my ($client_addr, $client_port, $procpid, $username, $maxtime, $maxdb) = ('0.0.0.0', 0, '?', 0, 0, '?');
-
-	## Read in and parse the psql output
-  SLURP: while ($slurp =~  /\s*(\S*) \|\s+(\-?\d+) \|\s+(\d+) \|\s+(\-?\d+) \| (.+?)\s+\| (.+?)\s/gsm) {
-		my ($add,$port,$pid,$time,$dbname,$user) = ($1,$2,$3,int $4,$5,$6);
-		next SLURP if skip_item($dbname);
-
-		if ($time >= $maxtime) {
-			$maxtime     = $time;
-			$maxdb       = $dbname;
-			$client_addr = $add;
-			$client_port = $port;
-			$procpid     = $pid;
-			$username    = $user;
-		}
-	}
-
-	## Use of skip_item means we may have no matches
-	if ($maxdb eq '?') {
-		add_unknown msg('qtime-nomatch');
-		return;
-	}
-
-	## Details on who the offender was
-	my $whodunit = sprintf q{%s:%s %s:%s%s%s %s:%s},
-		msg('database'),
-		$maxdb,
-		msg('PID'),
-		$procpid,
-		$client_port < 1 ? '' : (sprintf ' %s:%s', msg('port'), $client_port),
-		$client_addr eq '' ? '' : (sprintf ' %s:%s', msg('address'), $client_addr),
-		msg('username'),
-		$username;
-
-	$MRTG and do_mrtg({one => $maxtime, msg => $whodunit});
-
-	$db->{perf} .= sprintf q{'%s'=%s;%s;%s},
-			$whodunit,
-			$maxtime,
-			$warning,
-			$critical;
-
-	my $msg = sprintf '%s (%s)', msg('qtime-msg', $maxtime), $whodunit;
-
-	if (length $critical and $maxtime >= $critical) {
-		add_critical $msg;
-	}
-	elsif (length $warning and $maxtime >= $warning) {
-		add_warning $msg;
-	}
-	else {
-		add_ok $msg;
-	}
-
-	return;
+	return check_pg_stat_activity(
+		{
+			default_warning  => '2 minutes',
+			default_critical => '5 minutes',
+			whereclause      => q{current_query <> '<IDLE>'},
+			offsetcol        => q{query_start},
+		});
 
 } ## end of check_query_time
 
 
-sub check_txn_time {
+sub check_relation_size {
 
-	## Check the length of running transactions
+	my $relkind = shift || 'relation';
+
+	## Check the size of one or more relations
 	## Supports: Nagios, MRTG
-	## It makes no sense to run this more than once on the same cluster
-	## Warning and critical are time limits - defaults to seconds
-	## Valid units: s[econd], m[inute], h[our], d[ay]
-	## All above may be written as plural as well (e.g. "2 hours")
-	## Can also ignore databases with exclude and limit with include
-	## Limit to a specific user with the includeuser option
+	## By default, checks all relations
+	## Can check specific one(s) with include
+	## Can ignore some with exclude
+	## Warning and critical are bytes
+	## Valid units: b, k, m, g, t, e
+	## All above may be written as plural or with a trailing 'g'
+	## Limit to a specific user (relation owner) with the includeuser option
 	## Exclude users with the excludeuser option
 
-	my ($warning, $critical) = validate_range
-		({
-		type => 'time',
-		});
+	my ($warning, $critical) = validate_range({type => 'size'});
 
-	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-xact_start)),0)) }.
-		qq{FROM pg_stat_activity WHERE xact_start IS NOT NULL $USERWHERECLAUSE GROUP BY 1};
+	$SQL = sprintf q{
+SELECT pg_relation_size(c.oid) AS rsize,
+  pg_size_pretty(pg_relation_size(c.oid)) AS psize,
+  relkind, relname, nspname
+FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace
+},
+	$relkind eq 'table' ? q{'r'}
+	: $relkind eq 'index' ? q{'i'}
+	: q{'r' OR relkind = 'i'};
 
-	my $info = run_command($SQL, { regex => qr[\s+\|\s+\-?\d+], emptyok => 1 } );
-
-	my $found = 0;
-	for $db (@{$info->{db}}) {
-
-		if (!exists $db->{ok}) {
-			ndie msg('txntime-fail');
-		}
-
-		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
-			$stats{$db->{dbname}} = 0;
-			add_ok msg('no-match-user');
-			next;
-		}
-		$found = 1;
-		my $max = -1;
-		SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
-			my ($dbname,$current) = ($1, int $2);
-			next SLURP if skip_item($dbname);
-			$max = $current if $current > $max;
-		}
-		if ($MRTG) {
-			$stats{$db->{dbname}} = $max;
-			next;
-		}
-		if ($max < 0) {
-			if ($USERWHERECLAUSE) {
-				add_unknown 'T-EXCLUDE-DB';
-			}
-			else {
-				add_ok msg('txntime-none');
-			}
-			next;
-		}
-		$db->{perf} .= msg('maxtime', $max);
-
-		my $msg = msg('txntime-msg', $max);
-		if (length $critical and $max >= $critical) {
-			add_critical $msg;
-		}
-		elsif (length $warning and $max >= $warning) {
-			add_warning $msg;
-		}
-		else {
-			add_ok $msg;
-		}
+	if ($opt{perflimit}) {
+		$SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
 	}
 
-	return;
+	if ($USERWHERECLAUSE) {
+		$SQL =~ s/ WHERE/, pg_user u WHERE u.usesysid=c.relowner$USERWHERECLAUSE AND/;
+	}
 
-} ## end of check_txn_time
-
-
-sub check_txn_idle {
-
-	## Check the length of "idle in transaction" connections
-	## Supports: Nagios, MRTG
-	## It makes no sense to run this more than once on the same cluster
-	## Warning and critical are time limits - defaults to seconds
-	## Valid units: s[econd], m[inute], h[our], d[ay]
-	## All above may be written as plural as well (e.g. "2 hours")
-	## Can also ignore databases with exclude and limit with include
-	## Limit to a specific user with the includeuser option
-	## Exclude users with the excludeuser option
-
-	my ($warning, $critical) = validate_range
-		({
-		type => 'time',
-		});
-
-
-	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) }.
-		qq{FROM pg_stat_activity WHERE current_query = '<IDLE> in transaction'$USERWHERECLAUSE GROUP BY 1};
-
-	my $info = run_command($SQL, { regex => qr[\s*.+?\s+\|\s+\-?\d+], emptyok => 1 } );
+	my $info = run_command($SQL, {emptyok => 1});
 
 	my $found = 0;
 	for $db (@{$info->{db}}) {
 
-		my $max = -1;
-
-		if ($db->{slurp} !~ /\w/ and $USERWHERECLAUSE) {
+		$found = 1;
+		if ($db->{slurp}[0]{rsize} !~ /\d/ and $USERWHERECLAUSE) {
 			$stats{$db->{dbname}} = 0;
 			add_ok msg('no-match-user');
 			next;
 		}
 
-		if ($db->{slurp} =~ /^\s*$/o) {
-			if ($MRTG) {
-				$stats{$db->{dbname}} = 0;
-			}
-			else {
-				add_ok msg('txnidle-none');
-			}
-			next;
-		}
+		my ($max,$pmax,$kmax,$nmax,$smax) = (-1,0,0,'?','?');
 
-		$found = 1;
-		SLURP: while ($db->{slurp} =~ /(.+?)\s+\|\s+(\-?\d+)\s*/gsm) {
-			my ($dbname,$current) = ($1, int $2);
-			next SLURP if skip_item($dbname);
-			$max = $current if $current > $max;
+	  ROW: for my $r (@{$db->{slurp}}) {
+			my ($size,$psize,$kind,$name,$schema) = @$r{qw/ rsize psize relkind relname nspname/};
+
+			next ROW if skip_item($name, $schema);
+
+			$db->{perf} .= sprintf "%s%s$name=$size",
+				$VERBOSE==1 ? "\n" : ' ',
+				$kind eq 'r' ? "$schema." : '';
+			($max=$size, $pmax=$psize, $kmax=$kind, $nmax=$name, $smax=$schema) if $size > $max;
+		}
+		if ($max < 0) {
+			add_unknown msg('no-match-rel');
+			next;
 		}
 		if ($MRTG) {
 			$stats{$db->{dbname}} = $max;
-			next;
-		}
-		$db->{perf} .= msg('maxtime', $max);
-		if ($max < 0) {
-			add_unknown 'T-EXCLUDE-DB';
+			$statsmsg{$db->{dbname}} = sprintf "DB: $db->{dbname} %s %s$nmax",
+				$kmax eq 'i' ? 'INDEX:' : 'TABLE:', $kmax eq 'i' ? '' : "$smax.";
 			next;
 		}
 
-		my $msg = msg('txnidle-msg', $max);
+		my $msg;
+		if ($relkind eq 'relation') {
+			if ($kmax eq 'r') {
+				$msg = msg('relsize-msg-relt', "$smax.$nmax", $pmax);
+			}
+			else {
+				$msg = msg('relsize-msg-reli', $nmax, $pmax);
+			}
+		}
+		elsif ($relkind eq 'table') {
+			$msg = msg('relsize-msg-tab', "$smax.$nmax", $pmax);
+		}
+		else {
+			$msg = msg('relsize-msg-ind', $nmax, $pmax);
+		}
 		if (length $critical and $max >= $critical) {
 			add_critical $msg;
 		}
@@ -4156,319 +4719,17 @@ sub check_txn_idle {
 		}
 	}
 
-	## If no results, let's be paranoid and check their settings
-	if (!$found) {
-		verify_version();
-	}
-
 	return;
 
-} ## end of check_txn_idle
+} ## end of check_relation_size
 
 
-sub check_settings_checksum {
-
-	## Verify the checksum of all settings
-	## Supports: Nagios, MRTG
-	## Not that this will vary from user to user due to ALTER USER
-	## and because superusers see additional settings
-	## One of warning or critical must be given (but not both)
-	## It should run one time to find out the expected checksum
-	## You can use --critical="0" to find out the checksum
-	## You can include or exclude settings as well
-	## Example:
-	##  check_postgres_settings_checksum --critical="4e7ba68eb88915d3d1a36b2009da4acd"
-
-	my ($warning, $critical) = validate_range({type => 'checksum', onlyone => 1});
-
-	eval {
-		require Digest::MD5;
-	};
-	if ($@) {
-		ndie msg('checksum-nomd');
-	}
-
-	$SQL = 'SELECT name, setting FROM pg_settings ORDER BY name';
-	my $info = run_command($SQL, { regex => qr[client_encoding] });
-
-	for $db (@{$info->{db}}) {
-
-		(my $string = $db->{slurp}) =~ s/\s+$/\n/;
-
-		my $newstring = '';
-		SLURP: for my $line (split /\n/ => $string) {
-			$line =~ /^\s*(\w+)/ or ndie msg('checksum-badline', $line);
-			my $name = $1;
-			next SLURP if skip_item($name);
-			$newstring .= "$line\n";
-		}
-		if (! length $newstring) {
-			add_unknown msg('no-match-set');
-		}
-
-		my $checksum = Digest::MD5::md5_hex($newstring);
-
-		my $msg = msg('checksum-msg', $checksum);
-		if ($MRTG) {
-			$opt{mrtg} or ndie msg('checksum-nomrtg');
-			do_mrtg({one => $opt{mrtg} eq $checksum ? 1 : 0, msg => $checksum});
-		}
-		if ($critical and $critical ne $checksum) {
-			add_critical $msg;
-		}
-		elsif ($warning and $warning ne $checksum) {
-			add_warning $msg;
-		}
-		elsif (!$critical and !$warning) {
-			add_unknown $msg;
-		}
-		else {
-			add_ok $msg;
-		}
-	}
-
-	return;
-
-} ## end of check_settings_checksum
-
-
-sub check_timesync {
-
-	## Compare local time to the database time
-	## Supports: Nagios, MRTG
-	## Warning and critical are given in number of seconds difference
-
-	my ($warning,$critical) = validate_range
-		({
-		  type             => 'seconds',
-		  default_warning  => 2,
-		  default_critical => 5,
-		  });
-
-	$SQL = q{SELECT round(extract(epoch FROM now())), TO_CHAR(now(),'YYYY-MM-DD HH24:MI:SS')};
-	my $info = run_command($SQL);
-	my $localepoch = time;
-	my @l = localtime;
-
-	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /(\d+) \| (.+)/) {
-			add_unknown msg('invalid-query', $db->{slurp});
-			next;
-		}
-		my ($pgepoch,$pgpretty) = ($1,$2);
-
-		my $diff = abs($pgepoch - $localepoch);
-		if ($MRTG) {
-			$stats{$db->{dbname}} = $diff;
-			next;
-		}
-		$db->{perf} = msg('timesync-diff', $diff);
-		my $localpretty = sprintf '%d-%02d-%02d %02d:%02d:%02d', $l[5]+1900, $l[4]+1, $l[3],$l[2],$l[1],$l[0];
-		my $msg = msg('timesync-msg', $diff, $pgpretty, $localpretty);
-
-		if (length $critical and $diff >= $critical) {
-			add_critical $msg;
-		}
-		elsif (length $warning and $diff >= $warning) {
-			add_warning $msg;
-		}
-		else {
-			add_ok $msg;
-		}
-	}
-	return;
-
-} ## end of check_timesync
-
-
-sub check_txn_wraparound {
-
-	## Check how close to transaction wraparound we are on all databases
-	## Supports: Nagios, MRTG
-	## Warning and critical are the number of transactions performed
-	## Thus, anything *over* that number will trip the alert
-	## See: http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND
-	## It makes no sense to run this more than once on the same cluster
-
-	my ($warning, $critical) = validate_range
-		({
-		  type             => 'positive integer',
-		  default_warning  => 1_300_000_000,
-		  default_critical => 1_400_000_000,
-		  });
-
-	if ($warning and $warning >= 2_000_000_000) {
-		ndie msg('txnwrap-wbig');
-	}
-	if ($critical and $critical >= 2_000_000_000) {
-		ndie msg('txnwrap-cbig');
-	}
-
-	$SQL = q{SELECT datname, age(datfrozenxid) FROM pg_database WHERE datallowconn ORDER BY 1, 2};
-	my $info = run_command($SQL, { regex => qr[\w+\s+\|\s+\d+] } );
-
-	my ($mrtgmax,$mrtgmsg) = (0,'?');
-	for $db (@{$info->{db}}) {
-		my ($max,$msg) = (0,'?');
-		SLURP: while ($db->{slurp} =~ /(\S.+?)\s+\|\s+(\d+)/gsm) {
-			my ($dbname,$dbtxns) = ($1,$2);
-			$db->{perf} .= " '$dbname'=$dbtxns;";
-			$db->{perf} .= $warning if length $warning;
-			$db->{perf} .= ';';
-			$db->{perf} .= $critical if length $critical;
-			$db->{perf} .= ';0;2000000000';
-			next SLURP if skip_item($dbname);
-			if ($dbtxns > $max) {
-				$max = $dbtxns;
-				$msg = qq{$dbname: $dbtxns};
-				if ($dbtxns > $mrtgmax) {
-					$mrtgmax = $dbtxns;
-					$mrtgmsg = "DB: $dbname";
-				}
-			}
-		}
-		if (length $critical and $max >= $critical) {
-			add_critical $msg;
-		}
-		elsif (length $warning and $max >= $warning) {
-			add_warning $msg;
-		}
-		else {
-			add_ok $msg;
-		}
-	}
-	$MRTG and do_mrtg({one => $mrtgmax, msg => $mrtgmsg});
-
-	return;
-
-} ## end of check_txn_wraparound
-
-
-sub check_version {
-
-	## Compare version with what we think it should be
-	## Supports: Nagios, MRTG
-	## Warning and critical are the major and minor (e.g. 8.3)
-	## or the major, minor, and revision (e.g. 8.2.4 or even 8.3beta4)
-
-	if ($MRTG) {
-		if (!exists $opt{mrtg} or $opt{mrtg} !~ /^\d+\.\d+/) {
-			ndie msg('version-badmrtg');
-		}
-		if ($opt{mrtg} =~ /^\d+\.\d+$/) {
-			$opt{critical} = $opt{mrtg};
-		}
-		else {
-			$opt{warning} = $opt{mrtg};
-		}
-	}
-
-	my ($warning, $critical) = validate_range({type => 'version', forcemrtg => 1});
-
-	my ($warnfull, $critfull) = (($warning =~ /^\d+\.\d+$/ ? 0 : 1),($critical =~ /^\d+\.\d+$/ ? 0 : 1));
-
-	my $info = run_command('SELECT version()');
-
-	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /PostgreSQL ((\d+\.\d+)(\w+|\.\d+))/o) {
-			add_unknown msg('invalid-query', $db->{slurp});
-			next;
-		}
-		my ($full,$version,$revision) = ($1,$2,$3||'?');
-		$revision =~ s/^\.//;
-
-		my $ok = 1;
-
-		if (length $critical) {
-			if (($critfull and $critical ne $full)
-				or (!$critfull and $critical ne $version)) {
-				$MRTG and do_mrtg({one => 0, msg => $full});
-				add_critical msg('version-fail', $full, $critical);
-				$ok = 0;
-			}
-		}
-		elsif (length $warning) {
-			if (($warnfull and $warning ne $full)
-				or (!$warnfull and $warning ne $version)) {
-				$MRTG and do_mrtg({one => 0, msg => $full});
-				add_warning msg('version-fail', $full, $warning);
-				$ok = 0;
-			}
-		}
-		if ($ok) {
-			$MRTG and do_mrtg({one => 1, msg => $full});
-			add_ok msg('version-ok', $full);
-		}
-	}
-
-	return;
-
-} ## end of check_version
-
-
-sub check_custom_query {
-
-	## Run a user-supplied query, then parse the results
-	## If you end up using this to make a useful query, consider making it 
-	## into a specific action and sending in a patch!
-	## valtype must be one of: string, time, size, integer
-
-	my $valtype = $opt{valtype} || 'integer';
-
-	my ($warning, $critical) = validate_range({type => $valtype, leastone => 1});
-
-	my $query = $opt{query} or ndie msg('custom-nostring');
-
-	my $reverse = $opt{reverse} || 0;
-
-	my $info = run_command($query);
-
-	for $db (@{$info->{db}}) {
-
-		chomp $db->{slurp};
-		if (! length $db->{slurp}) {
-			add_unknown msg('custom-norows');
-			next;
-		}
-
-		my $goodrow = 0;
-		while ($db->{slurp} =~ /(\S+)(?:\s+\|\s+(.+))?$/gm) {
-			my ($data, $msg) = ($1,$2||'');
-			$goodrow++;
-			$db->{perf} .= " $msg";
-			my $gotmatch = 0;
-			if (length $critical) {
-				if (($valtype eq 'string' and $data eq $critical)
-					or
-					($reverse ? $data <= $critical : $data >= $critical)) { ## covers integer, time, size
-					add_critical "$data";
-					$gotmatch = 1;
-				}
-			}
-
-			if (length $warning and ! $gotmatch) {
-				if (($valtype eq 'string' and $data eq $warning)
-					or
-					($reverse ? $data <= $warning : $data >= $warning)) {
-					add_warning "$data";
-					$gotmatch = 1;
-				}
-			}
-
-			if (! $gotmatch) {
-				add_ok "$data";
-			}
-
-		} ## end each row returned
-
-		if (!$goodrow) {
-			add_unknown msg('custom-invalid');
-		}
-	}
-
-	return;
-
-} ## end of check_custom_query
+sub check_table_size {
+	return check_relation_size('table');
+}
+sub check_index_size {
+	return check_relation_size('index');
+}
 
 
 sub check_replicate_row {
@@ -4504,7 +4765,7 @@ sub check_replicate_row {
 	$SQL = qq{UPDATE $table SET $col = 'X' WHERE $pk = '$id'};
 	(my $update1 = $SQL) =~ s/X/$val1/;
 	(my $update2 = $SQL) =~ s/X/$val2/;
-	my $select = qq{SELECT $col FROM $table WHERE $pk = '$id'};
+	my $select = qq{SELECT $col AS c FROM $table WHERE $pk = '$id'};
 
 	## Are they the same on both sides? Must be yes, or we error out
 
@@ -4515,13 +4776,13 @@ sub check_replicate_row {
 	if (!defined $sourcedb) {
 		ndie msg('rep-norow', "$table.$col");
 	}
-	(my $value1 = $info1->{db}[0]{slurp}) =~ s/^\s*(\S+)\s*$/$1/;
+	my $value1 = $info1->{db}[0]{slurp}[0]{c};
 
 	my $info2 = run_command($select, { dbnumber => 2 });
 	my $slave = 0;
 	for my $d (@{$info2->{db}}) {
 		$slave++;
-		(my $value2 = $d->{slurp}) =~ s/^\s*(\S+)\s*$/$1/;
+		my $value2 = $d->{slurp}[0]{c};
 		if ($value1 ne $value2) {
 			ndie msg('rep-notsame');
 		}
@@ -4572,7 +4833,7 @@ sub check_replicate_row {
 		for my $d (@{$info2->{db}}) {
 			$slave++;
 			next if exists $slave{$slave};
-			(my $value2 = $d->{slurp}) =~ s/^\s*(\S+)\s*$/$1/;
+			my $value2 = $d->{slurp}[0]{c};
 			$time = $db->{totaltime} = time - $starttime;
 			if ($value2 eq $newval) {
 				$slave{$slave} = $time;
@@ -4652,37 +4913,38 @@ sub check_same_schema {
 
 		## Get a list of all users
 		if (! exists $filter{nousers}) {
-			$SQL = 'SELECT usesysid, quote_ident(usename), usecreatedb, usesuper FROM pg_user';
+			$SQL = q{
+SELECT usesysid, quote_ident(usename) AS usename, usecreatedb, usesuper
+FROM pg_user
+};
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				for my $line (split /\n/, $db->{slurp}) {
-					unless ($line =~ /^\s*(\d+)\s*\| (.+?)\s*\| ([t|f])\s*\| ([t|f]).*/gmo) {
-						warn "Query processing failed:\n$line\nfrom $SQL\n";
-						next;
-					}
-
-					$thing{$x}{users}{$2} = { oid=>$1, createdb=>$3, superuser=>$4 };
-					$thing{$x}{useroid}{$1} = $2;
+				for my $r (@{$db->{slurp}}) {
+					$thing{$x}{users}{$r->{usename}} = {
+						oid=>$r->{usesysid},
+						createdb=>$r->{usecreatedb},
+						superuser=>$r->{usesuper}
+					};
+					$thing{$x}{useroid}{$r->{usesysid}} = $r->{usename};
 				}
 			}
 		}
 
 		## Get a list of all schemas (aka namespaces)
 		if (! exists $filter{noschemas}) {
-			$SQL = q{SELECT quote_ident(nspname), n.oid, quote_ident(usename), nspacl FROM pg_namespace n }
-				. q{JOIN pg_user u ON (u.usesysid = n.nspowner) }
-				. q{WHERE nspname !~ '^pg_t'};
+			$SQL = q{
+SELECT quote_ident(nspname) AS nspname, n.oid, quote_ident(usename) AS usename, nspacl
+FROM pg_namespace n
+JOIN pg_user u ON (u.usesysid = n.nspowner)
+WHERE nspname !~ '^pg_t'
+};
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				for my $line (split /\n/, $db->{slurp}) {
-					unless ($line =~ /^\s*(.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (\S*).*/gmo) {
-						warn "Query processing failed:\n$line\nfrom $SQL\n";
-						next;
-					}
-					$thing{$x}{schemas}{$1} = {
-						oid   => $2,
-						owner => $3,
-						acl   => (exists $filter{noperms} or !$4) ? '(none)' : $4,
+				for my $r (@{$db->{slurp}}) {
+					$thing{$x}{schemas}{$r->{nspname}} = {
+						oid   => $r->{oid},
+						owner => $r->{usename},
+						acl   => (exists $filter{noperms} or !$r->{nspacl}) ? '(none)' : $r->{nspacl},
 					};
 				}
 			}
@@ -4690,26 +4952,24 @@ sub check_same_schema {
 
 		## Get a list of all relations
 		if (! exists $filter{notables}) {
-			$SQL = q{SELECT relkind, quote_ident(nspname), quote_ident(relname), quote_ident(usename), relacl, }
-				. q{CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid) ELSE '' END }
-				. q{FROM pg_class c }
-				. q{JOIN pg_namespace n ON (n.oid = c.relnamespace) }
-				. q{JOIN pg_user u ON (u.usesysid = c.relowner) }
-				. q{WHERE nspname !~ '^pg_t'};
+			$SQL = q{
+SELECT relkind, quote_ident(nspname) AS nspname, quote_ident(relname) AS relname, 
+  quote_ident(usename) AS usename, relacl,
+  CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid) ELSE '' END AS viewdef
+FROM pg_class c
+JOIN pg_namespace n ON (n.oid = c.relnamespace)
+JOIN pg_user u ON (u.usesysid = c.relowner)
+WHERE nspname !~ '^pg_t'
+};
 			exists $filter{notriggers}  and $SQL .= q{ AND relkind <> 'r'};
 			exists $filter{noviews}     and $SQL .= q{ AND relkind <> 'v'};
 			exists $filter{noindexes}   and $SQL .= q{ AND relkind <> 'i'};
 			exists $filter{nosequences} and $SQL .= q{ AND relkind <> 'S'};
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				for my $line (split /\n/, $db->{slurp}) {
-					unless ($line =~ /^\s*(\w)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.*?)\s*\| (.*)/gmo) {
-						warn "Query processing failed:\n$line\nfrom $SQL\n";
-						next;
-					}
-
-					my ($kind,$schema,$name,$owner,$acl,$def) = ($1,$2,$3,$4,$5,$6);
-
+				for my $r (@{$db->{slurp}}) {
+					my ($kind,$schema,$name,$owner,$acl,$def) = @$r{
+						qw/ relkind nspname relname usename relacl viewdef /};
  					$acl = '(none)' if exists $filter{noperms};
 					if ($kind eq 'r') {
 						$thing{$x}{tables}{"$schema.$name"} =
@@ -4739,30 +4999,25 @@ sub check_same_schema {
 		$SQL = q{SELECT typname, oid FROM pg_type};
 		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 		for $db (@{$info->{db}}) {
-			for my $line (split /\n/, $db->{slurp}) {
-				unless ($line =~ /^\s*(.+?)\s+\|\s+(\d+).*/gmo) {
-					warn "Query processing failed:\n$line\nfrom $SQL\n";
-					next;
-				}
-				$thing{$x}{type}{$2} = $1;
+			for my $r (@{$db->{slurp}}) {
+				$thing{$x}{type}{$r->{oid}} = $r->{typname};
 			}
 			$saved_db = $db if ! defined $saved_db;
 		}
 
 		## Get a list of all triggers
 		if (! exists $filter{notriggers}) {
-			$SQL = q{SELECT tgname, quote_ident(relname), proname, proargtypes FROM pg_trigger }
-				. q{ JOIN pg_class c ON (c.oid = tgrelid) }
-				. q{ JOIN pg_proc p ON (p.oid = tgfoid) }
-				. q{ WHERE NOT tgisconstraint}; ## constraints checked separately
+			$SQL = q{
+SELECT tgname, quote_ident(relname) AS relname, proname, proargtypes
+FROM pg_trigger
+JOIN pg_class c ON (c.oid = tgrelid)
+JOIN pg_proc p ON (p.oid = tgfoid)
+WHERE NOT tgisconstraint
+}; ## constraints checked separately
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				for my $line (split /\n/, $db->{slurp}) {
-					unless ($line =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.*?)/gmo) {
-						warn "Query processing failed:\n$line\nfrom $SQL\n";
-						next;
-					}
-					my ($name,$table,$func,$args) = ($1,$2,$3,$4);
+				for my $r (@{$db->{slurp}}) {
+					my ($name,$table,$func,$args) = @$r{qw/ tgname relname proname proargtypes /};
 					$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
 					$args =~ s/^\s*(.*)\s*$/($1)/;
 					$thing{$x}{triggers}{$name} = { table=>$table, func=>$func, args=>$args };
@@ -4772,45 +5027,45 @@ sub check_same_schema {
 
 		## Get a list of all columns
 		## We'll use information_schema for this one
-		$SQL = q{SELECT table_schema, table_name, column_name, ordinal_position, }
-			. q{COALESCE(column_default, '(none)'), }
-			. q{is_nullable, data_type, }
-			. q{COALESCE(character_maximum_length, 0), }
-			. q{COALESCE(numeric_precision, 0), }
-			. q{COALESCE(numeric_scale,0) }
-			. q{FROM information_schema.columns }
-			. q{ORDER BY table_schema, table_name, ordinal_position, column_name};
+		$SQL = q{
+SELECT table_schema AS ts, table_name AS tn, column_name AS cn, ordinal_position AS op,
+  COALESCE(column_default, '(none)') AS df,
+  is_nullable AS in, data_type AS dt,
+  COALESCE(character_maximum_length, 0) AS ml,
+  COALESCE(numeric_precision, 0) AS np,
+  COALESCE(numeric_scale,0) AS ns
+FROM information_schema.columns
+ORDER BY table_schema, table_name, ordinal_position, column_name
+};
 		$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 		my $oldrelation = '';
 		my $col = 0;
 		my $position;
 		for $db (@{$info->{db}}) {
-			for my $line (split /\n/, $db->{slurp}) {
-				unless ($line =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \| (.+?)\s+\| (.+?)\s+\| (.+?)\s+\|\s+(\d+) \|\s+(\d+) \|\s+(\d+).*/gmo) {
-					warn "Query processing failed:\n$line\nfrom $SQL\n";
-					next;
-				}
+			for my $r (@{$db->{slurp}}) {
+
+				my ($schema,$table) = @$r{qw/ ts tn /};
 
 				## If this is a new relation, reset the column numbering
-				if ($oldrelation ne "$1.$2") {
-					$oldrelation = "$1.$2";
+				if ($oldrelation ne "$schema.$table") {
+					$oldrelation = "$schema.$table";
 					$col = 1;
 				}
 
 				## Rather than use ordinal_position directly, count the live columns
 				$position = $col++;
 
-				$thing{$x}{columns}{"$1.$2"}{$3} = {
-					schema     => $1,
-					table      => $2,
-					name       => $3,
+				$thing{$x}{columns}{"$schema.$table"}{$r->{cn}} = {
+					schema     => $schema,
+					table      => $table,
+					name       => $r->{cn},
 					position   => exists $filter{noposition} ? 0 : $position,
-					default    => $5,
-					nullable   => $6,
-					type       => $7,
-					length     => $8,
-					precision  => $9,
-					scale      => $10,
+					default    => $r->{df},
+					nullable   => $r->{in},
+					type       => $r->{dt},
+					length     => $r->{ml},
+					precision  => $r->{np},
+					scale      => $r->{ns},
 				};
 			}
 		}
@@ -4818,16 +5073,14 @@ sub check_same_schema {
 		## Get a list of all constraints
 		## We'll use information_schema for this one too
 		if (! exists $filter{noconstraints}) {
-			$SQL = q{SELECT constraint_schema, constraint_name, table_schema, table_name }
-				. q{FROM information_schema.constraint_table_usage};
+			$SQL = q{
+SELECT constraint_schema AS cs, constraint_name AS cn, table_schema AS ts, table_name AS tn
+FROM information_schema.constraint_table_usage
+};
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				for my $line (split /\n/, $db->{slurp}) {
-					unless ($line =~ /^\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gmo) {
-						warn "Query processing failed:\n$line\nfrom $SQL\n";
-						next;
-					}
-					my ($ichi,$ni,$san,$shi) = ($1,$2,$3,$4);
+				for my $r (@{$db->{slurp}}) {
+					my ($ichi,$ni,$san,$shi) = @$r{qw/ cs cn ts tn/};
 
 					## No sense in grabbing "generic" constraints
 					next if $ni =~ /^\$\d+$/o;
@@ -4836,55 +5089,52 @@ sub check_same_schema {
 				}
 			}
 			$SQL = <<'SQL';  # cribbed from information_schema.constraint_column_usage
- SELECT current_database()::information_schema.sql_identifier AS table_catalog,
-    x.tblschema::information_schema.sql_identifier AS table_schema,
-    x.tblname::information_schema.sql_identifier AS table_name,
-    x.colname::information_schema.sql_identifier AS column_name,
-    current_database()::information_schema.sql_identifier AS constraint_catalog,
-    x.cstrschema::information_schema.sql_identifier AS constraint_schema,
-    x.cstrname::information_schema.sql_identifier AS constraint_name,
-    REGEXP_REPLACE(constrdef, '\n', ' \\n ','g')
+SELECT current_database()::information_schema.sql_identifier AS cd,
+  x.tblschema::information_schema.sql_identifier AS tschema,
+  x.tblname::information_schema.sql_identifier AS tname,
+  x.colname::information_schema.sql_identifier AS ccol,
+  current_database()::information_schema.sql_identifier AS constraint_catalog,
+  x.cstrschema::information_schema.sql_identifier AS cschema,
+  x.cstrname::information_schema.sql_identifier AS cname,
+  REGEXP_REPLACE(constrdef, '\n', ' \\n ','g') AS cdef
 FROM (( SELECT DISTINCT nr.nspname, r.relname, r.relowner, a.attname, nc.nspname, c.conname,
-          pg_catalog.pg_get_constraintdef(c.oid, true)
-          FROM pg_namespace nr, pg_class r, pg_attribute a, pg_depend d, pg_namespace nc, pg_constraint c
-         WHERE nr.oid = r.relnamespace
-           AND r.oid = a.attrelid
-           AND d.refclassid = 'pg_class'::regclass::oid
-           AND d.refobjid = r.oid
-           AND d.refobjsubid= a.attnum
-           AND d.classid = 'pg_constraint'::regclass::oid
-           AND d.objid = c.oid
-           AND c.connamespace = nc.oid
-           AND c.contype = 'c'::"char"
-           AND r.relkind = 'r'::"char"
-           AND NOT a.attisdropped
-         ORDER BY nr.nspname, r.relname, r.relowner, a.attname, nc.nspname, c.conname)
-     UNION ALL
-        SELECT nr.nspname, r.relname, r.relowner, a.attname, nc.nspname, c.conname,
-          pg_catalog.pg_get_constraintdef(c.oid, true)
-          FROM pg_namespace nr, pg_class r, pg_attribute a, pg_namespace nc, pg_constraint c
-         WHERE nr.oid = r.relnamespace
-           AND r.oid = a.attrelid
-           AND nc.oid = c.connamespace
-           AND
-               CASE
-                   WHEN c.contype = 'f'::"char" THEN r.oid = c.confrelid AND (a.attnum = ANY (c.confkey))
-                   ELSE r.oid = c.conrelid AND (a.attnum = ANY (c.conkey))
-               END
-           AND NOT a.attisdropped
-           AND (c.contype = ANY (ARRAY['p'::"char", 'u'::"char", 'f'::"char"]))
-           AND r.relkind = 'r'::"char")
+      pg_catalog.pg_get_constraintdef(c.oid, true)
+    FROM pg_namespace nr, pg_class r, pg_attribute a, pg_depend d, pg_namespace nc, pg_constraint c
+    WHERE nr.oid = r.relnamespace
+    AND r.oid = a.attrelid
+    AND d.refclassid = 'pg_class'::regclass::oid
+    AND d.refobjid = r.oid
+    AND d.refobjsubid= a.attnum
+    AND d.classid = 'pg_constraint'::regclass::oid
+    AND d.objid = c.oid
+    AND c.connamespace = nc.oid
+    AND c.contype = 'c'::"char"
+    AND r.relkind = 'r'::"char"
+    AND NOT a.attisdropped
+    ORDER BY nr.nspname, r.relname, r.relowner, a.attname, nc.nspname, c.conname)
+  UNION ALL
+    SELECT nr.nspname, r.relname, r.relowner, a.attname, nc.nspname, c.conname,
+      pg_catalog.pg_get_constraintdef(c.oid, true)
+    FROM pg_namespace nr, pg_class r, pg_attribute a, pg_namespace nc, pg_constraint c
+    WHERE nr.oid = r.relnamespace
+    AND r.oid = a.attrelid
+    AND nc.oid = c.connamespace
+    AND
+      CASE
+        WHEN c.contype = 'f'::"char" THEN r.oid = c.confrelid AND (a.attnum = ANY (c.confkey))
+        ELSE r.oid = c.conrelid AND (a.attnum = ANY (c.conkey))
+      END
+    AND NOT a.attisdropped
+    AND (c.contype = ANY (ARRAY['p'::"char", 'u'::"char", 'f'::"char"]))
+    AND r.relkind = 'r'::"char")
   x(tblschema, tblname, tblowner, colname, cstrschema, cstrname, constrdef)
 WHERE pg_has_role(x.tblowner, 'USAGE'::text)
 SQL
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				for my $line (split /\n/, $db->{slurp}) {
-					unless ($line =~ /^ \s* (.+?) \s+\|  \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?) \s+\| \s* (.+?)\s*$/gmox) {
-						warn "Query processing failed:\n$line\nfrom $SQL\n";
-						next;
-					}
-					my ($cschema,$cname,$tschema,$tname,$ccol,$cdef) = ($6,$7,$2,$3,$4,$8);
+				for my $r (@{$db->{slurp}}) {
+					my ($cschema,$cname,$tschema,$tname,$ccol,$cdef) = @$r{
+						qw/cschema cname tschema tname ccol cdef/};
 					## No sense in grabbing "generic" constraints
 					if ($cname !~ /^\$\d+$/o) {
 						if (exists $thing{$x}{colconstraints}{"$cschema.$cname"}) {
@@ -4900,17 +5150,17 @@ SQL
 
 		## Get a list of all functions
 		if (! exists $filter{nofunctions}) {
-			$SQL = q{SELECT quote_ident(nspname), quote_ident(proname), proargtypes, md5(prosrc), }
-				. q{proisstrict, proretset, provolatile }
-				. q{FROM pg_proc JOIN pg_namespace n ON (n.oid = pronamespace)};
+			$SQL = q{
+SELECT quote_ident(nspname) AS nspname, quote_ident(proname) AS proname, proargtypes, md5(prosrc) AS md,
+  proisstrict, proretset, provolatile
+FROM pg_proc
+JOIN pg_namespace n ON (n.oid = pronamespace)
+};
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				for my $line (split /\n/, $db->{slurp}) {
-					unless ($line =~ /^\s*(.+?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s+\| (.*?)\s*/gmo) {
-						warn "Query processing failed:\n$line\nfrom $SQL\n";
-						next;
-					}
-					my ($schema,$name,$args,$md5,$isstrict,$retset,$volatile) = ($1,$2,$3,$4,$5,$6,$7);
+				for my $r (@{$db->{slurp}}) {
+					my ($schema,$name,$args,$md5,$isstrict,$retset,$volatile) = @$r{
+						qw/ nspname proname proargtypes md proisstrict proretset provolatile /};
 					$args =~ s/ /,/g;
 					$args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
 					$args =~ s/^\s*(.*)\s*$/($1)/;
@@ -4929,12 +5179,8 @@ SQL
 			$SQL = q{SELECT lanname FROM pg_language};
 			$info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
 			for $db (@{$info->{db}}) {
-				for my $line (split /\n/, $db->{slurp}) {
-					unless ($line =~ /^\s*(\w+)\s*/gmo) {
-						warn "Query processing failed:\n$line\nfrom $SQL\n";
-						next;
-					}
-					$thing{$x}{language}{$1} = 1;
+				for my $r (@{$db->{slurp}}) {
+					$thing{$x}{language}{$r->{lanname}} = 1;
 				}
 			}
 		}
@@ -6015,44 +6261,49 @@ sub check_sequence {
 	(my $c = $critical) =~ s/\D//;
 
 	## Gather up all sequence names
-	my $SQL = q{SELECT DISTINCT ON (nspname, seqname) }.
-		q{nspname, seqname, quote_ident(nspname) || '.' || quote_ident(seqname), typname }.
-		# sequences by column dependency
-		q{FROM (SELECT depnsp.nspname, dep.relname as seqname, typname }.
-		q{FROM pg_depend }.
-		q{JOIN pg_class on classid = pg_class.oid }.
-		q{JOIN pg_class dep on dep.oid = objid }.
-		q{JOIN pg_namespace depnsp on depnsp.oid= dep.relnamespace }.
-		q{JOIN pg_class refclass on refclass.oid = refclassid }.
-		q{JOIN pg_class ref on ref.oid = refobjid }.
-		q{JOIN pg_namespace refnsp on refnsp.oid = ref.relnamespace }.
-		q{JOIN pg_attribute refattr ON (refobjid, refobjsubid) = (refattr.attrelid, refattr.attnum) }.
-		q{JOIN pg_type ON refattr.atttypid = pg_type.oid }.
-		q{WHERE pg_class.relname = 'pg_class'  }.
-		q{AND refclass.relname = 'pg_class' }.
-		q{AND dep.relkind in ('S') }.
-		q{AND ref.relkind in ('r') }.
-		q{AND typname IN ('int2', 'int4', 'int8') }.
-		q{UNION ALL }.
-		# sequences by parsing DEFAULT constraints
-		q{SELECT nspname, seq.relname, typname }.
-		q{FROM pg_attrdef }.
-		q{JOIN pg_attribute ON (attrelid, attnum) = (adrelid, adnum) }.
-		q{JOIN pg_type on pg_type.oid = atttypid }.
-		q{JOIN pg_class rel ON rel.oid = attrelid }.
-		q{JOIN pg_class seq ON seq.relname = regexp_replace(adsrc, $re$^nextval\('(.+?)'::regclass\)$$re$, $$\1$$) }. ## no critic
-		q{AND seq.relnamespace = rel.relnamespace }.
-		q{JOIN pg_namespace nsp ON nsp.oid = seq.relnamespace }.
-		q{WHERE adsrc ~ 'nextval' AND seq.relkind = 'S' AND typname IN ('int2', 'int4', 'int8') }.
-		q{UNION ALL }.
-		# all sequences, to catch those whose associations are not obviously recorded in pg_catalog
-		q{SELECT nspname, relname, CAST('int8' AS TEXT) }.
-		q{FROM pg_class }.
-		q{JOIN pg_namespace nsp ON nsp.oid = relnamespace }.
-		q{WHERE relkind = 'S') AS seqs }.
-		q{ORDER BY nspname, seqname, typname};
+	my $SQL = q{
+SELECT DISTINCT ON (nspname, seqname) nspname, seqname,
+  quote_ident(nspname) || '.' || quote_ident(seqname) AS safename, typname
+  -- sequences by column dependency
+FROM (
+ SELECT depnsp.nspname, dep.relname as seqname, typname
+ FROM pg_depend
+ JOIN pg_class on classid = pg_class.oid
+ JOIN pg_class dep on dep.oid = objid
+ JOIN pg_namespace depnsp on depnsp.oid= dep.relnamespace
+ JOIN pg_class refclass on refclass.oid = refclassid
+ JOIN pg_class ref on ref.oid = refobjid
+ JOIN pg_namespace refnsp on refnsp.oid = ref.relnamespace
+ JOIN pg_attribute refattr ON (refobjid, refobjsubid) = (refattr.attrelid, refattr.attnum)
+ JOIN pg_type ON refattr.atttypid = pg_type.oid
+ WHERE pg_class.relname = 'pg_class'
+ AND refclass.relname = 'pg_class'
+ AND dep.relkind in ('S')
+ AND ref.relkind in ('r')
+ AND typname IN ('int2', 'int4', 'int8')
+ UNION ALL
+ --sequences by parsing DEFAULT constraints
+ SELECT nspname, seq.relname, typname
+ FROM pg_attrdef
+ JOIN pg_attribute ON (attrelid, attnum) = (adrelid, adnum)
+ JOIN pg_type on pg_type.oid = atttypid
+ JOIN pg_class rel ON rel.oid = attrelid
+ JOIN pg_class seq ON seq.relname = regexp_replace(adsrc, $re$^nextval\('(.+?)'::regclass\)$$re$, $$\1$$)
+ AND seq.relnamespace = rel.relnamespace
+ JOIN pg_namespace nsp ON nsp.oid = seq.relnamespace
+ WHERE adsrc ~ 'nextval' AND seq.relkind = 'S' AND typname IN ('int2', 'int4', 'int8')
+ UNION ALL
+ -- all sequences, to catch those whose associations are not obviously recorded in pg_catalog
+ SELECT nspname, relname, CAST('int8' AS TEXT)
+ FROM pg_class
+ JOIN pg_namespace nsp ON nsp.oid = relnamespace
+ WHERE relkind = 'S'
+) AS seqs
+ORDER BY nspname, seqname, typname
+};
 
 	my $info = run_command($SQL, {regex => qr{\w}, emptyok => 1} );
+
 	my $MAXINT2 = 32767;
 	my $MAXINT4 = 2147483647;
 	my $MAXINT8 = 9223372036854775807;
@@ -6065,20 +6316,26 @@ sub check_sequence {
 		my %seqinfo;
 		my %seqperf;
 		my $multidb = @{$info->{db}} > 1 ? "$db->{dbname}." : '';
-		SLURP: while ($db->{slurp} =~ /\s*(.+?)\s+\| (.+?)\s+\| (.+?)\s+\| (.+?)\s*$/gsm) {
-			my ($schema, $seq, $seqname, $typename) = ($1,$2,$3,$4);
+		for my $r (@{$db->{slurp}}) {
+			my ($schema, $seq, $seqname, $typename) = @$r{qw/ nspname seqname safename typname /};
 			next if skip_item($seq);
 			my $maxValue = $typename eq 'int2' ? $MAXINT2 : $typename eq 'int4' ? $MAXINT4 : $MAXINT8;
-			$SQL = q{SELECT last_value, slots, used, ROUND(used/slots*100) AS percent, }.
-				q{CASE WHEN slots < used THEN 0 ELSE slots - used END AS numleft FROM }.
-				qq{ (SELECT last_value, CEIL((LEAST(max_value, $maxValue)-min_value::numeric+1)/increment_by::NUMERIC) AS slots,}.
-				qq{ CEIL((last_value-min_value::numeric+1)/increment_by::NUMERIC) AS used FROM $seqname) foo};
+			$SQL = qq{
+SELECT last_value, slots, used, ROUND(used/slots*100) AS percent,
+  CASE WHEN slots < used THEN 0 ELSE slots - used END AS numleft
+FROM (
+ SELECT last_value,
+  CEIL((LEAST(max_value, $maxValue)-min_value::numeric+1)/increment_by::NUMERIC) AS slots,
+  CEIL((last_value-min_value::numeric+1)/increment_by::NUMERIC) AS used
+FROM $seqname) foo
+};
 
 			my $seqinfo = run_command($SQL, { target => $db });
-			if (!defined $seqinfo->{db}[0] or $seqinfo->{db}[0]{slurp} !~ /(\d+)\D+(\d+)\D+(\d+)\D+(\d+)\D+(\d+)/) {
+			my $r2 = $seqinfo->{db}[0]{slurp}[0];
+			my ($last, $slots, $used, $percent, $left) = @$r2{qw/ last_value slots used percent numleft / };
+			if (! defined $last) {
 				ndie msg('seq-die', $seqname);
 			}
-			my ($last, $slots, $used, $percent, $left) = ($1,$2,$3,$4,$5);
 			my $msg = msg('seq-msg', $seqname, $percent, $left);
 			$seqperf{$percent}{$seqname} = [$left, " $multidb$seqname=$percent|$slots|$used|$left"];
 			if ($percent >= $maxp) {
@@ -6129,404 +6386,66 @@ sub check_sequence {
 } ## end of check_sequence
 
 
-sub check_checkpoint {
+sub check_settings_checksum {
 
-	## Checks how long in seconds since the last checkpoint on a WAL slave
+	## Verify the checksum of all settings
 	## Supports: Nagios, MRTG
-	## Warning and critical are seconds
-	## Requires $ENV{PGDATA} or --datadir
+	## Not that this will vary from user to user due to ALTER USER
+	## and because superusers see additional settings
+	## One of warning or critical must be given (but not both)
+	## It should run one time to find out the expected checksum
+	## You can use --critical="0" to find out the checksum
+	## You can include or exclude settings as well
+	## Example:
+	##  check_postgres_settings_checksum --critical="4e7ba68eb88915d3d1a36b2009da4acd"
 
-	my ($warning, $critical) = validate_range
-		({
-		  type              => 'time',
-		  leastone          => 1,
-		  forcemrtg         => 1,
-	});
+	my ($warning, $critical) = validate_range({type => 'checksum', onlyone => 1});
 
-	## Find the data directory, make sure it exists
-	my $dir = $opt{datadir} || $ENV{PGDATA};
-
-	if (!defined $dir or ! length $dir) {
-		ndie msg('checkpoint-nodir');
-	}
-
-	if (! -d $dir) {
-		ndie msg('checkpoint-baddir', $dir);
-	}
-
-	$db->{host} = '<none>';
-
-	## Run pg_controldata, grab the time
-	my $pgc
-		= $ENV{PGCONTROLDATA} ? $ENV{PGCONTROLDATA}
-		: $ENV{PGBINDIR}      ? "$ENV{PGBINDIR}/pg_controldata"
-		:                       'pg_controldata';
-	$COM = qq{$pgc "$dir"};
 	eval {
-		$res = qx{$COM 2>&1};
+		require Digest::MD5;
 	};
 	if ($@) {
-		ndie msg('checkpoint-nosys', $@);
+		ndie msg('checksum-nomd');
 	}
 
-	## If the path is echoed back, we most likely have an invalid data dir
-	if ($res =~ /$dir/) {
-		ndie msg('checkpoint-baddir2', $dir);
-	}
+	$SQL = 'SELECT name, setting FROM pg_settings ORDER BY name';
+	my $info = run_command($SQL, { regex => qr[client_encoding] });
 
-	if ($res =~ /WARNING: Calculated CRC checksum/) {
-		ndie msg('checkpoint-badver');
-	}
-	if ($res !~ /^pg_control.+\d+/) {
-		ndie msg('checkpoint-badver2');
-	}
-
-	my $regex = msg('checkpoint-po');
-	if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
-		## Just in case, check the English one as well
-		$regex = msg_en('checkpoint-po');
-		if ($res !~ /$regex\s*(.+)/) {
-			ndie msg('checkpoint-noregex', $dir);
-		}
-	}
-	my $last = $1;
-
-	## Convert to number of seconds
-	eval {
-		require Date::Parse;
-		import Date::Parse;
-	};
-	if ($@) {
-		ndie msg('checkpoint-nodp');
-	}
-	my $dt = str2time($last);
-	if ($dt !~ /^\d+$/) {
-		ndie msg('checkpoint-noparse', $last);
-	}
-	my $diff = $db->{perf} = time - $dt;
-	my $msg = $diff==1 ? msg('checkpoint-ok') : msg('checkpoint-ok2', $diff);
-
-	if ($MRTG) {
-		do_mrtg({one => $diff, msg => $msg});
-	}
-
-	if (length $critical and $diff >= $critical) {
-		add_critical $msg;
-		return;
-	}
-
-	if (length $warning and $diff >= $warning) {
-		add_warning $msg;
-		return;
-	}
-
-	add_ok $msg;
-
-	return;
-
-} ## end of check_checkpoint
-
-
-sub check_disabled_triggers {
-
-	## Checks how many disabled triggers are in the database
-	## Supports: Nagios, MRTG
-	## Warning and critical are integers, defaults to 1
-
-	my ($warning, $critical) = validate_range
-		({
-		  type              => 'positive integer',
-		  default_warning   => 1,
-		  default_critical  => 1,
-		  forcemrtg         => 1,
-	});
-
-	$SQL = q{SELECT tgrelid::regclass, tgname, tgenabled FROM pg_trigger WHERE tgenabled IS NOT TRUE ORDER BY tgname};
-	my $SQL83 = q{SELECT tgrelid::regclass, tgname, tgenabled FROM pg_trigger WHERE tgenabled = 'D' ORDER BY tgname};
-	my $SQLOLD = q{SELECT 'FAIL'};
-
-	my $info = run_command($SQL, { version => [ ">8.2 $SQL83", "<8.1 $SQLOLD" ] } );
-
-	my $count = 0;
-	my $dislis = '';
-	for (@{$info->{db}}) {
-		$db = $_;
-
-		if ($db->{slurp} =~ /^\s*FAIL/) {
-			ndie msg('die-action-version', $action, '8.1', $db->{version});
-		}
-		while ($db->{slurp} =~ / (.+?)\s+\| (.+?)\s+\| (\w+)/gsm) {
-			my ($table,$trigger,$setting) = ($1,$2,$3);
-			$count++;
-			$dislis .= " $table=>$trigger";
-		}
-		if ($MRTG) {
-			do_mrtg({one => $count});
-			return;
-		}
-	}
-
-	my $msg = msg('trigger-msg', "$count$dislis");
-
-	if ($critical and $count >= $critical) {
-		add_critical $msg;
-	}
-	elsif ($warning and $count >= $warning) {
-		add_warning $msg;
-	}
-	else {
-		add_ok $msg;
-	}
-
-	return;
-
-} ## end of check_disabled_triggers
-
-
-sub check_new_version_cp {
-
-	## Check if a new version of check_postgres.pl is available
-	## You probably don't want to run this one every five minutes. :)
-
-	my $site = 'bucardo.org';
-	my $path = 'check_postgres/latest_version.txt';
-	my $url = "http://$site/$path";
-	my ($newver,$maj,$rev,$message) = ('','','','');
-	my $versionre = qr{((\d+\.\d+)\.(\d+))\s+(.+)};
-
-	for my $meth (@get_methods) {
-		eval {
-			my $COM = "$meth $url";
-			$VERBOSE >= 1 and warn "TRYING: $COM\n";
-			my $info = qx{$COM 2>/dev/null};
-			if ($info =~ $versionre) {
-				($newver,$maj,$rev,$message) = ($1,$2,$3,$4);
-			}
-			$VERBOSE >=1 and warn "SET version to $newver\n";
-		};
-		last if length $newver;
-	}
-
-	if (! length $newver) {
-		add_unknown msg('new-cp-fail');
-		return;
-	}
-
-	if ($newver eq $VERSION) {
-		add_ok msg('new-cp-ok', $newver);
-		return;
-	}
-
-	if ($VERSION !~ /(\d+\.\d+)\.(\d+)/) {
-		add_unknown msg('new-cp-fail');
-		return;
-	}
-
-	$nohost = $message;
-	my ($cmaj,$crev) = ($1,$2);
-	if ($cmaj eq $maj) {
-		add_warning msg('new-cp-warn', $newver, $VERSION);
-	}
-	else {
-		add_critical msg('new-cp-warn', $newver, $VERSION);
-	}
-	return;
-
-} ## end of check_new_version_cp
-
-
-sub check_new_version_pg {
-
-	## Check if a new version of Postgres is available
-	## Note that we only check the revision
-	## This also depends highly on the web page at postgresql.org not changing format
-
-	my $url = 'http://www.postgresql.org/versions.rss';
-	my $versionre = qr{<title>(\d+)\.(\d+)\.(\d+)</title>};
-
-	my %newver;
-	for my $meth (@get_methods) {
-		eval {
-			my $COM = "$meth $url";
-			$VERBOSE >= 1 and warn "TRYING: $COM\n";
-			my $info = qx{$COM 2>/dev/null};
-			while ($info =~ /$versionre/g) {
-				my ($maj,$min,$rev) = ($1,$2,$3);
-				$newver{"$maj.$min"} = $rev;
-			}
-		};
-		last if %newver;
-	}
-
-	my $info = run_command('SELECT version()');
-
-	## Parse it out and return our information
 	for $db (@{$info->{db}}) {
-		if ($db->{slurp} !~ /PostgreSQL (\S+)/o) { ## no critic (ProhibitUnusedCapture)
-			add_unknown msg('invalid-query', $db->{slurp});
-			next;
+
+		my $newstring = '';
+		for my $r (@{$db->{slurp}}) {
+			next SLURP if skip_item($r->{name});
+			$newstring .= "$r->{name} $r->{setting}\n";
 		}
-		my $currver = $1;
-		if ($currver !~ /(\d+\.\d+)\.(\d+)/) {
-			add_unknown msg('new-pg-badver', $currver);
-			next;
+		if (! length $newstring) {
+			add_unknown msg('no-match-set');
 		}
-		my ($ver,$rev) = ($1,$2);
-		if (! exists $newver{$ver}) {
-			add_unknown msg('new-pg-badver2', $ver);
-			next;
+
+		my $checksum = Digest::MD5::md5_hex($newstring);
+
+		my $msg = msg('checksum-msg', $checksum);
+		if ($MRTG) {
+			$opt{mrtg} or ndie msg('checksum-nomrtg');
+			do_mrtg({one => $opt{mrtg} eq $checksum ? 1 : 0, msg => $checksum});
 		}
-		my $newrev = $newver{$ver};
-		if ($newrev > $rev) {
-			add_warning msg('new-pg-big', "$ver.$newrev", $currver);
+		if ($critical and $critical ne $checksum) {
+			add_critical $msg;
 		}
-		elsif ($newrev < $rev) {
-			add_critical msg('new-pg-small', "$ver.$newrev", $currver);
+		elsif ($warning and $warning ne $checksum) {
+			add_warning $msg;
+		}
+		elsif (!$critical and !$warning) {
+			add_unknown $msg;
 		}
 		else {
-			add_ok msg('new-pg-match', $currver);
+			add_ok $msg;
 		}
 	}
 
 	return;
 
-} ## end of check_new_version_pg
-
-
-sub check_new_version_bc {
-
-	## Check if a new version of Bucardo is available
-
-	my $site = 'bucardo.org';
-	my $path = 'bucardo/latest_version.txt';
-	my $url = "http://$site/$path";
-	my ($newver,$maj,$rev,$message) = ('','','','');
-	my $versionre = qr{((\d+\.\d+)\.(\d+))\s+(.+)};
-
-	for my $meth (@get_methods) {
-		eval {
-			my $COM = "$meth $url";
-			$VERBOSE >= 1 and warn "TRYING: $COM\n";
-			my $info = qx{$COM 2>/dev/null};
-			if ($info =~ $versionre) {
-				($newver,$maj,$rev,$message) = ($1,$2,$3,$4);
-			}
-			$VERBOSE >=1 and warn "SET version to $newver\n";
-		};
-		last if length $newver;
-	}
-
-	if (! length $newver) {
-		add_unknown msg('new-bc-fail');
-		return;
-	}
-
-	my $BCVERSION = '?';
-	eval {
-		$BCVERSION = qx{bucardo_ctl --version 2>&1};
-	};
-	if ($@ or !$BCVERSION) {
-		add_unknown msg('new-bc-badver');
-		return;
-	}
-
-	if ($BCVERSION !~ s/.*((\d+\.\d+)\.(\d+)).*/$1/s) {
-		add_unknown msg('new-bc-fail');
-		return;
-	}
-	my ($cmaj,$crev) = ($2,$3);
-
-	if ($newver eq $BCVERSION) {
-		add_ok msg('new-bc-ok', $newver);
-		return;
-	}
-
-	$nohost = $message;
-	if ($cmaj eq $maj) {
-		add_critical msg('new-bc-warn', $newver, $BCVERSION);
-	}
-	else {
-		add_warning msg('new-bc-warn', $newver, $BCVERSION);
-	}
-	return;
-
-} ## end of check_new_version_bc
-
-
-sub check_prepared_txns {
-
-	## Checks age of prepared transactions
-	## Most installations probably want no prepared_transactions
-	## Supports: Nagios, MRTG
-
-	my ($warning, $critical) = validate_range
-		({
-		  type              => 'seconds',
-		  default_warning   => '1',
-		  default_critical  => '30',
-		});
-
-	my $SQL = q{SELECT database, ROUND(EXTRACT(epoch FROM now()-prepared)), prepared}.
-		q{ FROM pg_prepared_xacts ORDER BY prepared ASC};
-
-	my $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
-
-	my $msg = msg('preptxn-none');
-	my $found = 0;
-	for $db (@{$info->{db}}) {
-		my (@crit,@warn,@ok);
-		my ($maxage,$maxdb) = (0,''); ## used by MRTG only
-		SLURP: while ($db->{slurp} =~ /\s*(.+?) \|\s+(\d+) \|\s+(.+?)$/gsm) {
-			my ($dbname,$age,$date) = ($1,$2,$3);
-			$found = 1 if ! $found;
-			next SLURP if skip_item($dbname);
-			$found = 2;
-			if ($MRTG) {
-				if ($age > $maxage) {
-					$maxdb = $dbname;
-					$maxage = $age;
-				}
-				elsif ($age == $maxage) {
-					$maxdb .= sprintf "%s$dbname", length $maxdb ? ' | ' : '';
-				}
-				next;
-			}
-
-			$msg = "$dbname=$date ($age)";
-			$db->{perf} .= " $msg";
-			if (length $critical and $age >= $critical) {
-				push @crit => $msg;
-			}
-			elsif (length $warning and $age >= $warning) {
-				push @warn => $msg;
-			}
-			else {
-				push @ok => $msg;
-			}
-		}
-		if ($MRTG) {
-			do_mrtg({one => $maxage, msg => $maxdb});
-		}
-		elsif (0 == $found) {
-			add_ok msg('preptxn-none');
-		}
-		elsif (1 == $found) {
-			add_unknown msg('no-match-db');
-		}
-		elsif (@crit) {
-			add_critical join ' ' => @crit;
-		}
-		elsif (@warn) {
-			add_warning join ' ' => @warn;
-		}
-		else {
-			add_ok join ' ' => @ok;
-		}
-	}
-
-	return;
-
-} ## end of check_prepared_txns
+} ## end of check_settings_checksum
 
 
 sub check_slony_status {
@@ -6612,114 +6531,385 @@ JOIN $schema.sl_node n2 ON (n2.no_id=st_received)};
 
 } ## end of check_slony_status
 
+sub check_timesync {
 
-sub show_dbstats {
+	## Compare local time to the database time
+	## Supports: Nagios, MRTG
+	## Warning and critical are given in number of seconds difference
 
-	## Returns values from the pg_stat_database view
-	## Supports: Cacti
-	## Assumes psql and target are the same version for the 8.3 check
+	my ($warning,$critical) = validate_range
+		({
+		  type             => 'seconds',
+		  default_warning  => 2,
+		  default_critical => 5,
+		  });
+
+	$SQL = q{SELECT round(extract(epoch FROM now())) AS epok, TO_CHAR(now(),'YYYY-MM-DD HH24:MI:SS') AS pretti};
+	my $info = run_command($SQL);
+	my $localepoch = time;
+	my @l = localtime;
+
+	for $db (@{$info->{db}}) {
+		my ($pgepoch,$pgpretty) = @{$db->{slurp}->[0]}{qw/ epok pretti /};
+
+		my $diff = abs($pgepoch - $localepoch);
+		if ($MRTG) {
+			$stats{$db->{dbname}} = $diff;
+			next;
+		}
+		$db->{perf} = msg('timesync-diff', $diff);
+		my $localpretty = sprintf '%d-%02d-%02d %02d:%02d:%02d', $l[5]+1900, $l[4]+1, $l[3],$l[2],$l[1],$l[0];
+		my $msg = msg('timesync-msg', $diff, $pgpretty, $localpretty);
+
+		if (length $critical and $diff >= $critical) {
+			add_critical $msg;
+		}
+		elsif (length $warning and $diff >= $warning) {
+			add_warning $msg;
+		}
+		else {
+			add_ok $msg;
+		}
+	}
+	return;
+
+} ## end of check_timesync
+
+
+sub check_txn_idle {
+
+	## Check the length of "idle in transaction" connections
+	## Supports: Nagios, MRTG
+	## It makes no sense to run this more than once on the same cluster
+	## Warning and critical are time limits - defaults to seconds
+	## Valid units: s[econd], m[inute], h[our], d[ay]
+	## All above may be written as plural as well (e.g. "2 hours")
+	## Can also ignore databases with exclude and limit with include
+	## Limit to a specific user with the includeuser option
+	## Exclude users with the excludeuser option
 
 	my ($warning, $critical) = validate_range
 		({
-		  type => 'cacti',
-	});
+		type => 'time',
+		});
 
-	my $SQL = q{SELECT datname,numbackends,xact_commit,xact_rollback,blks_read,blks_hit};
-	if ($opt{dbname}) {
-		$SQL .= q{,(SELECT SUM(idx_scan) FROM pg_stat_user_indexes) AS idx_scan};
-		$SQL .= q{,COALESCE((SELECT SUM(idx_tup_read) FROM pg_stat_user_indexes),0) AS idx_tup_read};
-		$SQL .= q{,COALESCE((SELECT SUM(idx_tup_fetch) FROM pg_stat_user_indexes),0) AS idx_tup_fetch};
-		$SQL .= q{,COALESCE((SELECT SUM(idx_blks_read) FROM pg_statio_user_indexes),0) AS idx_blks_read};
-		$SQL .= q{,COALESCE((SELECT SUM(idx_blks_hit) FROM pg_statio_user_indexes),0) AS idx_blks_hit};
-		$SQL .= q{,COALESCE((SELECT SUM(seq_scan) FROM pg_stat_user_tables),0) AS seq_scan};
-		$SQL .= q{,COALESCE((SELECT SUM(seq_tup_read) FROM pg_stat_user_tables),0) AS seq_tup_read};
-	}
-	$SQL .= q{ FROM pg_stat_database};
-	(my $SQL2 = $SQL) =~ s/AS seq_tup_read/AS seq_tup_read,tup_returned,tup_fetched,tup_inserted,tup_updated,tup_deleted/;
 
-	my $info = run_command($SQL, {regex => qr{\w}, version => [ ">8.2 $SQL2" ] } );
+	$SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) AS maxx }.
+		qq{FROM pg_stat_activity WHERE current_query = '<IDLE> in transaction'$USERWHERECLAUSE GROUP BY 1};
 
+	my $info = run_command($SQL, { emptyok => 1 } );
+
+	my $found = 0;
 	for $db (@{$info->{db}}) {
-		SLURP: for my $row (split /\n/ => $db->{slurp}) {
-			my @stats = split /\s*\|\s*/ => $row;
-			((defined($_) and length($_)) or $_ = 0) for @stats;
-			(my $dbname = shift @stats) =~ s/^\s*//;
-			next SLURP if skip_item($dbname);
-			## If dbnames were specififed, use those for filtering as well
-			if (@{$opt{dbname}}) {
-				my $keepit = 0;
-				for my $drow (@{$opt{dbname}}) {
-					for my $d (split /,/ => $drow) {
-						$d eq $dbname and $keepit = 1;
-					}
-				}
-				next SLURP unless $keepit;
-			}
-			my $template = 'backends:%d commits:%d rollbacks:%d read:%d hit:%d idxscan:%d idxtupread:%d idxtupfetch:%d idxblksread:%d idxblkshit:%d seqscan:%d seqtupread:%d ret:%d fetch:%d ins:%d upd:%d del:%d';
-			my $msg = sprintf "$template", @stats, (0,0,0,0,0,0,0,0,0,0,0,0,0);
-			print "$msg dbname:$dbname\n";
+		my $max = -1;
+		for my $r (@{$db->{slurp}}) {
+			$found++;
+			my ($dbname,$current) = ($r->{datname}, int $r->{maxx});
+			next if skip_item($dbname);
+			$max = $current if $current > $max;
 		}
-	}
-
-	exit 0;
-
-} ## end of show_dbstats
-
-
-sub check_pgbouncer_checksum {
-
-	## Verify the checksum of all pgbouncer settings
-	## Supports: Nagios, MRTG
-	## Not that the connection will be done on the pgbouncer database
-	## One of warning or critical must be given (but not both)
-	## It should run one time to find out the expected checksum
-	## You can use --critical="0" to find out the checksum
-	## You can include or exclude settings as well
-	## Example:
-	##  check_postgres_pgbouncer_checksum --critical="4e7ba68eb88915d3d1a36b2009da4acd"
-
-	my ($warning, $critical) = validate_range({type => 'checksum', onlyone => 1});
-
-	eval {
-		require Digest::MD5;
-	};
-	if ($@) {
-		ndie msg('checksum-nomd');
-	}
-
-	$SQL = 'SHOW CONFIG';
-	my $info = run_command($SQL, { regex => qr[log_pooler_errors] });
-
-	for $db (@{$info->{db}}) {
-
-		(my $string = $db->{slurp}) =~ s/\s+$/\n/;
-
-		my $newstring = '';
-		SLURP: for my $line (split /\n/ => $string) {
-			$line =~ /^\s*(\w+)/ or ndie msg('unknown-error');
-			my $name = $1;
-			next SLURP if skip_item($name);
-			$newstring .= "$line\n";
-		}
-		if (! length $newstring) {
-			add_unknown msg('no-match-set');
-		}
-
-		my $checksum = Digest::MD5::md5_hex($newstring);
-
-		my $msg = msg('checksum-msg', $checksum);
 		if ($MRTG) {
-			$opt{mrtg} or ndie msg('checksum-nomrtg');
-			do_mrtg({one => $opt{mrtg} eq $checksum ? 1 : 0, msg => $checksum});
+			$stats{$db->{dbname}} = $max;
+			next;
 		}
-		if ($critical and $critical ne $checksum) {
+		$db->{perf} .= msg('maxtime', $max);
+		if ($max < 0) {
+			add_unknown 'T-EXCLUDE-DB';
+			next;
+		}
+
+		my $msg = msg('txnidle-msg', $max);
+		if (length $critical and $max >= $critical) {
 			add_critical $msg;
 		}
-		elsif ($warning and $warning ne $checksum) {
+		elsif (length $warning and $max >= $warning) {
 			add_warning $msg;
 		}
-		elsif (!$critical and !$warning) {
-			add_unknown $msg;
+		else {
+			add_ok $msg;
+		}
+	}
+
+	## If no results, let's be paranoid and check their settings
+	if (!$found) {
+		if ($USERWHERECLAUSE) {
+			add_ok msg('no-match-user');
+		}
+		verify_version();
+	}
+
+	return;
+
+} ## end of check_txn_idle
+
+
+sub check_txn_time {
+
+	## Check the length of running transactions
+	## Supports: Nagios, MRTG
+	## It makes no sense to run this more than once on the same cluster
+	## Warning and critical are time limits - defaults to seconds
+	## Valid units: s[econd], m[inute], h[our], d[ay]
+	## All above may be written as plural as well (e.g. "2 hours")
+	## Can also ignore databases with exclude and limit with include
+	## Limit to a specific user with the includeuser option
+	## Exclude users with the excludeuser option
+
+	my ($warning, $critical) = validate_range
+		({
+		type => 'time',
+		});
+
+	$SQL = qq{
+SELECT
+ client_addr,
+ client_port,
+ procpid,
+ ROUND(EXTRACT(epoch FROM now()-xact_start)),
+ datname,
+ usename
+FROM pg_stat_activity
+WHERE xact_start IS NOT NULL $USERWHERECLAUSE
+};
+
+	my $info = run_command($SQL, { regex => qr{\d+ \|\s+\s+}, emptyok => 1 } );
+
+	$db = $info->{db}[0];
+	my $slurp = $db->{slurp};
+
+	if (! exists $db->{ok}) {
+		ndie msg('txntime-fail');
+	}
+
+	if ($slurp !~ /\w/ and $USERWHERECLAUSE) {
+		$stats{$db->{dbname}} = 0;
+		add_ok msg('no-match-user');
+		return;
+	}
+
+	## Default values for information gathered
+	my ($client_addr, $client_port, $procpid, $username, $maxtime, $maxdb) = ('0.0.0.0', 0, '?', 0, 0, '?');
+
+	## Read in and parse the psql output
+	for my $r (@{$db->{slurp}}) {
+		my ($add,$port,$pid,$time,$dbname,$user) = @$r{qw/ client_addr client_port procpid username maxtime maxdb /};
+		next if skip_item($dbname);
+
+		if ($time >= $maxtime) {
+			$maxtime     = $time;
+			$maxdb       = $dbname;
+			$client_addr = $add;
+			$client_port = $port;
+			$procpid     = $pid;
+			$username    = $user;
+		}
+	}
+
+	## Use of skip_item means we may have no matches
+	if ($maxdb eq '?') {
+		if ($USERWHERECLAUSE) { ## needed?
+			#add_unknown 'T-EXCLUDE-DB';
+			add_unknown msg('tttt-nomatch');
+		}
+		else {
+			add_ok msg('txntime-none');
+		}
+		return;
+	}
+
+	## Details on who the offender was
+	my $whodunit = sprintf q{%s:%s %s:%s%s%s %s:%s},
+		msg('database'),
+		$maxdb,
+		msg('PID'),
+		$procpid,
+		$client_port < 1 ? '' : (sprintf ' %s:%s', msg('port'), $client_port),
+		$client_addr eq '' ? '' : (sprintf ' %s:%s', msg('address'), $client_addr),
+		msg('username'),
+		$username;
+
+	$MRTG and do_mrtg({one => $maxtime, msg => $whodunit});
+
+	$db->{perf} .= sprintf q{'%s'=%s;%s;%s},
+		$whodunit,
+		$maxtime,
+		$warning,
+		$critical;
+
+	my $msg = sprintf '%s (%s)', msg('qtime-msg', $maxtime), $whodunit;
+
+	if (length $critical and $maxtime >= $critical) {
+		add_critical $msg;
+	}
+	elsif (length $warning and $maxtime >= $warning) {
+		add_warning $msg;
+	}
+	else {
+		add_ok $msg;
+	}
+
+	return;
+
+} ## end of check_txn_time
+
+
+sub check_txn_wraparound {
+
+	## Check how close to transaction wraparound we are on all databases
+	## Supports: Nagios, MRTG
+	## Warning and critical are the number of transactions performed
+	## Thus, anything *over* that number will trip the alert
+	## See: http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND
+	## It makes no sense to run this more than once on the same cluster
+
+	my ($warning, $critical) = validate_range
+		({
+		  type             => 'positive integer',
+		  default_warning  => 1_300_000_000,
+		  default_critical => 1_400_000_000,
+		  });
+
+	if ($warning and $warning >= 2_000_000_000) {
+		ndie msg('txnwrap-wbig');
+	}
+	if ($critical and $critical >= 2_000_000_000) {
+		ndie msg('txnwrap-cbig');
+	}
+
+	$SQL = q{SELECT datname, age(datfrozenxid) AS age FROM pg_database WHERE datallowconn ORDER BY 1, 2};
+	my $info = run_command($SQL, { regex => qr[\w+\s+\|\s+\d+] } );
+
+	my ($mrtgmax,$mrtgmsg) = (0,'?');
+	for $db (@{$info->{db}}) {
+		my ($max,$msg) = (0,'?');
+		for my $r (@{$db->{slurp}}) {
+			my ($dbname,$dbtxns) = ($r->{datname},$r->{age});
+			$db->{perf} .= " '$dbname'=$dbtxns;";
+			$db->{perf} .= $warning if length $warning;
+			$db->{perf} .= ';';
+			$db->{perf} .= $critical if length $critical;
+			$db->{perf} .= ';0;2000000000';
+			next SLURP if skip_item($dbname);
+			if ($dbtxns > $max) {
+				$max = $dbtxns;
+				$msg = qq{$dbname: $dbtxns};
+				if ($dbtxns > $mrtgmax) {
+					$mrtgmax = $dbtxns;
+					$mrtgmsg = "DB: $dbname";
+				}
+			}
+		}
+		if (length $critical and $max >= $critical) {
+			add_critical $msg;
+		}
+		elsif (length $warning and $max >= $warning) {
+			add_warning $msg;
+		}
+		else {
+			add_ok $msg;
+		}
+	}
+	$MRTG and do_mrtg({one => $mrtgmax, msg => $mrtgmsg});
+
+	return;
+
+} ## end of check_txn_wraparound
+
+
+sub check_version {
+
+	## Compare version with what we think it should be
+	## Supports: Nagios, MRTG
+	## Warning and critical are the major and minor (e.g. 8.3)
+	## or the major, minor, and revision (e.g. 8.2.4 or even 8.3beta4)
+
+	if ($MRTG) {
+		if (!exists $opt{mrtg} or $opt{mrtg} !~ /^\d+\.\d+/) {
+			ndie msg('version-badmrtg');
+		}
+		if ($opt{mrtg} =~ /^\d+\.\d+$/) {
+			$opt{critical} = $opt{mrtg};
+		}
+		else {
+			$opt{warning} = $opt{mrtg};
+		}
+	}
+
+	my ($warning, $critical) = validate_range({type => 'version', forcemrtg => 1});
+
+	my ($warnfull, $critfull) = (($warning =~ /^\d+\.\d+$/ ? 0 : 1),($critical =~ /^\d+\.\d+$/ ? 0 : 1));
+
+	my $info = run_command('SELECT version() AS version');
+
+	for $db (@{$info->{db}}) {
+		my $row = $db->{slurp}[0];
+		if ($row->{version} !~ /PostgreSQL ((\d+\.\d+)(\w+|\.\d+))/o) {
+			add_unknown msg('invalid-query', $row->{version});
+			next;
+		}
+		my ($full,$version,$revision) = ($1,$2,$3||'?');
+		$revision =~ s/^\.//;
+
+		my $ok = 1;
+
+		if (length $critical) {
+			if (($critfull and $critical ne $full)
+				or (!$critfull and $critical ne $version)) {
+				$MRTG and do_mrtg({one => 0, msg => $full});
+				add_critical msg('version-fail', $full, $critical);
+				$ok = 0;
+			}
+		}
+		elsif (length $warning) {
+			if (($warnfull and $warning ne $full)
+				or (!$warnfull and $warning ne $version)) {
+				$MRTG and do_mrtg({one => 0, msg => $full});
+				add_warning msg('version-fail', $full, $warning);
+				$ok = 0;
+			}
+		}
+		if ($ok) {
+			$MRTG and do_mrtg({one => 1, msg => $full});
+			add_ok msg('version-ok', $full);
+		}
+	}
+
+	return;
+
+} ## end of check_version
+
+
+sub check_wal_files {
+
+	## Check on the number of WAL files in use
+	## Supports: Nagios, MRTG
+	## Must run as a superuser
+	## Critical and warning are the number of files
+	## Example: --critical=40
+
+	my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
+
+	## Figure out where the pg_xlog directory is
+	$SQL = q{SELECT count(*) AS count FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$'}; ## no critic (RequireInterpolationOfMetachars)
+
+	my $info = run_command($SQL, {regex => qr[\d] });
+
+	my $found = 0;
+	for $db (@{$info->{db}}) {
+		my $r = $db->{slurp}[0];
+		my $numfiles = $r->{count};
+		if ($MRTG) {
+			$stats{$db->{dbname}} = $numfiles;
+			$statsmsg{$db->{dbname}} = '';
+			next;
+		}
+		my $msg = qq{$numfiles};
+		$db->{perf} .= " '$db->{host}'=$numfiles;$warning;$critical";
+		if (length $critical and $numfiles > $critical) {
+			add_critical $msg;
+		}
+		elsif (length $warning and $numfiles > $warning) {
+			add_warning $msg;
 		}
 		else {
 			add_ok $msg;
@@ -6728,7 +6918,7 @@ sub check_pgbouncer_checksum {
 
 	return;
 
-} ## end of check_pgbouncer_checksum
+} ## end of check_wal_files
 
 
 =pod
@@ -7179,7 +7369,8 @@ For MRTG output, simply outputs a 1 (good connection) or a 0 (bad connection) on
 (C<symlink: check_postgres_custom_query>) Runs a custom query of your choosing, and parses the results. The query itself is passed in through 
 the C<custom_query> argument, and should be kept as simple as possible. If at all possible, wrap it in 
 a view or a function to keep things easier to manage. The query should return one or two columns: the first 
-is the result that will be checked, and the second is any performance data you want sent.
+is the result that will be checked, and the second is any performance data you want sent. They must be returned 
+as columns named I<result> and I<data>.
 
 At least one warning or critical argument must be specified. What these are set to depends on the type of 
 query you are running. There are four types of custom_queries that can be run, specified by the C<valtype> 
