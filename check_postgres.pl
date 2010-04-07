@@ -6470,43 +6470,41 @@ sub check_slony_status {
 	my $schema = $opt{schema} || '';
 
 	if (!$schema) {
-		$SQL = q{SELECT quote_ident(nspname) FROM pg_namespace WHERE oid = }.
+		$SQL = q{SELECT quote_ident(nspname) AS nspname FROM pg_namespace WHERE oid = }.
 			   q{(SELECT relnamespace FROM pg_class WHERE relkind = 'v' AND relname = 'sl_status' LIMIT 1)};
 		my $res = run_command($SQL);
-		if ($res->{db}[0]{slurp} =~ /^\s(\w.*?)\s*$/) {
-			$schema = $1;
-		}
-		else {
+		if (! defined $res->{db}[0]{slurp}[0]{nspname}) {
 			add_unknown msg('slony-noschema');
 			return;
 		}
+		$schema = $res->{db}[0]{slurp}[0]{nspname};
 	}
 
 	my $SQL =
 qq{SELECT
- ROUND(EXTRACT(epoch FROM st_lag_time)),
+ ROUND(EXTRACT(epoch FROM st_lag_time)) AS lagtime,
  st_origin,
  st_received,
- current_database(),
- COALESCE(n1.no_comment, ''),
- COALESCE(n2.no_comment, '')
+ current_database() AS cd,
+ COALESCE(n1.no_comment, '') AS com1,
+ COALESCE(n2.no_comment, '') AS com2
 FROM $schema.sl_status
 JOIN $schema.sl_node n1 ON (n1.no_id=st_origin)
 JOIN $schema.sl_node n2 ON (n2.no_id=st_received)};
 
-	my $info = run_command($SQL, {regex => qr[\d+] } );
+	my $info = run_command($SQL);
 	$db = $info->{db}[0];
-	if ($db->{slurp} !~ /^\s*\d+/) {
+	if (! defined $db->{slurp}[0]{lagtime}) {
 		add_unknown msg('slony-nonumber');
 		return;
 	}
 	my $maxlagtime = 0;
 	my @perf;
-	for my $row (split /\n/ => $db->{slurp}) {
-		if ($row !~ /(\d+) \| +(\d+) \| +(\d+) \| (.*?) +\| (.*?) +\| (.+)/) {
+	for my $r (@{$db->{slurp}}) {
+		if (! defined $r->{lagtime}) {
 			add_unknown msg('slony-noparse');
 		}
-		my ($lag,$from,$to,$dbname,$fromc,$toc) = ($1,$2,$3,$4,$5,$6);
+		my ($lag,$from,$to,$dbname,$fromc,$toc) = @$r{qw/ lagtime st_origin st_received cd com1 com2/};
 		$maxlagtime = $lag if $lag > $maxlagtime;
 		push @perf => [
 			       $lag,
