@@ -6611,12 +6611,12 @@ sub check_txn_idle {
 			$max = $current if $current > $max;
 		}
 		if ($MRTG) {
-			$stats{$db->{dbname}} = $max;
+			$stats{$db->{dbname}} = $max < 0 ? 0 : $max;
 			next;
 		}
 		$db->{perf} .= msg('maxtime', $max);
 		if ($max < 0) {
-			add_unknown 'T-EXCLUDE-DB';
+			add_unknown msg('txnidle-none');
 			next;
 		}
 
@@ -6710,7 +6710,6 @@ WHERE xact_start IS NOT NULL $USERWHERECLAUSE
 	## Use of skip_item means we may have no matches
 	if ($maxdb eq '?') {
 		if ($USERWHERECLAUSE) { ## needed?
-			#add_unknown 'T-EXCLUDE-DB';
 			add_unknown msg('tttt-nomatch');
 		}
 		else {
