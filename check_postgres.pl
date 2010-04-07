@@ -1786,12 +1786,7 @@ sub run_command {
 		my @args = ('-q', '-t');
 		if (defined $db->{dbservice} and length $db->{dbservice}) { ## XX Check for simple names
 			$db->{pname} = "service=$db->{dbservice}";
-			if ($psql_version >= 8.3) {
-				push @args, qq{service=$db->{dbservice}};
-			}
-			else {
-				$ENV{PGSERVICE} = $db->{dbservice};
-			}
+			$ENV{PGSERVICE} = $db->{dbservice};
 		}
 		else {
 			$db->{pname} = "port=$db->{port} host=$db->{host} db=$db->{dbname} user=$db->{dbuser}";
@@ -8456,6 +8451,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.15.0>
 
+  Use $ENV{PGSERVICE} instead of "service=" to prevent problems (Guillaume Lelarge)
   Add --man option to show the entire manual. (Andy Lester)
   Redo the internal run_command() sub to use -x and hashes instead of regexes.
   Fix error in custom logic (Andreas Mager)
