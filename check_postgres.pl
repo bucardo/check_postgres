@@ -5757,13 +5757,22 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
         }
         ## Check for a difference in schema/table/column/definition
         elsif ($cdef1 ne $cdef2) {
-            push @{$fail{colconstraints}{defdiff}} =>
-                [
-                    $name,
-                    $tname1, $cname1, $cdef1,
-                    $tname2, $cname2, $cdef2,
-                ];
-            $failcount++;
+			## It may be because 8.2 and earlier over-quoted things
+			## Just in case, we'll compare sans doubel quotes
+			(my $cdef11 = $cdef1) =~ s/"//g;
+			(my $cdef22 = $cdef2) =~ s/"//g;
+			if ($cdef11 eq $cdef22) {
+				$VERBOSE >= 1 and warn "Constraint $cname1 on $tname1 matched when quotes were removed\n";
+			}
+			else {
+				push @{$fail{colconstraints}{defdiff}} =>
+					[
+					 $name,
+					 $tname1, $cname1, $cdef1,
+					 $tname2, $cname2, $cdef2,
+					 ];
+				$failcount++;
+			}
         }
     }
 
@@ -8458,6 +8467,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Change the output of query_time to show pid,user,port, and address (Giles Westwood)
   Fix to show database properly when using slony_status (Guillaume Lelarge)
   Allow warning items for same_schema to be comma-separated (Guillaume Lelarge)
+  Constraints only varying by double quotes now match in same_schema.
 
 =item B<Version 2.14.3> (March 1, 2010)
 
