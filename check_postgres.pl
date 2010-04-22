@@ -5757,24 +5757,74 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
         }
         ## Check for a difference in schema/table/column/definition
         elsif ($cdef1 ne $cdef2) {
-			## It may be because 8.2 and earlier over-quoted things
-			## Just in case, we'll compare sans doubel quotes
-			(my $cdef11 = $cdef1) =~ s/"//g;
-			(my $cdef22 = $cdef2) =~ s/"//g;
-			if ($cdef11 eq $cdef22) {
-				$VERBOSE >= 1 and warn "Constraint $cname1 on $tname1 matched when quotes were removed\n";
+			## Constraints are written very differently according to the Postgres version
+			## We'll try to do some normalizing here
+			my %flatten;
+			for my $string ($cdef1, $cdef2) {
+			  FOO: while ($string =~ m{(\w+):?:?(\w[\w ]+)? = ANY \(ARRAY\[(.+?)\]:?:?(\w[\w ]+)?\[?\]?\)}g) {
+					my ($col,$type1,$array,$type2) = ($1,$2,$3,$4);
+					if (! defined $type1 or $type1 eq $type2) {
+						my @item;
+						for my $item (split /\s*,\s*/ => $array) {
+							last FOO if $item !~ m{('?.+?'?)::(\w[\w ]+)};
+							push @item => $1;
+							$type2 ||= $2;
+						}
+						my $t1 = defined $type1 ? ('::'.$type1) : '';
+						my $t2 = defined $type2 ? ('::'.$type2) : '';
+						$flatten{$array} = join ' OR ' => map { "$col$t1 = $_$t2" } @item;
+					}
+				}
+				$string =~ s{(OR \()?(\w+:?:?(?:\w[\w ]+)? = ANY \(ARRAY\[(.+?)\]:?:?(?:\w[\w ]+)?\[?\]?\)(\))?)}
+							{
+								my ($p1,$all,$array,$p2) = ($1,$2,$3,$4);
+								if (exists $flatten{$array}) {
+									if ($p1 and $p2) {
+										"OR $flatten{$array}";
+									}
+									elsif ($p2) {
+										"$flatten{$array})";
+									}
+									else {
+										$flatten{$array};
+									}
+								}
+								else {
+									$all;
+								}
+							}ge;
+
+				## Normalize any casting like int4('foobar'::text)
+				my %dtype = (
+							 'int2' => 'smallint',
+							 'int4' => 'integer',
+							 'int8' => 'bigint',
+							 'text' => 'text',
+							 );
+				my $dtype = join '|' => keys %dtype;
+				$string =~ s{($dtype)\((\w+)::($dtype)\)}{$2::$3::$dtype{$1}}g;
+
 			}
-			else {
-				push @{$fail{colconstraints}{defdiff}} =>
-					[
-					 $name,
-					 $tname1, $cname1, $cdef1,
-					 $tname2, $cname2, $cdef2,
-					 ];
-				$failcount++;
+			if ($cdef1 ne $cdef2) {
+				## It may be because 8.2 and earlier over-quoted things
+				## Just in case, we'll compare sans double quotes
+				(my $cdef11 = $cdef1) =~ s/"//g;
+				(my $cdef22 = $cdef2) =~ s/"//g;
+				if ($cdef11 eq $cdef22) {
+					$VERBOSE >= 1 and warn "Constraint $cname1 on $tname1 matched when quotes were removed\n";
+				}
+				else {
+					push @{$fail{colconstraints}{defdiff}} =>
+						[
+						 $name,
+						 $tname1, $cname1, $cdef1,
+						 $tname2, $cname2, $cdef2,
+						 ];
+					$failcount++;
+				}
 			}
-        }
-    }
+		}
+	}
 
     ## Compare languages
     for my $name (sort keys %{$thing{1}{language}}) {
@@ -8467,7 +8517,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Change the output of query_time to show pid,user,port, and address (Giles Westwood)
   Fix to show database properly when using slony_status (Guillaume Lelarge)
   Allow warning items for same_schema to be comma-separated (Guillaume Lelarge)
-  Constraints only varying by double quotes now match in same_schema.
+  Constraint definitions across Postgres versions match better in same_schema.
 
 =item B<Version 2.14.3> (March 1, 2010)
 
