@@ -1,4 +1,4 @@
-#!/usr/bin/perl -- -*-cperl-*-
+#!/usr/bin/perl -- -*-mode:cperl; indent-tabs-mode: nil-*-
 
 ## Perform many different checks against Postgres databases.
 ## Designed primarily as a Nagios script.
@@ -5758,51 +5758,59 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
         elsif ($cdef1 ne $cdef2) {
             ## Constraints are written very differently according to the Postgres version
             ## We'll try to do some normalizing here
-            my %flatten;
-            for my $string ($cdef1, $cdef2) {
-              FOO: while ($string =~ m{(\w+):?:?(\w[\w ]+)? = ANY \(ARRAY\[(.+?)\]:?:?(\w[\w ]+)?\[?\]?\)}g) {
-                    my ($col,$type1,$array,$type2) = ($1,$2,$3,$4);
-                    if (! defined $type1 or $type1 eq $type2) {
-                        my @item;
-                        for my $item (split /\s*,\s*/ => $array) {
-                            last FOO if $item !~ m{('?.+?'?)::(\w[\w ]+)};
-                            push @item => $1;
-                            $type2 ||= $2;
+            my $var = qr{(?:''|'?\w+[\w ]*'?)(?:::\w[\w ]+\w+)?};
+            my $equiv = qr{$var = $var};
+
+            ## Change double cast using parens to three cast form
+            my %dtype = (
+                'int2' => 'smallint',
+                'int4' => 'integer',
+                'int8' => 'bigint',
+                'text' => 'text',
+            );
+            my $dtype = join '|' => keys %dtype;
+
+            for my $s1 ($cdef1, $cdef2) {
+                ## Remove parens about left side of cast: (foo)::bar => foo::bar
+                $s1 =~ s/\((\w+)\)::(\w+)/${1}::$2/g;
+
+                ## Remove parens around any array: ANY ((ARRAY...)) => ANY (ARRAY...)
+                $s1 =~ s{ANY \(\((ARRAY.+?)\)\)}{ANY ($1)}g;
+
+                ## Remove parens around casts: (foo::bar = baz) => foo::bar = baz
+                $s1 =~ s{\(($equiv)\)}{$1}g;
+
+                ## Replace foo = ANY(ARRAY[x,y]) with foo=x or foo=y
+                my $cvar = qr{'?(\w+)'?:?:?(\w[\w ]+\w+)?};
+                $s1 =~ s{($cvar = ANY \(ARRAY\[($var(?:, $var)*)\](\)?):?:?(\w[\w ]+\w)?\[?\]?\))}{
+                    my $flat;
+                    my ($all,$col,$type1,$array,$extraparen,$type2) = ($1,$2,$3,$4,$5,$6);
+                  FOO: {
+                        if (! defined $type1 or !defined $type2 or $type1 eq $type2) {
+                            my @item;
+                            for my $item (split /\s*,\s*/ => $array) {
+                                last FOO if $item !~ m{(.+)::(.+)};
+                                push @item => $1;
+                                $type2 ||= $2;
+                            }
+                            my $t1 = defined $type1 ? ('::'.$type1) : '';
+                            my $t2 = defined $type2 ? ('::'.$type2) : '';
+                            $flat = join ' OR ' => map { "$col$t1 = $_$t2" } @item;
                         }
-                        my $t1 = defined $type1 ? ('::'.$type1) : '';
-                        my $t2 = defined $type2 ? ('::'.$type2) : '';
-                        $flatten{$array} = join ' OR ' => map { "$col$t1 = $_$t2" } @item;
                     }
-                }
-                $string =~ s{(OR \()?(\w+:?:?(?:\w[\w ]+)? = ANY \(ARRAY\[(.+?)\]:?:?(?:\w[\w ]+)?\[?\]?\)(\))?)}
-                            {
-                                my ($p1,$all,$array,$p2) = ($1,$2,$3,$4);
-                                if (exists $flatten{$array}) {
-                                    if ($p1 and $p2) {
-                                        "OR $flatten{$array}";
-                                    }
-                                    elsif ($p2) {
-                                        "$flatten{$array})";
-                                    }
-                                    else {
-                                        $flatten{$array};
-                                    }
-                                }
-                                else {
-                                    $all;
-                                }
-                            }ge;
+                    $flat ? $extraparen ? "$flat)" : $flat : $all;
+                }ge;
 
-                ## Normalize any casting like int4('foobar'::text)
-                my %dtype = (
-                             'int2' => 'smallint',
-                             'int4' => 'integer',
-                             'int8' => 'bigint',
-                             'text' => 'text',
-                             );
-                my $dtype = join '|' => keys %dtype;
-                $string =~ s{($dtype)\((\w+)::($dtype)\)}{$2::$3::$dtype{$1}}g;
+                ## Get rid of excess parens in OR clauses
+                $s1 =~ s{\(($equiv(?: OR $equiv)+)\)}{$1}g;
 
+                ## Remove parens around entire thing
+                $s1 =~ s{^\s*\((.+)\)\s*$}{$1};
+
+                ## Remove parens around entire thing (with CHECK)
+                $s1 =~ s{^\s*CHECK \((.+)\)\s*$}{CHECK $1};
+
+                $s1 =~ s{($dtype)\((\w+)::($dtype)\)}{$2::$3::$dtype{$1}}g;
             }
             if ($cdef1 ne $cdef2) {
                 ## It may be because 8.2 and earlier over-quoted things
