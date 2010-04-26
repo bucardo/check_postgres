@@ -5063,6 +5063,7 @@ ORDER BY table_schema, table_name, ordinal_position, column_name
                     table      => $table,
                     name       => $r->{cn},
                     position   => exists $filter{noposition} ? 0 : $position,
+                    attnum     => $r->{op},
                     default    => $r->{df},
                     nullable   => $r->{in},
                     type       => $r->{dt},
@@ -5638,10 +5639,28 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
             }
 
             ## Are they on the same key?
+            ## May be just column reordering, so we dig deep before calling it a problem
             if ($key1 ne $key2) {
-                push @{$fail{constraints}{diffkey}} => [$cname, $tname, $key1, $key2];
-                $failcount++;
-                ## Fall through and possible check the source as well
+                if (! exists $thing{1}{colmap}{$tname}) {
+                    for my $col (keys %{$thing{1}{columns}{$tname}}) {
+                        my $attnum = $thing{1}{columns}{$tname}{$col}{attnum};
+                        $thing{1}{colmap}{$tname}{$attnum} = $col;
+                    }
+                }
+                if (! exists $thing{2}{colmap}{$tname}) {
+                    for my $col (keys %{$thing{2}{columns}{$tname}}) {
+                        my $attnum = $thing{2}{columns}{$tname}{$col}{attnum};
+                        $thing{2}{colmap}{$tname}{$attnum} = $col;
+                    }
+                }
+                (my $ckey1 = $key1) =~ s/(\d+)/$thing{1}{colmap}{$tname}{$1}/g;
+                (my $ckey2 = $key2) =~ s/(\d+)/$thing{2}{colmap}{$tname}{$1}/g;
+
+                if ($ckey1 ne $ckey2) {
+                    push @{$fail{constraints}{diffkey}} => [$cname, $tname, $ckey1, $ckey2];
+                    $failcount++;
+                }
+                ## No next here: we want to check the source as well
             }
 
             ## Only bother with the source for check constraints
@@ -6081,10 +6100,10 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
             $db->{perf} .= qq{ Constraint "$cname" on table "$tname" is type $type1 on 1, but $type2 on 2. };
         }
 
-        ## Constraints have a different key - rewrite prettier someday
+        ## Constraints have a different key
         for my $row (@{$fail{constraints}{diffkey}}) {
             my ($cname,$tname,$key1,$key2) = @$row;
-            $db->{perf} .= qq{ Constraint "$cname" on table "$tname" is conkey $key1 on 1, but $key2 on 2. };
+            $db->{perf} .= qq{ Constraint "$cname" on table "$tname" is on column $key1 on 1, but $key2 on 2. };
         }
 
         ## Constraints have different source (as near as we can tell)
