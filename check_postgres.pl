@@ -6144,7 +6144,7 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
         }
         if (exists $fail{functions}{diffvol}) {
             for my $name (sort @{$fail{functions}{diffvol}}) {
-                $db->{perf} .= " Function volatilitiy different on 1 than 2: $name ";
+                $db->{perf} .= " Function volatility different on 1 than 2: $name ";
             }
         }
     }
