@@ -4955,7 +4955,7 @@ WHERE nspname !~ '^pg_t'
         }
 
         ## Get a list of all relations
-        if (! exists $filter{notables}) {
+        if (! exists $filter{notables} or !exists $filter{noconstraints}) {
             $SQL = q{
 SELECT relkind, quote_ident(nspname) AS nspname, quote_ident(relname) AS relname, 
   quote_ident(usename) AS usename, relacl,
@@ -5077,76 +5077,20 @@ ORDER BY table_schema, table_name, ordinal_position, column_name
         ## We'll use information_schema for this one too
         if (! exists $filter{noconstraints}) {
             $SQL = q{
-SELECT constraint_schema AS cs, constraint_name AS cn, table_schema AS ts, table_name AS tn
-FROM information_schema.constraint_table_usage
+SELECT n1.nspname AS cschema, conname, contype, n1.nspname AS tschema, relname AS tname, conkey, consrc
+FROM pg_constraint c
+JOIN pg_namespace n1 ON (n1.oid = c.connamespace)
+JOIN pg_class r ON (r.oid = c.conrelid)
+JOIN pg_namespace n2 ON (n2.oid = r.relnamespace)
+WHERE n1.nspname !~ 'pg_'
 };
+
             $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
             for $db (@{$info->{db}}) {
                 for my $r (@{$db->{slurp}}) {
-                    my ($ichi,$ni,$san,$shi) = @$r{qw/ cs cn ts tn/};
-
-                    ## No sense in grabbing "generic" constraints
-                    next if $ni =~ /^\$\d+$/o;
-
-                    $thing{$x}{constraints}{"$ichi.$ni"} = "$san.$shi";
-                }
-            }
-            $SQL = <<'SQL';  # cribbed from information_schema.constraint_column_usage
-SELECT current_database()::information_schema.sql_identifier AS cd,
-  x.tblschema::information_schema.sql_identifier AS tschema,
-  x.tblname::information_schema.sql_identifier AS tname,
-  x.colname::information_schema.sql_identifier AS ccol,
-  current_database()::information_schema.sql_identifier AS constraint_catalog,
-  x.cstrschema::information_schema.sql_identifier AS cschema,
-  x.cstrname::information_schema.sql_identifier AS cname,
-  REGEXP_REPLACE(constrdef, '\n', ' \\n ','g') AS cdef
-FROM (( SELECT DISTINCT nr.nspname, r.relname, r.relowner, a.attname, nc.nspname, c.conname,
-      pg_catalog.pg_get_constraintdef(c.oid, true)
-    FROM pg_namespace nr, pg_class r, pg_attribute a, pg_depend d, pg_namespace nc, pg_constraint c
-    WHERE nr.oid = r.relnamespace
-    AND r.oid = a.attrelid
-    AND d.refclassid = 'pg_class'::regclass::oid
-    AND d.refobjid = r.oid
-    AND d.refobjsubid= a.attnum
-    AND d.classid = 'pg_constraint'::regclass::oid
-    AND d.objid = c.oid
-    AND c.connamespace = nc.oid
-    AND c.contype = 'c'::"char"
-    AND r.relkind = 'r'::"char"
-    AND NOT a.attisdropped
-    ORDER BY nr.nspname, r.relname, r.relowner, a.attname, nc.nspname, c.conname)
-  UNION ALL
-    SELECT nr.nspname, r.relname, r.relowner, a.attname, nc.nspname, c.conname,
-      pg_catalog.pg_get_constraintdef(c.oid, true)
-    FROM pg_namespace nr, pg_class r, pg_attribute a, pg_namespace nc, pg_constraint c
-    WHERE nr.oid = r.relnamespace
-    AND r.oid = a.attrelid
-    AND nc.oid = c.connamespace
-    AND
-      CASE
-        WHEN c.contype = 'f'::"char" THEN r.oid = c.confrelid AND (a.attnum = ANY (c.confkey))
-        ELSE r.oid = c.conrelid AND (a.attnum = ANY (c.conkey))
-      END
-    AND NOT a.attisdropped
-    AND (c.contype = ANY (ARRAY['p'::"char", 'u'::"char", 'f'::"char"]))
-    AND r.relkind = 'r'::"char")
-  x(tblschema, tblname, tblowner, colname, cstrschema, cstrname, constrdef)
-WHERE pg_has_role(x.tblowner, 'USAGE'::text)
-SQL
-            $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
-            for $db (@{$info->{db}}) {
-                for my $r (@{$db->{slurp}}) {
-                    my ($cschema,$cname,$tschema,$tname,$ccol,$cdef) = @$r{
-                        qw/cschema cname tschema tname ccol cdef/};
-                    ## No sense in grabbing "generic" constraints
-                    if ($cname !~ /^\$\d+$/o) {
-                        if (exists $thing{$x}{colconstraints}{"$cschema.$cname"}) {
-                            my @oldcols = split / / => $thing{$x}{colconstraints}{"$cschema.$cname"}->[1];
-                            push @oldcols => $ccol;
-                            $ccol = join ' ' => sort @oldcols;
-                        }
-                        $thing{$x}{colconstraints}{"$cschema.$cname"} = ["$tschema.$tname", $ccol, $cdef];
-                    }
+                    my ($cs,$name,$type,$ts,$tn,$key,$src) =
+                        @$r{qw/ cschema conname contype tschema tname conkey consrc/};
+                    $thing{$x}{constraints}{"$ts.$tn"}{$name} = [$type,$key,$src];
                 }
             }
         }
@@ -5306,6 +5250,9 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
     ## We treat the name as a unified "schema.relname"
     TABLE1:
     for my $name (sort keys %{$thing{1}{tables}}) {
+
+        next if exists $filter{notables};
+
         next if exists $thing{2}{tables}{$name};
 
         ## If the schema does not exist, don't bother reporting it
@@ -5328,6 +5275,8 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
     ## Any tables on 2 but not 1?
     TABLE2:
     for my $name (sort keys %{$thing{2}{tables}}) {
+
+        next if exists $filter{notables};
 
         if (exists $filter{notable_regex}) {
             for my $regex (@{$filter{notable_regex}}) {
@@ -5627,139 +5576,95 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
 
     ## Compare constraints
 
-    ## Table constraints - any exists on 1 but not 2?
-    CONSTRAINT1:
-    for my $name (sort keys %{$thing{1}{constraints}}) {
-        next if exists $thing{2}{constraints}{$name};
+    ## Constraints - any exists on 1 but not 2?
+    for my $tname (sort keys %{$thing{1}{constraints}}) {
 
-        ## If the table does not exist, we don't report it
-        next if ! exists $thing{2}{tables}{ $thing{1}{constraints}{$name} };
-
-        if (exists $filter{noconstraint_regex}) {
-            for my $regex (@{$filter{noconstraint_regex}}) {
-                next CONSTRAINT1 if $name =~ /$regex/;
-            }
-        }
-
-        for my $exclude (@{$opt{exclude}}) {
-            next CONSTRAINT1 if $name =~ /$exclude/;
-        }
-
-        push @{$fail{constraints}{notexist}{1}} => [$name, $thing{1}{constraints}{$name}];
-        $failcount++;
-    }
-
-    ## Check exists on 2 but not 1, and make sure the schema/table matches
-    CONSTRAINT2:
-    for my $name (sort keys %{$thing{2}{constraints}}) {
-
-        if (exists $filter{noconstraint_regex}) {
-            for my $regex (@{$filter{noconstraint_regex}}) {
-                next CONSTRAINT2 if $name =~ /$regex/;
-            }
-        }
-
-        for my $exclude (@{$opt{exclude}}) {
-            next CONSTRAINT2 if $name =~ /$exclude/;
-        }
-
-        if (! exists $thing{1}{constraints}{$name}) {
-
-            ## If the table does not exist, we don't report it
-            if (exists $thing{1}{tables}{ $thing{2}{constraints}{$name} }) {
-                push @{$fail{constraints}{notexist}{2}} => [$name, $thing{2}{constraints}{$name}];
-                $failcount++;
-            }
-
-            next;
-        }
-        if ($thing{1}{constraints}{$name} ne $thing{2}{constraints}{$name}) {
-            push @{$fail{constraints}{tablediff}} =>
-                [
-                    $name,
-                    $thing{1}{constraints}{$name},
-                    $thing{2}{constraints}{$name},
-                ];
-            $failcount++;
-        }
-    }
-
-    ## Column constraints - any exists on 1 but not 2?
-    CONSTRAINT3:
-    for my $name (sort keys %{$thing{1}{colconstraints}}) {
-        next if exists $thing{2}{colconstraints}{$name};
-
-        ## If the table does not exist, we don't report it
-        my ($tname,$cname) = @{$thing{1}{colconstraints}{$name}};
+        ## If the table does not exist, no sense in going on
         next if ! exists $thing{2}{tables}{$tname};
 
-        if (exists $filter{noconstraint_regex}) {
-            for my $regex (@{$filter{noconstraint_regex}}) {
-                next CONSTRAINT3 if $name =~ /$regex/;
+      C11: for my $cname (sort keys %{$thing{1}{constraints}{$tname}}) {
+
+            ## Move on if it exists on 2
+            next if exists $thing{2}{constraints}{$tname}{$cname};
+
+            if (exists $filter{noconstraint_regex}) {
+                for my $regex (@{$filter{noconstraint_regex}}) {
+                    next C11 if $cname =~ /$regex/;
+                }
             }
-        }
 
-        for my $exclude (@{$opt{exclude}}) {
-            next CONSTRAINT3 if $name =~ /$exclude/;
-        }
+            for my $exclude (@{$opt{exclude}}) {
+                next C11 if $cname =~ /$exclude/;
+            }
 
-        push @{$fail{colconstraints}{notexist}{1}} => [$name, $tname, $cname];
-        $failcount++;
+            push @{$fail{constraints}{notexist}{1}} => [$cname, $tname];
+            $failcount++;
+        }
     }
 
-    ## Check exists on 2 but not 1, and make sure the schema/table/column matches
-    CONSTRAINT4:
-    for my $name (sort keys %{$thing{2}{colconstraints}}) {
+    ## Check for constraints that exist on 2 but not 1
+    ## Also dig in and compare ones that do match
+    for my $tname (sort keys %{$thing{2}{constraints}}) {
 
-        if (exists $filter{noconstraint_regex}) {
-            for my $regex (@{$filter{noconstraint_regex}}) {
-                next CONSTRAINT4 if $name =~ /$regex/;
+        ## If the table does not exist, no sense in going on
+        next if ! exists $thing{1}{tables}{$tname};
+
+      C22: for my $cname (sort keys %{$thing{2}{constraints}{$tname}}) {
+
+            if (exists $filter{noconstraint_regex}) {
+                for my $regex (@{$filter{noconstraint_regex}}) {
+                    next C22 if $cname =~ /$regex/;
+                }
             }
-        }
 
-        for my $exclude (@{$opt{exclude}}) {
-            next CONSTRAINT4 if $name =~ /$exclude/;
-        }
+            for my $exclude (@{$opt{exclude}}) {
+                next C22 if $cname =~ /$exclude/;
+            }
 
-        if (! exists $thing{1}{colconstraints}{$name}) {
-
-            ## If the table does not exist, we don't report it
-            my ($tname,$cname) = @{$thing{2}{colconstraints}{$name}};
-            if (exists $thing{1}{tables}{ $tname }) {
-                push @{$fail{colconstraints}{notexist}{2}} => [$name, $tname, $cname];
+            if (! exists $thing{1}{constraints}{$tname}{$cname}) {
+                push @{$fail{constraints}{notexist}{2}} => [$cname, $tname];
                 $failcount++;
+                next C22;
             }
-            next;
-        }
 
-        ## Check for a difference in schema/table
-        my ($tname1,$cname1,$cdef1) = @{$thing{1}{colconstraints}{$name}};
-        my ($tname2,$cname2,$cdef2) = @{$thing{2}{colconstraints}{$name}};
-        if ($tname1 ne $tname2) {
-            push @{$fail{colconstraints}{tablediff}} =>
-                [
-                    $name,
-                    $tname1,
-                    $tname2,
-                ];
-            $failcount++;
-        }
-        ## Check for a difference in schema/table/column
-        elsif ($cname1 ne $cname2) {
-            push @{$fail{colconstraints}{columndiff}} =>
-                [
-                    $name,
-                    $tname1, $cname1,
-                    $tname2, $cname2,
-                ];
-            $failcount++;
-        }
-        ## Check for a difference in schema/table/column/definition
-        elsif ($cdef1 ne $cdef2) {
+            my ($type1,$key1,$cdef1) = @{$thing{1}{constraints}{$tname}{$cname}};
+            my ($type2,$key2,$cdef2) = @{$thing{2}{constraints}{$tname}{$cname}};
+
+            ## Are they the same type?
+            if ($type1 ne $type2) {
+                push @{$fail{constraints}{difftype}} => [$cname, $tname, $type1, $type2];
+                $failcount++;
+                next C22;
+            }
+
+            ## Are they on the same key?
+            if ($key1 ne $key2) {
+                push @{$fail{constraints}{diffkey}} => [$cname, $tname, $key1, $key2];
+                $failcount++;
+                ## Fall through and possible check the source as well
+            }
+
+            ## Only bother with the source for check constraints
+            next C22 if $type1 ne 'c';
+
+            ## Is the source the same?
+            if ($cdef1 eq $cdef2) {
+                next C22;
+            }
+
+            ## It may be because 8.2 and earlier over-quoted things
+            ## Just in case, we'll compare sans double quotes
+            (my $cdef11 = $cdef1) =~ s/"//g;
+            (my $cdef22 = $cdef2) =~ s/"//g;
+            if ($cdef11 eq $cdef22) {
+                $VERBOSE >= 1 and warn "Constraint $cname on $tname matched when quotes were removed\n";
+                next C22;
+            }
+
             ## Constraints are written very differently according to the Postgres version
             ## We'll try to do some normalizing here
             my $var = qr{(?:''|'?\w+[\w ]*'?)(?:::\w[\w ]+\w+)?};
-            my $equiv = qr{$var = $var};
+            my $equiv = qr{$var (?:=|>=|<=) $var};
 
             ## Change double cast using parens to three cast form
             my %dtype = (
@@ -5771,6 +5676,7 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
             my $dtype = join '|' => keys %dtype;
 
             for my $s1 ($cdef1, $cdef2) {
+
                 ## Remove parens about left side of cast: (foo)::bar => foo::bar
                 $s1 =~ s/\((\w+)\)::(\w+)/${1}::$2/g;
 
@@ -5801,8 +5707,12 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
                     $flat ? $extraparen ? "$flat)" : $flat : $all;
                 }ge;
 
+                ## Strip left to right three part casting parens
+                ## (foo::text)::integer => foo::text::integer
+                $s1 =~ s{\((\w[\w ]*?::\w[\w ]*?)\)(::\w[\w ]*\w* )}{$1$2}g;
+
                 ## Get rid of excess parens in OR clauses
-                $s1 =~ s{\(($equiv(?: OR $equiv)+)\)}{$1}g;
+                1 while $s1 =~ s{\(($equiv(?: OR $equiv)+)\)}{$1};
 
                 ## Remove parens around entire thing
                 $s1 =~ s{^\s*\((.+)\)\s*$}{$1};
@@ -5811,27 +5721,16 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
                 $s1 =~ s{^\s*CHECK \((.+)\)\s*$}{CHECK $1};
 
                 $s1 =~ s{($dtype)\((\w+)::($dtype)\)}{$2::$3::$dtype{$1}}g;
-            }
+
+            } ## end of normalizing
+
             if ($cdef1 ne $cdef2) {
-                ## It may be because 8.2 and earlier over-quoted things
-                ## Just in case, we'll compare sans double quotes
-                (my $cdef11 = $cdef1) =~ s/"//g;
-                (my $cdef22 = $cdef2) =~ s/"//g;
-                if ($cdef11 eq $cdef22) {
-                    $VERBOSE >= 1 and warn "Constraint $cname1 on $tname1 matched when quotes were removed\n";
-                }
-                else {
-                    push @{$fail{colconstraints}{defdiff}} =>
-                        [
-                         $name,
-                         $tname1, $cname1, $cdef1,
-                         $tname2, $cname2, $cdef2,
-                         ];
-                    $failcount++;
-                }
+                push @{$fail{constraints}{diffsrc}} => [$cname, $tname, $cdef1, $cdef2];
+                $failcount++;
             }
-        }
-    }
+
+        } ## end each constraint on this table
+    } ## end each table
 
     ## Compare languages
     for my $name (sort keys %{$thing{1}{language}}) {
@@ -6162,93 +6061,36 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
         }
     }
 
-    ## Constraint differences - table level
-    ## Don't report things twice
-    my %doublec;
+    ## Constraint differences
     if (exists $fail{constraints}) {
-        if (exists $fail{constraints}{notexist}) {
-            if (exists $fail{constraints}{notexist}{1}) {
-                for my $row (@{$fail{constraints}{notexist}{1}}) {
-                    my ($cname,$tname) = @$row;
-                    $db->{perf} .= qq{ Table "$tname" on 1 has constraint "$cname", but 2 does not. };
-                    $doublec{$cname}++;
-                }
-            }
-            if (exists $fail{constraints}{notexist}{2}) {
-                for my $row (@{$fail{constraints}{notexist}{2}}) {
-                    my ($cname,$tname) = @$row;
-                    $db->{perf} .= qq{ Table "$tname" on 2 has constraint "$cname", but 1 does not. };
-                    $doublec{$cname}++;
-                }
-            }
-        }
-        if (exists $fail{constraints}{tablediff}) {
-            for my $row (@{$fail{constraints}{tablediff}}) {
-                my ($cname,$t1,$t2) = @$row;
-                $db->{perf} .= qq{ Constraint "$cname" is applied to "$t1" on 1, but to "$t2" on 2. };
-                $doublec{$cname}++;
-            }
-        }
-    }
 
-    ## Constraint differences - column level
-    if (exists $fail{colconstraints}) {
-        if (exists $fail{colconstraints}{notexist}) {
-            if (exists $fail{colconstraints}{notexist}{1}) {
-                for my $row (@{$fail{colconstraints}{notexist}{1}}) {
-                    my ($name,$tname,$cname) = @$row;
-                    if (! exists $doublec{$name}) {
-                        $db->{perf} .= qq{ Table "$tname" on 1 has constraint "$name" on column "$cname", but 2 does not. };
-                    }
-                    else {
-                        $failcount--;
-                    }
-                }
-            }
-            if (exists $fail{colconstraints}{notexist}{2}) {
-                for my $row (@{$fail{colconstraints}{notexist}{2}}) {
-                    my ($name,$tname,$cname) = @$row;
-                    if (! exists $doublec{$name}) {
-                        $db->{perf} .= qq{ Table "$tname" on 2 has constraint "$name" on column "$cname", but 1 does not. };
-                    }
-                    else {
-                        $failcount--;
-                    }
-                }
-            }
+        ## Exists on 1 but not 2
+        for my $row (@{$fail{constraints}{notexist}{1}}) {
+            my ($cname,$tname) = @$row;
+            $db->{perf} .= qq{ Table "$tname" on 1 has constraint "$cname", but 2 does not. };
         }
-        if (exists $fail{colconstraints}{tablediff}) {
-            for my $row (@{$fail{colconstraints}{tablediff}}) {
-                my ($name,$t1,$t2) = @$row;
-                if (! exists $doublec{$name}) {
-                    $db->{perf} .= qq{ Constraint "$name" is applied to "$t1" on 1, but to "$t2" on 2. };
-                }
-                else {
-                    $failcount--;
-                }
-            }
+        ## Exists on 2 but not 1
+        for my $row (@{$fail{constraints}{notexist}{2}}) {
+            my ($cname,$tname) = @$row;
+            $db->{perf} .= qq{ Table "$tname" on 2 has constraint "$cname", but 1 does not. };
         }
-        if (exists $fail{colconstraints}{columndiff}) {
-            for my $row (@{$fail{colconstraints}{columndiff}}) {
-                my ($name,$t1,$c1,$t2,$c2) = @$row;
-                if (! exists $doublec{$name}) {
-                    $db->{perf} .= qq{ Constraint "$name" on 1 is applied to $t1.$c1, but to $t2.$c2 on 2. };
-                }
-                else {
-                    $failcount--;
-                }
-            }
+
+        ## Constraints are of differnet types (!)
+        for my $row (@{$fail{constraints}{difftype}}) {
+            my ($cname,$tname,$type1,$type2) = @$row;
+            $db->{perf} .= qq{ Constraint "$cname" on table "$tname" is type $type1 on 1, but $type2 on 2. };
         }
-        if (exists $fail{colconstraints}{defdiff}) {
-            for my $row (@{$fail{colconstraints}{defdiff}}) {
-                my ($name,$t1,$c1,$d1,$t2,$c2,$d2) = @$row;
-                if (! exists $doublec{$name}) {
-                    $db->{perf} .= qq{ Constraint "$name" (on $t1) on 1 differs from 2 ("$d1" vs. "$d2") };
-                }
-                else {
-                    $failcount--;
-                }
-            }
+
+        ## Constraints have a different key - rewrite prettier someday
+        for my $row (@{$fail{constraints}{diffkey}}) {
+            my ($cname,$tname,$key1,$key2) = @$row;
+            $db->{perf} .= qq{ Constraint "$cname" on table "$tname" is conkey $key1 on 1, but $key2 on 2. };
+        }
+
+        ## Constraints have different source (as near as we can tell)
+        for my $row (@{$fail{constraints}{diffsrc}}) {
+            my ($cname,$tname,$cdef1,$cdef2) = @$row;
+            $db->{perf} .= qq{ Constraint "$cname" on table "$tname" differs in source: $cdef1 vs. $cdef2. };
         }
     }
 
