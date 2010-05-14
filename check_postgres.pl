@@ -8012,7 +8012,7 @@ Example 1: Give a warning if any Slony is lagged by more than 20 seconds
 
 Example 2: Give a critical if Slony, installed under the schema "_slony", is over 10 minutes lagged
 
-  check_postgres_slony_sytatus --schema=_slony --critical=600
+  check_postgres_slony_status --schema=_slony --critical=600
 
 
 =head2 B<txn_time>
