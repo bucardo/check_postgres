@@ -2638,8 +2638,9 @@ ORDER BY datname
     my $percent = (int $total / $limit*100) || 1;
     my $msg = msg('backends-msg', $total, $limit, $percent);
     my $ok = 1;
+
     if ($e1) { ## minus
-        $ok = 0 if $limit-$total >= $e2;
+        $ok = 0 if $limit-$total <= $e2;
     }
     elsif ($e3) { ## percent
         my $nowpercent = $total/$limit*100;
@@ -2654,7 +2655,7 @@ ORDER BY datname
     }
 
     if ($w1) {
-        $ok = 0 if $limit-$total >= $w2;
+        $ok = 0 if $limit-$total <= $w2;
     }
     elsif ($w3) {
         my $nowpercent = $total/$limit*100;
