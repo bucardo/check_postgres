@@ -248,21 +248,21 @@ $dbh1->do(q{ALTER TABLE table_w_constraint ADD CONSTRAINT constraint_of_a CHECK(
 
 $t = qq{$S fails when first schema has an extra constraint};
 like ($cp1->run($stdargs),
-      qr{^$label CRITICAL.*?Table "public.table_w_constraint" on 1 has constraint "public.constraint_of_a" on column "a", but 2 does not},
+      qr{^$label CRITICAL.*?Table "public.table_w_constraint" on 1 has constraint "constraint_of_a", but 2 does not},
       $t);
 
 $dbh2->do(q{ALTER TABLE table_w_constraint ADD CONSTRAINT constraint_of_a CHECK(a < 0)});
 
 $t = qq{$S fails when tables have differing constraints};
 like ($cp1->run($stdargs),
-      qr{^$label CRITICAL.*?1 differs from 2 \("CHECK \(a > 0\)" vs. "CHECK \(a < 0\)"\)},
+      qr{^$label CRITICAL.*?differs in source: a > 0 vs. a < 0},
       $t);
 
 $dbh2->do(q{ALTER TABLE table_w_constraint DROP CONSTRAINT constraint_of_a});
 
 $t = qq{$S fails when one table is missing a constraint};
 like ($cp1->run($stdargs),
-      qr{^$label CRITICAL.*?Table "public.table_w_constraint" on 1 has constraint "public.constraint_of_a" on column "a", but 2 does not},
+      qr{^$label CRITICAL.*?Table "public.table_w_constraint" on 1 has constraint "constraint_of_a", but 2 does not},
       $t);
 
 $dbh1->do(q{CREATE TABLE table_w_another_cons (a int)});
@@ -271,7 +271,7 @@ $dbh2->do(q{ALTER TABLE table_w_another_cons ADD CONSTRAINT constraint_of_a CHEC
 
 $t = qq{$S fails when similar constraints are attached to differing tables};
 like ($cp1->run($stdargs),
-      qr{^$label CRITICAL.*?Constraint "public.constraint_of_a" is applied to "public.table_w_constraint" on 1, but to "public.table_w_another_cons" on 2},
+      qr{^$label CRITICAL.*?Table "public.table_w_constraint" on 1 has constraint "constraint_of_a", but 2 does not},
       $t);
 
 $dbh1->do(q{DROP TABLE table_w_another_cons});
