@@ -1,4 +1,5 @@
-#!/usr/bin/perl -- -*-mode:cperl; indent-tabs-mode: nil-*-
+#!/usr/bin/env perl
+# -*-mode:cperl; indent-tabs-mode: nil-*-
 
 ## Perform many different checks against Postgres databases.
 ## Designed primarily as a Nagios script.
