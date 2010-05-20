@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 50;
+use Test::More tests => 59;
 use lib 't','.';
 use CP_Testing;
 
@@ -395,8 +395,8 @@ $dbh2->do('DROP LANGUAGE plpgsql');
 
 #/////////// Indexes
 
-$dbh1->do(q{CREATE TABLE table_1_only (a int, b text)});
-$dbh2->do(q{CREATE TABLE table_1_only (a int, b text)});
+$dbh1->do(q{CREATE TABLE table_1_only (a INT NOT NULL, b TEXT NOT NULL)});
+$dbh2->do(q{CREATE TABLE table_1_only (a INT NOT NULL, b TEXT NOT NULL)});
 
 $t = qq{$S works when indexes are the same};
 $dbh1->do(q{CREATE INDEX index_1 ON table_1_only(a)});
@@ -417,5 +417,70 @@ $dbh2->do(q{CREATE INDEX index_3 ON table_1_only(a,b)});
 like ($cp1->run($stdargs),
       qr{^$label CRITICAL:.*Index on 2 but not 1: public.index_3},
       $t);
+
+$dbh1->do(q{SET client_min_messages = 'ERROR'});
+$dbh2->do(q{SET client_min_messages = 'ERROR'});
+
+$t = qq{$S fails when database 1 index is primary but 2 is not};
+$dbh1->do(q{ALTER TABLE table_1_only ADD CONSTRAINT index_3 PRIMARY KEY (a,b)});
+$dbh1->do(q{CLUSTER table_1_only USING index_3});
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL:.*Index public.index_3 is set as primary key on 1, but not set as primary key on 2},
+      $t);
+$t = qq{$S fails when database 1 index is unique but 2 is not};
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL:.*Index public.index_3 is set as unique on 1, but not set as unique on 2},
+      $t);
+$t = qq{$S fails when database 1 index is clustered but 2 is not};
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL:.*Index public.index_3 is set as clustered on 1, but not set as clustered on 2},
+      $t);
+
+$t = qq{$S fails when database 2 index is primary but 1 is not};
+$dbh1->do(q{ALTER TABLE table_1_only DROP CONSTRAINT index_3});
+$dbh1->do(q{CREATE INDEX index_3 ON table_1_only(a,b)});
+$dbh1->do(q{ALTER TABLE table_1_only SET WITHOUT CLUSTER});
+$dbh2->do(q{DROP INDEX index_3});
+$dbh2->do(q{ALTER TABLE table_1_only ADD CONSTRAINT index_3 PRIMARY KEY (a,b)});
+$dbh2->do(q{CLUSTER table_1_only USING index_3});
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL:.*Index public.index_3 is not set as primary key on 1, but set as primary key on 2},
+      $t);
+$t = qq{$S fails when database 2 index is unique but 1 is not};
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL:.*Index public.index_3 is not set as unique on 1, but set as unique on 2},
+      $t);
+$t = qq{$S fails when database 2 index is clustered but 1 is not};
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL:.*Index public.index_3 is not set as clustered on 1, but set as clustered on 2},
+      $t);
+
+$t = qq{$S fails when database 1 index is on different columns than database 2};
+$dbh1->do(q{CREATE INDEX index_4 ON table_1_only(a)});
+$dbh2->do(q{CREATE INDEX index_4 ON table_1_only(b)});
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL:.*Index public.index_4 is applied to column a on 1, but b on 2},
+      $t);
+
+$dbh1->do(q{DROP INDEX index_4});
+$dbh1->do(q{CREATE INDEX index_4 ON table_1_only(b,a)});
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL:.*Index public.index_4 is applied to columns b a on 1, but b on 2},
+      $t);
+
+
+$dbh1->do(q{DROP TABLE table_1_only});
+$dbh2->do(q{DROP TABLE table_1_only});
+$dbh1->do(q{CREATE TABLE table_1_only (a INT NOT NULL, b TEXT NOT NULL)});
+$dbh2->do(q{CREATE TABLE table_2_only (a INT NOT NULL, b TEXT NOT NULL)});
+$dbh1->do(q{CREATE INDEX index_5 ON table_1_only(a)});
+$dbh2->do(q{CREATE INDEX index_5 ON table_2_only(a)});
+
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL:.*Index public.index_5 is applied to table public.table_1_only on 1, but to table public.table_2_only on 2},
+      $t);
+
+$dbh1->do('DROP TABLE table_1_only');
+$dbh2->do('DROP TABLE table_2_only');
 
 exit;

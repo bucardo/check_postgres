@@ -5096,7 +5096,34 @@ WHERE n1.nspname !~ 'pg_'
                     $thing{$x}{constraints}{"$ts.$tn"}{$name} = [$type,$key,$src];
                 }
             }
-        }
+        } ## end of constraints
+
+        ## Get a list of all index information
+        if (! exists $filter{noindexes}) {
+            $SQL = q{
+SELECT n.nspname, c1.relname AS tname, c2.relname AS iname, indisunique, indisprimary, indisclustered, indisvalid, indkey
+FROM pg_index i
+JOIN pg_class c1 ON (c1.oid = indrelid)
+JOIN pg_class c2 ON (c2.oid = indexrelid)
+JOIN pg_namespace n ON (n.oid = c2.relnamespace)
+WHERE nspname !~ 'pg_'
+};
+            $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
+            for $db (@{$info->{db}}) {
+                for my $r (@{$db->{slurp}}) {
+                    my ($schema,$tname,$iname,$uniq,$pri,$clust,$valid,$key) = @$r{
+                        qw/ nspname tname iname indisunique indisprimary indisclustered indisvalid indkey/};
+                    $thing{$x}{indexinfo}{"$schema.$iname"} = {
+                        table       => "$schema.$tname",
+                        isunique    => $uniq,
+                        isprimary   => $pri,
+                        isclustered => $clust,
+                        isvalid     => $valid,
+                        key         => $key,
+                    };
+                }
+            }
+        } ## end of indexes
 
         ## Get a list of all functions
         if (! exists $filter{nofunctions}) {
@@ -5122,7 +5149,7 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
                     };
                 }
             }
-        }
+        } ## end of functions
 
         ## Get a list of all languages
         if (! exists $filter{nolanguages}) {
@@ -5137,6 +5164,7 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
 
 
     } ## end each database to query
+
 
     $db = $saved_db;
 
@@ -5556,7 +5584,49 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
             $failcount++;
             next;
         }
-    }
+
+        ## Do they both have the same information?
+        next if ! exists $thing{1}{indexinfo}{$name}
+            or ! exists $thing{2}{indexinfo}{$name};
+
+        my $one = $thing{1}{indexinfo}{$name};
+        my $two = $thing{2}{indexinfo}{$name};
+
+        if ($one->{table} ne $two->{table}) {
+            $fail{indexes}{table}{$name} = [$one->{table},$two->{table}];
+            $failcount++;
+            next;
+        }
+
+        for my $var (qw/isprimary isunique isclustered isvalid/) {
+            if ($one->{$var} ne $two->{$var}) {
+                $fail{indexes}{$var}{$name} = [$one->{$var},$two->{$var}];
+                $failcount++;
+            }
+        }
+
+        my $tname = $one->{table};
+        if (! exists $thing{1}{colmap}{$tname}) {
+            for my $col (keys %{$thing{1}{columns}{$tname}}) {
+                my $attnum = $thing{1}{columns}{$tname}{$col}{attnum};
+                $thing{1}{colmap}{$tname}{$attnum} = $col;
+            }
+        }
+        if (! exists $thing{2}{colmap}{$tname}) {
+            for my $col (keys %{$thing{2}{columns}{$tname}}) {
+                my $attnum = $thing{2}{columns}{$tname}{$col}{attnum};
+                $thing{2}{colmap}{$tname}{$attnum} = $col;
+            }
+        }
+        (my $cols1 = $one->{key}) =~ s/(\d+)/$thing{1}{colmap}{$tname}{$1}/g;
+        (my $cols2 = $two->{key}) =~ s/(\d+)/$thing{2}{colmap}{$tname}{$1}/g;
+
+        if ($cols1 ne $cols2) {
+            $fail{indexes}{key}{$name} = [$cols1, $cols2];
+            $failcount++;
+        }
+
+    } ## end of index info
 
     ## Compare columns
 
@@ -5669,28 +5739,26 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
 
             ## Are they on the same key?
             ## May be just column reordering, so we dig deep before calling it a problem
-            if ($key1 ne $key2) {
-                if (! exists $thing{1}{colmap}{$tname}) {
-                    for my $col (keys %{$thing{1}{columns}{$tname}}) {
-                        my $attnum = $thing{1}{columns}{$tname}{$col}{attnum};
-                        $thing{1}{colmap}{$tname}{$attnum} = $col;
-                    }
+            if (! exists $thing{1}{colmap}{$tname}) {
+                for my $col (keys %{$thing{1}{columns}{$tname}}) {
+                    my $attnum = $thing{1}{columns}{$tname}{$col}{attnum};
+                    $thing{1}{colmap}{$tname}{$attnum} = $col;
                 }
-                if (! exists $thing{2}{colmap}{$tname}) {
-                    for my $col (keys %{$thing{2}{columns}{$tname}}) {
-                        my $attnum = $thing{2}{columns}{$tname}{$col}{attnum};
-                        $thing{2}{colmap}{$tname}{$attnum} = $col;
-                    }
-                }
-                (my $ckey1 = $key1) =~ s/(\d+)/$thing{1}{colmap}{$tname}{$1}/g;
-                (my $ckey2 = $key2) =~ s/(\d+)/$thing{2}{colmap}{$tname}{$1}/g;
-
-                if ($ckey1 ne $ckey2) {
-                    push @{$fail{constraints}{diffkey}} => [$cname, $tname, $ckey1, $ckey2];
-                    $failcount++;
-                }
-                ## No next here: we want to check the source as well
             }
+            if (! exists $thing{2}{colmap}{$tname}) {
+                for my $col (keys %{$thing{2}{columns}{$tname}}) {
+                    my $attnum = $thing{2}{columns}{$tname}{$col}{attnum};
+                    $thing{2}{colmap}{$tname}{$attnum} = $col;
+                }
+            }
+            (my $ckey1 = $key1) =~ s/(\d+)/$thing{1}{colmap}{$tname}{$1}/g;
+            (my $ckey2 = $key2) =~ s/(\d+)/$thing{2}{colmap}{$tname}{$1}/g;
+
+            if ($ckey1 ne $ckey2) {
+                push @{$fail{constraints}{diffkey}} => [$cname, $tname, $ckey1, $ckey2];
+                $failcount++;
+            }
+            ## No next here: we want to check the source as well
 
             ## Only bother with the source for check constraints
             next C22 if $type1 ne 'c';
@@ -6084,19 +6152,52 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
     ## Index differences
 
     if (exists $fail{indexes}){
-      if (exists $fail{indexes}{notexist}) {
-        if (exists $fail{indexes}{notexist}{1}) {
-          for my $name (@{$fail{indexes}{notexist}{1}}) {
-            $db->{perf} .= " Index on 1 but not 2: $name ";
-          }
+        if (exists $fail{indexes}{notexist}) {
+            if (exists $fail{indexes}{notexist}{1}) {
+                for my $name (@{$fail{indexes}{notexist}{1}}) {
+                    $db->{perf} .= " Index on 1 but not 2: $name ";
+                }
+            }
+            if (exists $fail{indexes}{notexist}{2}) {
+                for my $name (@{$fail{indexes}{notexist}{2}}) {
+                    $db->{perf} .= " Index on 2 but not 1: $name ";
+                }
+            }
         }
-        if (exists $fail{indexes}{notexist}{2}) {
-          for my $name (@{$fail{indexes}{notexist}{2}}) {
-            $db->{perf} .= " Index on 2 but not 1: $name ";
-          }
+
+        for my $name (sort keys %{$fail{indexes}{table}}) {
+            my ($one,$two) = @{$fail{indexes}{table}{$name}};
+            $db->{perf} .= sprintf ' Index %s is applied to table %s on 1, but to table %s on 2 ',
+                $name,
+                $one,
+                $two;
         }
-      }
-    }
+
+        for my $var (qw/isprimary isunique isclustered isvalid/) {
+            for my $name (sort keys %{$fail{indexes}{$var}}) {
+                my ($one,$two) = @{$fail{indexes}{$var}{$name}};
+                (my $pname = $var) =~ s/^is//;
+                $pname = 'primary key' if $pname eq 'primary';
+                $db->{perf} .= sprintf ' Index %s is %s as %s on 1, but %s as %s on 2 ',
+                    $name,
+                    $one eq 't' ? 'set' : 'not set',
+                    $pname,
+                    $two eq 't' ? 'set' : 'not set',
+                    $pname;
+            }
+        }
+
+        for my $name (sort keys %{$fail{indexes}{key}}) {
+            my ($one,$two) = @{$fail{indexes}{key}{$name}};
+            $db->{perf} .= sprintf ' Index %s is applied to %s %s on 1, but %s on 2 ',
+                $name,
+                $one =~ / / ? 'columns' : 'column',
+                $one,
+                $two;
+        }
+
+    } ## end of indexes
+
 
     ## Column differences
     if (exists $fail{columns}) {
