@@ -8522,6 +8522,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.15.0>
 
+  Add index comparison for same_schema (Norman Yamada and Greg Sabino Mullane)
   Use $ENV{PGSERVICE} instead of "service=" to prevent problems (Guillaume Lelarge)
   Add --man option to show the entire manual. (Andy Lester)
   Redo the internal run_command() sub to use -x and hashes instead of regexes.
