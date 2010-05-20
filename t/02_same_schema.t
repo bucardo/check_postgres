@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 47;
+use Test::More tests => 50;
 use lib 't','.';
 use CP_Testing;
 
@@ -374,21 +374,48 @@ like ($cp1->run($stdargs),
       $t);
 
 $t = qq{$S fails when database 1 has a language that 2 does not};
-$dbh1->do('create language plpgsql');
+$dbh1->do('CREATE LANGUAGE plpgsql');
 like ($cp1->run($stdargs),
       qr{^$label CRITICAL:.*Items not matched: 1 .*Language on 1 but not 2: plpgsql},
       $t);
 
 $t = qq{$S works when languages are the same};
-$dbh2->do('create language plpgsql');
+$dbh2->do('CREATE LANGUAGE plpgsql');
 like ($cp1->run($stdargs),
       qr{^$label OK:},
       $t);
 
 $t = qq{$S fails when database 2 has a language that 1 does not};
-$dbh1->do('drop language plpgsql');
+$dbh1->do('DROP LANGUAGE plpgsql');
 like ($cp1->run($stdargs),
       qr{^$label CRITICAL:.*Items not matched: 1 .*Language on 2 but not 1: plpgsql},
+      $t);
+
+$dbh2->do('DROP LANGUAGE plpgsql');
+
+#/////////// Indexes
+
+$dbh1->do(q{CREATE TABLE table_1_only (a int, b text)});
+$dbh2->do(q{CREATE TABLE table_1_only (a int, b text)});
+
+$t = qq{$S works when indexes are the same};
+$dbh1->do(q{CREATE INDEX index_1 ON table_1_only(a)});
+$dbh2->do(q{CREATE INDEX index_1 ON table_1_only(a)});
+like ($cp1->run($stdargs),
+      qr{^$label OK:},
+      $t);
+
+$t = qq{$S fails when database 1 has an index that 2 does not};
+$dbh1->do(q{CREATE INDEX index_2 ON table_1_only(a,b)});
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL:.*Index on 1 but not 2: public.index_2},
+      $t);
+
+$t = qq{$S fails when database 2 has an index that 1 does not};
+$dbh1->do(q{DROP INDEX index_2});
+$dbh2->do(q{CREATE INDEX index_3 ON table_1_only(a,b)});
+like ($cp1->run($stdargs),
+      qr{^$label CRITICAL:.*Index on 2 but not 1: public.index_3},
       $t);
 
 exit;
