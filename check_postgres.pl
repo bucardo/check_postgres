@@ -5531,6 +5531,33 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
         }
     }
 
+    ## Compare indexes
+
+    ## Indexes on 1 but not 2
+  INDEX1:
+    for my $name (sort keys %{$thing{1}{indexes}}) {
+        next if exists $thing{2}{indexes}{$name};
+        for my $exclude (@{$opt{exclude}}) {
+            next INDEX1 if $name =~ /$exclude/;
+        }
+
+        push @{$fail{indexes}{notexist}{1}} => $name;
+        $failcount++;
+    }
+    ## Indexes on 2 but not 1
+  INDEX2:
+    for my $name (sort keys %{$thing{2}{indexes}}) {
+        for my $exclude (@{$opt{exclude}}) {
+            next INDEX2 if $name =~ /$exclude/;
+        }
+
+        if (! exists $thing{1}{indexes}{$name}) {
+            push @{$fail{indexes}{notexist}{2}} => $name;
+            $failcount++;
+            next;
+        }
+    }
+
     ## Compare columns
 
     ## Any columns on 1 but not 2, or 2 but not 1?
@@ -6052,6 +6079,23 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
                 $db->{perf} .= qq{ Trigger "$name" calls function "$func1" on 1, but function "$func2" on 2. };
             }
         }
+    }
+
+    ## Index differences
+
+    if (exists $fail{indexes}){
+      if (exists $fail{indexes}{notexist}) {
+        if (exists $fail{indexes}{notexist}{1}) {
+          for my $name (@{$fail{indexes}{notexist}{1}}) {
+            $db->{perf} .= " Index on 1 but not 2: $name ";
+          }
+        }
+        if (exists $fail{indexes}{notexist}{2}) {
+          for my $name (@{$fail{indexes}{notexist}{2}}) {
+            $db->{perf} .= " Index on 2 but not 1: $name ";
+          }
+        }
+      }
     }
 
     ## Column differences
