@@ -89,9 +89,7 @@ sub clean { ## no critic (RequireArgUnpacking)
 	pod2html check_postgres.pl > check_postgres.pl.html
 	@ perl -pi -e "s/<link.*?>//" check_postgres.pl.html
 	@ perl -pi -e "s~ git clone.*~ git clone git://bucardo.org/check_postgres.git</pre>~" check_postgres.pl.html
-	@ perl -pi -e "s~<title>\S+(.+)~<title>check_postgres.pl\\1</TITLE>~" check_postgres.pl.html
-	@ perl -pi -e "s~.*</title>~~" check_postgres.pl.html
-	@ perl -pi -e "s~</TITLE>~</title>~" check_postgres.pl.html
+	@ perl -pi -e "s~<title>\S+(.+)~<title>check_postgres.pl\\1~" check_postgres.pl.html
 	@ perl -pi -e "s~\`\`(.+?)''~&quot;\\1&quot;~g" check_postgres.pl.html
 	@ rm -f pod2htmd.tmp pod2htmi.tmp
 EOM
