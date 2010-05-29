@@ -2,7 +2,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-</title>
+<title>check_postgres.pl - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</title>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 
 </head>
@@ -308,6 +308,11 @@ script. The default value is 10; the units are always in seconds.</p>
 <dd>
 <p>Displays a help screen with a summary of all actions and options.</p>
 </dd>
+<dt><strong><a name="man" class="item"><strong>--man</strong></a></strong></dt>
+
+<dd>
+<p>Displays the entire manual.</p>
+</dd>
 <dt><strong><a name="v_or_version" class="item"><strong>-V</strong> or <strong>--version</strong></a></strong></dt>
 
 <dd>
@@ -367,8 +372,9 @@ your psql location into the <code>$PSQL</code> variable, also near the top of th
 <dt><strong><a name="output_val" class="item"><strong>--output=VAL</strong></a></strong></dt>
 
 <dd>
-<p>Determines the format of the output, for use in various programs. The default is 'nagios'. No
-other systems are supported yet.</p>
+<p>Determines the format of the output, for use in various programs. The
+default is 'nagios'. Available options are 'nagios', 'mrtg', 'simple'
+and 'cacti'.</p>
 </dd>
 <dt><strong><a name="mrtg_val" class="item"><strong>--mrtg=VAL</strong></a></strong></dt>
 
@@ -1172,7 +1178,7 @@ not given, the schema will be determined automatically each time this check is r
   check_postgres_slony_status --warning 20</pre>
 <p>Example 2: Give a critical if Slony, installed under the schema &quot;_slony&quot;, is over 10 minutes lagged</p>
 <pre>
-  check_postgres_slony_sytatus --schema=_slony --critical=600</pre>
+  check_postgres_slony_status --schema=_slony --critical=600</pre>
 <p>
 </p>
 <h2><a name="txn_time"><strong>txn_time</strong></a></h2>
@@ -1488,6 +1494,9 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 
 <dd>
 <pre>
+  Add index comparison for same_schema (Norman Yamada and Greg Sabino Mullane)
+  Use $ENV{PGSERVICE} instead of &quot;service=&quot; to prevent problems (Guillaume Lelarge)
+  Add --man option to show the entire manual. (Andy Lester)
   Redo the internal run_command() sub to use -x and hashes instead of regexes.
   Fix error in custom logic (Andreas Mager)
   Add the &quot;pgbouncer_checksum&quot; action (Guillaume Lelarge)
@@ -1495,7 +1504,8 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
   Don't apply a LIMIT when using --exclude on the bloat action (Marti Raudsepp)
   Change the output of query_time to show pid,user,port, and address (Giles Westwood)
   Fix to show database properly when using slony_status (Guillaume Lelarge)
-  Allow warning items for same_schema to be comma-separated (Guillaume Lelarge)</pre>
+  Allow warning items for same_schema to be comma-separated (Guillaume Lelarge)
+  Constraint definitions across Postgres versions match better in same_schema.</pre>
 </dd>
 <dt><strong><a name="3" class="item"><strong>Version 2.14.3</strong> (March 1, 2010)</a></strong></dt>
 
