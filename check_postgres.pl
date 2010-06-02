@@ -5101,7 +5101,7 @@ WHERE n1.nspname !~ 'pg_'
         ## Get a list of all index information
         if (! exists $filter{noindexes}) {
             $SQL = q{
-SELECT n.nspname, c1.relname AS tname, c2.relname AS iname, indisunique, indisprimary, indisclustered, indisvalid, indkey
+SELECT n.nspname, c1.relname AS tname, c2.relname AS iname, indisunique, indisprimary, indisclustered, indisvalid, indkey, indexprs, indpred
 FROM pg_index i
 JOIN pg_class c1 ON (c1.oid = indrelid)
 JOIN pg_class c2 ON (c2.oid = indexrelid)
@@ -5111,8 +5111,8 @@ WHERE nspname !~ 'pg_'
             $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
             for $db (@{$info->{db}}) {
                 for my $r (@{$db->{slurp}}) {
-                    my ($schema,$tname,$iname,$uniq,$pri,$clust,$valid,$key) = @$r{
-                        qw/ nspname tname iname indisunique indisprimary indisclustered indisvalid indkey/};
+                    my ($schema,$tname,$iname,$uniq,$pri,$clust,$valid,$key,$expr,$pred) = @$r{
+                        qw/ nspname tname iname indisunique indisprimary indisclustered indisvalid indkey indexprs indpred/};
                     $thing{$x}{indexinfo}{"$schema.$iname"} = {
                         table       => "$schema.$tname",
                         isunique    => $uniq,
@@ -5120,6 +5120,8 @@ WHERE nspname !~ 'pg_'
                         isclustered => $clust,
                         isvalid     => $valid,
                         key         => $key,
+                        expression  => $expr,
+                        pred        => $pred,
                     };
                 }
             }
@@ -5618,8 +5620,15 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
                 $thing{2}{colmap}{$tname}{$attnum} = $col;
             }
         }
-        (my $cols1 = $one->{key}) =~ s/(\d+)/$thing{1}{colmap}{$tname}{$1}/g;
-        (my $cols2 = $two->{key}) =~ s/(\d+)/$thing{2}{colmap}{$tname}{$1}/g;
+
+        my $cols1 = $one->{key};
+        my $cols2 = $two->{key};
+        if ($cols1 ne '0') {
+            $cols1 =~ s/(\d+)/$thing{1}{colmap}{$tname}{$1}/g;
+        }
+        if ($cols2 ne '0') {
+            $cols2 =~ s/(\d+)/$thing{2}{colmap}{$tname}{$1}/g;
+        }
 
         if ($cols1 ne $cols2) {
             $fail{indexes}{key}{$name} = [$cols1, $cols2];
