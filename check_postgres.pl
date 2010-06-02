@@ -5101,27 +5101,27 @@ WHERE n1.nspname !~ 'pg_'
         ## Get a list of all index information
         if (! exists $filter{noindexes}) {
             $SQL = q{
-SELECT n.nspname, c1.relname AS tname, c2.relname AS iname, indisunique, indisprimary, indisclustered, indisvalid, indkey, indexprs, indpred
+SELECT n.nspname, c1.relname AS tname, c2.relname AS iname,
+  indisprimary, indisunique, indisclustered, indisvalid,
+  pg_get_indexdef(c2.oid,0,false) AS statement
 FROM pg_index i
 JOIN pg_class c1 ON (c1.oid = indrelid)
 JOIN pg_class c2 ON (c2.oid = indexrelid)
-JOIN pg_namespace n ON (n.oid = c2.relnamespace)
+JOIN pg_namespace n ON (n.oid = c1.relnamespace)
 WHERE nspname !~ 'pg_'
 };
             $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
             for $db (@{$info->{db}}) {
                 for my $r (@{$db->{slurp}}) {
-                    my ($schema,$tname,$iname,$uniq,$pri,$clust,$valid,$key,$expr,$pred) = @$r{
-                        qw/ nspname tname iname indisunique indisprimary indisclustered indisvalid indkey indexprs indpred/};
-                    $thing{$x}{indexinfo}{"$schema.$iname"} = {
-                        table       => "$schema.$tname",
-                        isunique    => $uniq,
+                    my ($tschema,$tname,$iname,$pri,$uniq,$clust,$valid,$statement) = @$r{
+                        qw/ nspname tname iname indisprimary indisunique indisclustered indisvalid statement/};
+                    $thing{$x}{indexinfo}{"$tschema.$iname"} = {
+                        table       => "$tschema.$tname",
                         isprimary   => $pri,
+                        isunique    => $uniq,
                         isclustered => $clust,
                         isvalid     => $valid,
-                        key         => $key,
-                        expression  => $expr,
-                        pred        => $pred,
+                        statement   => $statement,
                     };
                 }
             }
@@ -5570,8 +5570,9 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
         for my $exclude (@{$opt{exclude}}) {
             next INDEX1 if $name =~ /$exclude/;
         }
-
-        push @{$fail{indexes}{notexist}{1}} => $name;
+        my $tname = exists $thing{1}{indexinfo}{$name}
+            ? $thing{1}{indexinfo}{$name}{table} : '';
+        push @{$fail{indexes}{notexist}{1}} => [$name, $tname];
         $failcount++;
     }
     ## Indexes on 2 but not 1
@@ -5582,7 +5583,9 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
         }
 
         if (! exists $thing{1}{indexes}{$name}) {
-            push @{$fail{indexes}{notexist}{2}} => $name;
+            my $tname = exists $thing{2}{indexinfo}{$name}
+                ? $thing{2}{indexinfo}{$name}{table} : '';
+            push @{$fail{indexes}{notexist}{2}} => [$name, $tname];
             $failcount++;
             next;
         }
@@ -5594,45 +5597,61 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
         my $one = $thing{1}{indexinfo}{$name};
         my $two = $thing{2}{indexinfo}{$name};
 
+        ## Must point to the same table
         if ($one->{table} ne $two->{table}) {
             $fail{indexes}{table}{$name} = [$one->{table},$two->{table}];
             $failcount++;
             next;
         }
 
+        ## Parse the statement to get columns, index type, expression, and predicate
+        if ($one->{statement} !~ /\ACREATE (\w* ?INDEX .+? ON .+? USING (\w+) (.+))/) {
+            die "Could not parse index statement: $one->{statement}\n";
+            next;
+        }
+        my ($def1, $method1,$col1) = ($1,$2,$3);
+        my $where1 = $col1 =~ s/WHERE (.+)// ? $1 : '';
+        1 while $col1   =~ s/\A\s*\((.+)\)\s*\z/$1/;
+        1 while $where1 =~ s/\A\s*\((.+)\)\s*\z/$1/;
+
+        if ($two->{statement} !~ /\ACREATE (\w* ?INDEX .+? ON .+? USING (\w+) (.+))/) {
+            die "Could not parse index statement: $two->{statement}\n";
+            next;
+        }
+        my ($def2,$method2,$col2) = ($1,$2,$3);
+        my $where2 = $col2 =~ s/WHERE (.+)// ? $1 : '';
+        1 while $col2   =~ s/\A\s*\((.+)\)\s*\z/$1/;
+        1 while $where2 =~ s/\A\s*\((.+)\)\s*\z/$1/;
+
+        my $table = $one->{table};
+
+        ## Same columns (also checks expression)
+        if ($col1 ne $col2) {
+            $fail{indexes}{cols}{$name} = [$table, $def1, $def2, $col1, $col2];
+            $failcount++;
+            next;
+        }
+
+        ## Same predicate?
+        if ($where1 ne $where2) {
+            $fail{indexes}{pred}{$name} = [$table, $def1, $def2, $where1, $where2];
+            $failcount++;
+            next;
+        }
+
+        ## Same method?
+        if ($method1 ne $method2) {
+            $fail{indexes}{method}{$name} = [$table, $def1, $def2, $method1, $method2];
+            $failcount++;
+            next;
+        }
+
+        ## Must have same meta information
         for my $var (qw/isprimary isunique isclustered isvalid/) {
             if ($one->{$var} ne $two->{$var}) {
-                $fail{indexes}{$var}{$name} = [$one->{$var},$two->{$var}];
+                $fail{indexes}{$var}{$name} = [$table, $one->{$var}, $two->{$var}];
                 $failcount++;
             }
-        }
-
-        my $tname = $one->{table};
-        if (! exists $thing{1}{colmap}{$tname}) {
-            for my $col (keys %{$thing{1}{columns}{$tname}}) {
-                my $attnum = $thing{1}{columns}{$tname}{$col}{attnum};
-                $thing{1}{colmap}{$tname}{$attnum} = $col;
-            }
-        }
-        if (! exists $thing{2}{colmap}{$tname}) {
-            for my $col (keys %{$thing{2}{columns}{$tname}}) {
-                my $attnum = $thing{2}{columns}{$tname}{$col}{attnum};
-                $thing{2}{colmap}{$tname}{$attnum} = $col;
-            }
-        }
-
-        my $cols1 = $one->{key};
-        my $cols2 = $two->{key};
-        if ($cols1 ne '0') {
-            $cols1 =~ s/(\d+)/$thing{1}{colmap}{$tname}{$1}/g;
-        }
-        if ($cols2 ne '0') {
-            $cols2 =~ s/(\d+)/$thing{2}{colmap}{$tname}{$1}/g;
-        }
-
-        if ($cols1 ne $cols2) {
-            $fail{indexes}{key}{$name} = [$cols1, $cols2];
-            $failcount++;
         }
 
     } ## end of index info
@@ -6159,17 +6178,18 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
     }
 
     ## Index differences
-
     if (exists $fail{indexes}){
         if (exists $fail{indexes}{notexist}) {
             if (exists $fail{indexes}{notexist}{1}) {
-                for my $name (@{$fail{indexes}{notexist}{1}}) {
-                    $db->{perf} .= " Index on 1 but not 2: $name ";
+                for my $row (@{$fail{indexes}{notexist}{1}}) {
+                    my ($name,$tname) = @$row;
+                    $db->{perf} .= " Index on 1 but not 2: $name ON $tname ";
                 }
             }
             if (exists $fail{indexes}{notexist}{2}) {
-                for my $name (@{$fail{indexes}{notexist}{2}}) {
-                    $db->{perf} .= " Index on 2 but not 1: $name ";
+                for my $row (@{$fail{indexes}{notexist}{2}}) {
+                    my ($name,$tname) = @$row;
+                    $db->{perf} .= " Index on 2 but not 1: $name ON $tname ";
                 }
             }
         }
@@ -6180,6 +6200,33 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
                 $name,
                 $one,
                 $two;
+        }
+
+        for my $name (sort keys %{$fail{indexes}{cols}}) {
+            my ($tname,$def1,$def2,$col1,$col2) = @{$fail{indexes}{cols}{$name}};
+            $db->{perf} .= sprintf ' Index %s on table %s applied to (%s) on 1 but (%s) on 2 ',
+                $name,
+                $tname,
+                $col1,
+                $col2;
+        }
+
+        for my $name (sort keys %{$fail{indexes}{pred}}) {
+            my ($tname,$def1,$def2,$w1,$w2) = @{$fail{indexes}{pred}{$name}};
+            $db->{perf} .= sprintf ' Index %s on table %s has predicate (%s) on 1 but (%s) on 2 ',
+                $name,
+                $tname,
+                $w1,
+                $w2;
+        }
+
+        for my $name (sort keys %{$fail{indexes}{method}}) {
+            my ($tname,$def1,$def2,$m1,$m2) = @{$fail{indexes}{method}{$name}};
+            $db->{perf} .= sprintf ' Index %s on table %s has method (%s) on 1 but (%s) on 2 ',
+                $name,
+                $tname,
+                $m1,
+                $m2;
         }
 
         for my $var (qw/isprimary isunique isclustered isvalid/) {
@@ -6194,15 +6241,6 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
                     $two eq 't' ? 'set' : 'not set',
                     $pname;
             }
-        }
-
-        for my $name (sort keys %{$fail{indexes}{key}}) {
-            my ($one,$two) = @{$fail{indexes}{key}{$name}};
-            $db->{perf} .= sprintf ' Index %s is applied to %s %s on 1, but %s on 2 ',
-                $name,
-                $one =~ / / ? 'columns' : 'column',
-                $one,
-                $two;
         }
 
     } ## end of indexes
