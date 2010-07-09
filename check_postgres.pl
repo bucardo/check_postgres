@@ -9582,4 +9582,4 @@ OF SUCH DAMAGE.
 
 =cut
 
-# vi: hardtabs=8 shiftwidth=8 noexpandtab nosmarttab
+# vi: tabstop=4 shiftwidth=4 expandtab
