@@ -24,20 +24,20 @@ like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
 
 $t=qq{$S returns unknown for bizarre Postgres version};
 $cp->fake_version('7.8.12');
-like ($cp->run(''), qr{$label UNKNOWN:.+Could not find revision information for Postgres version 7.8}, $t);
+like ($cp->run(''), qr{$label UNKNOWN:.+Could not download version information for Postgres}, $t);
 
-$t=qq{$S returns warning for outdated Postgres revision};
+$t=qq{$S returns critical for outdated Postgres revision};
 $cp->fake_version('8.3.0');
-like ($cp->run(''), qr{$label WARNING:.+Please upgrade to version 8.3.\d+ of Postgres}, $t);
+like ($cp->run(''), qr{$label CRITICAL:.+Please upgrade to version 8.3.\d+ of Postgres}, $t);
 
-$t=qq{$S returns warning for non-existent future version of Postgres};
+$t=qq{$S returns unknown for non-existent future version of Postgres};
 $cp->fake_version('8.2.999');
-like ($cp->run(''), qr{$label CRITICAL:.+The latest version of Postgres is 8.2.\d+, but you are running}, $t);
+like ($cp->run(''), qr{$label UNKNOWN:.+Your version of Postgres \(8.2.999\) appears to be ahead of the current release!}, $t);
 
 $t=qq{$S returns okay for matching version};
-$cp->run('') =~ /Postgres is (\S+)/ or BAIL_OUT "Could not determine version!\n";
+$cp->run('') =~ /current release! \((\S+)\)/ or BAIL_OUT "Could not determine version!\n";
 my $currver = $1;
 $cp->fake_version($currver);
-like ($cp->run(''), qr{$label OK:.+Postgres is at the latest revision}, $t);
+like ($cp->run(''), qr{$label OK:.+Version .+ is the latest for Postgres}, $t);
 
 exit;

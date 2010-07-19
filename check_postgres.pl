@@ -152,19 +152,13 @@ our %msg = (
     'logfile-syslog'     => q{Database is using syslog, please specify path with --logfile option (fac=$1)},
     'maxtime'            => q{ maxtime=$1}, ## needs leading space
     'mrtg-fail'          => q{Action $1 failed: $2},
-    'new-bc-badver'      => q{Could not determine the version of Bucardo},
-    'new-bc-fail'        => q{Could not find current version information for Bucardo},
-    'new-bc-ok'          => q{Version $1 is the latest for Bucardo},
-    'new-bc-warn'        => q{Please upgrade to version $1 of Bucardo. You are running $2},
-    'new-cp-fail'        => q{Unable to determine the current version of check_postgres.pl},
-    'new-cp-ok'          => q{Version $1 is the latest for check_postgres.pl},
-    'new-cp-warn'        => q{Version $1 of check_postgres.pl exists (this is version $2)},
-    'new-pg-badver'      => q{Could not determine the Postgres revision (version was $1)},
-    'new-pg-badver2'     => q{Could not find revision information for Postgres version $1},
-    'new-pg-big'         => q{Please upgrade to version $1 of Postgres. You are running $2},
-    'new-pg-dev'         => q{Cannot compare revisions for development version $1},
-    'new-pg-match'       => q{Postgres is at the latest revision ($1)},
-    'new-pg-small'       => q{The latest version of Postgres is $1, but you are running $2?},
+    'new-ver-nocver'     => q{Could not download version information for $1},
+    'new-ver-badver'     => q{Could not parse version information for $1},
+    'new-ver-dev'        => q{Cannot compare versions on development versions: you have $1 version $2},
+    'new-ver-nolver'     => q{Could not determine local version information for $1},
+    'new-ver-ok'         => q{Version $1 is the latest for $2},
+    'new-ver-warn'       => q{Please upgrade to version $1 of $2. You are running $3},
+    'new-ver-tt'         => q{Your version of $1 ($2) appears to be ahead of the current release! ($3)},
     'no-match-db'        => q{No matching databases found due to exclusion/inclusion options},
     'no-match-fs'        => q{No matching file systems found due to exclusion/inclusion options},
     'no-match-rel'       => q{No matching relations found due to exclusion/inclusion options},
@@ -365,19 +359,13 @@ our %msg = (
     'logfile-syslog'     => q{La base de données utiliser syslog, merci de spécifier le chemin avec l'option --logfile (fac=$1)},
     'maxtime'            => q{ maxtime=$1}, ## needs leading space
     'mrtg-fail'          => q{Échec de l'action $1 : $2},
-    'new-bc-badver'      => q{N'a pas pu déterminer la version de Bucardo},
-    'new-bc-fail'        => q{N'a pas pu trouver la version actuelle pour Bucardo},
-    'new-bc-ok'          => q{La version $1 est la dernière pour Bucardo},
-    'new-bc-warn'        => q{Merci de mettre à jour vers la version $1 de Bucardo. Vous utilisez actuellement la $2},
-    'new-cp-fail'        => q{Incapable de déterminer la version actuelle de check_postgres.pl},
-    'new-cp-ok'          => q{La version $1 est la dernière pour check_postgres.pl},
-    'new-cp-warn'        => q{La version $1 de check_postgres.pl existe (ceci est la version $2)},
-    'new-pg-badver'      => q{N'a pas pu déterminer la révision de Postgres (la version était $1)},
-    'new-pg-badver2'     => q{N'a pas pu trouver l'information de révision de Posrgres version $1},
-    'new-pg-big'         => q{Veuillez mettre à jour Postgres vers la version $1. Vous utilisez actuellement la version $2},
-'new-pg-dev'         => q{Cannot compare revisions for development version $1},
-    'new-pg-match'       => q{Postgres est à la dernière révision ($1)},
-    'new-pg-small'       => q{La dernière version de Postgres est la $1, mais vous utilisez actuellement la version $2?},
+'new-ver-nocver'     => q{Could not download version information for $1},
+'new-ver-badver'     => q{Could not parse version information for $1},
+'new-ver-dev'        => q{Cannot compare versions on development versions: you have $1 version $2},
+'new-ver-nolver'     => q{Could not determine local version information for $1},
+    'new-ver-ok'          => q{La version $1 est la dernière pour $2},
+    'new-bc-warn'        => q{Merci de mettre à jour vers la version $1 de $2. Vous utilisez actuellement la $3},
+'new-ver-tt'         => q{Your version of $1 ($2) appears to be ahead of the current release! ($3)},
     'no-match-db'        => q{Aucune base de données trouvée à cause des options d'exclusion/inclusion},
     'no-match-fs'        => q{Aucun système de fichier trouvé à cause des options d'exclusion/inclusion},
     'no-match-rel'       => q{Aucune relation trouvée à cause des options d'exclusion/inclusion},
@@ -859,6 +847,7 @@ our $action_info = {
  new_version_bc      => [0, 'Checks if a newer version of Bucardo is available.'],
  new_version_cp      => [0, 'Checks if a newer version of check_postgres.pl is available.'],
  new_version_pg      => [0, 'Checks if a newer version of Postgres is available.'],
+ new_version_tnm     => [0, 'Checks if a newer version of tail_n_mail is available.'],
  pgbouncer_checksum  => [0, 'Check that no pgbouncer settings have changed since the last check.'],
  prepared_txns       => [1, 'Checks number and age of prepared transactions.'],
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
@@ -1496,6 +1485,9 @@ check_new_version_pg() if $action eq 'new_version_pg';
 
 ## Check for new versions of Bucardo
 check_new_version_bc() if $action eq 'new_version_bc';
+
+## Check for new versions of tail_n_mail
+check_new_version_tnm() if $action eq 'new_version_tnm';
 
 finishup();
 
@@ -4090,61 +4082,123 @@ ORDER BY name
 } ## end of check_logfile
 
 
-sub check_new_version_bc {
+sub check_new_version {
 
-    ## Check if a new version of Bucardo is available
+    ## Check for newer versions of some program
 
-    my $site = 'bucardo.org';
-    my $path = 'bucardo/latest_version.txt';
-    my $url = "http://$site/$path";
-    my ($newver,$maj,$rev,$message) = ('','','','');
-    my $versionre = qr{((\d+\.\d+)\.(\d+))\s+(.+)};
+    my $program = shift or die;
+    my $exec = shift or die;
+    my $url = shift or die;
 
+    ## The format is X.Y.Z [optional message]
+    my $versionre = qr{((\d+)\.(\d+)\.(\d+))\s*(.*)};
+    my ($cversion,$cmajor,$cminor,$crevision,$cmessage) = ('','','','','');
+
+    ## Try to fetch the current version from the web
     for my $meth (@get_methods) {
         eval {
             my $COM = "$meth $url";
             $VERBOSE >= 1 and warn "TRYING: $COM\n";
             my $info = qx{$COM 2>/dev/null};
-            if ($info =~ $versionre) {
-                ($newver,$maj,$rev,$message) = ($1,$2,$3,$4);
+            ## Postgres is slightly different
+            if ($program eq 'Postgres') {
+                $cmajor = {};
+                while ($info =~ /<title>(\d+)\.(\d+)\.(\d+)/g) {
+                    $cmajor->{"$1.$2"} = $3;
+                }
             }
-            $VERBOSE >=1 and warn "SET version to $newver\n";
+            elsif ($info =~ $versionre) {
+                ($cversion,$cmajor,$cminor,$crevision,$cmessage) = ($1, int $2, int $3, int $4, $5);
+                if ($VERBOSE >= 1) {
+                    $info =~ s/\s+$//s;
+                    warn "Remote version string: $info\n";
+                    warn "Remote version: $cversion\n";
+                }
+            }
         };
-        last if length $newver;
+        last if $cmajor;
     }
 
-    if (! length $newver) {
-        add_unknown msg('new-bc-fail');
+    if (! $cmajor) {
+        add_unknown msg('new-ver-nocver', $program);
         return;
     }
 
-    my $BCVERSION = '?';
+    ## Figure out the local copy's version
+    my $output;
     eval {
-        $BCVERSION = qx{bucardo_ctl --version 2>&1};
+        ## We may already know the version (e.g. ourselves)
+        $output = ($exec =~ /\d+\.\d+/) ? $exec : qx{$exec --version 2>&1};
     };
-    if ($@ or !$BCVERSION) {
-        add_unknown msg('new-bc-badver');
+    if ($@ or !$output) {
+        if ($program eq 'tail_n_mail') {
+            ## Check for the old name
+            eval {
+                $output = qx{tail_n_mail.pl --version 2>&1};
+            };
+        }
+        if ($@ or !$output) {
+            add_unknown msg('new-ver-badver', $program);
+            return;
+        }
+    }
+
+    if ($output !~ $versionre) {
+        add_unknown msg('new-ver-nolver', $program);
+        return;
+    }
+    my ($lversion,$lmajor,$lminor,$lrevision) = ($1, int $2, int $3, int $4);
+    if ($VERBOSE >= 1) {
+        $output =~ s/\s+$//s;
+        warn "Local version string: $output\n";
+        warn "Local version: $lversion\n";
+    }
+
+    ## Postgres is a special case
+    if ($program eq 'Postgres') {
+        my $lver = "$lmajor.$lminor";
+        if (! exists $cmajor->{$lver}) {
+            add_unknown msg('new-ver-nocver', $program);
+            return;
+        }
+        $crevision = $cmajor->{$lver};
+        $cmajor = $lmajor;
+        $cminor = $lminor;
+        $cversion = "$cmajor.$cminor.$crevision";
+    }
+
+    ## Most common case: everything matches
+    if ($lversion eq $cversion) {
+        add_ok msg('new-ver-ok', $lversion, $program);
         return;
     }
 
-    if ($BCVERSION !~ s/.*((\d+\.\d+)\.(\d+)).*/$1/s) {
-        add_unknown msg('new-bc-fail');
-        return;
-    }
-    my ($cmaj,$crev) = ($2,$3);
-
-    if ($newver eq $BCVERSION) {
-        add_ok msg('new-bc-ok', $newver);
+    ## Check for a revision update
+    if ($lmajor==$cmajor and $lminor==$cminor and $lrevision<$crevision) {
+        add_critical msg('new-ver-warn', $cversion, $program, $lversion);
         return;
     }
 
-    $nohost = $message;
-    if ($cmaj eq $maj) {
-        add_critical msg('new-bc-warn', $newver, $BCVERSION);
+    ## Check for a major update
+    if ($lmajor<$cmajor or ($lmajor==$cmajor and $lminor<$cminor)) {
+        add_warning msg('new-ver-warn', $cversion, $program, $lversion);
+        return;
     }
-    else {
-        add_warning msg('new-bc-warn', $newver, $BCVERSION);
-    }
+
+    ## Anything else must be time travel, which we cannot handle
+    add_unknown msg('new-ver-tt', $program, $lversion, $cversion);
+    return;
+
+} ## end of check_new_version
+
+
+sub check_new_version_bc {
+
+    ## Check if a newer version of Bucardo is available
+
+    my $url = 'http://bucardo.org/bucardo/latest_version.txt';
+    check_new_version('Bucardo', 'bucardo_ctl', $url);
+
     return;
 
 } ## end of check_new_version_bc
@@ -4153,50 +4207,10 @@ sub check_new_version_bc {
 sub check_new_version_cp {
 
     ## Check if a new version of check_postgres.pl is available
-    ## You probably don't want to run this one every five minutes. :)
 
-    my $site = 'bucardo.org';
-    my $path = 'check_postgres/latest_version.txt';
-    my $url = "http://$site/$path";
-    my ($newver,$maj,$rev,$message) = ('','','','');
-    my $versionre = qr{((\d+\.\d+)\.(\d+))\s+(.+)};
+    my $url = 'http://bucardo.org/check_postgres/latest_version.txt';
+    check_new_version('check_postgres', $VERSION, $url);
 
-    for my $meth (@get_methods) {
-        eval {
-            my $COM = "$meth $url";
-            $VERBOSE >= 1 and warn "TRYING: $COM\n";
-            my $info = qx{$COM 2>/dev/null};
-            if ($info =~ $versionre) {
-                ($newver,$maj,$rev,$message) = ($1,$2,$3,$4);
-            }
-            $VERBOSE >=1 and warn "SET version to $newver\n";
-        };
-        last if length $newver;
-    }
-
-    if (! length $newver) {
-        add_unknown msg('new-cp-fail');
-        return;
-    }
-
-    if ($newver eq $VERSION) {
-        add_ok msg('new-cp-ok', $newver);
-        return;
-    }
-
-    if ($VERSION !~ /(\d+\.\d+)\.(\d+)/) {
-        add_unknown msg('new-cp-fail');
-        return;
-    }
-
-    $nohost = $message;
-    my ($cmaj,$crev) = ($1,$2);
-    if ($cmaj eq $maj) {
-        add_warning msg('new-cp-warn', $newver, $VERSION);
-    }
-    else {
-        add_critical msg('new-cp-warn', $newver, $VERSION);
-    }
     return;
 
 } ## end of check_new_version_cp
@@ -4205,60 +4219,39 @@ sub check_new_version_cp {
 sub check_new_version_pg {
 
     ## Check if a new version of Postgres is available
-    ## Note that we only check the revision
-    ## This also depends highly on the web page at postgresql.org not changing format
 
     my $url = 'http://www.postgresql.org/versions.rss';
-    my $versionre = qr{<title>(\d+)\.(\d+)\.(\d+)</title>};
 
-    my %newver;
-    for my $meth (@get_methods) {
-        eval {
-            my $COM = "$meth $url";
-            $VERBOSE >= 1 and warn "TRYING: $COM\n";
-            my $info = qx{$COM 2>/dev/null};
-            while ($info =~ /$versionre/g) {
-                my ($maj,$min,$rev) = ($1,$2,$3);
-                $newver{"$maj.$min"} = $rev;
-            }
-        };
-        last if %newver;
-    }
-
+    ## Grab the local version
     my $info = run_command('SELECT version() AS version');
-
-    $db = $info->{db}[0];
-
-    if ($db->{slurp}[0]{version} !~ /(\d+\.\d+)(\S+)/o) { ## no critic (ProhibitUnusedCapture)
-        add_unknown msg('new-pg-badver', $db->{slurp});
-        return;
-    }
-    my ($ver,$rev) = ($1,$2);
-    if (! exists $newver{$ver}) {
-        add_unknown msg('new-pg-badver2', $ver);
-        return;
-    }
-
-    if ($rev !~ s/^\.(\d+)/$1/) {
-        ## Beta version?
-        add_ok msg('new-pg-dev', "$ver$rev");
+    my $lversion = $info->{db}[0]{slurp}[0]{version};
+    ## Make sure it is parseable and check for development versions
+    if ($lversion !~ /\d+\.\d+\.\d+/) {
+        if ($lversion =~ /(\d+\.\d+\S+)/) {
+            add_ok msg('new-ver-dev', 'Postgres', $1);
+            return;
+        }
+        add_unknown msg('new-ver-nolver', 'Postgres');
         return;
     }
 
-    my $newrev = $newver{$ver};
-    if ($newrev > $rev) {
-        add_warning msg('new-pg-big', "$ver.$newrev", "$ver.$rev");
-    }
-    elsif ($newrev < $rev) {
-        add_critical msg('new-pg-small', "$ver.$newrev", "$ver.$rev");
-    }
-    else {
-        add_ok msg('new-pg-match', "$ver.$rev");
-    }
+    check_new_version('Postgres', $lversion, $url);
 
     return;
 
 } ## end of check_new_version_pg
+
+
+sub check_new_version_tnm {
+
+    ## Check if a new version of tail_n_mail is available
+
+    my $url = 'http://bucardo.org/tail_n_mail/latest_version.txt';
+    check_new_version('tail_n_mail', 'tail_n_mail', $url);
+
+    return;
+
+} ## end of check_new_version_tnm
 
 
 sub check_pg_stat_activity {
@@ -7313,8 +7306,8 @@ which determine if the output is displayed or not, where 'a' = all, 'c' = critic
 =item B<--get_method=VAL>
 
 Allows specification of the method used to fetch information for the C<new_version_cp>, 
-C<new_version_pg>, and C<new_version_bc> checks. The following programs are tried, in order, to 
-grab the information from the web: GET, wget, fetch, curl, lynx, links. To force the use of just 
+C<new_version_pg>, C<new_version_bc>, and C<new_version_tnm> checks. The following programs are tried, 
+in order, to grab the information from the web: GET, wget, fetch, curl, lynx, links. To force the use of just 
 one (and thus remove the overhead of trying all the others until one of those works), 
 enter one of the names as the argument to get_method. For example, a BSD box might enter 
 the following line in their C<.check_postgresrc> file:
@@ -7923,6 +7916,15 @@ Example 2: Same as above, but raise a warning, not a critical
 For MRTG output, returns a 1 or 0 on the first line, indicating success or failure. In case of a 
 failure, the fourth line will provide more detail on the failure encountered.
 
+=head2 B<new_version_bc>
+
+(C<symlink: check_postgres_new_version_bc>) Checks if a newer version of the Bucardo 
+program is available. The current version is obtained by running C<bucardo_ctl --version>.
+If a major upgrade is available, a warning is returned. If a revision upgrade is 
+available, a critical is returned. (Bucardo is a master to slave, and master to master 
+replication system for Postgres: see http://bucardo.org for more information).
+See also the information on the C<--get_method> option.
+
 =head2 B<new_version_cp>
 
 (C<symlink: check_postgres_new_version_cp>) Checks if a newer version of this program 
@@ -7941,13 +7943,15 @@ as possible is always recommended. Returns a warning if you do not have the late
 It is recommended this check is run at least once a day. See also the information on 
 the C<--get_method> option.
 
-=head2 B<new_version_bc>
 
-(C<symlink: check_postgres_new_version_bc>) Checks if a newer version of the Bucardo 
-program is available. The current version is obtained by running C<bucardo_ctl --version>.
-If a major upgrade is available, a warning is returned. If a revision upgrade is 
-available, a critical is returned. (Bucardo is a master to slave, and master to master 
-replication system for Postgres: see http://bucardo.org for more information).
+=head2 B<new_version_tnm>
+
+(C<symlink: check_postgres_new_version_tnm>) Checks if a newer version of the 
+tail_n_mail program is available. The current version is obtained by running 
+C<tail_n_mail --version>. If a major upgrade is available, a warning is returned. If a 
+revision upgrade is available, a critical is returned. (tail_n_mail is a log monitoring 
+tool that can send mail when interesting events appear in your Postgres logs.
+See: http://bucardo.org/wiki/Tail_n_mail for more information).
 See also the information on the C<--get_method> option.
 
 =head2 B<pgbouncer_checksum>
