@@ -162,6 +162,7 @@ our %msg = (
     'new-pg-badver'      => q{Could not determine the Postgres revision (version was $1)},
     'new-pg-badver2'     => q{Could not find revision information for Postgres version $1},
     'new-pg-big'         => q{Please upgrade to version $1 of Postgres. You are running $2},
+    'new-pg-dev'         => q{Cannot compare revisions for development version $1},
     'new-pg-match'       => q{Postgres is at the latest revision ($1)},
     'new-pg-small'       => q{The latest version of Postgres is $1, but you are running $2?},
     'no-match-db'        => q{No matching databases found due to exclusion/inclusion options},
@@ -374,6 +375,7 @@ our %msg = (
     'new-pg-badver'      => q{N'a pas pu déterminer la révision de Postgres (la version était $1)},
     'new-pg-badver2'     => q{N'a pas pu trouver l'information de révision de Posrgres version $1},
     'new-pg-big'         => q{Veuillez mettre à jour Postgres vers la version $1. Vous utilisez actuellement la version $2},
+'new-pg-dev'         => q{Cannot compare revisions for development version $1},
     'new-pg-match'       => q{Postgres est à la dernière révision ($1)},
     'new-pg-small'       => q{La dernière version de Postgres est la $1, mais vous utilisez actuellement la version $2?},
     'no-match-db'        => q{Aucune base de données trouvée à cause des options d'exclusion/inclusion},
@@ -1024,10 +1026,8 @@ if (! defined $PSQL or ! length $PSQL) {
 }
 -x $PSQL or ndie msg('opt-psql-noexec', $PSQL);
 $res = qx{$PSQL --version};
-$res =~ /^psql \(PostgreSQL\) (\d+\.\d+)(\S*)/ or ndie msg('opt-psql-nover');
+$res =~ /^psql.+(\d+\.\d+)/ or ndie msg('opt-psql-nover');
 our $psql_version = $1;
-our $psql_revision = $2;
-$psql_revision =~ s/\D//g;
 
 $VERBOSE >= 2 and warn qq{psql=$PSQL version=$psql_version\n};
 
@@ -1940,7 +1940,7 @@ sub run_command {
                 if ($db->{error}) {
                     ndie $db->{error};
                 }
-                if ($db->{slurp} !~ /PostgreSQL (\d+\.\d+)/) {
+                if ($db->{slurp} !~ /(\d+\.\d+)/) {
                     ndie msg('die-badversion', $db->{slurp});
                 }
                 $db->{version} = $1;
@@ -3040,7 +3040,7 @@ sub check_connection {
 
     $db = $info->{db}[0];
 
-    my $ver = ($db->{slurp}[0]{v} =~ /PostgreSQL (\d+\.\d+\S+)/o) ? $1 : '';
+    my $ver = ($db->{slurp}[0]{v} =~ /(\d+\.\d+\S+)/o) ? $1 : '';
 
     $MRTG and do_mrtg({one => $ver ? 1 : 0});
 
@@ -4229,32 +4229,31 @@ sub check_new_version_pg {
 
     $db = $info->{db}[0];
 
-    if ($db->{slurp}[0]{version} !~ /PostgreSQL (\S+)/o) { ## no critic (ProhibitUnusedCapture)
-        add_unknown msg('invalid-query', $db->{slurp});
+    if ($db->{slurp}[0]{version} !~ /(\d+\.\d+)(\S+)/o) { ## no critic (ProhibitUnusedCapture)
+        add_unknown msg('new-pg-badver', $db->{slurp});
         return;
     }
-
-    my $currver = $1;
-    if ($currver !~ /(\d+\.\d+)\.(\d+)/) {
-        add_unknown msg('new-pg-badver', $currver);
-        return;
-    }
-
     my ($ver,$rev) = ($1,$2);
     if (! exists $newver{$ver}) {
         add_unknown msg('new-pg-badver2', $ver);
         return;
     }
 
+    if ($rev !~ s/^\.(\d+)/$1/) {
+        ## Beta version?
+        add_ok msg('new-pg-dev', "$ver$rev");
+        return;
+    }
+
     my $newrev = $newver{$ver};
     if ($newrev > $rev) {
-        add_warning msg('new-pg-big', "$ver.$newrev", $currver);
+        add_warning msg('new-pg-big', "$ver.$newrev", "$ver.$rev");
     }
     elsif ($newrev < $rev) {
-        add_critical msg('new-pg-small', "$ver.$newrev", $currver);
+        add_critical msg('new-pg-small', "$ver.$newrev", "$ver.$rev");
     }
     else {
-        add_ok msg('new-pg-match', $currver);
+        add_ok msg('new-pg-match', "$ver.$rev");
     }
 
     return;
@@ -6965,7 +6964,7 @@ sub check_version {
 
     for $db (@{$info->{db}}) {
         my $row = $db->{slurp}[0];
-        if ($row->{version} !~ /PostgreSQL ((\d+\.\d+)(\w+|\.\d+))/o) {
+        if ($row->{version} !~ /((\d+\.\d+)(\w+|\.\d+))/o) {
             add_unknown msg('invalid-query', $row->{version});
             next;
         }
@@ -8581,6 +8580,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Fix to show database properly when using slony_status (Guillaume Lelarge)
   Allow warning items for same_schema to be comma-separated (Guillaume Lelarge)
   Constraint definitions across Postgres versions match better in same_schema.
+  Work against "EnterpriseDB" databases (tosivakumar and Greg Sabino Mullane)
 
 =item B<Version 2.14.3> (March 1, 2010)
 
