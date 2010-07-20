@@ -8584,7 +8584,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Fix to show database properly when using slony_status (Guillaume Lelarge)
   Allow warning items for same_schema to be comma-separated (Guillaume Lelarge)
   Constraint definitions across Postgres versions match better in same_schema.
-  Work against "EnterpriseDB" databases (tosivakumar and Greg Sabino Mullane)
+  Work against "EnterpriseDB" databases (Sivakumar Krishnamurthy and Greg Sabino Mullane)
 
 =item B<Version 2.14.3> (March 1, 2010)
 
