@@ -1177,7 +1177,7 @@ sub finishup {
         if ($opt{showperf}) {
             print '| ';
             for (sort keys %$info) {
-                my $m = sprintf '%s ', join $SEP => map { $_->[1] } @{$info->{$_}};
+                my $m = sprintf '%s ', join ' ' => map { $_->[1] } @{$info->{$_}};
                 if ($VERBOSE) {
                     $m =~ s/  /\n/g;
                 }
