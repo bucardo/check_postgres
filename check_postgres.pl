@@ -863,6 +863,7 @@ our $action_info = {
  txn_wraparound      => [1, 'See how close databases are getting to transaction ID wraparound.'],
  version             => [1, 'Check for proper Postgres version.'],
  wal_files           => [1, 'Check the number of WAL files in the pg_xlog directory'],
+ archive_ready       => [1, 'Check the number of WAL files ready in the pg_xlog/archive_status'],
 };
 
 ## XXX Need to i18n the above
@@ -1243,6 +1244,7 @@ our %testaction = (
                   txn_idle          => 'ON: stats_command_string(<8.3) VERSION: 8.0',
                   txn_time          => 'VERSION: 8.3',
                   wal_files         => 'VERSION: 8.1',
+                  archive_ready     => 'VERSION: 8.1',
                   fsm_pages         => 'VERSION: 8.2 MAX: 8.3',
                   fsm_relations     => 'VERSION: 8.2 MAX: 8.3',
 );
@@ -1426,6 +1428,9 @@ check_version() if $action eq 'version';
 
 ## Check the number of WAL files. warning and critical are numbers
 check_wal_files() if $action eq 'wal_files';
+
+## Check the number of WAL files ready to archive. warning and critical are numbers
+check_archive_ready() if $action eq 'archive_ready';
 
 ## Check the maximum transaction age of all connections
 check_txn_time() if $action eq 'txn_time';
@@ -7035,6 +7040,47 @@ sub check_wal_files {
 } ## end of check_wal_files
 
 
+sub check_archive_ready {
+
+    ## Check on the number of WAL archive with status "ready"
+    ## Supports: Nagios, MRTG
+    ## Must run as a superuser
+    ## Critical and warning are the number of files
+    ## Example: --critical=10
+
+    my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
+
+    $SQL = q{SELECT count(*) FROM pg_ls_dir('pg_xlog/archive_status') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}.ready$';};
+
+    my $info = run_command($SQL, {regex => qr[\d] });
+
+    my $found = 0;
+    for $db (@{$info->{db}}) {
+        my $r = $db->{slurp}[0];
+        my $numfiles = $r->{count};
+        if ($MRTG) {
+            $stats{$db->{dbname}} = $numfiles;
+            $statsmsg{$db->{dbname}} = '';
+            next;
+        }
+        my $msg = qq{$numfiles};
+        $db->{perf} .= " '$db->{host}'=$numfiles;$warning;$critical";
+        if (length $critical and $numfiles > $critical) {
+            add_critical $msg;
+        }
+        elsif (length $warning and $numfiles > $warning) {
+            add_warning $msg;
+        }
+        else {
+            add_ok $msg;
+        }
+    }
+
+    return;
+
+} ## end of check_archive_ready
+
+
 =pod
 
 =head1 NAME
@@ -8359,6 +8405,26 @@ Example 1: Check that the number of WAL files is 20 or less on host "pluto"
   check_postgres_wal_files --host=pluto --critical=20
 
 For MRTG output, reports the number of WAL files on line 1.
+
+=head2 B<archive_ready>
+
+(C<symlink: check_postgres_archive_ready>) Checks how many WAL files with extension F<.ready> 
+exist in the F<pg_xlog/archive_status> directory, which is found 
+off of your B<data_directory>. This action must be run as a superuser, in order to access the 
+contents of the F<pg_xlog/archive_status> directory. The minimum version to use this action is 
+Postgres 8.1. The I<--warning> and I<--critical> options are simply the number of 
+F<.ready> files in the F<pg_xlog/archive_status> directory. 
+Usually, these values should be low, turning on the archive mechanism, we usually want it to 
+archive WAL files as fast as possible.
+
+If the archive command fail, number of WAL in your F<pg_xlog> directory will grow until
+exhausting all the disk space and force PostgreSQL to stop immediatly.
+
+Example 1: Check that the number of ready WAL files is 10 or less on host "pluto"
+
+  check_postgres_archive_ready --host=pluto --critical=10
+
+For MRTG output, reports the number of ready WAL files on line 1.
 
 =head2 B<version>
 
