@@ -173,6 +173,7 @@ our %msg = (
     'opt-psql-nofind'    => q{Could not find a suitable psql executable},
     'opt-psql-nover'     => q{Could not determine psql version},
     'opt-psql-restrict'  => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
+    'pgbouncer-pool'     => q{Pool=$1 $2=$3},
     'PID'                => q{PID},
     'port'               => q{port},
     'preptxn-none'       => q{No prepared transactions found},
@@ -849,6 +850,14 @@ our $action_info = {
  new_version_pg      => [0, 'Checks if a newer version of Postgres is available.'],
  new_version_tnm     => [0, 'Checks if a newer version of tail_n_mail is available.'],
  pgbouncer_checksum  => [0, 'Check that no pgbouncer settings have changed since the last check.'],
+ pgb_pool_cl_active  => [1, 'Check the number of active clients in each pgbouncer pool.'],
+ pgb_pool_cl_wait    => [1, 'Check the number of watiing clients in each pgbouncer pool.'],
+ pgb_pool_sv_active  => [1, 'Check the number of active server connections in each pgbouncer pool.'],
+ pgb_pool_sv_idle    => [1, 'Check the number of idle server connections in each pgbouncer pool.'],
+ pgb_pool_sv_used    => [1, 'Check the number of used server connections in each pgbouncer pool.'],
+ pgb_pool_sv_tested  => [1, 'Check the number of tested server connections in each pgbouncer pool.'],
+ pgb_pool_sv_login   => [1, 'Check the number of login server connections in each pgbouncer pool.'],
+ pgb_pool_maxwait    => [1, 'Check the current maximum wait time for client connections in pgbouncer pools.'],
  prepared_txns       => [1, 'Checks number and age of prepared transactions.'],
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
@@ -1022,7 +1031,7 @@ our $psql_version = $1;
 $VERBOSE >= 2 and warn qq{psql=$PSQL version=$psql_version\n};
 
 $opt{defaultdb} = $psql_version >= 8.0 ? 'postgres' : 'template1';
-$opt{defaultdb} = 'pgbouncer' if $action eq 'pgbouncer_checksum';
+$opt{defaultdb} = 'pgbouncer' if ($action eq 'pgbouncer_checksum' || $action =~ /^pgb_/);
 
 sub add_response {
 
@@ -1477,6 +1486,30 @@ check_slony_status() if $action eq 'slony_status';
 ## Verify that the pgbouncer settings are what we think they should be
 check_pgbouncer_checksum() if $action eq 'pgbouncer_checksum';
 
+## Check the number of active clients in each pgbouncer pool
+check_pgb_pool('cl_active') if $action eq 'pgb_pool_cl_active';
+
+## Check the number of watiing clients in each pgbouncer pool
+check_pgb_pool('cl_wait') if $action eq 'pgb_pool_cl_wait';
+
+## Check the number of active server connections in each pgbouncer pool
+check_pgb_pool('sv_active') if $action eq 'pgb_pool_sv_active';
+
+## Check the number of idle server connections in each pgbouncer pool
+check_pgb_pool('sv_idle') if $action eq 'pgb_pool_sv_idle';
+
+## Check the number of used server connections in each pgbouncer pool
+check_pgb_pool('sv_used') if $action eq 'pgb_pool_sv_used';
+
+## Check the number of tested server connections in each pgbouncer pool
+check_pgb_pool('sv_tested') if $action eq 'pgb_pool_sv_tested';
+
+## Check the number of login server connections in each pgbouncer pool
+check_pgb_pool('sv_login') if $action eq 'pgb_pool_sv_login';
+
+## Check the current maximum wait time for client connections in pgbouncer pools
+check_pgb_pool('maxwait') if $action eq 'pgb_pool_maxwait';
+
 ##
 ## Everything past here does not hit a Postgres database
 ##
@@ -1847,7 +1880,7 @@ sub run_command {
         my $dbtimeout = $timeout * 1000;
         alarm 0;
 
-        if ($action ne 'pgbouncer_checksum') {
+        if ($action ne 'pgbouncer_checksum' and $action !~ /^pgb_/) {
             $string = "BEGIN;SET statement_timeout=$dbtimeout;COMMIT;$string";
         }
 
@@ -4433,7 +4466,7 @@ sub check_pgbouncer_checksum {
     $SQL = 'SHOW CONFIG';
     my $info = run_command($SQL, { regex => qr[log_pooler_errors] });
 
-    $db = $info->{db};
+    $db = $info->{db}[0];
 
     my $newstring = '';
     for my $r (@{$db->{slurp}}) {
@@ -4470,6 +4503,39 @@ sub check_pgbouncer_checksum {
 
 } ## end of check_pgbouncer_checksum
 
+sub check_pgb_pool {
+    # Check various bits of the pgbouncer SHOW POOLS ouptut
+    my $stat = shift;
+    my ($warning, $critical) = validate_range({type => 'positive integer'});
+
+    $SQL = 'SHOW POOLS';
+    my $info = run_command($SQL, { regex => qr[$stat] });
+
+    $db = $info->{db}[0];
+    my $output = $db->{slurp};
+    my $gotone = 0;
+    for my $i (@$output) {
+        next if skip_item($i->{database});
+        my $msg = "$i->{database}=$i->{$stat}";
+
+        if ($MRTG) {
+            $stats{$i->{database}} = $i->{$stat};
+            $statsmsg{$i->{database}} = msg('pgbouncer-pool', $i->{database}, $stat, $i->{$stat});
+            next;
+        }
+
+        if ($critical and $i->{$stat} >= $critical) {
+            add_critical $msg;
+        }
+        elsif ($warning and $i->{$stat} >= $warning) {
+            add_warning $msg;
+        }
+        else {
+            add_ok $msg;
+        }
+    }
+
+} ## end of check_pgb_pool
 
 sub check_prepared_txns {
 
