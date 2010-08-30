@@ -8091,6 +8091,60 @@ For MRTG output, returns a 1 or 0 indicating success of failure of the checksum 
 checksum must be provided as the C<--mrtg> argument. The fourth line always gives the 
 current checksum.
 
+=head2 B<pgbouncer pool checks>
+
+=over 4
+
+=item pgb_pool_cl_active
+
+(C<symlink:check_postgres_pgb_pool_cl_active>) Connections from clients that
+are currently associated with a connection to the database
+
+=item pgb_pool_cl_wait
+
+(C<symlink:check_postgres_pgb_pool_cl_wait>) Connections from clients that are
+waiting for a database connection
+
+=item pgb_pool_sv_active
+
+(C<symlink:check_postgres_pgb_pool_sv_active>) PostgreSQL connections currently
+associated with a client
+
+=item pgb_pool_sv_idle
+
+(C<symlink:check_postgres_pgb_pool_sv_idle>) PostgreSQL connections ready to be
+associated with an incoming client
+
+=item pgb_pool_sv_used
+
+(C<symlink:check_postgres_pgb_pool_sv_used>) PostgreSQL connections just
+unlinked from a client and not yet returned to the idle pool
+
+=item pgb_pool_sv_tested
+
+(C<symlink:check_postgres_pgb_pool_sv_tested>) PostgreSQL connections currently
+being tested
+
+=item pgb_pool_sv_login
+
+(C<symlink:check_postgres_pgb_pool_sv_login>) PostgreSQL connections currently
+in the login process
+
+=item pgb_pool_maxwait
+
+(C<symlink:check_postgres_pgb_pool_maxwait>) Time in seconds that the oldest
+client in the waiting pool has been waiting for a connection
+
+=back
+
+Examines pgbouncer's pool statistics. Each pool has a set of "client"
+connections, referring to connections from external clients, and "server"
+connections, referring to connections to PostgreSQL itself. The related
+check_postgres actions are prefixed by "cl_" and "sv_", respectively. Active
+client connections are those connections currently associated with an active
+server connection. Client connections may also be "waiting", meaning they have
+not yet been allocated a server connection.
+
 =head2 B<prepared_txns>
 
 (C<symlink: check_postgres_prepared_txns>) Check on the age of any existing prepared transactions. 
