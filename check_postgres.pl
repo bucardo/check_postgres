@@ -6851,14 +6851,14 @@ SELECT
  client_addr,
  client_port,
  procpid,
- ROUND(EXTRACT(epoch FROM now()-xact_start)),
+ ROUND(EXTRACT(epoch FROM now()-xact_start)) AS maxtime,
  datname,
  usename
 FROM pg_stat_activity
 WHERE xact_start IS NOT NULL $USERWHERECLAUSE
 };
 
-    my $info = run_command($SQL, { regex => qr{\d+ \|\s+\s+}, emptyok => 1 } );
+	my $info = run_command($SQL, { regex => qr{\| \d+\n}, emptyok => 1 } );
 
     $db = $info->{db}[0];
     my $slurp = $db->{slurp};
@@ -6878,7 +6878,7 @@ WHERE xact_start IS NOT NULL $USERWHERECLAUSE
 
     ## Read in and parse the psql output
     for my $r (@{$db->{slurp}}) {
-        my ($add,$port,$pid,$time,$dbname,$user) = @$r{qw/ client_addr client_port procpid username maxtime maxdb /};
+        my ($add,$port,$pid,$time,$dbname,$user) = @$r{qw/ client_addr client_port procpid maxtime datname usename /};
         next if skip_item($dbname);
 
         if ($time >= $maxtime) {
