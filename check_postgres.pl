@@ -851,7 +851,7 @@ our $action_info = {
  new_version_tnm     => [0, 'Checks if a newer version of tail_n_mail is available.'],
  pgbouncer_checksum  => [0, 'Check that no pgbouncer settings have changed since the last check.'],
  pgb_pool_cl_active  => [1, 'Check the number of active clients in each pgbouncer pool.'],
- pgb_pool_cl_wait    => [1, 'Check the number of watiing clients in each pgbouncer pool.'],
+ pgb_pool_cl_waiting => [1, 'Check the number of watiing clients in each pgbouncer pool.'],
  pgb_pool_sv_active  => [1, 'Check the number of active server connections in each pgbouncer pool.'],
  pgb_pool_sv_idle    => [1, 'Check the number of idle server connections in each pgbouncer pool.'],
  pgb_pool_sv_used    => [1, 'Check the number of used server connections in each pgbouncer pool.'],
@@ -1490,7 +1490,7 @@ check_pgbouncer_checksum() if $action eq 'pgbouncer_checksum';
 check_pgb_pool('cl_active') if $action eq 'pgb_pool_cl_active';
 
 ## Check the number of watiing clients in each pgbouncer pool
-check_pgb_pool('cl_wait') if $action eq 'pgb_pool_cl_wait';
+check_pgb_pool('cl_waiting') if $action eq 'pgb_pool_cl_waiting';
 
 ## Check the number of active server connections in each pgbouncer pool
 check_pgb_pool('sv_active') if $action eq 'pgb_pool_sv_active';
@@ -8100,9 +8100,9 @@ current checksum.
 (C<symlink:check_postgres_pgb_pool_cl_active>) Connections from clients that
 are currently associated with a connection to the database
 
-=item pgb_pool_cl_wait
+=item pgb_pool_cl_waiting
 
-(C<symlink:check_postgres_pgb_pool_cl_wait>) Connections from clients that are
+(C<symlink:check_postgres_pgb_pool_cl_waiting>) Connections from clients that are
 waiting for a database connection
 
 =item pgb_pool_sv_active
