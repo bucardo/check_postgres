@@ -8652,6 +8652,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Constraint definitions across Postgres versions match better in same_schema.
   Work against "EnterpriseDB" databases (Sivakumar Krishnamurthy and Greg Sabino Mullane)
   Separate perfdata with spaces (Jehan-Guillaume (ioguix) de Rorthais)
+  Add new action "archive_ready" (Jehan-Guillaume (ioguix) de Rorthais)
 
 =item B<Version 2.14.3> (March 1, 2010)
 
