@@ -8120,9 +8120,10 @@ client connections are those connections currently linked with an active server
 connection. Client connections may also be "waiting", meaning they have not yet
 been allocated a server connection. Server connections are "active" (linked to
 a client), "idle" (standing by for a client connection to link with), "used"
-(just unlinked from a client, and not yet returned to the idle pool), and
-"login" (in the process of logging in). The maxwait value shows how long in
-seconds the oldest waiting client connection has been waiting. 
+(just unlinked from a client, and not yet returned to the idle pool), "tested"
+(currently being tested) and "login" (in the process of logging in). The
+maxwait value shows how long in seconds the oldest waiting client connection
+has been waiting. 
 
 =head2 B<prepared_txns>
 
