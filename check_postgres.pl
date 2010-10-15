@@ -4046,11 +4046,13 @@ ORDER BY name
         ## We need at least hour, day, month, year
         my @t = localtime;
         my ($H,$d,$m,$Y) = (sprintf ('%02d',$t[2]),sprintf('%02d',$t[3]),sprintf('%02d',$t[4]+1),$t[5]+1900);
+        my $y = substr($Y,2,4);
         if ($logfile !~ $logfilere) {
             ndie msg('logfile-bad',$logfile);
         }
         $logfile =~ s/%%/~~/g;
         $logfile =~ s/%Y/$Y/g;
+        $logfile =~ s/%y/$y/g;
         $logfile =~ s/%m/$m/g;
         $logfile =~ s/%d/$d/g;
         $logfile =~ s/%H/$H/g;
