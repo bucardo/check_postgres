@@ -675,6 +675,7 @@ die $USAGE unless
                'version|V',
                'verbose|v+',
                'help|h',
+               'quiet|q',
                'man',
                'output=s',
                'simple',
@@ -1164,7 +1165,12 @@ sub finishup {
     $action =~ s/^\s*(\S+)\s*$/$1/;
     my $service = sprintf "%s$action", $FANCYNAME ? 'postgres_' : '';
     if (keys %critical or keys %warning or keys %ok or keys %unknown) {
-        printf '%s ', $YELLNAME ? uc $service : $service;
+        ## If in quiet mode, print nothing if all is ok
+        if ($opt{quiet} and ! keys %critical and ! keys %warning and ! keys %unknown) {
+        }
+        else {
+            printf '%s ', $YELLNAME ? uc $service : $service;
+        }
     }
 
     sub dumpresult {
@@ -1208,8 +1214,11 @@ sub finishup {
         exit 1;
     }
     if (keys %ok) {
-        print 'OK: ';
-        dumpresult(o => \%ok);
+        ## We print nothing if in quiet mode
+        if (! $opt{quiet}) {
+            print 'OK: ';
+            dumpresult(o => \%ok);
+        }
         exit 0;
     }
     if (keys %unknown) {
@@ -8740,6 +8749,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.15.0>
 
+  Add --quiet argument to surpress output on OK Nagios results
   Add index comparison for same_schema (Norman Yamada and Greg Sabino Mullane)
   Use $ENV{PGSERVICE} instead of "service=" to prevent problems (Guillaume Lelarge)
   Add --man option to show the entire manual. (Andy Lester)
