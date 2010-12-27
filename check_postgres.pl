@@ -852,7 +852,7 @@ our $action_info = {
  new_version_tnm     => [0, 'Checks if a newer version of tail_n_mail is available.'],
  pgbouncer_checksum  => [0, 'Check that no pgbouncer settings have changed since the last check.'],
  pgb_pool_cl_active  => [1, 'Check the number of active clients in each pgbouncer pool.'],
- pgb_pool_cl_waiting => [1, 'Check the number of watiing clients in each pgbouncer pool.'],
+ pgb_pool_cl_waiting => [1, 'Check the number of waiting clients in each pgbouncer pool.'],
  pgb_pool_sv_active  => [1, 'Check the number of active server connections in each pgbouncer pool.'],
  pgb_pool_sv_idle    => [1, 'Check the number of idle server connections in each pgbouncer pool.'],
  pgb_pool_sv_used    => [1, 'Check the number of used server connections in each pgbouncer pool.'],
@@ -1498,7 +1498,7 @@ check_pgbouncer_checksum() if $action eq 'pgbouncer_checksum';
 ## Check the number of active clients in each pgbouncer pool
 check_pgb_pool('cl_active') if $action eq 'pgb_pool_cl_active';
 
-## Check the number of watiing clients in each pgbouncer pool
+## Check the number of waiting clients in each pgbouncer pool
 check_pgb_pool('cl_waiting') if $action eq 'pgb_pool_cl_waiting';
 
 ## Check the number of active server connections in each pgbouncer pool
@@ -8548,7 +8548,7 @@ Usually, these values should be low, turning on the archive mechanism, we usuall
 archive WAL files as fast as possible.
 
 If the archive command fail, number of WAL in your F<pg_xlog> directory will grow until
-exhausting all the disk space and force PostgreSQL to stop immediatly.
+exhausting all the disk space and force PostgreSQL to stop immediately.
 
 Example 1: Check that the number of ready WAL files is 10 or less on host "pluto"
 

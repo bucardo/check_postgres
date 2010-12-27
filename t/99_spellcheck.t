@@ -206,6 +206,7 @@ dbuser
 del
 dylan
 emma
+env
 exabytes
 excludeuser
 ExclusiveLock
@@ -227,6 +228,7 @@ lancre
 localtime
 Logfile
 mallory
+maxwait
 minvalue
 morpork
 mrtg
@@ -247,6 +249,8 @@ ok
 oskar
 pageslots
 perflimit
+pgb
+pgbouncer's
 pgpass
 pluto
 Postgres
@@ -282,6 +286,7 @@ tablespaces
 Tambouras
 tardis
 timesync
+tnm
 upd
 uptime
 USERNAME
