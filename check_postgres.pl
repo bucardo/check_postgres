@@ -30,7 +30,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.15.0';
+our $VERSION = '2.15.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2116,7 +2116,7 @@ sub verify_version {
         if (!defined $info2->{db}[0]) {
             ndie msg('die-nosetting', $setting);
         }
-        my $val = $info2->{db}[0]{slurp};
+        my $val = $info2->{db}[0]{slurp}[0]{setting};
         if ($val !~ /^\s*on\b/) {
             ndie msg('die-noset', $action, $setting);
         }
@@ -7164,7 +7164,7 @@ sub check_archive_ready {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.15.0
+This documents describes check_postgres.pl version 2.15.1
 
 =head1 SYNOPSIS
 
@@ -8746,6 +8746,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.15.1>
+
+  Fix problem when examining items in pg_settings (Greg Sabino Mullane)
 
 =item B<Version 2.15.0>
 
