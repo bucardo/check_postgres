@@ -1932,6 +1932,12 @@ sub run_command {
             }
 
             if ($db->{error} =~ /FATAL/) {
+                ## If we are just trying to connect, this should be a normal error
+                if ($action eq 'connection') {
+                    $info->{fatal} = 1;
+                    return $info;
+                }
+
                 if (exists $arg->{fatalregex} and $db->{error} =~ /$arg->{fatalregex}/) {
                     $info->{fatalregex} = $db->{error};
                     next;
@@ -3078,6 +3084,12 @@ sub check_connection {
     my $info = run_command('SELECT version() AS v');
 
     $db = $info->{db}[0];
+
+    if (exists $info->{fatal}) {
+        $MRTG and do_mrtg({one => 0});
+        add_critical $db->{error};
+        return;
+    }
 
     my $ver = ($db->{slurp}[0]{v} =~ /(\d+\.\d+\S+)/o) ? $1 : '';
 
@@ -8750,6 +8762,9 @@ Items not specifically attributed are by Greg Sabino Mullane.
 =item B<Version 2.15.1>
 
   Fix problem when examining items in pg_settings (Greg Sabino Mullane)
+
+  For connection test, return critical, not unknown, on FATAL errors
+    (Greg Sabino Mullane, reported by Peter Eisentraut in bug #62)
 
 =item B<Version 2.15.0>
 
