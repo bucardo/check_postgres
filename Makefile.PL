@@ -1,6 +1,6 @@
 # $Id: Makefile.PL 12712 2009-04-23 16:22:51Z turnstep $
 
-use ExtUtils::MakeMaker;
+use ExtUtils::MakeMaker qw/WriteMakefile/;
 use Config;
 use strict;
 use warnings;
