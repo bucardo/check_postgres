@@ -59,10 +59,19 @@
 		<li><a href="#listener"><strong>listener</strong></a></li>
 		<li><a href="#locks"><strong>locks</strong></a></li>
 		<li><a href="#logfile"><strong>logfile</strong></a></li>
+		<li><a href="#new_version_bc"><strong>new_version_bc</strong></a></li>
 		<li><a href="#new_version_cp"><strong>new_version_cp</strong></a></li>
 		<li><a href="#new_version_pg"><strong>new_version_pg</strong></a></li>
-		<li><a href="#new_version_bc"><strong>new_version_bc</strong></a></li>
+		<li><a href="#new_version_tnm"><strong>new_version_tnm</strong></a></li>
 		<li><a href="#pgbouncer_checksum"><strong>pgbouncer_checksum</strong></a></li>
+		<li><a href="#pgb_pool_cl_active"><strong>pgb_pool_cl_active</strong></a></li>
+		<li><a href="#pgb_pool_cl_waiting"><strong>pgb_pool_cl_waiting</strong></a></li>
+		<li><a href="#pgb_pool_sv_active"><strong>pgb_pool_sv_active</strong></a></li>
+		<li><a href="#pgb_pool_sv_idle"><strong>pgb_pool_sv_idle</strong></a></li>
+		<li><a href="#pgb_pool_sv_used"><strong>pgb_pool_sv_used</strong></a></li>
+		<li><a href="#pgb_pool_sv_tested"><strong>pgb_pool_sv_tested</strong></a></li>
+		<li><a href="#pgb_pool_sv_login"><strong>pgb_pool_sv_login</strong></a></li>
+		<li><a href="#pgb_pool_maxwait"><strong>pgb_pool_maxwait</strong></a></li>
 		<li><a href="#prepared_txns"><strong>prepared_txns</strong></a></li>
 		<li><a href="#query_runtime"><strong>query_runtime</strong></a></li>
 		<li><a href="#query_time"><strong>query_time</strong></a></li>
@@ -78,6 +87,7 @@
 		<li><a href="#timesync"><strong>timesync</strong></a></li>
 		<li><a href="#txn_wraparound"><strong>txn_wraparound</strong></a></li>
 		<li><a href="#wal_files"><strong>wal_files</strong></a></li>
+		<li><a href="#archive_ready"><strong>archive_ready</strong></a></li>
 		<li><a href="#version"><strong>version</strong></a></li>
 	</ul>
 
@@ -106,7 +116,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.15.0</p>
+<p>This documents describes check_postgres.pl version 2.15.1</p>
 <p>
 </p>
 <hr />
@@ -392,8 +402,8 @@ which determine if the output is displayed or not, where 'a' = all, 'c' = critic
 
 <dd>
 <p>Allows specification of the method used to fetch information for the <code>new_version_cp</code>, 
-<code>new_version_pg</code>, and <code>new_version_bc</code> checks. The following programs are tried, in order, to 
-grab the information from the web: GET, wget, fetch, curl, lynx, links. To force the use of just 
+<code>new_version_pg</code>, <code>new_version_bc</code>, and <code>new_version_tnm</code> checks. The following programs are tried, 
+in order, to grab the information from the web: GET, wget, fetch, curl, lynx, links. To force the use of just 
 one (and thus remove the overhead of trying all the others until one of those works), 
 enter one of the names as the argument to get_method. For example, a BSD box might enter 
 the following line in their <code>.check_postgresrc</code> file:</p>
@@ -938,6 +948,15 @@ options should <em>not</em> be used.</p>
 failure, the fourth line will provide more detail on the failure encountered.</p>
 <p>
 </p>
+<h2><a name="new_version_bc"><strong>new_version_bc</strong></a></h2>
+<p>(<code>symlink: check_postgres_new_version_bc</code>) Checks if a newer version of the Bucardo 
+program is available. The current version is obtained by running <code>bucardo_ctl --version</code>.
+If a major upgrade is available, a warning is returned. If a revision upgrade is 
+available, a critical is returned. (Bucardo is a master to slave, and master to master 
+replication system for Postgres: see <a href="http://bucardo.org">http://bucardo.org</a> for more information).
+See also the information on the <code>--get_method</code> option.</p>
+<p>
+</p>
 <h2><a name="new_version_cp"><strong>new_version_cp</strong></a></h2>
 <p>(<code>symlink: check_postgres_new_version_cp</code>) Checks if a newer version of this program 
 (check_postgres.pl) is available, by grabbing the version from a small text file 
@@ -956,12 +975,13 @@ It is recommended this check is run at least once a day. See also the informatio
 the <code>--get_method</code> option.</p>
 <p>
 </p>
-<h2><a name="new_version_bc"><strong>new_version_bc</strong></a></h2>
-<p>(<code>symlink: check_postgres_new_version_bc</code>) Checks if a newer version of the Bucardo 
-program is available. The current version is obtained by running <code>bucardo_ctl --version</code>.
-If a major upgrade is available, a warning is returned. If a revision upgrade is 
-available, a critical is returned. (Bucardo is a master to slave, and master to master 
-replication system for Postgres: see <a href="http://bucardo.org">http://bucardo.org</a> for more information).
+<h2><a name="new_version_tnm"><strong>new_version_tnm</strong></a></h2>
+<p>(<code>symlink: check_postgres_new_version_tnm</code>) Checks if a newer version of the 
+tail_n_mail program is available. The current version is obtained by running 
+<code>tail_n_mail --version</code>. If a major upgrade is available, a warning is returned. If a 
+revision upgrade is available, a critical is returned. (tail_n_mail is a log monitoring 
+tool that can send mail when interesting events appear in your Postgres logs.
+See: <a href="http://bucardo.org/wiki/Tail_n_mail">http://bucardo.org/wiki/Tail_n_mail</a> for more information).
 See also the information on the <code>--get_method</code> option.</p>
 <p>
 </p>
@@ -984,6 +1004,46 @@ to find out an existing checksum.</p>
 <p>For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
 checksum must be provided as the <code>--mrtg</code> argument. The fourth line always gives the 
 current checksum.</p>
+<p>
+</p>
+<h2><a name="pgb_pool_cl_active"><strong>pgb_pool_cl_active</strong></a></h2>
+<p>
+</p>
+<h2><a name="pgb_pool_cl_waiting"><strong>pgb_pool_cl_waiting</strong></a></h2>
+<p>
+</p>
+<h2><a name="pgb_pool_sv_active"><strong>pgb_pool_sv_active</strong></a></h2>
+<p>
+</p>
+<h2><a name="pgb_pool_sv_idle"><strong>pgb_pool_sv_idle</strong></a></h2>
+<p>
+</p>
+<h2><a name="pgb_pool_sv_used"><strong>pgb_pool_sv_used</strong></a></h2>
+<p>
+</p>
+<h2><a name="pgb_pool_sv_tested"><strong>pgb_pool_sv_tested</strong></a></h2>
+<p>
+</p>
+<h2><a name="pgb_pool_sv_login"><strong>pgb_pool_sv_login</strong></a></h2>
+<p>
+</p>
+<h2><a name="pgb_pool_maxwait"><strong>pgb_pool_maxwait</strong></a></h2>
+<p>(symlinks: <code>check_postgres_pgb_pool_cl_active</code>, <code>check_postgres_pgb_pool_cl_waiting</code>,
+<code>check_postgres_pgb_pool_sv_active</code>, <code>check_postgres_pgb_pool_sv_idle</code>,
+<code>check_postgres_pgb_pool_sv_used</code>, <code>check_postgres_pgb_pool_sv_tested</code>,
+<code>check_postgres_pgb_pool_sv_login</code>, and <code>check_postgres_pgb_pool_maxwait</code>)</p>
+<p>Examines pgbouncer's pool statistics. Each pool has a set of &quot;client&quot;
+connections, referring to connections from external clients, and &quot;server&quot;
+connections, referring to connections to PostgreSQL itself. The related
+check_postgres actions are prefixed by &quot;cl_&quot; and &quot;sv_&quot;, respectively. Active
+client connections are those connections currently linked with an active server
+connection. Client connections may also be &quot;waiting&quot;, meaning they have not yet
+been allocated a server connection. Server connections are &quot;active&quot; (linked to
+a client), &quot;idle&quot; (standing by for a client connection to link with), &quot;used&quot;
+(just unlinked from a client, and not yet returned to the idle pool), &quot;tested&quot;
+(currently being tested) and &quot;login&quot; (in the process of logging in). The
+maxwait value shows how long in seconds the oldest waiting client connection
+has been waiting.</p>
 <p>
 </p>
 <h2><a name="prepared_txns"><strong>prepared_txns</strong></a></h2>
@@ -1306,6 +1366,23 @@ out of space, at which point Postgres will shut down.</p>
 <p>For MRTG output, reports the number of WAL files on line 1.</p>
 <p>
 </p>
+<h2><a name="archive_ready"><strong>archive_ready</strong></a></h2>
+<p>(<code>symlink: check_postgres_archive_ready</code>) Checks how many WAL files with extension <em class="file">.ready</em> 
+exist in the <em class="file">pg_xlog/archive_status</em> directory, which is found 
+off of your <strong>data_directory</strong>. This action must be run as a superuser, in order to access the 
+contents of the <em class="file">pg_xlog/archive_status</em> directory. The minimum version to use this action is 
+Postgres 8.1. The <em>--warning</em> and <em>--critical</em> options are simply the number of 
+<em class="file">.ready</em> files in the <em class="file">pg_xlog/archive_status</em> directory. 
+Usually, these values should be low, turning on the archive mechanism, we usually want it to 
+archive WAL files as fast as possible.</p>
+<p>If the archive command fail, number of WAL in your <em class="file">pg_xlog</em> directory will grow until
+exhausting all the disk space and force PostgreSQL to stop immediatly.</p>
+<p>Example 1: Check that the number of ready WAL files is 10 or less on host &quot;pluto&quot;</p>
+<pre>
+  check_postgres_archive_ready --host=pluto --critical=10</pre>
+<p>For MRTG output, reports the number of ready WAL files on line 1.</p>
+<p>
+</p>
 <h2><a name="version"><strong>version</strong></a></h2>
 <p>(<code>symlink: check_postgres_version</code>) Checks that the required version of Postgres is running. The 
 <em>--warning</em> and <em>--critical</em> options (only one is required) must be of 
@@ -1490,10 +1567,17 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="version_2_15_1" class="item"><strong>Version 2.15.1</strong></a></strong></dt>
+
+<dd>
+<pre>
+  Fix problem when examining items in pg_settings (Greg Sabino Mullane)</pre>
+</dd>
 <dt><strong><a name="version_2_15_0" class="item"><strong>Version 2.15.0</strong></a></strong></dt>
 
 <dd>
 <pre>
+  Add --quiet argument to surpress output on OK Nagios results
   Add index comparison for same_schema (Norman Yamada and Greg Sabino Mullane)
   Use $ENV{PGSERVICE} instead of &quot;service=&quot; to prevent problems (Guillaume Lelarge)
   Add --man option to show the entire manual. (Andy Lester)
@@ -1505,7 +1589,10 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
   Change the output of query_time to show pid,user,port, and address (Giles Westwood)
   Fix to show database properly when using slony_status (Guillaume Lelarge)
   Allow warning items for same_schema to be comma-separated (Guillaume Lelarge)
-  Constraint definitions across Postgres versions match better in same_schema.</pre>
+  Constraint definitions across Postgres versions match better in same_schema.
+  Work against &quot;EnterpriseDB&quot; databases (Sivakumar Krishnamurthy and Greg Sabino Mullane)
+  Separate perfdata with spaces (Jehan-Guillaume (ioguix) de Rorthais)
+  Add new action &quot;archive_ready&quot; (Jehan-Guillaume (ioguix) de Rorthais)</pre>
 </dd>
 <dt><strong><a name="3" class="item"><strong>Version 2.14.3</strong> (March 1, 2010)</a></strong></dt>
 
