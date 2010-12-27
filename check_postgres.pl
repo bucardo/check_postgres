@@ -1478,7 +1478,7 @@ check_fsm_pages() if $action eq 'fsm_pages';
 check_fsm_relations() if $action eq 'fsm_relations';
 
 ## Spit back info from the pg_stat_database table. Cacti only
-show_dbstats() if $action eq 'dbstats';
+check_dbstats() if $action eq 'dbstats';
 
 ## Check how long since the last checkpoint
 check_checkpoint() if $action eq 'checkpoint';
@@ -3263,7 +3263,7 @@ JOIN pg_user u ON (u.usesysid=d.datdba)$USERWHERECLAUSE
 } ## end of check_database_size
 
 
-sub show_dbstats {
+sub check_dbstats {
 
     ## Returns values from the pg_stat_database view
     ## Supports: Cacti
@@ -3328,7 +3328,7 @@ ret fetch ins upd del/) {
 
     exit 0;
 
-} ## end of show_dbstats
+} ## end of check_dbstats
 
 
 sub check_disabled_triggers {
@@ -4143,7 +4143,7 @@ ORDER BY name
 } ## end of check_logfile
 
 
-sub check_new_version {
+sub find_new_version {
 
     ## Check for newer versions of some program
 
@@ -4250,7 +4250,7 @@ sub check_new_version {
     add_unknown msg('new-ver-tt', $program, $lversion, $cversion);
     return;
 
-} ## end of check_new_version
+} ## end of find_new_version
 
 
 sub check_new_version_bc {
@@ -4258,7 +4258,7 @@ sub check_new_version_bc {
     ## Check if a newer version of Bucardo is available
 
     my $url = 'http://bucardo.org/bucardo/latest_version.txt';
-    check_new_version('Bucardo', 'bucardo_ctl', $url);
+    find_new_version('Bucardo', 'bucardo_ctl', $url);
 
     return;
 
@@ -4270,7 +4270,7 @@ sub check_new_version_cp {
     ## Check if a new version of check_postgres.pl is available
 
     my $url = 'http://bucardo.org/check_postgres/latest_version.txt';
-    check_new_version('check_postgres', $VERSION, $url);
+    find_new_version('check_postgres', $VERSION, $url);
 
     return;
 
@@ -4296,7 +4296,7 @@ sub check_new_version_pg {
         return;
     }
 
-    check_new_version('Postgres', $lversion, $url);
+    find_new_version('Postgres', $lversion, $url);
 
     return;
 
@@ -4308,14 +4308,14 @@ sub check_new_version_tnm {
     ## Check if a new version of tail_n_mail is available
 
     my $url = 'http://bucardo.org/tail_n_mail/latest_version.txt';
-    check_new_version('tail_n_mail', 'tail_n_mail', $url);
+    find_new_version('tail_n_mail', 'tail_n_mail', $url);
 
     return;
 
 } ## end of check_new_version_tnm
 
 
-sub check_pg_stat_activity {
+sub find_pg_stat_activity {
 
     ## Common function to run various actions against the pg_stat_activity view
     ## Actions: txn_idle, txn_time, query_time
@@ -4462,7 +4462,7 @@ ORDER BY xact_start, procpid DESC
 
     return;
 
-} ## end of check_pg_stat_activity
+} ## end of find_pg_stat_activity
 
 
 sub check_pgbouncer_checksum {
@@ -4526,7 +4526,9 @@ sub check_pgbouncer_checksum {
 
 } ## end of check_pgbouncer_checksum
 
+
 sub check_pgb_pool {
+
     # Check various bits of the pgbouncer SHOW POOLS ouptut
     my $stat = shift;
     my ($warning, $critical) = validate_range({type => 'positive integer'});
@@ -4559,6 +4561,7 @@ sub check_pgb_pool {
     }
 
 } ## end of check_pgb_pool
+
 
 sub check_prepared_txns {
 
@@ -4704,7 +4707,7 @@ sub check_query_time {
 
     ## Check the length of running queries
 
-    return check_pg_stat_activity(
+    return find_pg_stat_activity(
         {
             default_warning  => '2 minutes',
             default_critical => '5 minutes',
@@ -7936,16 +7939,16 @@ Example 3: Warn if any index not owned by postgres goes over 500 MB.
 For MRTG output, returns the size in bytes of the largest relation, and the name of the database 
 and relation as the fourth line.
 
-=head2 B<last_vacuum>
-
-=head2 B<last_autovacuum>
-
 =head2 B<last_analyze>
+
+=head2 B<last_vacuum>
 
 =head2 B<last_autoanalyze>
 
-(symlinks: C<check_postgres_last_vacuum>, C<check_postgres_last_autovacuum>, C<check_postgres_last_analyze>, and 
-C<check_postgres_last_autoanalyze>)
+=head2 B<last_autovacuum>
+
+(symlinks: C<check_postgres_last_analyze>, C<check_postgres_last_vacuum>, 
+C<check_postgres_last_autoanalyze>, and C<check_postgres_last_autovacuum>)
 Checks how long it has been since vacuum (or analyze) was last run on each 
 table in one or more databases. Use of these actions requires that the target 
 database is version 8.3 or greater, or that the version is 8.2 and the 
@@ -8361,6 +8364,30 @@ Example 2: Check that the sequence named "orders_id_seq" is not more than half f
 
   check_postgres_sequence --dbport=5432 --critical=50% --include=orders_id_seq
 
+=head2 B<settings_checksum>
+
+(C<symlink: check_postgres_settings_checksum>) Checks that all the Postgres settings are the same as last time you checked. 
+This is done by generating a checksum of a sorted list of setting names and 
+their values. Note that different users in the same database may have different 
+checksums, due to ALTER USER usage, and due to the fact that superusers see more 
+settings than ordinary users. Either the I<--warning> or the I<--critical> option 
+should be given, but not both. The value of each one is the checksum, a 
+32-character hexadecimal value. You can run with the special C<--critical=0> option 
+to find out an existing checksum.
+
+This action requires the Digest::MD5 module.
+
+Example 1: Find the initial checksum for the database on port 5555 using the default user (usually postgres)
+
+  check_postgres_settings_checksum --port=5555 --critical=0
+
+Example 2: Make sure no settings have changed and warn if so, using the checksum from above.
+
+  check_postgres_settings_checksum --port=5555 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231
+
+For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
+checksum must be provided as the C<--mrtg> argument. The fourth line always gives the 
+current checksum.
 
 =head2 B<slony_status>
 
@@ -8380,9 +8407,46 @@ Example 2: Give a critical if Slony, installed under the schema "_slony", is ove
 
   check_postgres_slony_status --schema=_slony --critical=600
 
+=head2 B<timesync>
+
+(C<symlink: check_postgres_timesync>) Compares the local system time with the time reported by one or more databases. 
+The I<--warning> and I<--critical> options represent the number of seconds between 
+the two systems before an alert is given. If neither is specified, the default values 
+are used, which are '2' and '5'. The warning value cannot be greater than the critical
+value. Due to the non-exact nature of this test, values of '0' or '1' are not recommended.
+
+The string returned shows the time difference as well as the time on each side written out.
+
+Example 1: Check that databases on hosts ankh, morpork, and klatch are no more than 3 seconds off from the local time:
+
+  check_postgres_timesync --host=ankh,morpork,klatch --critical=3
+
+For MRTG output, returns one the first line the number of seconds difference between the local 
+time and the database time. The fourth line returns the name of the database.
+
+=head2 B<txn_idle>
+
+(C<symlink: check_postgres_txn_idle>) Checks the length of "idle in transaction" queries on one or more databases. There is 
+no need to run this more than once on the same database cluster. Databases can be filtered 
+by using the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> 
+section below for more details.
+
+The I<--warning> and I<--critical> options are given as units of time, and both must 
+be provided (there are no defaults). Valid units are 'seconds', 'minutes', 'hours', 
+or 'days'. Each may be written singular or abbreviated to just the first letter. 
+If no units are given, the units are assumed to be seconds.
+
+This action requires Postgres 8.0 or better. Additionally, if the version is less than 8.3, 
+the 'stats_command_string' parameter must be set to 'on'.
+
+Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:
+
+  check_postgres_txn_idle --port=5432 --warning='15 seconds'
+
+For MRTG output, returns the time in seconds the longest idle transaction has been running. The fourth 
+line returns the name of the database.
 
 =head2 B<txn_time>
-
 
 (C<symlink: check_postgres_txn_time>) Checks the length of open transactions on one or more databases. 
 There is no need to run this command more than once per database cluster. 
@@ -8410,81 +8474,6 @@ Example 1: Warn if user 'warehouse' has a transaction open over 30 seconds
 For MRTG output, returns the maximum time in seconds a transaction has been open on the 
 first line. The fourth line gives the name of the database.
 
-=head2 B<txn_idle>
-
-(C<symlink: check_postgres_txn_idle>) Checks the length of "idle in transaction" queries on one or more databases. There is 
-no need to run this more than once on the same database cluster. Databases can be filtered 
-by using the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> 
-section below for more details.
-
-The I<--warning> and I<--critical> options are given as units of time, and both must 
-be provided (there are no defaults). Valid units are 'seconds', 'minutes', 'hours', 
-or 'days'. Each may be written singular or abbreviated to just the first letter. 
-If no units are given, the units are assumed to be seconds.
-
-This action requires Postgres 8.0 or better. Additionally, if the version is less than 8.3, 
-the 'stats_command_string' parameter must be set to 'on'.
-
-Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:
-
-  check_postgres_txn_idle --port=5432 --warning='15 seconds'
-
-For MRTG output, returns the time in seconds the longest idle transaction has been running. The fourth 
-line returns the name of the database.
-
-=head2 B<rebuild_symlinks>
-
-=head2 B<rebuild_symlinks_force>
-
-This action requires no other arguments, and does not connect to any databases, 
-but simply creates symlinks in the current directory for each action, in the form 
-B<check_postgres_E<lt>action_nameE<gt>>.
-If the file already exists, it will not be overwritten. If the action is rebuild_symlinks_force, 
-then symlinks will be overwritten. The option --symlinks is a shorter way of saying 
---action=rebuild_symlinks
-
-=head2 B<settings_checksum>
-
-(C<symlink: check_postgres_settings_checksum>) Checks that all the Postgres settings are the same as last time you checked. 
-This is done by generating a checksum of a sorted list of setting names and 
-their values. Note that different users in the same database may have different 
-checksums, due to ALTER USER usage, and due to the fact that superusers see more 
-settings than ordinary users. Either the I<--warning> or the I<--critical> option 
-should be given, but not both. The value of each one is the checksum, a 
-32-character hexadecimal value. You can run with the special C<--critical=0> option 
-to find out an existing checksum.
-
-This action requires the Digest::MD5 module.
-
-Example 1: Find the initial checksum for the database on port 5555 using the default user (usually postgres)
-
-  check_postgres_settings_checksum --port=5555 --critical=0
-
-Example 2: Make sure no settings have changed and warn if so, using the checksum from above.
-
-  check_postgres_settings_checksum --port=5555 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231
-
-For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
-checksum must be provided as the C<--mrtg> argument. The fourth line always gives the 
-current checksum.
-
-=head2 B<timesync>
-
-(C<symlink: check_postgres_timesync>) Compares the local system time with the time reported by one or more databases. 
-The I<--warning> and I<--critical> options represent the number of seconds between 
-the two systems before an alert is given. If neither is specified, the default values 
-are used, which are '2' and '5'. The warning value cannot be greater than the critical
-value. Due to the non-exact nature of this test, values of '0' or '1' are not recommended.
-
-The string returned shows the time difference as well as the time on each side written out.
-
-Example 1: Check that databases on hosts ankh, morpork, and klatch are no more than 3 seconds off from the local time:
-
-  check_postgres_timesync --host=ankh,morpork,klatch --critical=3
-
-For MRTG output, returns one the first line the number of seconds difference between the local 
-time and the database time. The fourth line returns the name of the database.
-
 =head2 B<txn_wraparound>
 
 (C<symlink: check_postgres_txn_wraparound>) Checks how close to transaction wraparound one or more databases are getting. 
@@ -8506,6 +8495,24 @@ Example 2: Check port 6000 and give a critical when 1.7 billion transactions are
 
 For MRTG output, returns the highest number of transactions for all databases on line one,
 while line 4 indicates which database it is.
+
+=head2 B<version>
+
+(C<symlink: check_postgres_version>) Checks that the required version of Postgres is running. The 
+I<--warning> and I<--critical> options (only one is required) must be of 
+the format B<X.Y> or B<X.Y.Z> where B<X> is the major version number, 
+B<Y> is the minor version number, and B<Z> is the revision.
+
+Example 1: Give a warning if the database on port 5678 is not version 8.4.10:
+
+  check_postgres_version --port=5678 -w=8.4.10
+
+Example 2: Give a warning if any databases on hosts valley,grain, or sunshine is not 8.3:
+
+  check_postgres_version -H valley,grain,sunshine --critical=8.3
+
+For MRTG output, reports a 1 or a 0 indicating success or failure on the first line. The 
+fourth line indicates the current version. The version must be provided via the C<--mrtg> option.
 
 =head2 B<wal_files>
 
@@ -8549,23 +8556,16 @@ Example 1: Check that the number of ready WAL files is 10 or less on host "pluto
 
 For MRTG output, reports the number of ready WAL files on line 1.
 
-=head2 B<version>
+=head2 B<rebuild_symlinks>
 
-(C<symlink: check_postgres_version>) Checks that the required version of Postgres is running. The 
-I<--warning> and I<--critical> options (only one is required) must be of 
-the format B<X.Y> or B<X.Y.Z> where B<X> is the major version number, 
-B<Y> is the minor version number, and B<Z> is the revision.
+=head2 B<rebuild_symlinks_force>
 
-Example 1: Give a warning if the database on port 5678 is not version 8.4.10:
-
-  check_postgres_version --port=5678 -w=8.4.10
-
-Example 2: Give a warning if any databases on hosts valley,grain, or sunshine is not 8.3:
-
-  check_postgres_version -H valley,grain,sunshine --critical=8.3
-
-For MRTG output, reports a 1 or a 0 indicating success or failure on the first line. The 
-fourth line indicates the current version. The version must be provided via the C<--mrtg> option.
+This action requires no other arguments, and does not connect to any databases, 
+but simply creates symlinks in the current directory for each action, in the form 
+B<check_postgres_E<lt>action_nameE<gt>>.
+If the file already exists, it will not be overwritten. If the action is rebuild_symlinks_force, 
+then symlinks will be overwritten. The option --symlinks is a shorter way of saying 
+--action=rebuild_symlinks
 
 =head1 BASIC FILTERING
 
