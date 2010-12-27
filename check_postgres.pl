@@ -30,7 +30,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.15.1';
+our $VERSION = '2.15.2';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -2844,11 +2844,12 @@ FROM (
 
         for my $r (@{$db->{slurp}}) {
 
-            my ($dbname,$schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws) = @$r{
-                qw/ db schemaname tablename tups pages otta tbloat wastedpages wastedbytes wastedsize/};
-            my ($index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws) = @$r{
-                    qw/ iname irows ipages iotta ibloat wastedipgaes wastedibytes wastedisize/};
-
+            my ($dbname,$schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb) = @$r{
+                qw/ db schemaname tablename tups pages otta tbloat wastedpages wastedbytes/};
+            my $ws = pretty_size($wb);
+            my ($index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb) = @$r{
+                    qw/ iname irows ipages iotta ibloat wastedipgaes wastedibytes/};
+            my $iws = pretty_size($iwb);
             next if skip_item($table, $schema);
 
             ## Made it past the exclusions
@@ -7179,7 +7180,7 @@ sub check_archive_ready {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.15.1
+This documents describes check_postgres.pl version 2.15.2
 
 =head1 SYNOPSIS
 
