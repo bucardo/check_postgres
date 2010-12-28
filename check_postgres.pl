@@ -2844,20 +2844,20 @@ FROM (
 
         for my $r (@{$db->{slurp}}) {
 
-            my ($dbname,$schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb) = @$r{
-                qw/ db schemaname tablename tups pages otta tbloat wastedpages wastedbytes/};
-            my $ws = pretty_size($wb);
-            my ($index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb) = @$r{
-                    qw/ iname irows ipages iotta ibloat wastedipgaes wastedibytes/};
-            my $iws = pretty_size($iwb);
+            for my $v (values %$r) {
+                $v =~ s/(\d+) bytes/pretty_size($1,1)/ge;
+            }
+
+            my ($dbname,$schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws) = @$r{
+                qw/ db schemaname tablename tups pages otta tbloat wastedpages wastedbytes wastedsize/};
+
             next if skip_item($table, $schema);
+
+            my ($index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws) = @$r{
+                    qw/ iname irows ipages iotta ibloat wastedipgaes wastedibytes wastedisize/};
 
             ## Made it past the exclusions
             $max = -2 if $max == -1;
-
-            for my $v (values %$r) {
-                $v =~ s/\| (\d+) bytes/'| ' . pretty_size($1,1)/ge;
-            }
 
             ## Do the table first if we haven't seen it
             if (! $seenit{"$dbname.$schema.$table"}++) {
@@ -8760,7 +8760,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.15.2>
+=item B<Version 2.15.2> December 28, 2010
 
   Better formatting of sizes in the bloat action output.
 
