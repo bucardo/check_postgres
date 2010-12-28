@@ -8762,7 +8762,9 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.15.2>
 
-  Better formatting of sizes in the bloat output.
+  Better formatting of sizes in the bloat action output.
+
+  Remove duplicate perfs in bloat action output.
 
 =item B<Version 2.15.1> December 27, 2010
 
