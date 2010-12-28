@@ -8760,14 +8760,18 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.15.1>
+=item B<Version 2.15.2>
+
+  Better formatting of sizes in the bloat output.
+
+=item B<Version 2.15.1> December 27, 2010
 
   Fix problem when examining items in pg_settings (Greg Sabino Mullane)
 
   For connection test, return critical, not unknown, on FATAL errors
     (Greg Sabino Mullane, reported by Peter Eisentraut in bug #62)
 
-=item B<Version 2.15.0>
+=item B<Version 2.15.0> November 8, 2010
 
   Add --quiet argument to surpress output on OK Nagios results
   Add index comparison for same_schema (Norman Yamada and Greg Sabino Mullane)
