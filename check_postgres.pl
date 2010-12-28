@@ -1065,7 +1065,7 @@ sub add_response {
                 $db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
                     defined $db->{port} ? ($db->{port} eq $opt{defaultport} ? '' : qq{(port=$db->{port}) }) : '';
     $header =~ s/\s+$//;
-    my $perf = ($opt{showtime} and $db->{totaltime}) ? "time=$db->{totaltime}" : '';
+    my $perf = ($opt{showtime} and $db->{totaltime} and $opt{action} ne 'bloat') ? "time=$db->{totaltime}" : '';
     if ($db->{perf}) {
         $perf .= " $db->{perf}";
     }
@@ -2861,7 +2861,7 @@ FROM (
 
             ## Do the table first if we haven't seen it
             if (! $seenit{"$dbname.$schema.$table"}++) {
-                $db->{perf} .= " $schema.$table=$wb";
+                $db->{perf} = " $schema.$table=$wb";
                 my $msg = msg('bloat-table', $dbname, $schema, $table, $tups, $pages, $otta, $bloat, $wb, $ws);
                 my $ok = 1;
                 my $perbloat = $bloat * 100;
@@ -2902,7 +2902,7 @@ FROM (
 
             ## Now the index, if it exists
             if ($index ne '?') {
-                $db->{perf} .= " $index=$iwb" if $iwb;
+                $db->{perf} = " $index=$iwb" if $iwb;
                 my $msg = msg('bloat-index', $dbname, $index, $irows, $ipages, $iotta, $ibloat, $iwb, $iws);
                 my $ok = 1;
                 my $iperbloat = $ibloat * 100;
