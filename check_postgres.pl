@@ -6827,7 +6827,7 @@ sub check_txn_idle {
         }
         $db->{perf} .= msg('maxtime', $max);
         if ($max < 0) {
-            add_unknown msg('txnidle-none');
+            add_ok msg('txnidle-none');
             next;
         }
 
