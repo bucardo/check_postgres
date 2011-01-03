@@ -8875,7 +8875,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Allow list of web fetch methods to be changed with the --get_method option.
   Add support for the --language argument, which overrides any ENV.
   Add the --no-check_postgresrc flag.
-  Ensure check_postgresrc options are completely overriden by command-line options.
+  Ensure check_postgresrc options are completely overridden by command-line options.
   Fix incorrect warning > critical logic in replicate_rows (Glyn Astill)
 
 =item B<Version 2.10.0> (August 3, 2009)
