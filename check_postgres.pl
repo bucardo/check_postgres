@@ -3155,6 +3155,10 @@ sub check_custom_query {
             $goodrow++;
             $db->{perf} .= " $msg";
             my $gotmatch = 0;
+            if (! defined $data) {
+                add_unknown msg('custom-invalid');
+                return;
+            }
             if (length $critical) {
                 if (($valtype eq 'string' and $data eq $critical)
                     or
@@ -3167,7 +3171,7 @@ sub check_custom_query {
             if (length $warning and ! $gotmatch) {
                 if (($valtype eq 'string' and $data eq $warning)
                     or
-                    ($reverse ? $data <= $warning : $data >= $warning)) {
+                    (length $data and $reverse ? $data <= $warning : $data >= $warning)) {
                     add_warning "$data";
                     $gotmatch = 1;
                 }
@@ -6937,7 +6941,7 @@ WHERE xact_start IS NOT NULL $USERWHERECLAUSE
     ## Use of skip_item means we may have no matches
     if ($maxdb eq '?') {
         if ($USERWHERECLAUSE) { ## needed?
-            add_unknown msg('fixme-nomatch');
+            add_unknown msg('txntime-none');
         }
         else {
             add_ok msg('txntime-none');
