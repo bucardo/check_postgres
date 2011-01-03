@@ -1265,6 +1265,7 @@ our %testaction = (
                   archive_ready     => 'VERSION: 8.1',
                   fsm_pages         => 'VERSION: 8.2 MAX: 8.3',
                   fsm_relations     => 'VERSION: 8.2 MAX: 8.3',
+                  listener          => 'MAX: 8.4',
 );
 if ($opt{test}) {
     print msgn('testmode-start');
@@ -1277,10 +1278,8 @@ if ($opt{test}) {
             next;
         }
         print msgn('testmode-ok', $db->{pname});
-        for (split /\n/ => $db->{slurp}) {
-            while (/(\S+)\s*\|\s*(.+)\s*/sg) { ## no critic (ProhibitUnusedCapture)
-                $set{$db->{pname}}{$1} = $2;
-            }
+        for (@{ $db->{slurp} }) {
+            $set{$_->{name}} = $_->{setting};
         }
     }
     for my $ac (split /\s+/ => $action) {
@@ -1291,7 +1290,7 @@ if ($opt{test}) {
             my ($rver,$rmaj,$rmin) = ($1,$2,$3);
             for my $db (@{$info->{db}}) {
                 next unless exists $db->{ok};
-                if ($set{$db->{pname}}{server_version} !~ /((\d+)\.(\d+))/) {
+                if ($set{server_version} !~ /((\d+)\.(\d+))/) {
                     print msgn('testmode-nover', $db->{pname});
                     next;
                 }
@@ -1307,12 +1306,12 @@ if ($opt{test}) {
             my ($rver,$rmaj,$rmin) = ($1,$2,$3);
             for my $db (@{$info->{db}}) {
                 next unless exists $db->{ok};
-                if ($set{$db->{pname}}{server_version} !~ /((\d+)\.(\d+))/) {
+                if ($set{server_version} !~ /((\d+)\.(\d+))/) {
                     print msgn('testmode-nover', $db->{pname});
                     next;
                 }
                 my ($sver,$smaj,$smin) = ($1,$2,$3);
-                if ($smaj > $rmaj) {
+                if ($smaj > $rmaj or ($smaj==$rmaj and $smin > $rmin)) {
                     print msgn('testmode-norun', $ac, $db->{pname}, $rver, $sver);
                 }
             }
@@ -1327,7 +1326,7 @@ if ($opt{test}) {
                     next if $op eq '>' and $db->{version} <= $ver;
                     next if $op eq '=' and $db->{version} != $ver;
                 }
-                my $val = $set{$db->{pname}}{$setting};
+                my $val = $set{$setting};
                 if ($val ne 'on') {
                     print msgn('testmode-noset', $ac, $db->{pname}, $setting);
                 }
