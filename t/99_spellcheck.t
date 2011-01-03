@@ -19,7 +19,7 @@ else {
     opendir my $dir, 't' or die qq{Could not open directory 't': $!\n};
     @testfiles = map { "t/$_" } grep { /^.+\.(t|pl|pm)$/ } readdir $dir;
     closedir $dir or die qq{Could not closedir "$dir": $!\n};
-    plan tests => 2+@testfiles;
+    plan tests => 3+@testfiles;
 }
 
 my %okword;
@@ -68,6 +68,30 @@ SKIP: {
             fail(qq{Could not find the file "$file"!});
         }
         my $string = qx{podspell $file};
+        spellcheck("POD from $file" => $string, $file);
+    }
+}
+
+
+## The embedded POD, round two, because the above does not catch everything
+SKIP: {
+    if (!eval { require Pod::Text; 1 }) {
+        skip 'Need Pod::Text to re-test the spelling of embedded POD', 1;
+    }
+
+	my $parser = Pod::Text->new (quotes => 'none');
+
+    for my $file (qw{check_postgres.pl}) {
+        if (! -e $file) {
+            fail(qq{Could not find the file "$file"!});
+        }
+		my $string;
+		my $tmpfile = "$file.tmp";
+        $parser->parse_from_file($file, $tmpfile);
+		next if ! open my $fh, '<', $tmpfile;
+		{ local $/; $string = <$fh>; }
+		close $fh or warn "Could not close $tmpfile\n";
+		unlink $tmpfile;
         spellcheck("POD from $file" => $string, $file);
     }
 }
@@ -179,56 +203,121 @@ xmlns
 
 ## check_postgres.pl:
 
+Abrigo
+Albe
+alice
+ARG
 args
 artemus
 Astill
+autoanalyze
 AUTOanalyze
 autovac
 autovacuum
 AUTOvacuum
 backends
+Basename
 battlestar
+baz
+bigint
+blks
+Boes
 Bucardo
 burrick
+cd
+checkpostgresrc
 checksum
 checksums
+checktype
+conf
 contrib
+controldata
 cperl
 criticals
 cronjob
+ctl
+CUUM
+Cwd
+datadir
 datallowconn
 dbhost
 dbname
 dbpass
 dbport
+dbservice
 dbstats
 dbuser
+de
+debugoutput
+Deckelmann
 del
+DESC
+dev
+df
+dir
+dric
 dylan
+Eisentraut
 emma
+endcrypt
+EnterpriseDB
 env
+eval
+exabyte
 exabytes
 excludeuser
+excludeusers
 ExclusiveLock
 faceoff
 finishup
 flagg
+fooey
 franklin
+FreeBSD
+freespacemap
 fsm
-GetOptions
 garrett
+Getopt
+GetOptions
+Glaesemann
 greg
 grimm
+gtld
 hardcode
 HiRes
+hong
+HOSTADDRESS
+html
+https
+Hywell
+idx
+# idx
 includeuser
 Ioannis
+ioguix
+Jehan
+Kirkwood
 klatch
+kong
+Koops
+Krishnamurthy
 lancre
+Laurenz
+Lelarge
+listinfo
+localhost
 localtime
 Logfile
+logtime
+Mager
+maindatabase
+Makefile
+Mallett
 mallory
 maxwait
+mcp
+MINIPAGES
+MINPAGES
 minvalue
 morpork
 mrtg
@@ -238,63 +327,120 @@ multi
 nagios
 NAGIOS
 nextval
+nnx
+# nnx
 nofuncbody
+nofunctions
 noidle
+noindexes
 nolanguage
-noobjectnames
 nols
+noobjectname
+noobjectnames
+noowner
+noperm
 noperms
 noposition
+notrigger
 ok
+Oliveira
 oskar
 pageslots
+param
+parens
+perf
+perfdata
 perflimit
+perfs
+petabytes
 pgb
 pgbouncer's
+PGCONTROLDATA
+PGDATA
+PGDATABASE
+PGHOST
 pgpass
+PGPORT
+PGSERVICE
+PGUSER
+pid
+plugin
 pluto
 Postgres
+postgresql
 postgresrc
 prepend
+prereqs
 psql
 PSQL
 queryname
 quirm
+Raudsepp
 rc
+Redistributions
 refactoring
+regex
+regexes
+relname
+relpages
+repinfo
+RequireInterpolationOfMetachars
 ret
+rgen
+ritical
 robert
+Rorthais
 runtime
 salesrep
 sami
-scott
+sb
 schemas
+scott
+sda
 Seklecki
 showperf
+Sivakumar
+sl
 slon
+slony
 Slony
 Slony's
-slony
 snazzo
 speedtest
+sql
 SQL
+ssel
+sslmode
 stderr
+sv
+symlink
 symlinked
 symlinks
 tablespace
 tablespaces
 Tambouras
 tardis
+Taveira
+tempdir
 timesync
+tmp
 tnm
+Tolley
+tup
 upd
 uptime
 USERNAME
 usernames
+USERWHERECLAUSE
 usr
+valtype
+Villemain
 wal
 WAL
 watson
+Westwood
+wiki
 wilkins
-RequireInterpolationOfMetachars
-
+xact
+xlog
+Zwerschke

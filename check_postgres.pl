@@ -8784,7 +8784,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.15.0> November 8, 2010
 
-  Add --quiet argument to surpress output on OK Nagios results
+  Add --quiet argument to suppress output on OK Nagios results
   Add index comparison for same_schema (Norman Yamada and Greg Sabino Mullane)
   Use $ENV{PGSERVICE} instead of "service=" to prevent problems (Guillaume Lelarge)
   Add --man option to show the entire manual. (Andy Lester)
@@ -8931,8 +8931,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
   French translations (Guillaume Lelarge)
   Make the backends search return ok if no matches due to inclusion rules,
     per report by Guillaume Lelarge (Greg)
-  Added comprehensive unit tests (Greg, Jeff Boes, Selena Decklemann)
-  Make fsm_pages and fsm_relatins handle 8.4 servers smoothly. (Greg)
+  Added comprehensive unit tests (Greg, Jeff Boes, Selena Deckelmann)
+  Make fsm_pages and fsm_relations handle 8.4 servers smoothly. (Greg)
   Fix missing 'upd' field in show_dbstats (Andras Fabian)
   Allow ENV{PGCONTROLDATA} and ENV{PGBINDIR}. (Greg)
   Add various Perl module infrastructure (e.g. Makefile.PL) (Greg)
