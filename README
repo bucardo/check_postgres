@@ -1,4 +1,4 @@
-check_postgres is Copyright (C) 2007-2010, Greg Sabino Mullane
+check_postgres is Copyright (C) 2007-2011, Greg Sabino Mullane
 
 This is check_postgres, a monitoring tool for Postgres.
 
@@ -76,7 +76,7 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 COPYRIGHT:
 ----------
 
-  Copyright (c) 2007-2010 Greg Sabino Mullane
+  Copyright (c) 2007-2011 Greg Sabino Mullane
 
 
 LICENSE INFORMATION:
