@@ -30,7 +30,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.15.2';
+our $VERSION = '2.15.3';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -1065,7 +1065,7 @@ sub add_response {
                 $db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
                     defined $db->{port} ? ($db->{port} eq $opt{defaultport} ? '' : qq{(port=$db->{port}) }) : '';
     $header =~ s/\s+$//;
-    my $perf = ($opt{showtime} and $db->{totaltime} and $opt{action} ne 'bloat') ? "time=$db->{totaltime}" : '';
+    my $perf = ($opt{showtime} and $db->{totaltime} and $action ne 'bloat') ? "time=$db->{totaltime}" : '';
     if ($db->{perf}) {
         $perf .= " $db->{perf}";
     }
@@ -7180,7 +7180,7 @@ sub check_archive_ready {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.15.2
+This documents describes check_postgres.pl version 2.15.3
 
 =head1 SYNOPSIS
 
@@ -8759,6 +8759,15 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.15.4>
+
+  Fix warning when using symlinks
+    (Greg Sabino Mullane, reported by Peter Eisentraut in bug #63)
+
+=item B<Version 2.15.3> December 30, 2010
+
+  Show OK for no matching txn_idle entries.
 
 =item B<Version 2.15.2> December 28, 2010
 
