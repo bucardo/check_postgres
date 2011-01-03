@@ -8780,7 +8780,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.15.4>
+=item B<Version 2.15.4> January 3, 2011
 
   Fix warning when using symlinks
     (Greg Sabino Mullane, reported by Peter Eisentraut in bug #63)
