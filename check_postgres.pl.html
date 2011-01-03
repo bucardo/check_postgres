@@ -37,6 +37,7 @@
 	<li><a href="#actions">ACTIONS</a></li>
 	<ul>
 
+		<li><a href="#archive_ready"><strong>archive_ready</strong></a></li>
 		<li><a href="#autovac_freeze"><strong>autovac_freeze</strong></a></li>
 		<li><a href="#backends"><strong>backends</strong></a></li>
 		<li><a href="#bloat"><strong>bloat</strong></a></li>
@@ -52,10 +53,10 @@
 		<li><a href="#index_size"><strong>index_size</strong></a></li>
 		<li><a href="#table_size"><strong>table_size</strong></a></li>
 		<li><a href="#relation_size"><strong>relation_size</strong></a></li>
-		<li><a href="#last_vacuum"><strong>last_vacuum</strong></a></li>
-		<li><a href="#last_autovacuum"><strong>last_autovacuum</strong></a></li>
 		<li><a href="#last_analyze"><strong>last_analyze</strong></a></li>
+		<li><a href="#last_vacuum"><strong>last_vacuum</strong></a></li>
 		<li><a href="#last_autoanalyze"><strong>last_autoanalyze</strong></a></li>
+		<li><a href="#last_autovacuum"><strong>last_autovacuum</strong></a></li>
 		<li><a href="#listener"><strong>listener</strong></a></li>
 		<li><a href="#locks"><strong>locks</strong></a></li>
 		<li><a href="#logfile"><strong>logfile</strong></a></li>
@@ -78,17 +79,16 @@
 		<li><a href="#replicate_row"><strong>replicate_row</strong></a></li>
 		<li><a href="#same_schema"><strong>same_schema</strong></a></li>
 		<li><a href="#sequence"><strong>sequence</strong></a></li>
+		<li><a href="#settings_checksum"><strong>settings_checksum</strong></a></li>
 		<li><a href="#slony_status"><strong>slony_status</strong></a></li>
-		<li><a href="#txn_time"><strong>txn_time</strong></a></li>
+		<li><a href="#timesync"><strong>timesync</strong></a></li>
 		<li><a href="#txn_idle"><strong>txn_idle</strong></a></li>
+		<li><a href="#txn_time"><strong>txn_time</strong></a></li>
+		<li><a href="#txn_wraparound"><strong>txn_wraparound</strong></a></li>
+		<li><a href="#version"><strong>version</strong></a></li>
+		<li><a href="#wal_files"><strong>wal_files</strong></a></li>
 		<li><a href="#rebuild_symlinks"><strong>rebuild_symlinks</strong></a></li>
 		<li><a href="#rebuild_symlinks_force"><strong>rebuild_symlinks_force</strong></a></li>
-		<li><a href="#settings_checksum"><strong>settings_checksum</strong></a></li>
-		<li><a href="#timesync"><strong>timesync</strong></a></li>
-		<li><a href="#txn_wraparound"><strong>txn_wraparound</strong></a></li>
-		<li><a href="#wal_files"><strong>wal_files</strong></a></li>
-		<li><a href="#archive_ready"><strong>archive_ready</strong></a></li>
-		<li><a href="#version"><strong>version</strong></a></li>
 	</ul>
 
 	<li><a href="#basic_filtering">BASIC FILTERING</a></li>
@@ -116,7 +116,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.15.2</p>
+<p>This documents describes check_postgres.pl version 2.15.4</p>
 <p>
 </p>
 <hr />
@@ -441,6 +441,23 @@ point we change from OK to WARNING, and what point we go to CRITICAL. Note that
 because criticals are always checked first, setting the warning equal to the 
 critical is an effective way to turn warnings off and always give a critical.</p>
 <p>The current supported actions are:</p>
+<p>
+</p>
+<h2><a name="archive_ready"><strong>archive_ready</strong></a></h2>
+<p>(<code>symlink: check_postgres_archive_ready</code>) Checks how many WAL files with extension <em class="file">.ready</em> 
+exist in the <em class="file">pg_xlog/archive_status</em> directory, which is found 
+off of your <strong>data_directory</strong>. This action must be run as a superuser, in order to access the 
+contents of the <em class="file">pg_xlog/archive_status</em> directory. The minimum version to use this action is 
+Postgres 8.1. The <em>--warning</em> and <em>--critical</em> options are simply the number of 
+<em class="file">.ready</em> files in the <em class="file">pg_xlog/archive_status</em> directory. 
+Usually, these values should be low, turning on the archive mechanism, we usually want it to 
+archive WAL files as fast as possible.</p>
+<p>If the archive command fail, number of WAL in your <em class="file">pg_xlog</em> directory will grow until
+exhausting all the disk space and force PostgreSQL to stop immediately.</p>
+<p>Example 1: Check that the number of ready WAL files is 10 or less on host &quot;pluto&quot;</p>
+<pre>
+  check_postgres_archive_ready --host=pluto --critical=10</pre>
+<p>For MRTG output, reports the number of ready WAL files on line 1.</p>
 <p>
 </p>
 <h2><a name="autovac_freeze"><strong>autovac_freeze</strong></a></h2>
@@ -846,18 +863,18 @@ will be given. To prevent this, it is recommended that you set the
 and relation as the fourth line.</p>
 <p>
 </p>
-<h2><a name="last_vacuum"><strong>last_vacuum</strong></a></h2>
-<p>
-</p>
-<h2><a name="last_autovacuum"><strong>last_autovacuum</strong></a></h2>
-<p>
-</p>
 <h2><a name="last_analyze"><strong>last_analyze</strong></a></h2>
 <p>
 </p>
+<h2><a name="last_vacuum"><strong>last_vacuum</strong></a></h2>
+<p>
+</p>
 <h2><a name="last_autoanalyze"><strong>last_autoanalyze</strong></a></h2>
-<p>(symlinks: <code>check_postgres_last_vacuum</code>, <code>check_postgres_last_autovacuum</code>, <code>check_postgres_last_analyze</code>, and 
-<code>check_postgres_last_autoanalyze</code>)
+<p>
+</p>
+<h2><a name="last_autovacuum"><strong>last_autovacuum</strong></a></h2>
+<p>(symlinks: <code>check_postgres_last_analyze</code>, <code>check_postgres_last_vacuum</code>, 
+<code>check_postgres_last_autoanalyze</code>, and <code>check_postgres_last_autovacuum</code>)
 Checks how long it has been since vacuum (or analyze) was last run on each 
 table in one or more databases. Use of these actions requires that the target 
 database is version 8.3 or greater, or that the version is 8.2 and the 
@@ -1226,6 +1243,27 @@ if there are more than one sequence at that percentage.</p>
   check_postgres_sequence --dbport=5432 --critical=50% --include=orders_id_seq</pre>
 <p>
 </p>
+<h2><a name="settings_checksum"><strong>settings_checksum</strong></a></h2>
+<p>(<code>symlink: check_postgres_settings_checksum</code>) Checks that all the Postgres settings are the same as last time you checked. 
+This is done by generating a checksum of a sorted list of setting names and 
+their values. Note that different users in the same database may have different 
+checksums, due to ALTER USER usage, and due to the fact that superusers see more 
+settings than ordinary users. Either the <em>--warning</em> or the <em>--critical</em> option 
+should be given, but not both. The value of each one is the checksum, a 
+32-character hexadecimal value. You can run with the special <code>--critical=0</code> option 
+to find out an existing checksum.</p>
+<p>This action requires the Digest::MD5 module.</p>
+<p>Example 1: Find the initial checksum for the database on port 5555 using the default user (usually postgres)</p>
+<pre>
+  check_postgres_settings_checksum --port=5555 --critical=0</pre>
+<p>Example 2: Make sure no settings have changed and warn if so, using the checksum from above.</p>
+<pre>
+  check_postgres_settings_checksum --port=5555 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231</pre>
+<p>For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
+checksum must be provided as the <code>--mrtg</code> argument. The fourth line always gives the 
+current checksum.</p>
+<p>
+</p>
 <h2><a name="slony_status"><strong>slony_status</strong></a></h2>
 <p>(<code>symlink: check_postgres_slony_status</code>) Checks in the status of a Slony cluster by looking 
 at the results of Slony's sl_status view. This is returned as the number of seconds of &quot;lag time&quot;. 
@@ -1239,6 +1277,38 @@ not given, the schema will be determined automatically each time this check is r
 <p>Example 2: Give a critical if Slony, installed under the schema &quot;_slony&quot;, is over 10 minutes lagged</p>
 <pre>
   check_postgres_slony_status --schema=_slony --critical=600</pre>
+<p>
+</p>
+<h2><a name="timesync"><strong>timesync</strong></a></h2>
+<p>(<code>symlink: check_postgres_timesync</code>) Compares the local system time with the time reported by one or more databases. 
+The <em>--warning</em> and <em>--critical</em> options represent the number of seconds between 
+the two systems before an alert is given. If neither is specified, the default values 
+are used, which are '2' and '5'. The warning value cannot be greater than the critical
+value. Due to the non-exact nature of this test, values of '0' or '1' are not recommended.</p>
+<p>The string returned shows the time difference as well as the time on each side written out.</p>
+<p>Example 1: Check that databases on hosts ankh, morpork, and klatch are no more than 3 seconds off from the local time:</p>
+<pre>
+  check_postgres_timesync --host=ankh,morpork,klatch --critical=3</pre>
+<p>For MRTG output, returns one the first line the number of seconds difference between the local 
+time and the database time. The fourth line returns the name of the database.</p>
+<p>
+</p>
+<h2><a name="txn_idle"><strong>txn_idle</strong></a></h2>
+<p>(<code>symlink: check_postgres_txn_idle</code>) Checks the length of &quot;idle in transaction&quot; queries on one or more databases. There is 
+no need to run this more than once on the same database cluster. Databases can be filtered 
+by using the <em>--include</em> and <em>--exclude</em> options. See the <a href="#basic_filtering">BASIC FILTERING</a> 
+section below for more details.</p>
+<p>The <em>--warning</em> and <em>--critical</em> options are given as units of time, and both must 
+be provided (there are no defaults). Valid units are 'seconds', 'minutes', 'hours', 
+or 'days'. Each may be written singular or abbreviated to just the first letter. 
+If no units are given, the units are assumed to be seconds.</p>
+<p>This action requires Postgres 8.0 or better. Additionally, if the version is less than 8.3, 
+the 'stats_command_string' parameter must be set to 'on'.</p>
+<p>Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:</p>
+<pre>
+  check_postgres_txn_idle --port=5432 --warning='15 seconds'</pre>
+<p>For MRTG output, returns the time in seconds the longest idle transaction has been running. The fourth 
+line returns the name of the database.</p>
 <p>
 </p>
 <h2><a name="txn_time"><strong>txn_time</strong></a></h2>
@@ -1264,71 +1334,6 @@ If no units are given, the units are assumed to be seconds.</p>
 first line. The fourth line gives the name of the database.</p>
 <p>
 </p>
-<h2><a name="txn_idle"><strong>txn_idle</strong></a></h2>
-<p>(<code>symlink: check_postgres_txn_idle</code>) Checks the length of &quot;idle in transaction&quot; queries on one or more databases. There is 
-no need to run this more than once on the same database cluster. Databases can be filtered 
-by using the <em>--include</em> and <em>--exclude</em> options. See the <a href="#basic_filtering">BASIC FILTERING</a> 
-section below for more details.</p>
-<p>The <em>--warning</em> and <em>--critical</em> options are given as units of time, and both must 
-be provided (there are no defaults). Valid units are 'seconds', 'minutes', 'hours', 
-or 'days'. Each may be written singular or abbreviated to just the first letter. 
-If no units are given, the units are assumed to be seconds.</p>
-<p>This action requires Postgres 8.0 or better. Additionally, if the version is less than 8.3, 
-the 'stats_command_string' parameter must be set to 'on'.</p>
-<p>Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:</p>
-<pre>
-  check_postgres_txn_idle --port=5432 --warning='15 seconds'</pre>
-<p>For MRTG output, returns the time in seconds the longest idle transaction has been running. The fourth 
-line returns the name of the database.</p>
-<p>
-</p>
-<h2><a name="rebuild_symlinks"><strong>rebuild_symlinks</strong></a></h2>
-<p>
-</p>
-<h2><a name="rebuild_symlinks_force"><strong>rebuild_symlinks_force</strong></a></h2>
-<p>This action requires no other arguments, and does not connect to any databases, 
-but simply creates symlinks in the current directory for each action, in the form 
-<strong>check_postgres_&lt;action_name&gt;</strong>.
-If the file already exists, it will not be overwritten. If the action is rebuild_symlinks_force, 
-then symlinks will be overwritten. The option --symlinks is a shorter way of saying 
---action=rebuild_symlinks</p>
-<p>
-</p>
-<h2><a name="settings_checksum"><strong>settings_checksum</strong></a></h2>
-<p>(<code>symlink: check_postgres_settings_checksum</code>) Checks that all the Postgres settings are the same as last time you checked. 
-This is done by generating a checksum of a sorted list of setting names and 
-their values. Note that different users in the same database may have different 
-checksums, due to ALTER USER usage, and due to the fact that superusers see more 
-settings than ordinary users. Either the <em>--warning</em> or the <em>--critical</em> option 
-should be given, but not both. The value of each one is the checksum, a 
-32-character hexadecimal value. You can run with the special <code>--critical=0</code> option 
-to find out an existing checksum.</p>
-<p>This action requires the Digest::MD5 module.</p>
-<p>Example 1: Find the initial checksum for the database on port 5555 using the default user (usually postgres)</p>
-<pre>
-  check_postgres_settings_checksum --port=5555 --critical=0</pre>
-<p>Example 2: Make sure no settings have changed and warn if so, using the checksum from above.</p>
-<pre>
-  check_postgres_settings_checksum --port=5555 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231</pre>
-<p>For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
-checksum must be provided as the <code>--mrtg</code> argument. The fourth line always gives the 
-current checksum.</p>
-<p>
-</p>
-<h2><a name="timesync"><strong>timesync</strong></a></h2>
-<p>(<code>symlink: check_postgres_timesync</code>) Compares the local system time with the time reported by one or more databases. 
-The <em>--warning</em> and <em>--critical</em> options represent the number of seconds between 
-the two systems before an alert is given. If neither is specified, the default values 
-are used, which are '2' and '5'. The warning value cannot be greater than the critical
-value. Due to the non-exact nature of this test, values of '0' or '1' are not recommended.</p>
-<p>The string returned shows the time difference as well as the time on each side written out.</p>
-<p>Example 1: Check that databases on hosts ankh, morpork, and klatch are no more than 3 seconds off from the local time:</p>
-<pre>
-  check_postgres_timesync --host=ankh,morpork,klatch --critical=3</pre>
-<p>For MRTG output, returns one the first line the number of seconds difference between the local 
-time and the database time. The fourth line returns the name of the database.</p>
-<p>
-</p>
 <h2><a name="txn_wraparound"><strong>txn_wraparound</strong></a></h2>
 <p>(<code>symlink: check_postgres_txn_wraparound</code>) Checks how close to transaction wraparound one or more databases are getting. 
 The <em>--warning</em> and <em>--critical</em> options indicate the number of transactions done, and must be a positive integer. 
@@ -1345,6 +1350,21 @@ it, please visit the page
   check_postgres_txn_wraparound --port=6000 --critical=1_700_000_000</pre>
 <p>For MRTG output, returns the highest number of transactions for all databases on line one,
 while line 4 indicates which database it is.</p>
+<p>
+</p>
+<h2><a name="version"><strong>version</strong></a></h2>
+<p>(<code>symlink: check_postgres_version</code>) Checks that the required version of Postgres is running. The 
+<em>--warning</em> and <em>--critical</em> options (only one is required) must be of 
+the format <strong>X.Y</strong> or <strong>X.Y.Z</strong> where <strong>X</strong> is the major version number, 
+<strong>Y</strong> is the minor version number, and <strong>Z</strong> is the revision.</p>
+<p>Example 1: Give a warning if the database on port 5678 is not version 8.4.10:</p>
+<pre>
+  check_postgres_version --port=5678 -w=8.4.10</pre>
+<p>Example 2: Give a warning if any databases on hosts valley,grain, or sunshine is not 8.3:</p>
+<pre>
+  check_postgres_version -H valley,grain,sunshine --critical=8.3</pre>
+<p>For MRTG output, reports a 1 or a 0 indicating success or failure on the first line. The 
+fourth line indicates the current version. The version must be provided via the <code>--mrtg</code> option.</p>
 <p>
 </p>
 <h2><a name="wal_files"><strong>wal_files</strong></a></h2>
@@ -1366,36 +1386,16 @@ out of space, at which point Postgres will shut down.</p>
 <p>For MRTG output, reports the number of WAL files on line 1.</p>
 <p>
 </p>
-<h2><a name="archive_ready"><strong>archive_ready</strong></a></h2>
-<p>(<code>symlink: check_postgres_archive_ready</code>) Checks how many WAL files with extension <em class="file">.ready</em> 
-exist in the <em class="file">pg_xlog/archive_status</em> directory, which is found 
-off of your <strong>data_directory</strong>. This action must be run as a superuser, in order to access the 
-contents of the <em class="file">pg_xlog/archive_status</em> directory. The minimum version to use this action is 
-Postgres 8.1. The <em>--warning</em> and <em>--critical</em> options are simply the number of 
-<em class="file">.ready</em> files in the <em class="file">pg_xlog/archive_status</em> directory. 
-Usually, these values should be low, turning on the archive mechanism, we usually want it to 
-archive WAL files as fast as possible.</p>
-<p>If the archive command fail, number of WAL in your <em class="file">pg_xlog</em> directory will grow until
-exhausting all the disk space and force PostgreSQL to stop immediatly.</p>
-<p>Example 1: Check that the number of ready WAL files is 10 or less on host &quot;pluto&quot;</p>
-<pre>
-  check_postgres_archive_ready --host=pluto --critical=10</pre>
-<p>For MRTG output, reports the number of ready WAL files on line 1.</p>
+<h2><a name="rebuild_symlinks"><strong>rebuild_symlinks</strong></a></h2>
 <p>
 </p>
-<h2><a name="version"><strong>version</strong></a></h2>
-<p>(<code>symlink: check_postgres_version</code>) Checks that the required version of Postgres is running. The 
-<em>--warning</em> and <em>--critical</em> options (only one is required) must be of 
-the format <strong>X.Y</strong> or <strong>X.Y.Z</strong> where <strong>X</strong> is the major version number, 
-<strong>Y</strong> is the minor version number, and <strong>Z</strong> is the revision.</p>
-<p>Example 1: Give a warning if the database on port 5678 is not version 8.4.10:</p>
-<pre>
-  check_postgres_version --port=5678 -w=8.4.10</pre>
-<p>Example 2: Give a warning if any databases on hosts valley,grain, or sunshine is not 8.3:</p>
-<pre>
-  check_postgres_version -H valley,grain,sunshine --critical=8.3</pre>
-<p>For MRTG output, reports a 1 or a 0 indicating success or failure on the first line. The 
-fourth line indicates the current version. The version must be provided via the <code>--mrtg</code> option.</p>
+<h2><a name="rebuild_symlinks_force"><strong>rebuild_symlinks_force</strong></a></h2>
+<p>This action requires no other arguments, and does not connect to any databases, 
+but simply creates symlinks in the current directory for each action, in the form 
+<strong>check_postgres_&lt;action_name&gt;</strong>.
+If the file already exists, it will not be overwritten. If the action is rebuild_symlinks_force, 
+then symlinks will be overwritten. The option --symlinks is a shorter way of saying 
+--action=rebuild_symlinks</p>
 <p>
 </p>
 <hr />
@@ -1567,13 +1567,37 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
-<dt><strong><a name="version_2_15_1" class="item"><strong>Version 2.15.1</strong></a></strong></dt>
+<dt><strong><a name="version_2_15_4" class="item"><strong>Version 2.15.4</strong></a></strong></dt>
+
+<dd>
+<pre>
+  Fix warning when using symlinks
+    (Greg Sabino Mullane, reported by Peter Eisentraut in bug #63)</pre>
+</dd>
+<dt><strong><a name="version_2_15_3_december_30_2010" class="item"><strong>Version 2.15.3</strong> December 30, 2010</a></strong></dt>
+
+<dd>
+<pre>
+  Show OK for no matching txn_idle entries.</pre>
+</dd>
+<dt><strong><a name="version_2_15_2_december_28_2010" class="item"><strong>Version 2.15.2</strong> December 28, 2010</a></strong></dt>
+
+<dd>
+<pre>
+  Better formatting of sizes in the bloat action output.</pre>
+<pre>
+  Remove duplicate perfs in bloat action output.</pre>
+</dd>
+<dt><strong><a name="version_2_15_1_december_27_2010" class="item"><strong>Version 2.15.1</strong> December 27, 2010</a></strong></dt>
 
 <dd>
 <pre>
   Fix problem when examining items in pg_settings (Greg Sabino Mullane)</pre>
+<pre>
+  For connection test, return critical, not unknown, on FATAL errors
+    (Greg Sabino Mullane, reported by Peter Eisentraut in bug #62)</pre>
 </dd>
-<dt><strong><a name="version_2_15_0" class="item"><strong>Version 2.15.0</strong></a></strong></dt>
+<dt><strong><a name="version_2_15_0_november_8_2010" class="item"><strong>Version 2.15.0</strong> November 8, 2010</a></strong></dt>
 
 <dd>
 <pre>
