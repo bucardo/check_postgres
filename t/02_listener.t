@@ -24,6 +24,16 @@ my $label = 'POSTGRES_LISTENER';
 
 $result = $cp->run('-w foo');
 
+my $ver = $dbh->{pg_server_version};
+if ($ver >= 90000) {
+  SKIP: {
+        skip 'Cannot test listener on Postgres 9.0 or higher', 8;
+    }
+
+	exit;
+
+}
+
 $t = qq{$S returned expected text and warning};
 like ($result, qr{^$label WARNING:}, $t);
 
