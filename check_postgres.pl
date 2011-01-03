@@ -3667,7 +3667,7 @@ FROM (SELECT
 
     my $info = run_command($SQL, { version => [ ">8.3 $SQLNOOP" ] } );
 
-    if (exists $info->{db}[0]{fail}) {
+    if (exists $info->{db}[0]{slurp}[0]{fail}) {
         add_unknown msg('fsm-rel-highver');
         return;
     }
