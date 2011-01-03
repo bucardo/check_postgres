@@ -45,10 +45,10 @@ SKIP: {
 
     $goodver or skip 'Cannot test backends completely with older versions of Postgres', 3;
 
-    like ($result, qr{^$label OK: \(host:$host\) 2 of 10 connections}, $t);
+    like ($result, qr{^$label OK: \(host:$host\).* 2 of 10 connections}, $t);
 
     $t=qq{$S returned correct percentage};
-    like ($result, qr{^$label OK: \(host:$host\) 2 of 10 connections \(20%\)}, $t);
+    like ($result, qr{^$label OK: \(host:$host\).* 2 of 10 connections \(20%\)}, $t);
 
     $t=qq{$S returned correct performance data};
     like ($result, qr{ \| time=(\d\.\d\d)  'ardala'=0;9;9;0;10 'beedeebeedee'=0;9;9;0;10 'postgres'=2;9;9;0;10 'template0'=0;9;9;0;10 'template1'=0;9;9;0;10\s$}, $t);
@@ -107,10 +107,9 @@ like ($cp->run("-w ${num}0%"), qr{^$label WARNING}, $t);
 like ($cp->run('-w 40%'), qr{^$label OK}, $t);
 
 $t=qq{$S works with warning option as a negative number};
-like ($cp->run('-w -6'), qr{^$label WARNING}, $t);
 like ($cp->run('-w -7'), qr{^$label WARNING}, $t);
-$num = $goodver ? 8 : 9;
-like ($cp->run("-w -$num"), qr{^$label OK}, $t);
+like ($cp->run('-w -8'), qr{^$label WARNING}, $t);
+like ($cp->run('-w -1'), qr{^$label OK}, $t);
 
 $t=qq{$S works with critical option as an absolute number};
 like ($cp->run('-c 2'), qr{^$label CRITICAL}, $t);
