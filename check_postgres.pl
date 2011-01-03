@@ -43,7 +43,7 @@ $opt{defaultport} = 5432;
 ## What type of output to use by default
 our $DEFAULT_OUTPUT = 'nagios';
 
-## If psql is not in your path, it is recommended that hardcode it here,
+## If psql is not in your path, it is recommended to hardcode it here,
 ## as an alternative to the --PSQL option
 $PSQL = '';
 
@@ -129,9 +129,9 @@ our %msg = (
     'diskspace-nodf'     => q{Could not find required executable /bin/df},
     'diskspace-nodir'    => q{Could not find data directory "$1"},
     'file-noclose'       => q{Could not close $1: $2},
-    'fsm-page-highver'   => q{Cannot check on fsm_pages on servers version 8.4 or greater},
+    'fsm-page-highver'   => q{Cannot check fsm_pages on servers version 8.4 or greater},
     'fsm-page-msg'       => q{fsm page slots used: $1 of $2 ($3%)},
-    'fsm-rel-highver'    => q{Cannot check on fsm_relations on servers version 8.4 or greater},
+    'fsm-rel-highver'    => q{Cannot check fsm_relations on servers version 8.4 or greater},
     'fsm-rel-msg'        => q{fsm relations used: $1 of $2 ($3%)},
     'invalid-option'     => q{Invalid option},
     'invalid-query'      => q{Invalid query returned: $1},
@@ -194,7 +194,7 @@ our %msg = (
     'range-cactionly'    => q{This action is for cacti use only and takes no warning or critical arguments},
     'range-int'          => q{Invalid argument for '$1' option: must be an integer},
     'range-int-pos'      => q{Invalid argument for '$1' option: must be a positive integer},
-    'range-neg-percent'  => q{Cannot specify a negative percent!},
+    'range-neg-percent'  => q{Cannot specify a negative percentage!},
     'range-none'         => q{No warning or critical options are needed},
     'range-noopt-both'   => q{Must provide both 'warning' and 'critical' options},
     'range-noopt-one'    => q{Must provide a 'warning' or 'critical' option},
