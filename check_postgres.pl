@@ -97,6 +97,7 @@ our %msg = (
     'bloat-index'        => q{(db $1) index $2 rows:$3 pages:$4 shouldbe:$5 ($6X) wasted bytes:$7 ($8)},
     'bloat-nomin'        => q{no relations meet the minimum bloat criteria},
     'bloat-table'        => q{(db $1) table $2.$3 rows:$4 pages:$5 shouldbe:$6 ($7X) wasted size:$8 ($9)},
+    'bug-report'         => q{Please report these details to check_postgres@bucardo.org:},
     'checkpoint-baddir'  => q{Invalid data_directory: "$1"},
     'checkpoint-baddir2' => q{pg_controldata could not read the given data directory: "$1"},
     'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version},
@@ -165,6 +166,7 @@ our %msg = (
     'no-match-set'       => q{No matching settings found due to exclusion/inclusion options},
     'no-match-table'     => q{No matching tables found due to exclusion/inclusion options},
     'no-match-user'      => q{No matching entries found due to user exclusion/inclusion options},
+    'no-parse-psql'      => q{Could not parse psql output!},
     'no-time-hires'      => q{Cannot find Time::HiRes, needed if 'showtime' is true},
     'opt-output-invalid' => q{Invalid output: must be 'nagios' or 'mrtg' or 'simple' or 'cacti'},
     'opt-psql-badpath'   => q{Invalid psql argument: must be full path to a file named psql},
@@ -177,6 +179,8 @@ our %msg = (
     'PID'                => q{PID},
     'port'               => q{port},
     'preptxn-none'       => q{No prepared transactions found},
+    'psa-disabled'       => q{No queries - is stats_command_string or track_activities off?},
+    'psa-noexact'        => q{Unknown error},
     'psa-nomatches'      => q{No queries were found},
     'psa-nosuper'        => q{No matches - please run as a superuser},
     'psa-skipped'        => q{No matching rows were found (skipped rows: $1)},
@@ -305,6 +309,7 @@ our %msg = (
     'bloat-index'        => q{(db $1) index $2 lignes:$3 pages:$4 devrait être:$5 ($6X) octets perdus:$7 ($8)},
     'bloat-nomin'        => q{aucune relation n'atteint le critère minimum de fragmentation},
     'bloat-table'        => q{(db $1) table $2.$3 lignes:$4 pages:$5 devrait être:$6 ($7X) place perdue:$8 ($9)},
+'bug-report'         => q{Please report these details to check_postgres@bucardo.org:},
     'checkpoint-baddir'  => q{data_directory invalide : "$1"},
     'checkpoint-baddir2' => q{pg_controldata n'a pas pu lire le répertoire des données indiqué : « $1 »},
     'checkpoint-badver'  => q{Échec lors de l'exécution de pg_controldata - probablement la mauvaise version},
@@ -365,7 +370,7 @@ our %msg = (
 'new-ver-dev'        => q{Cannot compare versions on development versions: you have $1 version $2},
 'new-ver-nolver'     => q{Could not determine local version information for $1},
     'new-ver-ok'          => q{La version $1 est la dernière pour $2},
-    'new-bc-warn'        => q{Merci de mettre à jour vers la version $1 de $2. Vous utilisez actuellement la $3},
+    'new-ver-warn'        => q{Merci de mettre à jour vers la version $1 de $2. Vous utilisez actuellement la $3},
 'new-ver-tt'         => q{Your version of $1 ($2) appears to be ahead of the current release! ($3)},
     'no-match-db'        => q{Aucune base de données trouvée à cause des options d'exclusion/inclusion},
     'no-match-fs'        => q{Aucun système de fichier trouvé à cause des options d'exclusion/inclusion},
@@ -373,6 +378,7 @@ our %msg = (
     'no-match-set'       => q{Aucun paramètre trouvé à cause des options d'exclusion/inclusion},
     'no-match-table'     => q{Aucune table trouvée à cause des options d'exclusion/inclusion},
     'no-match-user'      => q{Aucune entrée trouvée à cause options d'exclusion/inclusion},
+'no-parse-psql'      => q{Could not parse psql output!},
     'no-time-hires'      => q{N'a pas trouvé le module Time::HiRes, nécessaire quand « showtime » est activé},
     'opt-output-invalid' => q{Sortie invalide : doit être 'nagios' ou 'mrtg' ou 'simple' ou 'cacti'},
     'opt-psql-badpath'   => q{Argument invalide pour psql : doit être le chemin complet vers un fichier nommé psql},
@@ -381,12 +387,19 @@ our %msg = (
     'opt-psql-nofind'    => q{N'a pas pu trouver un psql exécutable},
     'opt-psql-nover'     => q{N'a pas pu déterminer la version de psql},
     'opt-psql-restrict'  => q{Ne peut pas utiliser l'option --PSQL si NO_PSQL_OPTION est activé},
+'pgbouncer-pool'     => q{Pool=$1 $2=$3},
     'PID'                => q{PID},
     'port'               => q{port},
     'preptxn-none'       => q{Aucune transaction préparée trouvée},
+'psa-disabled'       => q{No queries - is stats_command_string or track_activities off?},
+'psa-noexact'        => q{Unknown error},
+'psa-nomatches'      => q{No queries were found},
+'psa-nosuper'        => q{No matches - please run as a superuser},
+'psa-skipped'        => q{No matching rows were found (skipped rows: $1)},
     'qtime-fail'         => q{Ne peut pas exécuter l'action txn_idle si stats_command_string est désactivé !},
     'qtime-msg'          => q{requête la plus longue : $1s},
     'qtime-nomatch'      => q{Aucune entrée correspondante n'a été trouvée},
+'Query'              => q{Query: $1},
     'range-badcs'        => q{Option « $1 » invalide : doit être une somme de contrôle},
     'range-badlock'      => q{Option « $1 » invalide : doit être un nombre de verrou ou « type1=#;type2=# »},
     'range-badpercent'   => q{Option « $1 » invalide : doit être un pourcentage},
@@ -2030,9 +2043,10 @@ sub run_command {
                     $stuff[$num]{$lastval} .= "\n$1";
                 }
                 else {
-                    ### XXX msg these
-                    warn "Could not parse psql output!\n";
-                    warn "Please report these details to check_postgres\@bucardo.org:\n";
+                    my $msg = msg('no-parse-psql');
+                    warn "$msg\n";
+                    $msg = msg('bug-report');
+                    warn "$msg\n";
                     my $cline = (caller)[2];
                     my $args = join ' ' => @args;
                     warn "Version:      $VERSION\n";
@@ -4385,7 +4399,7 @@ ORDER BY xact_start, procpid DESC
                 }
                 ## Something else is going on
                 else {
-                    add_unknown msg('psa-noxact');
+                    add_unknown msg('psa-noexact');
                 }
                 return;
             }
