@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name                        : check_postgres.pl
-version                     : 2.15.4
+version                     : 2.15.5
 abstract                    : Postgres monitoring script
 author:              
   - Greg Sabino Mullane <greg@endpoint.com>
@@ -30,7 +30,7 @@ recommends:
 provides:
   check_postgres:
     file                    : check_postgres.pl
-    version                 : 2.15.4
+    version                 : 2.15.5
 
 keywords:
   - Postgres

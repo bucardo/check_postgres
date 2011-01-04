@@ -30,7 +30,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.15.4';
+our $VERSION = '2.15.5';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -68,10 +68,10 @@ our $YELLNAME = 1;
 ## Preferred order of ways to fetch pages for new_version checks
 our $get_method_timeout = 30;
 our @get_methods = (
-    "GET -t $get_method_timeout",
-    "wget --quiet --timeout=$get_method_timeout -O -",
+    "GET -t $get_method_timeout -H 'Pragma: no-cache'",
+    "wget --quiet --timeout=$get_method_timeout --no-cache -O -",
+    "curl --silent --max-time=$get_method_timeout -H 'Pragma: no-cache'",
     "fetch -q -T $get_method_timeout -o -",
-    "curl --silent --max-time=$get_method_timeout",
     "lynx --connect-timeout=$get_method_timeout --dump",
     'links -dump',
 );
@@ -7200,7 +7200,7 @@ sub check_archive_ready {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.15.4
+This documents describes check_postgres.pl version 2.15.5
 
 =head1 SYNOPSIS
 
@@ -8779,6 +8779,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.15.5>
+
+  Add cache-busting for the version-grabbing utilities.
 
 =item B<Version 2.15.4> January 3, 2011
 
