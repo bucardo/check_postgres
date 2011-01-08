@@ -50,6 +50,7 @@
 		<li><a href="#disk_space"><strong>disk_space</strong></a></li>
 		<li><a href="#fsm_pages"><strong>fsm_pages</strong></a></li>
 		<li><a href="#fsm_relations"><strong>fsm_relations</strong></a></li>
+		<li><a href="#hot_standby_delay"><strong>hot_standby_delay</strong></a></li>
 		<li><a href="#index_size"><strong>index_size</strong></a></li>
 		<li><a href="#table_size"><strong>table_size</strong></a></li>
 		<li><a href="#relation_size"><strong>relation_size</strong></a></li>
@@ -116,7 +117,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.15.4</p>
+<p>This documents describes check_postgres.pl version 2.16.0</p>
 <p>
 </p>
 <hr />
@@ -824,6 +825,18 @@ checking this information does require obtaining special locks on the free-space
 run this check with short intervals.</p>
 <p>For MRTG output, returns the percent of free-space-map on the first line, the number of relations currently used on 
 the second line.</p>
+<p>
+</p>
+<h2><a name="hot_standby_delay"><strong>hot_standby_delay</strong></a></h2>
+<p>(<code>symlink: check_hot_standby_delay</code>) Checks the streaming replication lag by computing the delta 
+between the xlog position of a master server and the one of a slave connected to it. The slave_
+server must be in hot_standby (eg. read only) mode, therefore the minimum version to use this_
+action is Postgres 9.0. The <em>--warning</em> and <em>--critical</em> options are the delta between xlog 
+location. These values should match the volume of transactions needed to have the streaming 
+replication disconnect from the master because of too much lag.</p>
+<p>You must provide information on how to reach the second database by a connection 
+parameter ending in the number 2, such as &quot;--dbport2=5543&quot;. If if it not given, 
+the action fails.</p>
 <p>
 </p>
 <h2><a name="index_size"><strong>index_size</strong></a></h2>
@@ -1567,7 +1580,14 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
-<dt><strong><a name="version_2_15_4" class="item"><strong>Version 2.15.4</strong></a></strong></dt>
+<dt><strong><a name="version_2_16_0" class="item"><strong>Version 2.16.0</strong></a></strong></dt>
+
+<dd>
+<pre>
+  Add new action 'hot_standby_delay' (Nicolas Thauvin)
+  Add cache-busting for the version-grabbing utilities.</pre>
+</dd>
+<dt><strong><a name="version_2_15_4_january_3_2011" class="item"><strong>Version 2.15.4</strong> January 3, 2011</a></strong></dt>
 
 <dd>
 <pre>
@@ -1601,7 +1621,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 
 <dd>
 <pre>
-  Add --quiet argument to surpress output on OK Nagios results
+  Add --quiet argument to suppress output on OK Nagios results
   Add index comparison for same_schema (Norman Yamada and Greg Sabino Mullane)
   Use $ENV{PGSERVICE} instead of &quot;service=&quot; to prevent problems (Guillaume Lelarge)
   Add --man option to show the entire manual. (Andy Lester)
@@ -1716,7 +1736,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
   Allow list of web fetch methods to be changed with the --get_method option.
   Add support for the --language argument, which overrides any ENV.
   Add the --no-check_postgresrc flag.
-  Ensure check_postgresrc options are completely overriden by command-line options.
+  Ensure check_postgresrc options are completely overridden by command-line options.
   Fix incorrect warning &gt; critical logic in replicate_rows (Glyn Astill)</pre>
 </dd>
 <dt><strong><strong>Version 2.10.0</strong> (August 3, 2009)</strong></dt>
@@ -1790,8 +1810,8 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
   French translations (Guillaume Lelarge)
   Make the backends search return ok if no matches due to inclusion rules,
     per report by Guillaume Lelarge (Greg)
-  Added comprehensive unit tests (Greg, Jeff Boes, Selena Decklemann)
-  Make fsm_pages and fsm_relatins handle 8.4 servers smoothly. (Greg)
+  Added comprehensive unit tests (Greg, Jeff Boes, Selena Deckelmann)
+  Make fsm_pages and fsm_relations handle 8.4 servers smoothly. (Greg)
   Fix missing 'upd' field in show_dbstats (Andras Fabian)
   Allow ENV{PGCONTROLDATA} and ENV{PGBINDIR}. (Greg)
   Add various Perl module infrastructure (e.g. Makefile.PL) (Greg)
