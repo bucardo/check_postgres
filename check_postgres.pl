@@ -3751,7 +3751,7 @@ sub check_hot_standby_delay {
     my ($master, $slave);
     $SQL = q{SELECT pg_is_in_recovery() AS recovery;};
 
-    # Check if master is online (eg really a master)
+    # Check if master is online (e.g. really a master)
     for my $x (1..2) {
         my $info = run_command($SQL, { dbnumber => $x, regex => qr(t|f) });
 
@@ -8070,7 +8070,7 @@ the second line.
 
 (C<symlink: check_hot_standby_delay>) Checks the streaming replication lag by computing the delta 
 between the xlog position of a master server and the one of a slave connected to it. The slave_
-server must be in hot_standby (eg. read only) mode, therefore the minimum version to use this_
+server must be in hot_standby (e.g. read only) mode, therefore the minimum version to use this_
 action is Postgres 9.0. The I<--warning> and I<--critical> options are the delta between xlog 
 location. These values should match the volume of transactions needed to have the streaming 
 replication disconnect from the master because of too much lag.
