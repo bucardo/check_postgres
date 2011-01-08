@@ -3000,6 +3000,16 @@ FROM (
 sub check_checkpoint {
 
     ## Checks how long in seconds since the last checkpoint on a WAL slave
+
+    ## Note that this value is actually the last checkpoint on the
+    ## *master* (as copied from the WAL checkpoint record), so it more
+    ## indicative that the master has been unable to complete a
+    ## checkpoint for some other reason (i.e., unable to write dirty
+    ## buffers or archive_command failure, etc).  As such, this check
+    ## may make more sense on the master, or we may want to look at
+    ## the WAL segments received/processed instead of the checkpoint
+    ## timestamp.
+
     ## Supports: Nagios, MRTG
     ## Warning and critical are seconds
     ## Requires $ENV{PGDATA} or --datadir
