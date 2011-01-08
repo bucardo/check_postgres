@@ -348,6 +348,8 @@ our %msg = (
     'fsm-page-msg'       => q{emplacements de pages utilisés par la FSM : $1 sur $2 ($3%)},
     'fsm-rel-highver'    => q{Ne peut pas vérifier fsm_relations sur des serveurs en version 8.4 ou ultérieure},
     'fsm-rel-msg'        => q{relations tracées par la FSM : $1 sur $2 ($3%)},
+'hs-no-role'         => q{Not a master/slave couple},
+'hs-no-location'     => q{Could not get current xlog location on $1},
     'invalid-option'     => q{Option invalide},
     'invalid-query'      => q{Une requête invalide a renvoyé : $1},
     'listener-count'     => q{ en écoute=$1}, ## needs leading space
