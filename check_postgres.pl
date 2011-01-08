@@ -30,7 +30,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.15.5';
+our $VERSION = '2.16.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -134,6 +134,8 @@ our %msg = (
     'fsm-page-msg'       => q{fsm page slots used: $1 of $2 ($3%)},
     'fsm-rel-highver'    => q{Cannot check fsm_relations on servers version 8.4 or greater},
     'fsm-rel-msg'        => q{fsm relations used: $1 of $2 ($3%)},
+    'hs-no-role'         => q{Not a master/slave couple},
+    'hs-no-location'     => q{Could not get current xlog location on $1},
     'invalid-option'     => q{Invalid option},
     'invalid-query'      => q{Invalid query returned: $1},
     'listener-count'     => q{ listening=$1}, ## needs leading space
@@ -850,6 +852,7 @@ our $action_info = {
  disk_space          => [1, 'Checks space of local disks Postgres is using.'],
  fsm_pages           => [1, 'Checks percentage of pages used in free space map.'],
  fsm_relations       => [1, 'Checks percentage of relations used in free space map.'],
+ hot_standby_delay   => [1, 'Check the replication delay in hot standby setup'],
  index_size          => [0, 'Checks the size of indexes only.'],
  table_size          => [0, 'Checks the size of tables only.'],
  relation_size       => [0, 'Checks the size of tables and indexes.'],
@@ -1278,6 +1281,7 @@ our %testaction = (
                   archive_ready     => 'VERSION: 8.1',
                   fsm_pages         => 'VERSION: 8.2 MAX: 8.3',
                   fsm_relations     => 'VERSION: 8.2 MAX: 8.3',
+                  hot_standby_delay => 'VERSION: 9.0',
                   listener          => 'MAX: 8.4',
 );
 if ($opt{test}) {
@@ -1461,6 +1465,9 @@ check_wal_files() if $action eq 'wal_files';
 
 ## Check the number of WAL files ready to archive. warning and critical are numbers
 check_archive_ready() if $action eq 'archive_ready';
+
+## Check the replication delay in hot standby setup
+check_hot_standby_delay() if $action eq 'hot_standby_delay';
 
 ## Check the maximum transaction age of all connections
 check_txn_time() if $action eq 'txn_time';
@@ -3717,6 +3724,114 @@ FROM (SELECT
     return;
 
 } ## end of check_fsm_relations
+
+
+sub check_hot_standby_delay {
+
+    ## Check on the delay in PITR replication between master and slave
+    ## Supports: Nagios, MRTG
+    ## Critical and warning are the delay between master and slave xlog locations
+    ## Example: --critical=1024
+
+    my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
+
+    # check if master and slave comply with the check using pg_is_in_recovery()
+    my ($master, $slave);
+    $SQL = q{SELECT pg_is_in_recovery() AS recovery;};
+
+    # Check if master is online (eg really a master)
+    for my $x (1..2) {
+        my $info = run_command($SQL, { dbnumber => $x, regex => qr(t|f) });
+
+        for $db (@{$info->{db}}) {
+            my $status = $db->{slurp}[0];
+            if ($status->{recovery} eq 't') {
+                $slave = $x;
+                last;
+            }
+            if ($status->{recovery} eq 'f') {
+                $master = $x;
+                last;
+            }
+        }
+    }
+    if (! defined $slave and ! defined $master) {
+        add_unknown msg('hs-no-role');
+        return;
+    }
+
+    ## Get xlog positions
+    my ($moffset, $s_rec_offset, $s_rep_offset);
+    ## On master
+    $SQL = q{SELECT pg_current_xlog_location() AS location};
+    my $info = run_command($SQL, { dbnumber => $master });
+    my $saved_db;
+    for $db (@{$info->{db}}) {
+        my $location = $db->{slurp}[0]{location};
+        next if ! defined $location;
+
+        my ($x, $y) = split(/\//, $location);
+        $moffset = (hex("ffffffff") * hex($x)) + hex($y);
+        $saved_db = $db if ! defined $saved_db;
+    }
+
+    if (! defined $moffset) {
+        add_unknown msg('hs-no-location', 'master');
+        return;
+    }
+
+    ## On slave
+    $SQL = q{SELECT pg_last_xlog_receive_location() AS receive, pg_last_xlog_replay_location() AS replay};
+
+    $info = run_command($SQL, { dbnumber => $slave, regex => qr/\// });
+
+    for $db (@{$info->{db}}) {
+        my $receive = $db->{slurp}[0]{receive};
+        my $replay = $db->{slurp}[0]{replay};
+
+        if (defined $receive) {
+            my ($a, $b) = split(/\//, $receive);
+            $s_rec_offset = (hex("ffffffff") * hex($a)) + hex($b);
+        }
+
+        if (defined $replay) {
+            my ($a, $b) = split(/\//, $replay);
+            $s_rep_offset = (hex("ffffffff") * hex($a)) + hex($b);
+        }
+
+        $saved_db = $db if ! defined $saved_db;
+    }
+
+    if (! defined $s_rec_offset and ! defined $s_rep_offset) {
+        add_unknown msg('hs-no-location', 'slave');
+        return;
+    }
+
+    ## Compute deltas
+    $db = $saved_db;
+    my $rec_delta = $moffset - $s_rec_offset;
+    my $rep_delta = $moffset - $s_rep_offset;
+
+    $MRTG and do_mrtg({one => $rep_delta, two => $rec_delta});
+
+    $db->{perf} = qq{replay_delay=$rep_delta;$warning;$critical};
+    $db->{perf} .= qq{ receive_delay=$rec_delta;$warning;$critical};
+
+    ## Do the check on replay delay in case SR has disconnected because it way too far behind
+    my $msg = qq{$rep_delta};
+    if (length $critical and $rep_delta > $critical) {
+        add_critical $msg;
+    }
+    elsif (length $warning and $rep_delta > $warning) {
+        add_warning $msg;
+    }
+    else {
+        add_ok $msg;
+    }
+
+    return;
+
+} ## End of check_hot_standby_delay
 
 
 sub check_last_analyze {
@@ -7200,7 +7315,7 @@ sub check_archive_ready {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.15.5
+This documents describes check_postgres.pl version 2.16.0
 
 =head1 SYNOPSIS
 
@@ -7938,6 +8053,19 @@ run this check with short intervals.
 
 For MRTG output, returns the percent of free-space-map on the first line, the number of relations currently used on 
 the second line.
+
+=head2 B<hot_standby_delay>
+
+(C<symlink: check_hot_standby_delay>) Checks the streaming replication lag by computing the delta 
+between the xlog position of a master server and the one of a slave connected to it. The slave_
+server must be in hot_standby (eg. read only) mode, therefore the minimum version to use this_
+action is Postgres 9.0. The I<--warning> and I<--critical> options are the delta between xlog 
+location. These values should match the volume of transactions needed to have the streaming 
+replication disconnect from the master because of too much lag.
+
+You must provide information on how to reach the second database by a connection 
+parameter ending in the number 2, such as "--dbport2=5543". If if it not given, 
+the action fails.
 
 =head2 B<index_size>
 
@@ -8780,8 +8908,9 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.15.5>
+=item B<Version 2.16.0>
 
+  Add new action 'hot_standby_delay' (Nicolas Thauvin)
   Add cache-busting for the version-grabbing utilities.
 
 =item B<Version 2.15.4> January 3, 2011
