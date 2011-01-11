@@ -1219,6 +1219,9 @@ sub finishup {
             }
         }
         print "\n";
+
+        return;
+
     }
 
     if (keys %critical) {
@@ -4708,6 +4711,8 @@ sub check_pgb_pool {
         }
     }
 
+    return;
+
 } ## end of check_pgb_pool
 
 
@@ -5844,7 +5849,6 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
         ## Parse the statement to get columns, index type, expression, and predicate
         if ($one->{statement} !~ /\ACREATE (\w* ?INDEX .+? ON .+? USING (\w+) (.+))/) {
             die "Could not parse index statement: $one->{statement}\n";
-            next;
         }
         my ($def1, $method1,$col1) = ($1,$2,$3);
         my $where1 = $col1 =~ s/WHERE (.+)// ? $1 : '';
@@ -5853,7 +5857,6 @@ JOIN pg_namespace n ON (n.oid = pronamespace)
 
         if ($two->{statement} !~ /\ACREATE (\w* ?INDEX .+? ON .+? USING (\w+) (.+))/) {
             die "Could not parse index statement: $two->{statement}\n";
-            next;
         }
         my ($def2,$method2,$col2) = ($1,$2,$3);
         my $where2 = $col2 =~ s/WHERE (.+)// ? $1 : '';
