@@ -4305,6 +4305,7 @@ sub find_new_version {
     ## The format is X.Y.Z [optional message]
     my $versionre = qr{((\d+)\.(\d+)\.(\d+))\s*(.*)};
     my ($cversion,$cmajor,$cminor,$crevision,$cmessage) = ('','','','','');
+    my $found = 0;
 
     ## Try to fetch the current version from the web
     for my $meth (@get_methods) {
@@ -4316,10 +4317,12 @@ sub find_new_version {
             if ($program eq 'Postgres') {
                 $cmajor = {};
                 while ($info =~ /<title>(\d+)\.(\d+)\.(\d+)/g) {
+                    $found = 1;
                     $cmajor->{"$1.$2"} = $3;
                 }
             }
             elsif ($info =~ $versionre) {
+                $found = 1;
                 ($cversion,$cmajor,$cminor,$crevision,$cmessage) = ($1, int $2, int $3, int $4, $5);
                 if ($VERBOSE >= 1) {
                     $info =~ s/\s+$//s;
@@ -4328,10 +4331,10 @@ sub find_new_version {
                 }
             }
         };
-        last if $cmajor;
+        last if $found;
     }
 
-    if (! $cmajor) {
+    if (! $found) {
         add_unknown msg('new-ver-nocver', $program);
         return;
     }
@@ -8927,6 +8930,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
   Add new action 'hot_standby_delay' (Nicolas Thauvin)
   Add cache-busting for the version-grabbing utilities.
+  Fix problem with going to next method for new_version_pg
+    (Greg Sabino Mullane, reported by Hywel Mallett in bug #65)
 
 =item B<Version 2.15.4> January 3, 2011
 
