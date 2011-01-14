@@ -638,6 +638,9 @@ if (! $opt{'no-check_postgresrc'}) {
     elsif (-e '/etc/check_postgresrc') {
         $rcfile = '/etc/check_postgresrc';
     }
+    elsif (-e '/usr/local/etc/check_postgresrc') {
+        $rcfile = '/usr/local/etc/check_postgresrc';
+    }
 }
 ## We need a temporary hash so that multi-value options can be overridden on the command line
 my %tempopt;
@@ -8932,6 +8935,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Add cache-busting for the version-grabbing utilities.
   Fix problem with going to next method for new_version_pg
     (Greg Sabino Mullane, reported by Hywel Mallett in bug #65)
+  Allow /usr/local/etc as an alternative location for the 
+    check_postgresrc file (Hywel Mallett)
 
 =item B<Version 2.15.4> January 3, 2011
 
