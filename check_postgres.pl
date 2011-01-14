@@ -7041,7 +7041,7 @@ FROM pg_stat_activity
 WHERE xact_start IS NOT NULL $USERWHERECLAUSE
 };
 
-	my $info = run_command($SQL, { regex => qr{\| \d+\n}, emptyok => 1 } );
+    my $info = run_command($SQL, { regex => qr{\| \d+\n}, emptyok => 1 } );
 
     $db = $info->{db}[0];
     my $slurp = $db->{slurp};
