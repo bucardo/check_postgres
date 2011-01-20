@@ -5267,7 +5267,9 @@ JOIN pg_class c ON (c.oid = tgrelid)
 JOIN pg_proc p ON (p.oid = tgfoid)
 WHERE NOT tgisconstraint
 }; ## constraints checked separately
-            $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
+            (my $SQL2 = $SQL) =~ s/NOT tgisconstraint/tgconstraint = 0/;
+
+            $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x, version  => [ ">8.4 $SQL2" ] } );
             for $db (@{$info->{db}}) {
                 for my $r (@{$db->{slurp}}) {
                     my ($name,$table,$func,$args) = @$r{qw/ tgname relname proname proargtypes /};
