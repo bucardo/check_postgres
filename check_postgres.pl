@@ -8939,6 +8939,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
     (Greg Sabino Mullane, reported by Hywel Mallett in bug #65)
   Allow /usr/local/etc as an alternative location for the 
     check_postgresrc file (Hywel Mallett)
+  Do not use tgisconstraint in same_schema if Postgres >= 9
+    (Guillaume Lelarge)
 
 =item B<Version 2.15.4> January 3, 2011
 
