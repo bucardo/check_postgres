@@ -110,7 +110,6 @@ our %msg = (
     'checkpoint-ok'      => q{Last checkpoint was 1 second ago},
     'checkpoint-ok2'     => q{Last checkpoint was $1 seconds ago},
     'checkpoint-po'      => q{Time of latest checkpoint:},
-    'checksum-badline'   => q{Invalid pg_setting line: $1},
     'checksum-msg'       => q{checksum: $1},
     'checksum-nomd'      => q{Must install the Perl module Digest::MD5 to use the checksum action},
     'checksum-nomrtg'    => q{Must provide a checksum via the --mrtg option},
@@ -143,8 +142,7 @@ our %msg = (
     'locks-msg'          => q{total "$1" locks: $2},
     'locks-msg2'         => q{total locks: $1},
     'logfile-bad'        => q{Invalid logfile "$1"},
-    'logfile-debug'      => q{Dest is $1, dir is $2, file is $3, facility is $4},
-    'logfile-debug2'     => q{Final logfile: $1},
+    'logfile-debug'      => q{Final logfile: $1},
     'logfile-dne'        => q{logfile $1 does not exist!},
     'logfile-fail'       => q{fails logging to: $1},
     'logfile-ok'         => q{logs to: $1},
@@ -186,9 +184,7 @@ our %msg = (
     'psa-nomatches'      => q{No queries were found},
     'psa-nosuper'        => q{No matches - please run as a superuser},
     'psa-skipped'        => q{No matching rows were found (skipped rows: $1)},
-    'qtime-fail'         => q{Cannot run the txn_idle action unless stats_command_string is set to 'on'!},
     'qtime-msg'          => q{longest query: $1s},
-    'qtime-nomatch'      => q{No queries were found},
     'Query'              => q{Query: $1},
     'range-badcs'        => q{Invalid '$1' option: must be a checksum},
     'range-badlock'      => q{Invalid '$1' option: must be number of locks, or "type1=#;type2=#"},
@@ -324,7 +320,6 @@ our %msg = (
     'checkpoint-ok'      => q{Le dernier CHECKPOINT est survenu il y a une seconde},
     'checkpoint-ok2'     => q{Le dernier CHECKPOINT est survenu il y a $1 secondes},
     'checkpoint-po'      => q{Heure du dernier point de contr�le :},
-    'checksum-badline'   => q{Ligne pg_setting invalide : $1},
     'checksum-msg'       => q{somme de contrôle : $1},
     'checksum-nomd'      => q{Vous devez installer le module Perl Digest::MD5 pour utiliser l'action checksum},
     'checksum-nomrtg'    => q{Vous devez fournir une somme de contrôle avec l'option --mrtg},
@@ -357,8 +352,7 @@ our %msg = (
     'locks-msg'          => q{total des verrous « $1 » : $2},
     'locks-msg2'         => q{total des verrous : $1},
     'logfile-bad'        => q{Option logfile invalide « $1 »},
-    'logfile-debug'      => q{la destination est $1, le répertoire est $2, le fichier est $3, l'option facility est $4},
-    'logfile-debug2'     => q{Journal applicatif final : $1},
+    'logfile-debug'      => q{Journal applicatif final : $1},
     'logfile-dne'        => q{le journal applicatif $1 n'existe pas !},
     'logfile-fail'       => q{échec pour tracer dans : $1},
     'logfile-ok'         => q{trace dans : $1},
@@ -400,9 +394,7 @@ our %msg = (
     'psa-nomatches'      => q{Aucune requ??te n'a ??t?? trouv??e},
     'psa-nosuper'        => q{Aucune correspondance - merci de m'ex??cuter en tant que superutilisateur},
     'psa-skipped'        => q{Aucune ligne correspondante n'a ??t?? trouv??e (lignes ignor??es : $1)},
-    'qtime-fail'         => q{Ne peut pas exécuter l'action txn_idle si stats_command_string est désactivé !},
     'qtime-msg'          => q{requête la plus longue : $1s},
-    'qtime-nomatch'      => q{Aucune entrée correspondante n'a été trouvée},
     'Query'              => q{Requ??te : $1},
     'range-badcs'        => q{Option « $1 » invalide : doit être une somme de contrôle},
     'range-badlock'      => q{Option « $1 » invalide : doit être un nombre de verrou ou « type1=#;type2=# »},
@@ -4232,7 +4224,7 @@ ORDER BY name
         $logfile =~ s/%d/$d/g;
         $logfile =~ s/%H/$H/g;
 
-        $VERBOSE >= 3 and warn msg('logfile-debug2', $logfile);
+        $VERBOSE >= 3 and warn msg('logfile-debug', $logfile);
 
         if (! -e $logfile) {
             my $msg = msg('logfile-dne', $logfile);
