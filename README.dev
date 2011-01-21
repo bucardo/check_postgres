@@ -10,7 +10,7 @@ Quick notes on the current release process:
 * Add a release date next to the new version number
 * Change the version number everywhere (use prove -v t/00_release.t to verify)
 * git commit as needed
-* Run: make html
+* Run: perl Makefile.PL; make html
 * Run: make signature_asc
 * Run: make signature
 * Add a new tag: git tag -u 14964ac8 1.2.3 -m "Version 1.2.3, released August 3, 2009" <commit>
