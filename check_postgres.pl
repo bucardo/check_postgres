@@ -2529,7 +2529,7 @@ sub check_autovac_freeze {
             elsif ($r->{perc} == $maxp) {
                 $maxdb .= sprintf '%s%s', (length $maxdb ? ' | ' : ''), $r->{datname};
             }
-            $maxt = $r->{tnxs} if $r->{txns} > $maxt;
+            $maxt = $r->{txns} if $r->{txns} > $maxt;
             next SLURP;
         }
 
