@@ -61,7 +61,7 @@ stop_words = Mullane Nagios Slony Slony's nols salesrep psql dbname postgres USE
 
 [-References::ProhibitDoubleSigils]
 
-#[-RegularExpressions::ProhibitCaptureWithoutTest]
+[-RegularExpressions::ProhibitCaptureWithoutTest]
 [-RegularExpressions::ProhibitComplexRegexes]
 [-RegularExpressions::ProhibitEnumeratedClasses]
 [-RegularExpressions::ProhibitEscapedMetacharacters]
