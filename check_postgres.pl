@@ -8923,7 +8923,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.16.0>
+=item B<Version 2.16.0> January 20, 2011
 
   Add new action 'hot_standby_delay' (Nicolas Thauvin)
   Add cache-busting for the version-grabbing utilities.
