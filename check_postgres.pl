@@ -3841,7 +3841,7 @@ sub check_hot_standby_delay {
 
     return;
 
-} ## End of check_hot_standby_delay
+} ## end of check_hot_standby_delay
 
 
 sub check_last_analyze {
@@ -8072,7 +8072,7 @@ the second line.
 =head2 B<hot_standby_delay>
 
 (C<symlink: check_hot_standby_delay>) Checks the streaming replication lag by computing the delta 
-between the xlog position of a master server and the one of a slave connected to it. The slave_
+between the xlog position of a master server and the one of the slaves connected to it. The slave_
 server must be in hot_standby (e.g. read only) mode, therefore the minimum version to use this_
 action is Postgres 9.0. The I<--warning> and I<--critical> options are the delta between xlog 
 location. These values should match the volume of transactions needed to have the streaming 

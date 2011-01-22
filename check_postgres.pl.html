@@ -829,8 +829,8 @@ the second line.</p>
 </p>
 <h2><a name="hot_standby_delay"><strong>hot_standby_delay</strong></a></h2>
 <p>(<code>symlink: check_hot_standby_delay</code>) Checks the streaming replication lag by computing the delta 
-between the xlog position of a master server and the one of a slave connected to it. The slave_
-server must be in hot_standby (eg. read only) mode, therefore the minimum version to use this_
+between the xlog position of a master server and the one of the slaves connected to it. The slave_
+server must be in hot_standby (e.g. read only) mode, therefore the minimum version to use this_
 action is Postgres 9.0. The <em>--warning</em> and <em>--critical</em> options are the delta between xlog 
 location. These values should match the volume of transactions needed to have the streaming 
 replication disconnect from the master because of too much lag.</p>
@@ -1580,12 +1580,18 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
-<dt><strong><a name="version_2_16_0" class="item"><strong>Version 2.16.0</strong></a></strong></dt>
+<dt><strong><a name="version_2_16_0_january_20_2011" class="item"><strong>Version 2.16.0</strong> January 20, 2011</a></strong></dt>
 
 <dd>
 <pre>
   Add new action 'hot_standby_delay' (Nicolas Thauvin)
-  Add cache-busting for the version-grabbing utilities.</pre>
+  Add cache-busting for the version-grabbing utilities.
+  Fix problem with going to next method for new_version_pg
+    (Greg Sabino Mullane, reported by Hywel Mallett in bug #65)
+  Allow /usr/local/etc as an alternative location for the 
+    check_postgresrc file (Hywel Mallett)
+  Do not use tgisconstraint in same_schema if Postgres &gt;= 9
+    (Guillaume Lelarge)</pre>
 </dd>
 <dt><strong><a name="version_2_15_4_january_3_2011" class="item"><strong>Version 2.15.4</strong> January 3, 2011</a></strong></dt>
 
