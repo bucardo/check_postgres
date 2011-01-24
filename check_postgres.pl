@@ -754,7 +754,7 @@ for my $mv (keys %tempopt) {
 
 our $VERBOSE = $opt{verbose} || 0;
 
-our $OUTPUT = lc $opt{output} || '';
+our $OUTPUT = lc($opt{output} || '');
 
 ## Allow the optimization of the get_methods list by an argument
 if ($opt{get_method}) {
@@ -2342,7 +2342,7 @@ sub validate_range {
     }
     elsif ($type =~ /integer/) {
         $warning =~ s/_//g;
-        if (length $warning and $warning !~ /^\d+$/) {
+        if (length $warning and $warning !~ /^[-+]?\d+$/) {
             ndie $type =~ /positive/ ? msg('range-int-pos', 'warning') : msg('range-int', 'warning');
         }
         elsif (length $warning && $type =~ /positive/ && $warning <= 0) {
@@ -2350,7 +2350,7 @@ sub validate_range {
         }
 
         $critical =~ s/_//g;
-        if (length $critical and $critical !~ /^\d+$/) {
+        if (length $critical and $critical !~ /^[-+]?\d+$/) {
             ndie $type =~ /positive/ ? msg('range-int-pos', 'critical') : msg('range-int', 'critical');
         }
         elsif (length $critical && $type =~ /positive/ && $critical <= 0) {
@@ -2367,6 +2367,8 @@ sub validate_range {
             ) {
             ndie msg('range-warnbig');
         }
+        $warning = int $warning if length $warning;
+        $critical = int $critical if length $warning;
     }
     elsif ('restringex' eq $type) {
         if (! length $critical and ! length $warning) {
@@ -2390,6 +2392,8 @@ sub validate_range {
                 ndie msg('range-badpercent', 'warning');
             }
         }
+        $warning = int $warning if length $warning;
+        $critical = int $critical if length $warning;
     }
     elsif ('size or percent' eq $type) {
         if (length $critical) {
@@ -2486,6 +2490,53 @@ sub validate_range {
     return ($warning,$critical);
 
 } ## end of validate_range
+
+
+sub validate_size_or_percent_with_oper {
+
+    my $arg = shift || {};
+    ndie qq{validate_range must be called with a hashref\n}
+        unless ref $arg eq 'HASH';
+
+    my $warning  = exists $opt{warning}  ? $opt{warning} :
+        exists $opt{critical} ? '' : $arg->{default_warning} || '';
+    my $critical = exists $opt{critical} ? $opt{critical} :
+        exists $opt{warning} ? '' : $arg->{default_critical} || '';
+
+    ndie msg('range-noopt-size') unless length $critical || length $warning;
+    my @subs;
+    for my $val ($warning, $critical) {
+        if ($val =~ /^([^&|]+)\s([&|]{2}|and|or)\s([^&|]+)$/i) {
+            my ($l, $op, $r) = ($1, $2, $3);
+            local $opt{warning} = $l;
+            local $opt{critical} = 0;
+            ($l) = validate_range({ type => 'size or percent' });
+            $opt{warning} = $r;
+            ($r) = validate_range({ type => 'size or percent' });
+            if ($l =~ s/%$//) {
+                ($l, $r) = ($r, $l);
+            } else {
+                $r =~ s/%$//;
+            }
+            push @subs, $op eq '&&' || lc $op eq 'and' ? sub {
+                $_[0] >= $l && $_[1] >= $r;
+            } : sub {
+                $_[0] >= $l || $_[1] >= $r;
+            };
+        }
+        else {
+            local $opt{warning} = $val;
+            local $opt{critical} = 0;
+            my ($v) = validate_range({ type => 'size or percent' });
+            push @subs, !length $v ? sub { 0 }
+                    : $v =~ s/%$// ? sub { $_[1] >= $v }
+                                   : sub { $_[0] >= $v };
+        }
+    }
+
+    return @subs;
+
+} ## end of validate_size_or_percent_with_oper
 
 
 sub check_autovac_freeze {
@@ -2770,9 +2821,8 @@ sub check_bloat {
         $LIMIT = $opt{perflimit};
     }
 
-    my ($warning, $critical) = validate_range
+    my ($warning, $critical) = validate_size_or_percent_with_oper
         ({
-          type               => 'size or percent',
           default_warning    => '1 GB',
           default_critical   => '5 GB',
           });
@@ -2893,32 +2943,14 @@ FROM (
                     $stats{table}{"DB=$dbname TABLE=$schema.$table"} = [$wb, $bloat];
                     next;
                 }
-                if (length $critical) {
-                    if (index($critical,'%')>=0) {
-                        (my $critical2 = $critical) =~ s/\%//;
-                        if ($perbloat >= $critical2) {
-                            add_critical $msg;
-                            $ok = 0;
-                        }
-                    }
-                    elsif ($wb >= $critical) {
-                        add_critical $msg;
-                        $ok = 0;
-                    }
+                if ($critical->($wb, $perbloat)) {
+                    add_critical $msg;
+                    $ok = 0;
                 }
 
-                if (length $warning and $ok) {
-                    if (index($warning,'%')>=0) {
-                        (my $warning2 = $warning) =~ s/\%//;
-                        if ($perbloat >= $warning2) {
-                            add_warning $msg;
-                            $ok = 0;
-                        }
-                    }
-                    elsif ($wb >= $warning) {
-                        add_warning $msg;
-                        $ok = 0;
-                    }
+                if ($ok && $warning->($wb, $perbloat)) {
+                    add_warning $msg;
+                    $ok = 0;
                 }
                 ($max = $wb, $maxmsg = $msg) if $wb > $max and $ok;
             }
@@ -2934,34 +2966,15 @@ FROM (
                     $stats{index}{"DB=$dbname INDEX=$index"} = [$iwb, $ibloat];
                     next;
                 }
-                if (length $critical) {
-                    if (index($critical,'%')>=0) {
-                        (my $critical2 = $critical) =~ s/\%//;
-                        if ($iperbloat >= $critical2) {
-                            add_critical $msg;
-                            $ok = 0;
-                        }
-                    }
-                    elsif ($iwb >= $critical) {
-                        add_critical $msg;
-                        $ok = 0;
-                    }
+                if ($critical->($iwb, $iperbloat)) {
+                    add_critical $msg;
+                    $ok = 0;
                 }
 
-                if (length $warning and $ok) {
-                    if (index($warning,'%')>=0) {
-                        (my $warning2 = $warning) =~ s/\%//;
-                        if ($iperbloat >= $warning2) {
-                            add_warning $msg;
-                            $ok = 0;
-                        }
-                    }
-                    elsif ($iwb >= $warning) {
-                        add_warning $msg;
-                        $ok = 0;
-                    }
+                if ($ok && $warning->($iwb, $iperbloat)) {
+                    add_warning $msg;
+                    $ok = 0;
                 }
-
                 ($max = $iwb, $maxmsg = $msg) if $iwb > $max and $ok;
             }
         }
@@ -3440,9 +3453,8 @@ sub check_disk_space {
     ## NOTE: Needs to run on the same system (for now)
     ## XXX Allow custom ssh commands for remote df and the like
 
-    my ($warning, $critical) = validate_range
+    my ($warning, $critical) = validate_size_or_percent_with_oper
         ({
-          type             => 'size or percent',
           default_warning  => '90%',
           default_critical => '95%',
           });
@@ -3549,32 +3561,16 @@ WHERE spclocation <> ''
             $db->{perf} = "$fs=$used";
 
             my $ok = 1;
-            if (length $critical) {
-                if (index($critical,'%')>=0) {
-                    (my $critical2 = $critical) =~ s/\%//;
-                    if ($percent >= $critical2) {
-                        add_critical $msg;
-                        $ok = 0;
-                    }
-                }
-                elsif ($used >= $critical) {
-                    add_critical $msg;
-                    $ok = 0;
-                }
+            if ($critical->($used, $percent)) {
+                add_critical $msg;
+                $ok = 0;
             }
-            if (length $warning and $ok) {
-                if (index($warning,'%')>=0) {
-                    (my $warning2 = $warning) =~ s/\%//;
-                    if ($percent >= $warning2) {
-                        add_warning $msg;
-                        $ok = 0;
-                    }
-                }
-                elsif ($used >= $warning) {
-                    add_warning $msg;
-                    $ok = 0;
-                }
+
+            if ($ok && $warning->($used, $percent)) {
+                add_warning $msg;
+                $ok = 0;
             }
+
             if ($ok) {
                 add_ok $msg;
             }
@@ -7724,7 +7720,7 @@ enabled on the target databases, and requires that ANALYZE is run frequently.
 The I<--include> and I<--exclude> options can be used to filter out which tables 
 to look at. See the L</"BASIC FILTERING"> section for more details.
 
-The I<--warning> and I<--critical> options can be specified as sizes or percents.
+The I<--warning> and I<--critical> options can be specified as sizes, percents, or both.
 Valid size units are bytes, kilobytes, megabytes, gigabytes, terabytes, exabytes, 
 petabytes, and zettabytes. You can abbreviate all of those with the first letter. Items 
 without units are assumed to be 'bytes'. The default values are '1 GB' and '5 GB'. The value 
@@ -7751,7 +7747,7 @@ should give a rough idea of how bloated things are.
 
 Example 1: Warn if any table on port 5432 is over 100 MB bloated, and critical if over 200 MB
 
-  check_postgres_bloat --port=5432 --warning='100 M', --critical='200 M'
+  check_postgres_bloat --port=5432 --warning='100 M' --critical='200 M'
 
 Example 2: Give a critical if table 'orders' on host 'sami' has more than 10 megs of bloat
 
@@ -7760,6 +7756,16 @@ Example 2: Give a critical if table 'orders' on host 'sami' has more than 10 meg
 Example 3: Give a critical if table 'q4' on database 'sales' is over 50% bloated
 
   check_postgres_bloat --db=sales --include=q4 --critical='50%'
+
+Example 4: Give a critical any table is over 20% bloated I<and> has over 150
+MB of bloat:
+
+  check_postgres_bloat --port=5432 --critical='20% and 150 M'
+
+Example 5: Give a critical any table is over 40% bloated I<or> has over 500 MB
+of bloat:
+
+  check_postgres_bloat --port=5432 --warning='500 M or 40%'
 
 For MRTG output, the first line gives the highest number of wasted bytes for the tables, and the 
 second line gives the highest number of wasted bytes for the indexes. The fourth line gives the database 
@@ -7998,7 +8004,7 @@ For MRTG output, returns the number of disabled triggers on the first line.
 that you have the executable "/bin/df" available to report on disk sizes, and it 
 also needs to be run as a superuser, so it can examine the B<data_directory> 
 setting inside of Postgres. The I<--warning> and I<--critical> options are 
-given in either sizes or percentages. If using sizes, the standard unit types 
+given in either sizes or percentages or both. If using sizes, the standard unit types 
 are allowed: bytes, kilobytes, gigabytes, megabytes, gigabytes, terabytes, or 
 exabytes. Each may be abbreviated to the first letter only; no units at all 
 indicates 'bytes'. The default values are '90%' and '95%'.
@@ -8026,6 +8032,15 @@ Example 1: Make sure that no file system is over 90% for the database on port 54
 Example 2: Check that all file systems starting with /dev/sda are smaller than 10 GB and 11 GB (warning and critical)
 
   check_postgres_disk_space --port=5432 --warning='10 GB' --critical='11 GB' --include="~^/dev/sda"
+
+Example 4: Make sure that no file system is both over 50% I<and> has over 15 GB
+
+  check_postgres_disk_space --critical='50% and 15 GB'
+
+Example 5: Issue a warning if any file system is either over 70% full I<or> has
+more than 1T
+
+  check_postgres_disk_space --warning='1T or 75'
 
 For MRTG output, returns the size in bytes of the file system on the first line, 
 and the name of the file system on the fourth line.

@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 26;
+use Test::More tests => 30;
 use lib 't','.';
 use CP_Testing;
 
@@ -67,6 +67,18 @@ like ($cp->run('-c 100000'), qr{^$label CRITICAL:.+$tname}, $t);
 
 $t=qq{$S returns warning for bloated table using percentages};
 like ($cp->run('-w 10%'), qr{^$label WARNING:.+$tname}, $t);
+
+$t=qq{$S returns warning for bloated table using size or percent};
+like ($cp->run('-w "100000 || 10%"'), qr{^$label WARNING:.+$tname}, $t);
+
+$t=qq{$S returns warning for bloated table using big size or percent};
+like ($cp->run('-w "1000000000 || 10%"'), qr{^$label WARNING:.+$tname}, $t);
+
+$t=qq{$S returns warning for bloated table using size and percent};
+like ($cp->run('-w "10000 && 10%"'), qr{^$label WARNING:.+$tname}, $t);
+
+$t=qq{$S returns no warning for bloated table using big size and percent};
+like ($cp->run('-w "1000000000 && 10%"'), qr{^$label OK: DB "postgres".+$tname}, $t);
 
 $dbh->do("DROP TABLE $tname");
 

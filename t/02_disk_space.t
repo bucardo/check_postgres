@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 7;
+use Test::More tests => 8;
 use lib 't','.';
 use CP_Testing;
 
@@ -40,6 +40,9 @@ like ($result, qr{$label OK}, $t);
 
 $t = qq{$S flags insufficient space};
 like ($cp->run('-w 1b'), qr{$label WARNING:}, $t);
+
+$t = qq{$S flags insufficient space};
+like ($cp->run('-w "999z or 1%"'), qr{$label WARNING:}, $t);
 
 $t = qq{$S reports MRTG output};
 like ($cp->run('--output=mrtg'), qr{\A\d+\n0\n\n/.*\n}, $t);
