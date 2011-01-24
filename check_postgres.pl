@@ -2392,8 +2392,8 @@ sub validate_range {
                 ndie msg('range-badpercent', 'warning');
             }
         }
-        $warning = int $warning if length $warning;
-        $critical = int $critical if length $warning;
+        $warning = $warning if length $warning;
+        $critical = $critical if length $warning;
     }
     elsif ('size or percent' eq $type) {
         if (length $critical) {
