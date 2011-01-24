@@ -214,8 +214,8 @@ PERCENT: {
         warning  => '5%',
     );
     my ($w, $c) = check_postgres::validate_range({ type => 'percent' });
-    is $w, '5%', 'Should have warning == 5%';
-    is $c, '90%', 'Should have critical == 90%';
+    is $w, '5', 'Should have warning == 5%';
+    is $c, '90', 'Should have critical == 90%';
 }
 
 SIZEORPERCENT: {

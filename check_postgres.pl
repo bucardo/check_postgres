@@ -2383,17 +2383,17 @@ sub validate_range {
     }
     elsif ('percent' eq $type) {
         if (length $critical) {
-            if ($critical !~ /^\d+\%$/) {
+            if ($critical !~ /^(\d+)\%$/) {
                 ndie msg('range-badpercent', 'critical');
             }
+            $critical = $1;
         }
         if (length $warning) {
-            if ($warning !~ /^\d+\%$/) {
+            if ($warning !~ /^(\d+)\%$/) {
                 ndie msg('range-badpercent', 'warning');
             }
+            $warning = $1;
         }
-        $warning = $warning if length $warning;
-        $critical = $critical if length $warning;
     }
     elsif ('size or percent' eq $type) {
         if (length $critical) {
