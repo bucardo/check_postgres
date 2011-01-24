@@ -117,7 +117,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.16.0</p>
+<p>This documents describes check_postgres.pl version 2.17.0</p>
 <p>
 </p>
 <hr />
@@ -516,7 +516,7 @@ by use of the VACUUM command.) This action requires that stats collection be
 enabled on the target databases, and requires that ANALYZE is run frequently. 
 The <em>--include</em> and <em>--exclude</em> options can be used to filter out which tables 
 to look at. See the <a href="#basic_filtering">BASIC FILTERING</a> section for more details.</p>
-<p>The <em>--warning</em> and <em>--critical</em> options can be specified as sizes or percents.
+<p>The <em>--warning</em> and <em>--critical</em> options can be specified as sizes, percents, or both.
 Valid size units are bytes, kilobytes, megabytes, gigabytes, terabytes, exabytes, 
 petabytes, and zettabytes. You can abbreviate all of those with the first letter. Items 
 without units are assumed to be 'bytes'. The default values are '1 GB' and '5 GB'. The value 
@@ -538,13 +538,21 @@ index size is even more of a guess than the correct table size, but both
 should give a rough idea of how bloated things are.</p>
 <p>Example 1: Warn if any table on port 5432 is over 100 MB bloated, and critical if over 200 MB</p>
 <pre>
-  check_postgres_bloat --port=5432 --warning='100 M', --critical='200 M'</pre>
+  check_postgres_bloat --port=5432 --warning='100 M' --critical='200 M'</pre>
 <p>Example 2: Give a critical if table 'orders' on host 'sami' has more than 10 megs of bloat</p>
 <pre>
   check_postgres_bloat --host=sami --include=orders --critical='10 MB'</pre>
 <p>Example 3: Give a critical if table 'q4' on database 'sales' is over 50% bloated</p>
 <pre>
   check_postgres_bloat --db=sales --include=q4 --critical='50%'</pre>
+<p>Example 4: Give a critical any table is over 20% bloated <em>and</em> has over 150
+MB of bloat:</p>
+<pre>
+  check_postgres_bloat --port=5432 --critical='20% and 150 M'</pre>
+<p>Example 5: Give a critical any table is over 40% bloated <em>or</em> has over 500 MB
+of bloat:</p>
+<pre>
+  check_postgres_bloat --port=5432 --warning='500 M or 40%'</pre>
 <p>For MRTG output, the first line gives the highest number of wasted bytes for the tables, and the 
 second line gives the highest number of wasted bytes for the indexes. The fourth line gives the database 
 name, table name, and index name information. If you want to output the bloat ratio instead (how many 
@@ -770,7 +778,7 @@ the name of the table and the name of the trigger for each disabled trigger.</p>
 that you have the executable &quot;/bin/df&quot; available to report on disk sizes, and it 
 also needs to be run as a superuser, so it can examine the <strong>data_directory</strong> 
 setting inside of Postgres. The <em>--warning</em> and <em>--critical</em> options are 
-given in either sizes or percentages. If using sizes, the standard unit types 
+given in either sizes or percentages or both. If using sizes, the standard unit types 
 are allowed: bytes, kilobytes, gigabytes, megabytes, gigabytes, terabytes, or 
 exabytes. Each may be abbreviated to the first letter only; no units at all 
 indicates 'bytes'. The default values are '90%' and '95%'.</p>
@@ -790,6 +798,13 @@ maps to a file system: these can be included or excluded. See the
 <p>Example 2: Check that all file systems starting with /dev/sda are smaller than 10 GB and 11 GB (warning and critical)</p>
 <pre>
   check_postgres_disk_space --port=5432 --warning='10 GB' --critical='11 GB' --include=&quot;~^/dev/sda&quot;</pre>
+<p>Example 4: Make sure that no file system is both over 50% <em>and</em> has over 15 GB</p>
+<pre>
+  check_postgres_disk_space --critical='50% and 15 GB'</pre>
+<p>Example 5: Issue a warning if any file system is either over 70% full <em>or</em> has
+more than 1T</p>
+<pre>
+  check_postgres_disk_space --warning='1T or 75'</pre>
 <p>For MRTG output, returns the size in bytes of the file system on the first line, 
 and the name of the file system on the fourth line.</p>
 <p>
