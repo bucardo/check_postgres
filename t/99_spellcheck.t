@@ -289,9 +289,8 @@ hong
 HOSTADDRESS
 html
 https
-Hywell
+Hywel
 idx
-# idx
 includeuser
 Ioannis
 ioguix
@@ -328,7 +327,6 @@ nagios
 NAGIOS
 nextval
 nnx
-# nnx
 nofuncbody
 nofunctions
 noidle
@@ -344,6 +342,7 @@ noposition
 notrigger
 ok
 Oliveira
+oper
 oskar
 pageslots
 param
@@ -422,6 +421,7 @@ Tambouras
 tardis
 Taveira
 tempdir
+tgisconstraint
 Thauvin
 timesync
 tmp

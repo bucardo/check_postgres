@@ -9090,7 +9090,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
   Quote dbname in perf output for the backends check. (Davide Abrigo)
   Add 'fetch' as an alternative method for new_version checks, as this 
-    comes by default with FreeBSD. (Hywell Mallett)
+    comes by default with FreeBSD. (Hywel Mallett)
 
 =item B<Version 2.9.2> (July 12, 2009)
 
