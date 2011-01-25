@@ -2377,7 +2377,7 @@ sub validate_range {
             ndie msg('range-warnbig');
         }
         $warning = int $warning if length $warning;
-        $critical = int $critical if length $warning;
+        $critical = int $critical if length $critical;
     }
     elsif ('restringex' eq $type) {
         if (! length $critical and ! length $warning) {
