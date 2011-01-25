@@ -34,8 +34,18 @@ $cp->fake_self_version($current_version);
 like ($cp->run(''), qr{$label OK:  Version $current_version is the latest for check_postgres}, $t);
 
 $t=qq{$S returns critical for mismatched revision};
-$cp->fake_self_version($cmaj . ($crev==0 ? 99 : $crev-1));
-like ($cp->run(''), qr{$label CRITICAL:  Please upgrade to version \d+\.\d+\.\d+ of check_postgres. You are running \d+\.\d+\.\d+}, $t);
+my $warncrit;
+if ($crev==0) {
+	$crev = 99;
+	$cmaj--;
+	$warncrit = 'WARNING';
+}
+else {
+	$crev--;
+	$warncrit = 'CRITICAL';
+}
+$cp->fake_self_version("$cmaj.$crev");
+like ($cp->run(''), qr{$label $warncrit:  Please upgrade to version \d+\.\d+\.\d+ of check_postgres. You are running \d+\.\d+\.\d+}, $t);
 
 $cp->restore_self_version();
 
