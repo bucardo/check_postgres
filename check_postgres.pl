@@ -8734,7 +8734,7 @@ Example 2: Give a warning if there are 50 or more transactions
 
   check_postgres_txn_idle --port=5432 --warning='+50'
 
-Example 4: Give a critical if 5 or more connections hav been idle in
+Example 4: Give a critical if 5 or more connections have been idle in
 transaction for more than 10 seconds:
 
   check_postgres_txn_idle --port=5432 --crtical='5 for 10 seconds'
