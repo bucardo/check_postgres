@@ -8737,7 +8737,7 @@ Example 2: Give a warning if there are 50 or more transactions
 Example 4: Give a critical if 5 or more connections have been idle in
 transaction for more than 10 seconds:
 
-  check_postgres_txn_idle --port=5432 --crtical='5 for 10 seconds'
+  check_postgres_txn_idle --port=5432 --critical='5 for 10 seconds'
 
 For MRTG output, returns the time in seconds the longest idle transaction has been running. The fourth 
 line returns the name of the database.
