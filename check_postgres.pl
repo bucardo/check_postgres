@@ -7331,7 +7331,7 @@ sub check_wal_files {
     ## Critical and warning are the number of files
     ## Example: --critical=40
 
-    my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
+    my ($warning, $critical) = validate_range({type => 'positive integer', leastone => 1});
 
     ## Figure out where the pg_xlog directory is
     $SQL = q{SELECT count(*) AS count FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$'}; ## no critic (RequireInterpolationOfMetachars)

@@ -23,8 +23,8 @@ $t=qq{$S fails when called with an invalid option};
 like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
 
 $t=qq{$S fails when called with an invalid option};
-like ($cp->run('--warning=30%'), qr{ERROR:.+must be an integer}, $t);
-like ($cp->run('--warning=-30'), qr{ERROR:.+must be an integer}, $t);
+like ($cp->run('--warning=30%'), qr{ERROR:.+must be a positive integer}, $t);
+like ($cp->run('--warning=-30'), qr{ERROR:.+must be a positive integer}, $t);
 
 my $ver = $dbh->{pg_server_version};
 if ($ver < 80100) {
@@ -41,11 +41,11 @@ if ($ver < 80100) {
 
 $t=qq{$S works as expected for warnings};
 like ($cp->run('--warning=30'), qr{^$label OK}, $t);
-like ($cp->run('--warning=0'), qr{^$label WARNING}, $t);
+like ($cp->run('--warning=1'), qr{^$label WARNING}, $t);
 
 $t=qq{$S works as expected for criticals};
 like ($cp->run('--critical=30'), qr{^$label OK}, $t);
-like ($cp->run('--critical=0'), qr{^$label CRITICAL}, $t);
+like ($cp->run('--critical=1'), qr{^$label CRITICAL}, $t);
 
 $cp->drop_schema_if_exists();
 $cp->create_fake_pg_table('pg_ls_dir', 'text');
