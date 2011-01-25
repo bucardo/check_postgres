@@ -5,7 +5,8 @@
 use 5.006;
 use strict;
 use warnings;
-use Test::More tests => 139;
+use Test::More tests => 144;
+#use Test::More 'no_plan';
 
 eval {
     local @ARGV = qw(--action nonexistent);
@@ -263,7 +264,7 @@ CACTI: {
     is $c, '', 'Should have critical == ""';
 }
 
-RANGEOP: {
+SIZEORPERCENTOP: {
     # Try size.
     local %check_postgres::opt = (
         warning  => '1k',
@@ -418,4 +419,54 @@ RANGEOP: {
     ok $w->(1024, 10), 'Should get true for warning 1024, 10';
     ok $w->(42, 20), 'Should get true for warning 42, 20';
     ok  $w->(1024, 20), 'Should get true for warning 1024, 20';
+}
+
+INTFORTIME: {
+    # Try time.
+    local %check_postgres::opt = (
+        critical => '1h',
+        warning  => '20m'
+    );
+
+    is_deeply [ check_postgres::validate_integer_for_time() ],
+        [undef, 1200, undef, 3600],
+        'validate_integer_for_time() should parse time';
+
+    # Try integers, which default to time for backcompat.
+    %check_postgres::opt = (
+        critical => '1200',
+        warning  => '7200'
+    );
+    is_deeply [ check_postgres::validate_integer_for_time() ],
+        [ undef, 7200, undef, 1200 ],
+        'validate_integer_for_time() should parse unsigned ints as time';
+
+
+    # Try signed integers, which will be integers, not times.
+    %check_postgres::opt = (
+        critical => '+60',
+        warning  => '-45'
+    );
+    is_deeply [ check_postgres::validate_integer_for_time() ],
+        [ -45, undef, 60, undef ],
+        'validate_integer_for_time() should parse signed ints as ints';
+
+    # Try both.
+    %check_postgres::opt = (
+        critical => '+60 for 1h',
+        warning  => '45 for 30m'
+    );
+    is_deeply [ check_postgres::validate_integer_for_time() ],
+        [ 45, 1800, 60, 3600 ],
+        'validate_integer_for_time() should parse ints and times';
+
+    # Reverse the operands.
+    %check_postgres::opt = (
+        critical => '1h FOR 60',
+        warning  => '30 FOR +45'
+    );
+
+    is_deeply [ check_postgres::validate_integer_for_time() ],
+        [ 45, 30, 60, 3600 ],
+        'validate_integer_for_time() should parse times and ints';
 }

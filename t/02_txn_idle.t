@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 13;
+use Test::More tests => 16;
 use lib 't','.';
 use CP_Testing;
 
@@ -68,6 +68,17 @@ like ($cp->run(q{-w 0}), qr{longest idle in txn: \d+s}, $t);
 
 $t .= ' (MRTG)';
 like ($cp->run(q{--output=mrtg -w 0}), qr{\d+\n0\n\nDB: $dbname\n}, $t);
+
+sleep(1);
+
+# Try integers.
+like ($cp->run(q{-w +0}), qr{Total idle in transaction: \d+\b}, $t);
+$ENV{FOO} = 1;
+like ($cp->run(q{-w +1}), qr{Total idle in transaction: \d+\b}, $t);
+
+# Try both.
+sleep(1);
+like ($cp->run(q{-w '1 for 2s'}), qr{1 idle transactions longer than 2s, longest: \d+s}, $t);
 
 $idle_dbh->commit;
 

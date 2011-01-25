@@ -211,6 +211,7 @@ our %msg = (
     'range-warnbigsize'  => q{The 'warning' option ($1 bytes) cannot be larger than the 'critical' option ($2 bytes)},
     'range-warnbigtime'  => q{The 'warning' option ($1 s) cannot be larger than the 'critical' option ($2 s)},
     'range-warnsmall'    => q{The 'warning' option cannot be less than the 'critical' option},
+    'range-nointfortime' => q{Invalid argument for '$' options: must be an integer, time or integer for time},
     'relsize-msg-ind'    => q{largest index is "$1": $2},
     'relsize-msg-reli'   => q{largest relation is index "$1": $2},
     'relsize-msg-relt'   => q{largest relation is table "$1": $2},
@@ -278,7 +279,10 @@ our %msg = (
     'timesync-msg'       => q{timediff=$1 DB=$2 Local=$3},
     'trigger-msg'        => q{Disabled triggers: $1},
     'txnidle-msg'        => q{longest idle in txn: $1s},
+    'txnidle-for-msg'    => q{$1 idle transactions longer than $2s, longest: $3s},
+    'txnidle-count-msg'  => q{Total idle in transaction: $1},
     'txnidle-none'       => q{no idle in transaction},
+    'txnidle-count-none' => q{not more than $1 idle in transaction},
     'txntime-fail'       => q{Query failed},
     'txntime-msg'        => q{longest txn: $1s},
     'txntime-none'       => q{No transactions},
@@ -421,6 +425,7 @@ our %msg = (
     'range-warnbigsize'  => q{L'option warning ($1 octets) ne peut pas être plus grand que l'option critical ($2 octets)},
     'range-warnbigtime'  => q{L'option warning ($1 s) ne peut pas être plus grand que l'option critical ($2 s)},
     'range-warnsmall'    => q{L'option warningne peut pas être plus petit que l'option critical},
+'range-nointfortime' => q{Invalid argument for '$' options: must be an integer, time or integer for time},
     'relsize-msg-ind'    => q{le plus gros index est « $1 » : $2},
     'relsize-msg-reli'   => q{la plus grosse relation est l'index « $1 » : $2},
     'relsize-msg-relt'   => q{la plus grosse relation est la table « $1 » : $2},
@@ -488,7 +493,11 @@ our %msg = (
     'timesync-msg'       => q{timediff=$1 Base de données=$2 Local=$3},
     'trigger-msg'        => q{Triggers désactivés : $1},
     'txnidle-msg'        => q{transaction en attente la plus longue : $1s},
+'txnidle-for-msg'    => q{$1 idle transactions longer than $2s, longest: $3s},
+'txnidle-count-msg'  => q{Total idle in transaction: $1},
+'txnidle-count-none' => q{not more than $1 idle in transaction},
     'txnidle-none'       => q{Aucun processus en attente dans une transaction},
+    'txnidle-count-none' => q{pas plus de $1 transaction en attente},
     'txntime-fail'       => q{Échec de la requête},
     'txntime-msg'        => q{Transaction la plus longue : $1s},
     'txntime-none'       => q{Aucune transaction},
@@ -2506,7 +2515,7 @@ sub validate_size_or_percent_with_oper {
     ndie msg('range-noopt-size') unless length $critical || length $warning;
     my @subs;
     for my $val ($warning, $critical) {
-        if ($val =~ /^([^&|]+)\s([&|]{2}|and|or)\s([^&|]+)$/i) {
+        if ($val =~ /^(.+?)\s([&|]{2}|and|or)\s(.+)$/i) {
             my ($l, $op, $r) = ($1, $2, $3);
             local $opt{warning} = $l;
             local $opt{critical} = 0;
@@ -2538,6 +2547,51 @@ sub validate_size_or_percent_with_oper {
 
 } ## end of validate_size_or_percent_with_oper
 
+sub validate_integer_for_time {
+    my $arg = shift || {};
+    ndie qq{validate_integer_for_time must be called with a hashref\n}
+        unless ref $arg eq 'HASH';
+
+    my $warning  = exists $opt{warning}  ? $opt{warning} :
+        exists $opt{critical} ? '' : $arg->{default_warning} || '';
+    my $critical = exists $opt{critical} ? $opt{critical} :
+        exists $opt{warning} ? '' : $arg->{default_critical} || '';
+    ndie msg('range-nointfortime', 'critical') unless length $critical or length $warning;
+
+    my @ret;
+    for my $spec ([ warning => $warning], [critical => $critical]) {
+        my ($level, $val) = @{ $spec };
+        if (length $val) {
+            if ($val =~ /^(.+?)\sfor\s(.+)$/i) {
+                my ($int, $time) = ($1, $2);
+
+                # Integer first, time second.
+                ($int, $time) = ($time, $int)
+                    if $int =~ /[a-zA-Z]$/ || $time =~ /^[-+]\d+$/;
+
+                # Determine the values.
+                $time = size_in_seconds($time, $level);
+                ndie msg('range-int', $level) if $time !~ /^[-+]?\d+$/;
+                push @ret, int $int, $time;
+            }
+            else {
+                # Disambiguate int from time int by sign.
+                if ($val =~ /^[-+]\d+$/) {
+                    ndie msg('range-int', $level) if $val !~ /^[-+]?\d+$/;
+                    push @ret, int $val, undef;
+                } else {
+                    # Assume time for backwards compatibility.
+                    push @ret, undef, size_in_seconds($val, $level);
+                }
+            }
+        }
+        else {
+            push @ret, '', '';
+        }
+    }
+
+    return @ret;
+} ## end of validate_integer_for_time
 
 sub check_autovac_freeze {
 
@@ -6937,34 +6991,38 @@ sub check_timesync {
 
 sub check_txn_idle {
 
-    ## Check the length of "idle in transaction" connections
+    ## Check the length and optionally number of "idle in transaction"
+    ## connections
     ## Supports: Nagios, MRTG
     ## It makes no sense to run this more than once on the same cluster
-    ## Warning and critical are time limits - defaults to seconds
-    ## Valid units: s[econd], m[inute], h[our], d[ay]
+    ## Warning and critical are time limits or counts for time limits -
+    ## default to seconds
+    ## Valid time units: s[econd], m[inute], h[our], d[ay]
+    ## Valid counts for time limits: "$int for $time"
     ## All above may be written as plural as well (e.g. "2 hours")
     ## Can also ignore databases with exclude and limit with include
     ## Limit to a specific user with the includeuser option
     ## Exclude users with the excludeuser option
 
-    my ($warning, $critical) = validate_range
-        ({
-        type => 'time',
-        });
+    my ($wcount, $wtime, $ccount, $ctime) = validate_integer_for_time();
 
-
-    $SQL = q{SELECT datname, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) AS maxx }.
+    $SQL = q{SELECT datname, COUNT(datid) AS numb, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) AS maxx }.
         qq{FROM pg_stat_activity WHERE current_query = '<IDLE> in transaction'$USERWHERECLAUSE GROUP BY 1};
+
+    my $base_count = $wcount || $ccount;
+    $SQL .= " HAVING COUNT(datid) >= $base_count" if $base_count;
 
     my $info = run_command($SQL, { emptyok => 1 } );
 
     my $found = 0;
     for $db (@{$info->{db}}) {
         my $max = -1;
+        my $count = 0;
         for my $r (@{$db->{slurp}}) {
             $found++;
-            my ($dbname,$current) = ($r->{datname}, int $r->{maxx});
+            my ($dbname,$numb,$current) = ($r->{datname}, int $r->{numb}, int $r->{maxx});
             next if skip_item($dbname);
+            $count += $numb;
             $max = $current if $current > $max;
         }
         if ($MRTG) {
@@ -6973,20 +7031,48 @@ sub check_txn_idle {
         }
         $db->{perf} .= msg('maxtime', $max);
         if ($max < 0) {
-            add_ok msg('txnidle-none');
+            add_ok $base_count ? msg('txnidle-count-none', $base_count) : msg('txnidle-none');
             next;
         }
 
-        my $msg = msg('txnidle-msg', $max);
-        if (length $critical and $max >= $critical) {
-            add_critical $msg;
+        my $ok = 1;
+        if (length $ctime && length $ccount) {
+            if ($max >= $ctime && $count >= $ccount) {
+                add_critical msg('txnidle-for-msg', $count, $ctime, $max);
+                $ok = 0;
+            }
+        } elsif (length $ctime) {
+            if ($max >= $ctime) {
+                add_critical msg('txnidle-msg', $max);
+                $ok = 0;
+            }
+        } elsif (length $ccount) {
+            if ($count >= $ccount) {
+                add_critical msg('txnidle-count-msg', $count);
+                $ok = 0;
+            }
         }
-        elsif (length $warning and $max >= $warning) {
-            add_warning $msg;
+
+        if ($ok) {
+            if (length $wtime && length $wcount) {
+                if ($max >= $wtime && $count >= $wcount) {
+                    add_warning msg('txnidle-for-msg', $count, $wtime, $max);
+                    $ok = 0;
+                }
+            } elsif (length $wtime) {
+                if ($max >= $wtime) {
+                    add_warning msg('txnidle-msg', $max);
+                    $ok = 0;
+                }
+            } elsif (length $wcount) {
+                if ($count >= $wcount) {
+                    add_warning msg('txnidle-count-msg', $count);
+                    $ok = 0;
+                }
+            }
         }
-        else {
-            add_ok $msg;
-        }
+
+        add_ok msg('txnidle-msg', $max) if $ok;
     }
 
     ## If no results, let's be paranoid and check their settings
@@ -8625,15 +8711,17 @@ time and the database time. The fourth line returns the name of the database.
 
 =head2 B<txn_idle>
 
-(C<symlink: check_postgres_txn_idle>) Checks the length of "idle in transaction" queries on one or more databases. There is 
-no need to run this more than once on the same database cluster. Databases can be filtered 
-by using the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> 
+(C<symlink: check_postgres_txn_idle>) Checks the number and duration of "idle
+in transaction" queries on one or more databases. There is no need to run this
+more than once on the same database cluster. Databases can be filtered by
+using the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING">
 section below for more details.
 
-The I<--warning> and I<--critical> options are given as units of time, and both must 
-be provided (there are no defaults). Valid units are 'seconds', 'minutes', 'hours', 
-or 'days'. Each may be written singular or abbreviated to just the first letter. 
-If no units are given, the units are assumed to be seconds.
+The I<--warning> and I<--critical> options are given as units of time, signed
+integers, or integers for units of time, and both must be provided (there are
+no defaults). Valid units are 'seconds', 'minutes', 'hours', or 'days'. Each
+may be written singular or abbreviated to just the first letter. If no units
+are given and the numbers are unsigned, the units are assumed to be seconds.
 
 This action requires Postgres 8.0 or better. Additionally, if the version is less than 8.3, 
 the 'stats_command_string' parameter must be set to 'on'.
@@ -8641,6 +8729,15 @@ the 'stats_command_string' parameter must be set to 'on'.
 Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:
 
   check_postgres_txn_idle --port=5432 --warning='15 seconds'
+
+Example 2: Give a warning if there are 50 or more transactions
+
+  check_postgres_txn_idle --port=5432 --warning='+50'
+
+Example 4: Give a critical if 5 or more connections hav been idle in
+transaction for more than 10 seconds:
+
+  check_postgres_txn_idle --port=5432 --crtical='5 for 10 seconds'
 
 For MRTG output, returns the time in seconds the longest idle transaction has been running. The fourth 
 line returns the name of the database.
