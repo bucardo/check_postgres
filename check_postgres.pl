@@ -2919,7 +2919,8 @@ FROM (
       FROM pg_stats s, (
         SELECT
           BLOCK_SIZE,
-          CASE WHEN substring(v,12,3) IN ('8.0','8.1','8.2') THEN 27 ELSE 23 END AS hdr,
+            CASE WHEN SUBSTRING(SPLIT_PART(v, ' ', 2) FROM '#"[0-9]+.[0-9]+#"%' for '#')
+              IN ('8.0','8.1','8.2') THEN 27 ELSE 23 END AS hdr,
           CASE WHEN v ~ 'mingw32' OR v ~ '64-bit' THEN 8 ELSE 4 END AS ma
         FROM (SELECT version() AS v) AS foo
       ) AS constants
