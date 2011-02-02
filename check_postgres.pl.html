@@ -117,7 +117,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.17.0</p>
+<p>This documents describes check_postgres.pl version 2.17.1</p>
 <p>
 </p>
 <hr />
@@ -1322,19 +1322,28 @@ time and the database time. The fourth line returns the name of the database.</p
 <p>
 </p>
 <h2><a name="txn_idle"><strong>txn_idle</strong></a></h2>
-<p>(<code>symlink: check_postgres_txn_idle</code>) Checks the length of &quot;idle in transaction&quot; queries on one or more databases. There is 
-no need to run this more than once on the same database cluster. Databases can be filtered 
-by using the <em>--include</em> and <em>--exclude</em> options. See the <a href="#basic_filtering">BASIC FILTERING</a> 
+<p>(<code>symlink: check_postgres_txn_idle</code>) Checks the number and duration of &quot;idle
+in transaction&quot; queries on one or more databases. There is no need to run this
+more than once on the same database cluster. Databases can be filtered by
+using the <em>--include</em> and <em>--exclude</em> options. See the <a href="#basic_filtering">BASIC FILTERING</a>
 section below for more details.</p>
-<p>The <em>--warning</em> and <em>--critical</em> options are given as units of time, and both must 
-be provided (there are no defaults). Valid units are 'seconds', 'minutes', 'hours', 
-or 'days'. Each may be written singular or abbreviated to just the first letter. 
-If no units are given, the units are assumed to be seconds.</p>
+<p>The <em>--warning</em> and <em>--critical</em> options are given as units of time, signed
+integers, or integers for units of time, and both must be provided (there are
+no defaults). Valid units are 'seconds', 'minutes', 'hours', or 'days'. Each
+may be written singular or abbreviated to just the first letter. If no units
+are given and the numbers are unsigned, the units are assumed to be seconds.</p>
 <p>This action requires Postgres 8.0 or better. Additionally, if the version is less than 8.3, 
 the 'stats_command_string' parameter must be set to 'on'.</p>
 <p>Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:</p>
 <pre>
   check_postgres_txn_idle --port=5432 --warning='15 seconds'</pre>
+<p>Example 2: Give a warning if there are 50 or more transactions</p>
+<pre>
+  check_postgres_txn_idle --port=5432 --warning='+50'</pre>
+<p>Example 4: Give a critical if 5 or more connections have been idle in
+transaction for more than 10 seconds:</p>
+<pre>
+  check_postgres_txn_idle --port=5432 --critical='5 for 10 seconds'</pre>
 <p>For MRTG output, returns the time in seconds the longest idle transaction has been running. The fourth 
 line returns the name of the database.</p>
 <p>
@@ -1595,6 +1604,22 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
+<dt><strong><a name="version_2_17_1" class="item"><strong>Version 2.17.1</strong></a></strong></dt>
+
+<dd>
+<pre>
+    Set maxliagn to 8 in the bloat check if box identified as '64-bit'
+      (Michel Sijmons, bug #66)</pre>
+<pre>
+    Support non-standard version strings in the bloat check.
+      (Michel Sijmons and Gurjeet Singh, bug #66)</pre>
+</dd>
+<dt><strong><a name="version_2_17_0" class="item"><strong>Version 2.17.0</strong></a></strong></dt>
+
+<dd>
+<pre>
+  Allow &quot;and&quot;, &quot;or&quot; inside arguments (David E. Wheeler)</pre>
+</dd>
 <dt><strong><a name="version_2_16_0_january_20_2011" class="item"><strong>Version 2.16.0</strong> January 20, 2011</a></strong></dt>
 
 <dd>
@@ -1787,7 +1812,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
   Quote dbname in perf output for the backends check. (Davide Abrigo)
   Add 'fetch' as an alternative method for new_version checks, as this 
-    comes by default with FreeBSD. (Hywell Mallett)</pre>
+    comes by default with FreeBSD. (Hywel Mallett)</pre>
 </dd>
 <dt><strong><strong>Version 2.9.2</strong> (July 12, 2009)</strong></dt>
 
