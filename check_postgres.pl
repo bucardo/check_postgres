@@ -2524,7 +2524,8 @@ sub validate_size_or_percent_with_oper {
             ($r) = validate_range({ type => 'size or percent' });
             if ($l =~ s/%$//) {
                 ($l, $r) = ($r, $l);
-            } else {
+            }
+            else {
                 $r =~ s/%$//;
             }
             push @subs, $op eq '&&' || lc $op eq 'and' ? sub {
@@ -7047,12 +7048,14 @@ sub check_txn_idle {
                 add_critical msg('txnidle-for-msg', $count, $ctime, $max);
                 $ok = 0;
             }
-        } elsif (length $ctime) {
+        }
+        elsif (length $ctime) {
             if ($max >= $ctime) {
                 add_critical msg('txnidle-msg', $max);
                 $ok = 0;
             }
-        } elsif (length $ccount) {
+        }
+        elsif (length $ccount) {
             if ($count >= $ccount) {
                 add_critical msg('txnidle-count-msg', $count);
                 $ok = 0;
@@ -7065,12 +7068,14 @@ sub check_txn_idle {
                     add_warning msg('txnidle-for-msg', $count, $wtime, $max);
                     $ok = 0;
                 }
-            } elsif (length $wtime) {
+            }
+            elsif (length $wtime) {
                 if ($max >= $wtime) {
                     add_warning msg('txnidle-msg', $max);
                     $ok = 0;
                 }
-            } elsif (length $wcount) {
+            }
+            elsif (length $wcount) {
                 if ($count >= $wcount) {
                     add_warning msg('txnidle-count-msg', $count);
                     $ok = 0;
