@@ -2613,6 +2613,47 @@ sub validate_integer_for_time {
 } ## end of validate_integer_for_time
 
 
+sub check_archive_ready {
+
+    ## Check on the number of WAL archive with status "ready"
+    ## Supports: Nagios, MRTG
+    ## Must run as a superuser
+    ## Critical and warning are the number of files
+    ## Example: --critical=10
+
+    my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
+
+    $SQL = q{SELECT count(*) FROM pg_ls_dir('pg_xlog/archive_status') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}.ready$';};
+
+    my $info = run_command($SQL, {regex => qr[\d] });
+
+    my $found = 0;
+    for $db (@{$info->{db}}) {
+        my $r = $db->{slurp}[0];
+        my $numfiles = $r->{count};
+        if ($MRTG) {
+            $stats{$db->{dbname}} = $numfiles;
+            $statsmsg{$db->{dbname}} = '';
+            next;
+        }
+        my $msg = qq{$numfiles};
+        $db->{perf} .= " '$db->{host}'=$numfiles;$warning;$critical";
+        if (length $critical and $numfiles > $critical) {
+            add_critical $msg;
+        }
+        elsif (length $warning and $numfiles > $warning) {
+            add_warning $msg;
+        }
+        else {
+            add_ok $msg;
+        }
+    }
+
+    return;
+
+} ## end of check_archive_ready
+
+
 sub check_autovac_freeze {
 
     ## Check how close all databases are to autovacuum_freeze_max_age
@@ -7206,46 +7247,6 @@ sub check_wal_files {
 
 } ## end of check_wal_files
 
-
-sub check_archive_ready {
-
-    ## Check on the number of WAL archive with status "ready"
-    ## Supports: Nagios, MRTG
-    ## Must run as a superuser
-    ## Critical and warning are the number of files
-    ## Example: --critical=10
-
-    my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
-
-    $SQL = q{SELECT count(*) FROM pg_ls_dir('pg_xlog/archive_status') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}.ready$';};
-
-    my $info = run_command($SQL, {regex => qr[\d] });
-
-    my $found = 0;
-    for $db (@{$info->{db}}) {
-        my $r = $db->{slurp}[0];
-        my $numfiles = $r->{count};
-        if ($MRTG) {
-            $stats{$db->{dbname}} = $numfiles;
-            $statsmsg{$db->{dbname}} = '';
-            next;
-        }
-        my $msg = qq{$numfiles};
-        $db->{perf} .= " '$db->{host}'=$numfiles;$warning;$critical";
-        if (length $critical and $numfiles > $critical) {
-            add_critical $msg;
-        }
-        elsif (length $warning and $numfiles > $warning) {
-            add_warning $msg;
-        }
-        else {
-            add_ok $msg;
-        }
-    }
-
-    return;
-
-} ## end of check_archive_ready
 
 
 =pod
