@@ -2617,6 +2617,24 @@ sub validate_integer_for_time {
 } ## end of validate_integer_for_time
 
 
+sub perfname {
+
+	## Return a safe label name for Nagios performance data
+	my $name = shift;
+
+	my $escape = 0;
+
+	$name =~ s/'/''/g and $escape++;
+
+	if ($escape or index($name, ' ') >=0) {
+		$name = qq{'$name'};
+	}
+
+	return $name;
+
+} ## end of perfname;
+
+
 sub check_archive_ready {
 
     ## Check on the number of WAL archive with status "ready"
@@ -3021,90 +3039,106 @@ FROM (
     }
 
     my %seenit;
-    for $db (@{$info->{db}}) {
-        if ($db->{slurp}[0] !~ /\w+/o) {
-            add_ok msg('bloat-nomin') unless $MRTG;
-            return;
-        }
-        ## Not a 'regex' to run_command as we need to check the above first.
-        if ($db->{slurp}[0] !~ /\d+/) {
-            add_unknown msg('invalid-query', $db->{slurp}) unless $MRTG;
-            return;
-        }
 
-        my $max = -1;
-        my $maxmsg = '?';
+	## Store the perf data for sorting at the end
+	my %perf;
 
-        for my $r (@{$db->{slurp}}) {
+	$db = $info->{db}[0];
 
-            for my $v (values %$r) {
-                $v =~ s/(\d+) bytes/pretty_size($1,1)/ge;
-            }
+	if ($db->{slurp} !~ /\w+/o) {
+		add_ok msg('bloat-nomin') unless $MRTG;
+		return;
+	}
+	## Not a 'regex' to run_command as we need to check the above first.
+	if ($db->{slurp} !~ /\d+/) {
+		add_unknown msg('invalid-query', $db->{slurp}) unless $MRTG;
+		return;
+	}
 
-            my ($dbname,$schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws) = @$r{
-                qw/ db schemaname tablename tups pages otta tbloat wastedpages wastedbytes wastedsize/};
+	my $max = -1;
+	my $maxmsg = '?';
 
-            next if skip_item($table, $schema);
+	for my $r (@{ $db->{slurp} }) {
 
-            my ($index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws) = @$r{
-                    qw/ iname irows ipages iotta ibloat wastedipgaes wastedibytes wastedisize/};
+		for my $v (values %$r) {
+			$v =~ s/(\d+) bytes/pretty_size($1,1)/ge;
+		}
 
-            ## Made it past the exclusions
-            $max = -2 if $max == -1;
+		my ($dbname,$schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws) = @$r{
+			qw/ db schemaname tablename tups pages otta tbloat wastedpages wastedbytes wastedsize/};
 
-            ## Do the table first if we haven't seen it
-            if (! $seenit{"$dbname.$schema.$table"}++) {
-                $db->{perf} = " $schema.$table=$wb";
-                my $msg = msg('bloat-table', $dbname, $schema, $table, $tups, $pages, $otta, $bloat, $wb, $ws);
-                my $ok = 1;
-                my $perbloat = $bloat * 100;
+		next if skip_item($table, $schema);
 
-                if ($MRTG) {
-                    $stats{table}{"DB=$dbname TABLE=$schema.$table"} = [$wb, $bloat];
-                    next;
-                }
-                if ($critical->($wb, $perbloat)) {
-                    add_critical $msg;
-                    $ok = 0;
-                }
+		my ($index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws) = @$r{
+			qw/ iname irows ipages iotta ibloat wastedipgaes wastedibytes wastedisize/};
 
-                if ($ok and $warning->($wb, $perbloat)) {
-                    add_warning $msg;
-                    $ok = 0;
-                }
-                ($max = $wb, $maxmsg = $msg) if $wb > $max and $ok;
-            }
+		## Made it past the exclusions
+		$max = -2 if $max == -1;
 
-            ## Now the index, if it exists
-            if ($index ne '?') {
-                $db->{perf} = " $index=$iwb" if $iwb;
-                my $msg = msg('bloat-index', $dbname, $index, $irows, $ipages, $iotta, $ibloat, $iwb, $iws);
-                my $ok = 1;
-                my $iperbloat = $ibloat * 100;
+		## Do the table first if we haven't seen it
+		if (! $seenit{"$dbname.$schema.$table"}++) {
+			my $nicename = perfname("$schema.$table");
+			$db->{perf} = "$nicename:${wb}B";
+			$perf{$wb}{$nicename}++;
+			my $msg = msg('bloat-table', $dbname, $schema, $table, $tups, $pages, $otta, $bloat, $wb, $ws);
+			my $ok = 1;
+			my $perbloat = $bloat * 100;
 
-                if ($MRTG) {
-                    $stats{index}{"DB=$dbname INDEX=$index"} = [$iwb, $ibloat];
-                    next;
-                }
-                if ($critical->($iwb, $iperbloat)) {
-                    add_critical $msg;
-                    $ok = 0;
-                }
+			if ($MRTG) {
+				$stats{table}{"DB=$dbname TABLE=$schema.$table"} = [$wb, $bloat];
+				next;
+			}
+			if ($critical->($wb, $perbloat)) {
+				add_critical $msg;
+				$ok = 0;
+			}
 
-                if ($ok and $warning->($iwb, $iperbloat)) {
-                    add_warning $msg;
-                    $ok = 0;
-                }
-                ($max = $iwb, $maxmsg = $msg) if $iwb > $max and $ok;
-            }
-        }
-        if ($max == -1) {
-            add_unknown msg('no-match-rel');
-        }
-        elsif ($max != -1) {
-            add_ok $maxmsg;
-        }
-    }
+			if ($ok and $warning->($wb, $perbloat)) {
+				add_warning $msg;
+				$ok = 0;
+			}
+			($max = $wb, $maxmsg = $msg) if $wb > $max and $ok;
+		}
+
+		## Now the index, if it exists
+		if ($index ne '?') {
+			my $nicename = perfname($index);
+			$db->{perf} = "$nicename:${iwb}B";
+			$perf{$iwb}{$nicename}++;
+			my $msg = msg('bloat-index', $dbname, $index, $irows, $ipages, $iotta, $ibloat, $iwb, $iws);
+			my $ok = 1;
+			my $iperbloat = $ibloat * 100;
+
+			if ($MRTG) {
+				$stats{index}{"DB=$dbname INDEX=$index"} = [$iwb, $ibloat];
+				next;
+			}
+			if ($critical->($iwb, $iperbloat)) {
+				add_critical $msg;
+				$ok = 0;
+			}
+
+			if ($ok and $warning->($iwb, $iperbloat)) {
+				add_warning $msg;
+				$ok = 0;
+			}
+			($max = $iwb, $maxmsg = $msg) if $iwb > $max and $ok;
+		}
+	}
+
+	if ($max == -1) {
+		add_unknown msg('no-match-rel');
+	}
+	elsif ($max != -1) {
+		## Show the sorted perf
+		$db->{perf} = '';
+		for my $size (sort {$b <=> $a } keys %perf) {
+			for my $name (sort keys %{ $perf{$size} }) {
+				$db->{perf} .= "$name=${size}B ";
+			}
+		}
+		add_ok $maxmsg;
+	}
 
     if ($MRTG) {
         keys %stats or bad_mrtg(msg('unknown-error'));
@@ -4723,7 +4757,8 @@ ORDER BY prepared ASC
             }
 
             $msg = "$dbname=$date ($age)";
-            $db->{perf} .= " $msg";
+			my $nicename = perfname($dbname);
+            $db->{perf} .= " $nicename=${age}s;$warning;$critical";
             if (length $critical and $age >= $critical) {
                 push @crit => $msg;
             }
@@ -4888,9 +4923,11 @@ FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace
 
             next ROW if skip_item($name, $schema);
 
-            $db->{perf} .= sprintf "%s%s$name=$size",
+			my $nicename = $kind eq 'r' ? "$schema.$name" : $name;
+
+            $db->{perf} .= sprintf "%s%s=%sB;%s;%s",
                 $VERBOSE==1 ? "\n" : ' ',
-                $kind eq 'r' ? "$schema." : '';
+				perfname($nicename), $size, $warning, $critical;
             ($max=$size, $pmax=$psize, $kmax=$kind, $nmax=$name, $smax=$schema) if $size > $max;
         }
         if ($max < 0) {
@@ -6667,7 +6704,8 @@ FROM $seqname) foo
                 ndie msg('seq-die', $seqname);
             }
             my $msg = msg('seq-msg', $seqname, $percent, $left);
-            $seqperf{$percent}{$seqname} = [$left, " $multidb$seqname=$percent|$slots|$used|$left"];
+			my $nicename = perfname("$multidb$seqname");
+            $seqperf{$percent}{$seqname} = [$left, " $nicename=$percent%;$w%;$c%"];
             if ($percent >= $maxp) {
                 $maxp = $percent;
                 if (! exists $opt{perflimit} or $limit++ < $opt{perflimit}) {
