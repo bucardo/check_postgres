@@ -278,8 +278,8 @@ our %msg = (
     'timesync-diff'      => q{ diff=$1}, ## needs leading space
     'timesync-msg'       => q{timediff=$1 DB=$2 Local=$3},
     'trigger-msg'        => q{Disabled triggers: $1},
-    'txnidle-msg'        => q{longest idle in txn: $1s},
-    'txnidle-for-msg'    => q{$1 idle transactions longer than $2s, longest: $3s},
+    'txnidle-msg'        => q{longest idle in txn: $1s$2 $3},
+    'txnidle-for-msg'    => q{$1 idle transactions longer than $2s, longest: $3s $4},
     'txnidle-count-msg'  => q{Total idle in transaction: $1},
     'txnidle-none'       => q{no idle in transaction},
     'txnidle-count-none' => q{not more than $1 idle in transaction},
@@ -492,7 +492,7 @@ our %msg = (
     'timesync-diff'      => q{ diff=$1}, ## needs leading space
     'timesync-msg'       => q{timediff=$1 Base de données=$2 Local=$3},
     'trigger-msg'        => q{Triggers désactivés : $1},
-    'txnidle-msg'        => q{transaction en attente la plus longue : $1s},
+    'txnidle-msg'        => q{transaction en attente la plus longue : $1s$2 $3},
 'txnidle-for-msg'    => q{$1 idle transactions longer than $2s, longest: $3s},
 'txnidle-count-msg'  => q{Total idle in transaction: $1},
 'txnidle-count-none' => q{not more than $1 idle in transaction},
@@ -2354,7 +2354,7 @@ sub validate_range {
         if (length $warning and $warning !~ /^[-+]?\d+$/) {
             ndie $type =~ /positive/ ? msg('range-int-pos', 'warning') : msg('range-int', 'warning');
         }
-        elsif (length $warning && $type =~ /positive/ && $warning <= 0) {
+        elsif (length $warning and $type =~ /positive/ and $warning <= 0) {
             ndie msg('range-int-pos', 'warning');
         }
 
@@ -2362,7 +2362,7 @@ sub validate_range {
         if (length $critical and $critical !~ /^[-+]?\d+$/) {
             ndie $type =~ /positive/ ? msg('range-int-pos', 'critical') : msg('range-int', 'critical');
         }
-        elsif (length $critical && $type =~ /positive/ && $critical <= 0) {
+        elsif (length $critical and $type =~ /positive/ and $critical <= 0) {
             ndie msg('range-int-pos', 'critical');
         }
 
@@ -2581,7 +2581,7 @@ sub validate_integer_for_time {
                 # Disambiguate int from time int by sign.
                 if ($val =~ /^[-+]\d+$/) {
                     ndie msg('range-int', $level) if $val !~ /^[-+]?\d+$/;
-                    push @ret, int $val, undef;
+                    push @ret, int $val, '';
                 }
                 else {
                     # Assume time for backwards compatibility.
@@ -3009,7 +3009,7 @@ FROM (
                     $ok = 0;
                 }
 
-                if ($ok && $warning->($wb, $perbloat)) {
+                if ($ok and $warning->($wb, $perbloat)) {
                     add_warning $msg;
                     $ok = 0;
                 }
@@ -3032,7 +3032,7 @@ FROM (
                     $ok = 0;
                 }
 
-                if ($ok && $warning->($iwb, $iperbloat)) {
+                if ($ok and $warning->($iwb, $iperbloat)) {
                     add_warning $msg;
                     $ok = 0;
                 }
@@ -3627,7 +3627,7 @@ WHERE spclocation <> ''
                 $ok = 0;
             }
 
-            if ($ok && $warning->($used, $percent)) {
+            if ($ok and $warning->($used, $percent)) {
                 add_warning $msg;
                 $ok = 0;
             }
@@ -4651,7 +4651,7 @@ ORDER BY xact_start, procpid DESC
 
         my $m = $action eq 'query_time' ? msg('qtime-msg', $maxtime)
             : $action eq 'txn_time'   ? msg('txntime-msg', $maxtime)
-              : $action eq 'txn_idle'   ? msg('txnidle-msg', $maxtime)
+              : $action eq 'txn_idle'   ? msg('txnidle-msg', $maxtime, '', $whodunit)
               : die "Unknown action: $action\n";
         my $msg = sprintf '%s (%s)%s', $m, $whodunit, $details;
 
@@ -7013,77 +7013,117 @@ sub check_txn_idle {
 
     my ($wcount, $wtime, $ccount, $ctime) = validate_integer_for_time();
 
-    $SQL = q{SELECT datname, COUNT(datid) AS numb, max(COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0)) AS maxx }.
-        qq{FROM pg_stat_activity WHERE current_query = '<IDLE> in transaction'$USERWHERECLAUSE GROUP BY 1};
-
-    my $base_count = $wcount || $ccount;
-    $SQL .= " HAVING COUNT(datid) >= $base_count" if $base_count;
+    $SQL = q{SELECT datname, datid, procpid, usename, client_addr, }.
+        qq{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
+        qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0) AS seconds }.
+        qq{FROM pg_stat_activity WHERE current_query = '<IDLE> in transaction'$USERWHERECLAUSE};
 
     my $info = run_command($SQL, { emptyok => 1 } );
 
+    ## List of valid rows per database
+    my %dbidle;
+
+    ## See if we have a minimum number of matches
+    my $base_count = $wcount || $ccount;
+
     my $found = 0;
     for $db (@{$info->{db}}) {
-        my $max = -1;
-        my $count = 0;
+
+        ## Store the longest time winner's row here:
+        my $maxr = { seconds => 0 };
+
         for my $r (@{$db->{slurp}}) {
-            $found++;
-            my ($dbname,$numb,$current) = ($r->{datname}, int $r->{numb}, int $r->{maxx});
-            next if skip_item($dbname);
-            $count += $numb;
-            $max = $current if $current > $max;
+
+            ## Skip if we don't care about this database
+            next if skip_item($r->{datname});
+
+            ## Add this row to this database's list
+            push @{$dbidle{$r->{datname}}} => $r;
+
+            ## Keep track of the longest overall time
+            $maxr = $r if $r->{seconds} >= $maxr->{seconds};
         }
+
+        ## How many idles do we have?
+        my $idle_count = keys %dbidle;
+
+        my $max = $maxr->{seconds};
+
+        ## Details on who the top offender was
+        my $whodunit = "DB: $db->{dbname}";
+        if ($max > 0) {
+            $whodunit = sprintf q{%s:%s %s:%s %s:%s%s%s},
+                msg('PID'),
+                $maxr->{procpid},
+                msg('database'),
+                $maxr->{datname},
+                msg('username'),
+                $maxr->{usename},
+                $maxr->{client_addr} eq '' ? '' : (sprintf ' %s:%s', msg('address'), $maxr->{client_addr}),
+                $maxr->{client_port} < 1 ? '' : (sprintf ' %s:%s', msg('port'), $maxr->{client_port});
+        }
+
+        ## If the number of seconds is high, show an alternate form
+        my $ptime = $max > 300 ? ' (' . pretty_time($max) . ')' : '';
+
+
+        ## For MRTG, we can simply exit right now
         if ($MRTG) {
-            $stats{$db->{dbname}} = $max < 0 ? 0 : $max;
-            next;
+            do_mrtg({one => $max, msg => $whodunit});
+            exit;
         }
+
+        ## Show the maximum number of seconds in the perf section
         $db->{perf} .= msg('maxtime', $max);
-        if ($max < 0) {
+
+        ## If we got no matches at all, we either have no IIT or are under the threshhold
+        if (! $idle_count) {
             add_ok $base_count ? msg('txnidle-count-none', $base_count) : msg('txnidle-none');
             next;
         }
 
         my $ok = 1;
-        if (length $ctime && length $ccount) {
-            if ($max >= $ctime && $count >= $ccount) {
-                add_critical msg('txnidle-for-msg', $count, $ctime, $max);
+        if (length $ctime and length $ccount) {
+            if ($max >= $ctime and $idle_count >= $ccount) {
+                add_critical msg('txnidle-for-msg', $idle_count, $ctime, $max, $whodunit);
                 $ok = 0;
             }
         }
         elsif (length $ctime) {
             if ($max >= $ctime) {
-                add_critical msg('txnidle-msg', $max);
+                add_critical msg('txnidle-msg', $max, $ptime, $whodunit);
                 $ok = 0;
             }
         }
         elsif (length $ccount) {
-            if ($count >= $ccount) {
-                add_critical msg('txnidle-count-msg', $count);
+            if ($idle_count >= $ccount) {
+                add_critical msg('txnidle-count-msg', $idle_count);
                 $ok = 0;
             }
         }
 
         if ($ok) {
-            if (length $wtime && length $wcount) {
-                if ($max >= $wtime && $count >= $wcount) {
-                    add_warning msg('txnidle-for-msg', $count, $wtime, $max);
+            if (length $wtime and length $wcount) {
+                if ($max >= $wtime and $idle_count >= $wcount) {
+                    add_warning msg('txnidle-for-msg', $idle_count, $wtime, $max, $whodunit);
                     $ok = 0;
                 }
             }
             elsif (length $wtime) {
                 if ($max >= $wtime) {
-                    add_warning msg('txnidle-msg', $max);
+                    add_warning msg('txnidle-msg', $max, $ptime, $whodunit);
                     $ok = 0;
                 }
             }
             elsif (length $wcount) {
-                if ($count >= $wcount) {
-                    add_warning msg('txnidle-count-msg', $count);
+                if ($idle_count >= $wcount) {
+                    add_warning msg('txnidle-count-msg', $idle_count);
                     $ok = 0;
                 }
             }
         }
 
-        add_ok msg('txnidle-msg', $max) if $ok;
+        add_ok msg('txnidle-msg', $max, $ptime, $whodunit) if $ok;
     }
 
     ## If no results, let's be paranoid and check their settings
@@ -8745,13 +8785,13 @@ Example 2: Give a warning if there are 50 or more transactions
 
   check_postgres_txn_idle --port=5432 --warning='+50'
 
-Example 4: Give a critical if 5 or more connections have been idle in
+Example 3: Give a critical if 5 or more connections have been idle in
 transaction for more than 10 seconds:
 
   check_postgres_txn_idle --port=5432 --critical='5 for 10 seconds'
 
 For MRTG output, returns the time in seconds the longest idle transaction has been running. The fourth 
-line returns the name of the database.
+line returns the name of the database and other information about the longest transaction.
 
 =head2 B<txn_time>
 
