@@ -1100,7 +1100,7 @@ sub add_response {
                 $db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
                     defined $db->{port} ? ($db->{port} eq $opt{defaultport} ? '' : qq{(port=$db->{port}) }) : '';
     $header =~ s/\s+$//;
-    my $perf = ($opt{showtime} and $db->{totaltime} and $action ne 'bloat') ? "time=$db->{totaltime}" : '';
+    my $perf = ($opt{showtime} and $db->{totaltime} and $action ne 'bloat') ? "time=$db->{totaltime}s" : '';
     if ($db->{perf}) {
         $perf .= " $db->{perf}";
     }
