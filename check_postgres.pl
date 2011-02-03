@@ -190,6 +190,7 @@ our %msg = (
     'qtime-msg'          => q{longest query: $1s$2 $3},
     'qtime-none'         => q{no queries},
     'Query'              => q{Query: $1},
+    'queries'            => q{queries},
     'range-badcs'        => q{Invalid '$1' option: must be a checksum},
     'range-badlock'      => q{Invalid '$1' option: must be number of locks, or "type1=#;type2=#"},
     'range-badpercent'   => q{Invalid '$1' option: must be a percentage},
@@ -281,6 +282,7 @@ our %msg = (
     'time-years'         => q{years},
     'timesync-diff'      => q{ diff=$1}, ## needs leading space
     'timesync-msg'       => q{timediff=$1 DB=$2 Local=$3},
+    'transactions'       => q{transactions},
     'trigger-msg'        => q{Disabled triggers: $1},
     'txnidle-count-msg'  => q{Total idle in transaction: $1},
     'txnidle-count-none' => q{not more than $1 idle in transaction},
@@ -409,6 +411,7 @@ our %msg = (
 'qtime-for-msg'      => q{$1 queries longer than $2s, longest: $3s$4 $5},
     'qtime-msg'          => q{requête la plus longue : $1s},
 'qtime-none'         => q{no queries},
+'queries'            => q{queries},
     'Query'              => q{Requ??te : $1},
     'range-badcs'        => q{Option « $1 » invalide : doit être une somme de contrôle},
     'range-badlock'      => q{Option « $1 » invalide : doit être un nombre de verrou ou « type1=#;type2=# »},
@@ -501,6 +504,7 @@ our %msg = (
     'time-years'         => q{années},
     'timesync-diff'      => q{ diff=$1}, ## needs leading space
     'timesync-msg'       => q{timediff=$1 Base de données=$2 Local=$3},
+'transactions'       => q{transactions},
     'trigger-msg'        => q{Triggers désactivés : $1},
 'txnidle-count-msg'  => q{Total idle in transaction: $1},
     'txnidle-count-none' => q{pas plus de $1 transaction en attente},
@@ -4821,6 +4825,7 @@ sub check_query_time {
     ## Check the length of running queries
 
     check_txn_idle('qtime',
+                   msg('queries'),
                    'query_start',
                    q{query_start IS NOT NULL});
 
@@ -6912,8 +6917,8 @@ sub check_txn_idle {
     ## Limit to a specific user with the includeuser option
     ## Exclude users with the excludeuser option
 
-    ## We may be called as someone else
     my $type = shift || 'txnidle';
+    my $thing = shift || msg('transactions');
     my $start = shift || 'query_start';
     my $clause = shift || q{current_query = '<IDLE> in transaction'};
 
@@ -6978,7 +6983,7 @@ sub check_txn_idle {
     ## We don't care which at the moment, and return the same message
     if (! $count) {
         $MRTG and do_mrtg({one => 0, msg => $whodunit});
-		$db->{perf} = "0;$wtime;$ctime";
+		$db->{perf} = "$thing=0;$wtime;$ctime";
 
         add_ok msg("$type-none");
         return;
@@ -6990,7 +6995,7 @@ sub check_txn_idle {
     ## See if we have a minimum number of matches
     my $base_count = $wcount || $ccount;
     if ($base_count and $count < $base_count) {
-		$db->{perf} = "$count;$wcount;$ccount";
+		$db->{perf} = "$type=$count;$wcount;$ccount";
         add_ok msg("$type-count-none", $base_count);
         return;
     }
@@ -7015,8 +7020,8 @@ sub check_txn_idle {
     my $ptime = $max > 300 ? ' (' . pretty_time($max) . ')' : '';
 
     ## Show the maximum number of seconds in the perf section
-	$db->{perf} .= sprintf q{'%s'=%s;%s;%s},
-		$whodunit,
+	$db->{perf} .= sprintf q{%s=%ss;%s;%s},
+		$type,
         $max,
         $wtime,
         $ctime;
@@ -7072,6 +7077,7 @@ sub check_txn_time {
     ## as well as excluding any idle in transactions
 
     check_txn_idle('txntime',
+                   '',
                    'xact_start',
                    q{xact_start IS NOT NULL});
 
