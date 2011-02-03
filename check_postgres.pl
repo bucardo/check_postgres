@@ -4652,7 +4652,7 @@ ORDER BY xact_start, procpid DESC
         my $m = $action eq 'query_time' ? msg('qtime-msg', $maxtime)
             : $action eq 'txn_time'   ? msg('txntime-msg', $maxtime)
               : $action eq 'txn_idle'   ? msg('txnidle-msg', $maxtime)
-              : die "Unkown action: $action\n";
+              : die "Unknown action: $action\n";
         my $msg = sprintf '%s (%s)%s', $m, $whodunit, $details;
 
         if (length $critical and $maxtime >= $critical) {
