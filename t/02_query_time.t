@@ -71,7 +71,7 @@ sleep 1;
 $dbh->disconnect();
 $dbh = $cp->test_database_handle();
 $t = qq{$S detects running query};
-like ($cp->run(q{-w 1}), qr{$label WARNING:}, $t);
+like ($cp->run(q{-w 1 -vv}), qr{$label WARNING:}, $t);
 $dbh->rollback();
 $dbh->disconnect();
 

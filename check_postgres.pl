@@ -184,7 +184,11 @@ our %msg = (
     'psa-nomatches'      => q{No queries were found},
     'psa-nosuper'        => q{No matches - please run as a superuser},
     'psa-skipped'        => q{No matching rows were found (skipped rows: $1)},
-    'qtime-msg'          => q{longest query: $1s},
+    'qtime-count-msg'    => q{Total queries: $1},
+    'qtime-count-none'   => q{not more than $1 queries},
+    'qtime-for-msg'      => q{$1 queries longer than $2s, longest: $3s$4 $5},
+    'qtime-msg'          => q{longest query: $1s$2 $3},
+    'qtime-none'         => q{no queries},
     'Query'              => q{Query: $1},
     'range-badcs'        => q{Invalid '$1' option: must be a checksum},
     'range-badlock'      => q{Invalid '$1' option: must be number of locks, or "type1=#;type2=#"},
@@ -278,13 +282,15 @@ our %msg = (
     'timesync-diff'      => q{ diff=$1}, ## needs leading space
     'timesync-msg'       => q{timediff=$1 DB=$2 Local=$3},
     'trigger-msg'        => q{Disabled triggers: $1},
-    'txnidle-msg'        => q{longest idle in txn: $1s$2 $3},
-    'txnidle-for-msg'    => q{$1 idle transactions longer than $2s, longest: $3s$4 $5},
     'txnidle-count-msg'  => q{Total idle in transaction: $1},
-    'txnidle-none'       => q{no idle in transaction},
     'txnidle-count-none' => q{not more than $1 idle in transaction},
-    'txntime-fail'       => q{Query failed},
-    'txntime-msg'        => q{longest txn: $1s},
+    'txnidle-for-msg'    => q{$1 idle transactions longer than $2s, longest: $3s$4 $5},
+    'txnidle-msg'        => q{longest idle in txn: $1s$2 $3},
+    'txnidle-none'       => q{no idle in transaction},
+    'txntime-count-msg'  => q{Total transactions: $1},
+    'txntime-count-none' => q{not more than $1 transactions},
+    'txntime-for-msg'    => q{$1 transactions longer than $2s, longest: $3s$4 $5},
+    'txntime-msg'        => q{longest txn: $1s$2 $3},
     'txntime-none'       => q{No transactions},
     'txnwrap-cbig'       => q{The 'critical' value must be less than 2 billion},
     'txnwrap-wbig'       => q{The 'warning' value must be less than 2 billion},
@@ -398,7 +404,11 @@ our %msg = (
     'psa-nomatches'      => q{Aucune requ??te n'a ??t?? trouv??e},
     'psa-nosuper'        => q{Aucune correspondance - merci de m'ex??cuter en tant que superutilisateur},
     'psa-skipped'        => q{Aucune ligne correspondante n'a ??t?? trouv??e (lignes ignor??es : $1)},
+'qtime-count-msg'    => q{Total queries: $1},
+'qtime-count-none'   => q{not more than $1 queries},
+'qtime-for-msg'      => q{$1 queries longer than $2s, longest: $3s$4 $5},
     'qtime-msg'          => q{requête la plus longue : $1s},
+'qtime-none'         => q{no queries},
     'Query'              => q{Requ??te : $1},
     'range-badcs'        => q{Option « $1 » invalide : doit être une somme de contrôle},
     'range-badlock'      => q{Option « $1 » invalide : doit être un nombre de verrou ou « type1=#;type2=# »},
@@ -492,14 +502,15 @@ our %msg = (
     'timesync-diff'      => q{ diff=$1}, ## needs leading space
     'timesync-msg'       => q{timediff=$1 Base de données=$2 Local=$3},
     'trigger-msg'        => q{Triggers désactivés : $1},
-    'txnidle-msg'        => q{transaction en attente la plus longue : $1s$2 $3},
-'txnidle-for-msg'    => q{$1 idle transactions longer than $2s, longest: $3s$4 $5},
 'txnidle-count-msg'  => q{Total idle in transaction: $1},
-'txnidle-count-none' => q{not more than $1 idle in transaction},
-    'txnidle-none'       => q{Aucun processus en attente dans une transaction},
     'txnidle-count-none' => q{pas plus de $1 transaction en attente},
-    'txntime-fail'       => q{Échec de la requête},
-    'txntime-msg'        => q{Transaction la plus longue : $1s},
+'txnidle-for-msg'    => q{$1 idle transactions longer than $2s, longest: $3s$4 $5},
+    'txnidle-msg'        => q{transaction en attente la plus longue : $1s$2 $3},
+    'txnidle-none'       => q{Aucun processus en attente dans une transaction},
+'txntime-count-msg'  => q{Total transactions: $1},
+'txntime-count-none' => q{not more than $1 transactions},
+'txntime-for-msg'    => q{$1 transactions longer than $2s, longest: $3s$4 $5},
+    'txntime-msg'        => q{Transaction la plus longue : $1s$2 $3},
     'txntime-none'       => q{Aucune transaction},
     'txnwrap-cbig'       => q{La valeur critique doit être inférieure à 2 milliards},
     'txnwrap-wbig'       => q{La valeur d'avertissement doit être inférieure à 2 milliards},
@@ -695,6 +706,7 @@ die $USAGE unless
                \%opt,
                'version|V',
                'verbose|v+',
+			   'vv',
                'help|h',
                'quiet|q',
                'man',
@@ -762,6 +774,7 @@ for my $mv (keys %tempopt) {
 }
 
 our $VERBOSE = $opt{verbose} || 0;
+$VERBOSE = 5 if $opt{vv};
 
 our $OUTPUT = lc($opt{output} || '');
 
@@ -1160,7 +1173,8 @@ sub do_mrtg_stats {
 
     ## Show the two highest items for mrtg stats hash
 
-    my $msg = shift || msg('unknown-error');
+    my $msg = shift;
+    defined $msg or ndie('unknown-error');
 
     keys %stats or bad_mrtg($msg);
     my ($one,$two) = ('','');
@@ -4521,156 +4535,6 @@ sub check_new_version_tnm {
 } ## end of check_new_version_tnm
 
 
-sub find_pg_stat_activity {
-
-    ## Common function to run various actions against the pg_stat_activity view
-    ## Actions: txn_idle, txn_time, query_time
-    ## Supports: Nagios, MRTG
-    ## It makes no sense to run this more than once on the same cluster
-    ## Warning and critical are time limits - defaults to seconds
-    ## Valid units: s[econd], m[inute], h[our], d[ay]
-    ## All above may be written as plural as well (e.g. "2 hours")
-    ## Can also ignore databases with exclude and limit with include
-    ## Limit to a specific user with the includeuser option
-    ## Exclude users with the excludeuser option
-
-    my $arg = shift || {};
-
-    my ($warning, $critical) = validate_range
-        ({
-          type             => 'time',
-          default_warning  => $arg->{default_warning},
-          default_critical => $arg->{default_critical},
-          });
-
-    ## Grab information from the pg_stat_activity table
-    ## Since we clobber old info on a qtime "tie", use an ORDER BY
-    $SQL = qq{
-SELECT
- xact_start,
- SUBSTR(current_query,0,100) AS current_query,
- client_addr,
- client_port,
- procpid,
- COALESCE(ROUND(EXTRACT(epoch FROM now()-$arg->{offsetcol})),0) AS qtime,
- datname,
- usename
-FROM pg_stat_activity
-WHERE $arg->{whereclause} $USERWHERECLAUSE
-ORDER BY xact_start, procpid DESC
-};
-
-    my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1 } );
-
-    ## Default values for information gathered
-    my ($maxact, $maxtime, $client_addr, $client_port, $procpid, $username, $maxdb, $maxq) =
-        ('?',0,'?','?','?','?','?','?');
-
-    for $db (@{$info->{db}}) {
-
-        ## Parse the psql output and gather stats from the winning row
-        ## Read in and parse the psql output
-        my $skipped = 0;
-      ROW: for my $r (@{$db->{slurp}}) {
-
-            ## Apply --exclude and --include arguments to the database name
-            if (skip_item($r->{datname})) {
-                $skipped++;
-                next ROW;
-            }
-
-            ## Detect cases where pg_stat_activity is not fully populated
-            if ($r->{xact_start} !~ /\d/o) {
-                ## Perhaps this is a non-superuser?
-                if ($r->{current_query} =~ /insufficient/) {
-                    add_unknown msg('psa-nosuper');
-                }
-                ## Perhaps stats_command_string / track_activities is off?
-                elsif ($r->{current_query} =~ /disabled/) {
-                    add_unknown msg('psa-disabled');
-                }
-                ## Something else is going on
-                else {
-                    add_unknown msg('psa-noexact');
-                }
-                return;
-            }
-
-            ## Assign stats if we have a new winner
-            if ($r->{qtime} >= $maxtime) {
-                $maxact      = $r->{xact_start};
-                $client_addr = $r->{client_addr};
-                $client_port = $r->{client_port};
-                $procpid     = $r->{procpid};
-                $maxtime     = $r->{qtime};
-                $maxdb       = $r->{datname};
-                $username    = $r->{usename};
-                $maxq        = $r->{current_query};
-            }
-        }
-
-        ## We don't really care why things matches as far as the final output
-        ## But it's nice to report what we can
-        if ($maxdb eq '?') {
-            $MRTG and do_mrtg({one => 0, msg => 'No rows'});
-            $db->{perf} = "0;$warning;$critical";
-
-            if ($skipped) {
-                add_ok msg('psa-skipped', $skipped);
-            }
-            else {
-                add_ok msg('psa-nomatches');
-            }
-            return;
-        }
-
-        ## Details on who the offender was
-        my $whodunit = sprintf q{%s:%s %s:%s%s%s %s:%s},
-            msg('database'),
-            $maxdb,
-            msg('PID'),
-            $procpid,
-            $client_port < 1 ? '' : (sprintf ' %s:%s', msg('port'), $client_port),
-            $client_addr eq '' ? '' : (sprintf ' %s:%s', msg('address'), $client_addr),
-            msg('username'),
-            $username;
-
-        my $details = '';
-        if ($VERBOSE >= 1 and $maxtime > 0) { ## >0 so we don't report ourselves
-            $maxq =~ s/\n/\\n/g;
-            $details = ' ' . msg('Query', $maxq);
-        }
-
-        $MRTG and do_mrtg({one => $maxtime, msg => "$whodunit$details"});
-
-        $db->{perf} .= sprintf q{'%s'=%s;%s;%s},
-            $whodunit,
-            $maxtime,
-            $warning,
-            $critical;
-
-        my $m = $action eq 'query_time' ? msg('qtime-msg', $maxtime)
-            : $action eq 'txn_time'   ? msg('txntime-msg', $maxtime)
-              : $action eq 'txn_idle'   ? msg('txnidle-msg', $maxtime, '', $whodunit)
-              : die "Unknown action: $action\n";
-        my $msg = sprintf '%s (%s)%s', $m, $whodunit, $details;
-
-        if (length $critical and $maxtime >= $critical) {
-            add_critical $msg;
-        }
-        elsif (length $warning and $maxtime >= $warning) {
-            add_warning $msg;
-        }
-        else {
-            add_ok $msg;
-        }
-    }
-
-    return;
-
-} ## end of find_pg_stat_activity
-
-
 sub check_pgbouncer_checksum {
 
     ## Verify the checksum of all pgbouncer settings
@@ -4915,13 +4779,11 @@ sub check_query_time {
 
     ## Check the length of running queries
 
-    return find_pg_stat_activity(
-        {
-            default_warning  => '2 minutes',
-            default_critical => '5 minutes',
-            whereclause      => q{current_query <> '<IDLE>'},
-            offsetcol        => q{query_start},
-        });
+    check_txn_idle('qtime',
+                   'query_start',
+                   q{query_start IS NOT NULL});
+
+    return;
 
 } ## end of check_query_time
 
@@ -7009,16 +6871,22 @@ sub check_txn_idle {
     ## Limit to a specific user with the includeuser option
     ## Exclude users with the excludeuser option
 
+    ## We may be called as someone else
+    my $type = shift || 'txnidle';
+    my $start = shift || 'query_start';
+    my $clause = shift || q{current_query = '<IDLE> in transaction'};
+
     ## Extract the warning and critical seconds and counts.
     ## If not given, items will be an empty string
     my ($wcount, $wtime, $ccount, $ctime) = validate_integer_for_time();
 
     ## We don't GROUP BY because we want details on every connection
     ## Someday we may even break things down by database
-    $SQL = q{SELECT datname, datid, procpid, usename, client_addr, }.
-        qq{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
-        qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-query_start)),0) AS seconds }.
-        qq{FROM pg_stat_activity WHERE current_query = '<IDLE> in transaction'$USERWHERECLAUSE};
+    $SQL = q{SELECT datname, datid, procpid, usename, client_addr, xact_start, current_query, }.
+        q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
+        qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
+        qq{FROM pg_stat_activity WHERE $clause$USERWHERECLAUSE }.
+        qq{ORDER BY xact_start, query_start, procpid DESC};
 
     my $info = run_command($SQL, { emptyok => 1 } );
 
@@ -7029,7 +6897,10 @@ sub check_txn_idle {
     my $maxr = { seconds => 0 };
 
     ## How many valid rows did we get?
-    my $idle_count = 0;
+    my $count = 0;
+
+    ## Info about the top offender
+    my $whodunit = "DB: $db->{dbname}";
 
     ## Process each returned row
     for my $r (@{ $db->{slurp} }) {
@@ -7037,16 +6908,39 @@ sub check_txn_idle {
         ## Skip if we don't care about this database
         next if skip_item($r->{datname});
 
+		## Detect cases where pg_stat_activity is not fully populated
+		if (length $r->{xact_start} and $r->{xact_start} !~ /\d/o) {
+			## Perhaps this is a non-superuser?
+			if ($r->{current_query} =~ /insufficient/) {
+				add_unknown msg('psa-nosuper');
+				return;
+			}
+
+			## Perhaps stats_command_string / track_activities is off?
+			if ($r->{current_query} =~ /disabled/) {
+				add_unknown msg('psa-disabled');
+				return;
+			}
+
+			## Something else is going on
+			add_unknown msg('psa-noexact');
+			return;
+		}
+
         ## Keep track of the longest overall time
         $maxr = $r if $r->{seconds} >= $maxr->{seconds};
 
-        $idle_count++;
+        $count++;
     }
 
     ## If there were no matches, then there were no rows, or no non-excluded rows
     ## We don't care which at the moment, and return the same message
-    if (! $idle_count) {
-        ndie msg('txnidle-none');
+    if (! $count) {
+        $MRTG and do_mrtg({one => 0, msg => $whodunit});
+		$db->{perf} = "0;$wtime;$ctime";
+
+        add_ok msg("$type-none");
+        return;
     }
 
     ## Extract the seconds to avoid typing out the hash each time
@@ -7054,13 +6948,13 @@ sub check_txn_idle {
 
     ## See if we have a minimum number of matches
     my $base_count = $wcount || $ccount;
-    if ($base_count and $idle_count < $base_count) {
-        add_ok msg('txnidle-count-none', $base_count);
+    if ($base_count and $count < $base_count) {
+		$db->{perf} = "$count;$wcount;$ccount";
+        add_ok msg("$type-count-none", $base_count);
         return;
     }
 
     ## Details on who the top offender was
-    my $whodunit = "DB: $db->{dbname}";
     if ($max > 0) {
         $whodunit = sprintf q{%s:%s %s:%s %s:%s%s%s},
             msg('PID'), $maxr->{procpid},
@@ -7080,47 +6974,51 @@ sub check_txn_idle {
     my $ptime = $max > 300 ? ' (' . pretty_time($max) . ')' : '';
 
     ## Show the maximum number of seconds in the perf section
-    $db->{perf} .= msg('maxtime', $max);
+	$db->{perf} .= sprintf q{'%s'=%s;%s;%s},
+		$whodunit,
+        $max,
+        $wtime,
+        $ctime;
 
     if (length $ctime and length $ccount) {
-        if ($max >= $ctime and $idle_count >= $ccount) {
-            add_critical msg('txnidle-for-msg', $idle_count, $ctime, $max, $ptime, $whodunit);
+        if ($max >= $ctime and $count >= $ccount) {
+            add_critical msg("$type-for-msg", $count, $ctime, $max, $ptime, $whodunit);
             return;
         }
     }
     elsif (length $ctime) {
         if ($max >= $ctime) {
-            add_critical msg('txnidle-msg', $max, $ptime, $whodunit);
+            add_critical msg("$type-msg", $max, $ptime, $whodunit);
             return;
         }
     }
     elsif (length $ccount) {
-        if ($idle_count >= $ccount) {
-            add_critical msg('txnidle-count-msg', $idle_count);
+        if ($count >= $ccount) {
+            add_critical msg("$type-count-msg", $count);
             return;
         }
     }
 
     if (length $wtime and length $wcount) {
-        if ($max >= $wtime and $idle_count >= $wcount) {
-            add_warning msg('txnidle-for-msg', $idle_count, $wtime, $max, $ptime, $whodunit);
+        if ($max >= $wtime and $count >= $wcount) {
+            add_warning msg("$type-for-msg", $count, $wtime, $max, $ptime, $whodunit);
             return;
         }
     }
     elsif (length $wtime) {
         if ($max >= $wtime) {
-            add_warning msg('txnidle-msg', $max, $ptime, $whodunit);
+            add_warning msg("$type-msg", $max, $ptime, $whodunit);
             return;
         }
     }
     elsif (length $wcount) {
-        if ($idle_count >= $wcount) {
-            add_warning msg('txnidle-count-msg', $idle_count);
+        if ($count >= $wcount) {
+            add_warning msg("$type-count-msg", $count);
             return;
         }
     }
 
-    add_ok msg('txnidle-msg', $max, $ptime, $whodunit);
+    add_ok msg("$type-msg", $max, $ptime, $whodunit);
 
     return;
 
@@ -7129,107 +7027,12 @@ sub check_txn_idle {
 
 sub check_txn_time {
 
-    ## Check the length of running transactions
-    ## Supports: Nagios, MRTG
-    ## It makes no sense to run this more than once on the same cluster
-    ## Warning and critical are time limits - defaults to seconds
-    ## Valid units: s[econd], m[inute], h[our], d[ay]
-    ## All above may be written as plural as well (e.g. "2 hours")
-    ## Can also ignore databases with exclude and limit with include
-    ## Limit to a specific user with the includeuser option
-    ## Exclude users with the excludeuser option
+    ## This is the same as check_txn_idle, but we want where the time is not null
+    ## as well as excluding any idle in transactions
 
-    my ($warning, $critical) = validate_range
-        ({
-        type => 'time',
-        });
-
-    $SQL = qq{
-SELECT
- client_addr,
- client_port,
- procpid,
- ROUND(EXTRACT(epoch FROM now()-xact_start)) AS maxtime,
- datname,
- usename
-FROM pg_stat_activity
-WHERE xact_start IS NOT NULL $USERWHERECLAUSE
-};
-
-    my $info = run_command($SQL, { regex => qr{\| \d+\n}, emptyok => 1 } );
-
-    $db = $info->{db}[0];
-    my $slurp = $db->{slurp};
-
-    if (! exists $db->{ok}) {
-        ndie msg('txntime-fail');
-    }
-
-    if ($slurp !~ /\w/ and $USERWHERECLAUSE) {
-        $stats{$db->{dbname}} = 0;
-        add_ok msg('no-match-user');
-        return;
-    }
-
-    ## Default values for information gathered
-    my ($client_addr, $client_port, $procpid, $username, $maxtime, $maxdb) = ('0.0.0.0', 0, '?', 0, 0, '?');
-
-    ## Read in and parse the psql output
-    for my $r (@{$db->{slurp}}) {
-        my ($add,$port,$pid,$time,$dbname,$user) = @$r{qw/ client_addr client_port procpid maxtime datname usename /};
-        next if skip_item($dbname);
-
-        if ($time >= $maxtime) {
-            $maxtime     = $time;
-            $maxdb       = $dbname;
-            $client_addr = $add;
-            $client_port = $port;
-            $procpid     = $pid;
-            $username    = $user;
-        }
-    }
-
-    ## Use of skip_item means we may have no matches
-    if ($maxdb eq '?') {
-        if ($USERWHERECLAUSE) { ## needed?
-            add_unknown msg('txntime-none');
-        }
-        else {
-            add_ok msg('txntime-none');
-        }
-        return;
-    }
-
-    ## Details on who the offender was
-    my $whodunit = sprintf q{%s:%s %s:%s%s%s %s:%s},
-        msg('database'),
-        $maxdb,
-        msg('PID'),
-        $procpid,
-        $client_port < 1 ? '' : (sprintf ' %s:%s', msg('port'), $client_port),
-        $client_addr eq '' ? '' : (sprintf ' %s:%s', msg('address'), $client_addr),
-        msg('username'),
-        $username;
-
-    $MRTG and do_mrtg({one => $maxtime, msg => $whodunit});
-
-    $db->{perf} .= sprintf q{'%s'=%s;%s;%s},
-        $whodunit,
-        $maxtime,
-        $warning,
-        $critical;
-
-    my $msg = sprintf '%s (%s)', msg('qtime-msg', $maxtime), $whodunit;
-
-    if (length $critical and $maxtime >= $critical) {
-        add_critical $msg;
-    }
-    elsif (length $warning and $maxtime >= $warning) {
-        add_warning $msg;
-    }
-    else {
-        add_ok $msg;
-    }
+    check_txn_idle('txntime',
+                   'xact_start',
+                   q{xact_start IS NOT NULL});
 
     return;
 
