@@ -30,7 +30,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.17.1';
+our $VERSION = '2.18.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -7254,7 +7254,7 @@ sub check_archive_ready {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.17.1
+This documents describes check_postgres.pl version 2.18.0
 
 =head1 SYNOPSIS
 
@@ -8877,7 +8877,10 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.17.1>
+=item B<Version 2.18.0>
+
+    Give detailed information and refactor txn_idle, txn_time, and query_time
+      (Per request from bug #61)
 
     Set maxliagn to 8 in the bloat check if box identified as '64-bit'
       (Michel Sijmons, bug #66)
