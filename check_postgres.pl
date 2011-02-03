@@ -2547,7 +2547,9 @@ sub validate_size_or_percent_with_oper {
 
 } ## end of validate_size_or_percent_with_oper
 
+
 sub validate_integer_for_time {
+
     my $arg = shift || {};
     ndie qq{validate_integer_for_time must be called with a hashref\n}
         unless ref $arg eq 'HASH';
@@ -2579,9 +2581,10 @@ sub validate_integer_for_time {
                 if ($val =~ /^[-+]\d+$/) {
                     ndie msg('range-int', $level) if $val !~ /^[-+]?\d+$/;
                     push @ret, int $val, undef;
-                } else {
+                }
+                else {
                     # Assume time for backwards compatibility.
-                    push @ret, undef, size_in_seconds($val, $level);
+                    push @ret, '', size_in_seconds($val, $level);
                 }
             }
         }
@@ -2591,7 +2594,9 @@ sub validate_integer_for_time {
     }
 
     return @ret;
+
 } ## end of validate_integer_for_time
+
 
 sub check_autovac_freeze {
 
