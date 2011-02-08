@@ -8924,14 +8924,14 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.18.0>
 
-    Give detailed information and refactor txn_idle, txn_time, and query_time
-      (Per request from bug #61)
+  Give detailed information and refactor txn_idle, txn_time, and query_time
+    (Per request from bug #61)
 
-    Set maxliagn to 8 in the bloat check if box identified as '64-bit'
-      (Michel Sijmons, bug #66)
+  Set maxliagn to 8 in the bloat check if box identified as '64-bit'
+    (Michel Sijmons, bug #66)
 
-    Support non-standard version strings in the bloat check.
-      (Michel Sijmons and Gurjeet Singh, bug #66)
+  Support non-standard version strings in the bloat check.
+    (Michel Sijmons and Gurjeet Singh, bug #66)
 
 =item B<Version 2.17.0>
 
