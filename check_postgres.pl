@@ -1065,7 +1065,7 @@ if (! defined $PSQL or ! length $PSQL) {
 }
 -x $PSQL or ndie msg('opt-psql-noexec', $PSQL);
 $res = qx{$PSQL --version};
-$res =~ /psql.+(\d+\.\d+)/ or ndie msg('opt-psql-nover');
+$res =~ /psql\D+(\d+\.\d+)/ or ndie msg('opt-psql-nover');
 our $psql_version = $1;
 
 $VERBOSE >= 2 and warn qq{psql=$PSQL version=$psql_version\n};
