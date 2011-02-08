@@ -30,7 +30,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.18.0';
+our $VERSION = '2.17.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -7299,7 +7299,7 @@ sub check_wal_files {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.18.0
+This documents describes check_postgres.pl version 2.17.0
 
 =head1 SYNOPSIS
 
@@ -8922,7 +8922,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
 
-=item B<Version 2.18.0>
+=item B<Version 2.17.0>
 
   Give detailed information and refactor txn_idle, txn_time, and query_time
     (Per request from bug #61)
@@ -8933,9 +8933,9 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Support non-standard version strings in the bloat check.
     (Michel Sijmons and Gurjeet Singh, bug #66)
 
-=item B<Version 2.17.0>
-
   Allow "and", "or" inside arguments (David E. Wheeler)
+
+  Fix psql version regex (Peter Eisentraut, bug #69)
 
 =item B<Version 2.16.0> January 20, 2011
 
