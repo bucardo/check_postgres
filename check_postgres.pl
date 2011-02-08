@@ -129,6 +129,7 @@ our %msg = (
     'diskspace-nodf'     => q{Could not find required executable /bin/df},
     'diskspace-nodir'    => q{Could not find data directory "$1"},
     'file-noclose'       => q{Could not close $1: $2},
+    'files'              => q{files},
     'fsm-page-highver'   => q{Cannot check fsm_pages on servers version 8.4 or greater},
     'fsm-page-msg'       => q{fsm page slots used: $1 of $2 ($3%)},
     'fsm-rel-highver'    => q{Cannot check fsm_relations on servers version 8.4 or greater},
@@ -350,6 +351,7 @@ our %msg = (
     'diskspace-nodata'   => q{N'a pas pu déterminer data_directory : êtes-vous connecté en tant que super-utilisateur ?},
     'diskspace-nodf'     => q{N'a pas pu trouver l'exécutable /bin/df},
     'diskspace-nodir'    => q{N'a pas pu trouver le répertoire des données « $1 »},
+'files'              => q{files},
     'file-noclose'       => q{N'a pas pu fermer $1 : $2},
     'fsm-page-highver'   => q{Ne peut pas vérifier fsm_pages sur des serveurs en version 8.4 ou ultérieure},
     'fsm-page-msg'       => q{emplacements de pages utilisés par la FSM : $1 sur $2 ($3%)},
@@ -2654,12 +2656,10 @@ sub check_archive_ready {
         my $r = $db->{slurp}[0];
         my $numfiles = $r->{count};
         if ($MRTG) {
-            $stats{$db->{dbname}} = $numfiles;
-            $statsmsg{$db->{dbname}} = '';
-            next;
+            do_mrtg({one => $numfiles});
         }
         my $msg = qq{$numfiles};
-        $db->{perf} .= " '$db->{host}'=$numfiles;$warning;$critical";
+        $db->{perf} .= ' ' . msg('files') . "=$numfiles;$warning;$critical";
         if (length $critical and $numfiles > $critical) {
             add_critical $msg;
         }
