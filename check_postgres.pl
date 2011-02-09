@@ -4922,7 +4922,7 @@ sub check_query_time {
                    msg('queries'),
                    msg('query-time'),
                    'query_start',
-                   q{query_start IS NOT NULL});
+                   q{query_start IS NOT NULL AND current_query <> '<IDLE> in transaction'});
 
     return;
 
@@ -8441,9 +8441,9 @@ line lists the database.
 
 =head2 B<query_time>
 
-(C<symlink: check_postgres_query_time>) Checks the length of running queries on one or more databases. There is 
-no need to run this more than once on the same database cluster.
-Databases can be filtered 
+(C<symlink: check_postgres_query_time>) Checks the length of running queries on one or more databases. 
+There is no need to run this more than once on the same database cluster. Note that 
+this already excludes queries that are "idle in transaction". Databases can be filtered 
 by using the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING">
 section for more details. You can also filter on the user running the 
 query with the I<--includeuser> and I<--excludeuser> options.
@@ -9017,6 +9017,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Fix psql version regex (Peter Eisentraut, bug #69)
 
   Standardize and clean up all perfdata ouput (bug #52)
+
+  Exclude "idle in transaction" from the query_time check (bug #43)
 
   Clean up the custom_query action a bit.
 
