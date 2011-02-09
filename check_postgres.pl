@@ -1087,7 +1087,8 @@ sub add_response {
         $perf .= sprintf '%s%s', length($perf) ? ' ' : '', $db->{perf};
     }
     ## Strip trailing semicolons as allowed by the Nagios spec
-    $perf =~ s/[; ]+$//;
+    $perf =~ s/; / /;
+    $perf =~ s/;$//;
     push @{$type->{$header}} => [$msg,$perf];
 
     return;
