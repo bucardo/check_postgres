@@ -9016,6 +9016,10 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
   Fix psql version regex (Peter Eisentraut, bug #69)
 
+  Standardize and clean up all perfdata ouput (bug #52)
+
+  Clean up the custom_query action a bit.
+
 =item B<Version 2.16.0> January 20, 2011
 
   Add new action 'hot_standby_delay' (Nicolas Thauvin)
