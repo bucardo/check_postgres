@@ -87,6 +87,7 @@ our @get_methods = (
 our %msg = (
 'en' => {
     'address'            => q{address},
+    'age'                => q{age},
     'backends-fatal'     => q{Could not connect: too many connections},
     'backends-mrtg'      => q{DB=$1 Max connections=$2},
     'backends-msg'       => q{$1 of $2 connections ($3%)},
@@ -100,7 +101,7 @@ our %msg = (
     'bug-report'         => q{Please report these details to check_postgres@bucardo.org:},
     'checkpoint-baddir'  => q{Invalid data_directory: "$1"},
     'checkpoint-baddir2' => q{pg_controldata could not read the given data directory: "$1"},
-    'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version},
+    'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version (tried $1)},
     'checkpoint-badver2' => q{Failed to run pg_controldata - is it the correct version?},
     'checkpoint-nodir'   => q{Must supply a --datadir argument or set the PGDATA environment variable},
     'checkpoint-nodp'    => q{Must install the Perl module Date::Parse to use the checkpoint action},
@@ -310,6 +311,7 @@ our %msg = (
 },
 'fr' => {
     'address'            => q{adresse},
+'age'                => q{age},
     'backends-fatal'     => q{N'a pas pu se connecter : trop de connexions},
     'backends-mrtg'      => q{DB=$1 Connexions maximum=$2},
     'backends-msg'       => q{$1 connexions sur $2 ($3%)},
@@ -323,7 +325,7 @@ our %msg = (
     'bug-report'         => q{Merci de rapporter ces d??tails ?? check_postgres@bucardo.org:},
     'checkpoint-baddir'  => q{data_directory invalide : "$1"},
     'checkpoint-baddir2' => q{pg_controldata n'a pas pu lire le répertoire des données indiqué : « $1 »},
-    'checkpoint-badver'  => q{Échec lors de l'exécution de pg_controldata - probablement la mauvaise version},
+'checkpoint-badver'  => q{Échec lors de l'exécution de pg_controldata - probablement la mauvaise version (tried $1)},
     'checkpoint-badver2' => q{Échec lors de l'exécution de pg_controldata - est-ce la bonne version ?},
     'checkpoint-nodir'   => q{Vous devez fournir un argument --datadir ou configurer la variable d'environnement PGDATA},
     'checkpoint-nodp'    => q{Vous devez installer le module Perl Date::Parse pour utiliser l'action checkpoint},
@@ -1108,8 +1110,11 @@ sub add_response {
     $header =~ s/\s+$//;
     my $perf = ($opt{showtime} and $db->{totaltime} and $action ne 'bloat') ? "time=$db->{totaltime}s" : '';
     if ($db->{perf}) {
-        $perf .= " $db->{perf}";
+        $db->{perf} =~ s/^ +//;
+        $perf .= sprintf '%s%s', length($perf) ? ' ' : '', $db->{perf};
     }
+    ## Strip trailing semicolons as allowed by the Nagios spec
+    $perf =~ s/[; ]+$//;
     push @{$type->{$header}} => [$msg,$perf];
 
     return;
@@ -2067,7 +2072,7 @@ sub run_command {
                     $num++;
                     next;
                 }
-                if ($line =~ /^(\w+)\s+\| (.*)/) {
+                if ($line =~ /^([\?\w]+)\s+\| (.*)/) {
                     $stuff[$num]{$1} = $2;
                     $lastval = $1;
                 }
@@ -2721,7 +2726,7 @@ sub check_autovac_freeze {
             next SLURP;
         }
 
-        my $msg = "'$r->{datname}'=$r->{perc}\%;$w;$c";
+        my $msg = sprintf ' %s=%s%%;%s;%s', perfname($r->{datname}), $r->{perc}, $w, $c;
         $db->{perf} .= " $msg";
         if (length $critical and $r->{perc} >= $c) {
             push @crit => $msg;
@@ -2867,7 +2872,8 @@ ORDER BY datname
         elsif ($w3) {
             $nwarn = (int $w2*$limit/100)
         }
-        $db->{perf} .= " '$r->{datname}'=$r->{current};$nwarn;$ncrit;0;$limit";
+        $db->{perf} .= sprintf ' %s=%s;%s;%s;0;%s',
+            perfname($r->{datname}), $r->{current}, $nwarn, $ncrit, $limit;
 
         if (! skip_item($r->{datname})) {
             $total += $r->{current};
@@ -3220,7 +3226,7 @@ sub check_checkpoint {
     }
 
     if ($res =~ /WARNING: Calculated CRC checksum/) {
-        ndie msg('checkpoint-badver');
+        ndie msg('checkpoint-badver', $pgc);
     }
     if ($res !~ /^pg_control.+\d+/) {
         ndie msg('checkpoint-badver2');
@@ -3248,8 +3254,10 @@ sub check_checkpoint {
     if ($dt !~ /^\d+$/) {
         ndie msg('checkpoint-noparse', $last);
     }
-    my $diff = $db->{perf} = time - $dt;
+    my $diff = time - $dt;
     my $msg = $diff==1 ? msg('checkpoint-ok') : msg('checkpoint-ok2', $diff);
+    $db->{perf} = sprintf '%s=%s;%s;%s',
+        perfname(msg('age')), $diff, $warning, $critical;
 
     if ($MRTG) {
         do_mrtg({one => $diff, msg => $msg});
@@ -3334,35 +3342,49 @@ sub check_custom_query {
 
         my $goodrow = 0;
 
+        ## The other column tells is the name to use as the perfdata value
+        my $perfname;
+
         for my $r (@{$db->{slurp}}) {
-            my ($data,$msg) = ($r->{result}, $r->{data}||'');
+            my $result = $r->{result};
+            if (! defined $perfname) {
+                $perfname = '';
+                for my $name (keys %$r) {
+                    next if $name eq 'result';
+                    $perfname = $name;
+                    last;
+                }
+            }
             $goodrow++;
-            $db->{perf} .= " $msg";
+            if ($perfname) {
+                $db->{perf} .= sprintf ' %s=%s;%s;%s',
+                    perfname($perfname), $r->{$perfname}, $warning, $critical;
+            }
             my $gotmatch = 0;
-            if (! defined $data) {
+            if (! defined $result) {
                 add_unknown msg('custom-invalid');
                 return;
             }
             if (length $critical) {
-                if (($valtype eq 'string' and $data eq $critical)
+                if (($valtype eq 'string' and $result eq $critical)
                     or
-                    ($reverse ? $data <= $critical : $data >= $critical)) { ## covers integer, time, size
-                    add_critical "$data";
+                    ($valtype ne 'string' and $reverse ? $result <= $critical : $result >= $critical)) { ## covers integer, time, size
+                    add_critical "$result";
                     $gotmatch = 1;
                 }
             }
 
             if (length $warning and ! $gotmatch) {
-                if (($valtype eq 'string' and $data eq $warning)
+                if (($valtype eq 'string' and $result eq $warning)
                     or
-                    (length $data and $reverse ? $data <= $warning : $data >= $warning)) {
-                    add_warning "$data";
+                    ($valtype ne 'string' and length $result and $reverse ? $result <= $warning : $result >= $warning)) {
+                    add_warning "$result";
                     $gotmatch = 1;
                 }
             }
 
             if (! $gotmatch) {
-                add_ok "$data";
+                add_ok "$result";
             }
 
         } ## end each row returned
@@ -7773,11 +7795,12 @@ For MRTG output, simply outputs a 1 (good connection) or a 0 (bad connection) on
 
 =head2 B<custom_query>
 
-(C<symlink: check_postgres_custom_query>) Runs a custom query of your choosing, and parses the results. The query itself is passed in through 
-the C<custom_query> argument, and should be kept as simple as possible. If at all possible, wrap it in 
-a view or a function to keep things easier to manage. The query should return one or two columns: the first 
-is the result that will be checked, and the second is any performance data you want sent. They must be returned 
-as columns named I<result> and I<data>.
+(C<symlink: check_postgres_custom_query>) Runs a custom query of your choosing, and parses the results. 
+The query itself is passed in through the C<query> argument, and should be kept as simple as possible. 
+If at all possible, wrap it in a view or a function to keep things easier to manage. The query should 
+return one or two columns. It is required that one of the coumns be named "result" and is the item 
+that will be checked against your warning and critical values. The second column is for the performance 
+data and any name can be used: this will be the 'value' inside the performance data section.
 
 At least one warning or critical argument must be specified. What these are set to depends on the type of 
 query you are running. There are four types of custom_queries that can be run, specified by the C<valtype> 
@@ -7806,17 +7829,19 @@ Normally, an alert is triggered if the values returned are B<greater than> or eq
 value. However, an option of I<--reverse> will trigger the alert if the returned value is 
 B<lower than> or equal to the critical or warning value.
 
-Example 1: Warn if any relation over 100 pages is named "rad":
+Example 1: Warn if any relation over 100 pages is named "rad", put the number of pages 
+inside the performance data section.
 
-  check_postgres_custom_query --valtype=string -w "rad" --query="SELECT relname FROM pg_class WHERE relpages > 100" --port=5432
+  check_postgres_custom_query --valtype=string -w "rad" --query=
+    "SELECT relname AS result, relpages AS pages FROM pg_class WHERE relpages > 100"
 
 Example 2: Give a critical if the "foobar" function returns a number over 5MB:
 
-  check_postgres_custom_query --port=5432 --critical='5MB'--valtype=size --query="SELECT foobar()"
+  check_postgres_custom_query --critical='5MB'--valtype=size --query="SELECT foobar() AS result"
 
 Example 2: Warn if the function "snazzo" returns less than 42:
 
-  check_postgres_custom_query --port=5432 --critical=42 --query="SELECT snazzo()" --reverse
+  check_postgres_custom_query --critical=42 --query="SELECT snazzo() AS result" --reverse
 
 If you come up with a useful custom_query, consider sending in a patch to this program 
 to make it into a standard action that other people can use.
