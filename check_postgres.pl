@@ -137,6 +137,8 @@ our %msg = (
     'fsm-rel-msg'        => q{fsm relations used: $1 of $2 ($3%)},
     'hs-no-role'         => q{Not a master/slave couple},
     'hs-no-location'     => q{Could not get current xlog location on $1},
+    'hs-receive-delay'   => q{receive-delay},
+    'hs-replay-delay'    => q{replay_delay},
     'invalid-option'     => q{Invalid option},
     'invalid-query'      => q{Invalid query returned: $1},
     'listener-count'     => q{ listening=$1}, ## needs leading space
@@ -362,6 +364,8 @@ our %msg = (
     'fsm-rel-msg'        => q{relations tracées par la FSM : $1 sur $2 ($3%)},
     'hs-no-role'         => q{Pas de couple ma??tre/esclave},
     'hs-no-location'     => q{N'a pas pu obtenir l'emplacement courant dans le journal des transactions sur $1},
+'hs-receive-delay'   => q{receive-delay},
+'hs-replay-delay'    => q{replay_delay},
     'invalid-option'     => q{Option invalide},
     'invalid-query'      => q{Une requête invalide a renvoyé : $1},
     'listener-count'     => q{ en écoute=$1}, ## needs leading space
@@ -4002,8 +4006,10 @@ sub check_hot_standby_delay {
 
     $MRTG and do_mrtg({one => $rep_delta, two => $rec_delta});
 
-    $db->{perf} = qq{replay_delay=$rep_delta;$warning;$critical};
-    $db->{perf} .= qq{ receive_delay=$rec_delta;$warning;$critical};
+    $db->{perf} = sprintf '%s=%s;%s;%s',
+        perfname(msg('hs-replay-delay')), $rep_delta, $warning, $critical;
+    $db->{perf} .= sprintf '%s=%s;%s;%s',
+        perfname(msg('hs-receive-delay')), $rec_delta, $warning, $critical;
 
     ## Do the check on replay delay in case SR has disconnected because it way too far behind
     my $msg = qq{$rep_delta};
