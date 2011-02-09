@@ -286,7 +286,7 @@ our %msg = (
     'time-weeks'         => q{weeks},
     'time-year'          => q{year},
     'time-years'         => q{years},
-    'timesync-diff'      => q{ diff=$1}, ## needs leading space
+    'timesync-diff'      => q{diff},
     'timesync-msg'       => q{timediff=$1 DB=$2 Local=$3},
     'transactions'       => q{transactions},
     'trigger-msg'        => q{Disabled triggers: $1},
@@ -515,7 +515,7 @@ our %msg = (
     'time-weeks'         => q{semaines},
     'time-year'          => q{année},
     'time-years'         => q{années},
-    'timesync-diff'      => q{ diff=$1}, ## needs leading space
+    'timesync-diff'      => q{diff},
     'timesync-msg'       => q{timediff=$1 Base de données=$2 Local=$3},
 'transactions'       => q{transactions},
     'trigger-msg'        => q{Triggers désactivés : $1},
@@ -4815,8 +4815,8 @@ ORDER BY prepared ASC
             }
 
             $msg = "$dbname=$date ($age)";
-			my $nicename = perfname($dbname);
-            $db->{perf} .= " $nicename=${age}s;$warning;$critical";
+            $db->{perf} .= sprintf ' %s=%ss;%s;%s',
+                perfname($dbname), $age, $warning, $critical;
             if (length $critical and $age >= $critical) {
                 push @crit => $msg;
             }
@@ -6957,6 +6957,7 @@ JOIN $schema.sl_node n2 ON (n2.no_id=st_received)};
 
 } ## end of check_slony_status
 
+
 sub check_timesync {
 
     ## Compare local time to the database time
@@ -6983,7 +6984,9 @@ sub check_timesync {
             $stats{$db->{dbname}} = $diff;
             next;
         }
-        $db->{perf} = msg('timesync-diff', $diff);
+        $db->{perf} = sprintf '%s=%ss;%s;%s',
+            perfname(msg('timesync-diff')), $diff, $warning, $critical;
+
         my $localpretty = sprintf '%d-%02d-%02d %02d:%02d:%02d', $l[5]+1900, $l[4]+1, $l[3],$l[2],$l[1],$l[0];
         my $msg = msg('timesync-msg', $diff, $pgpretty, $localpretty);
 
@@ -7217,11 +7220,8 @@ sub check_txn_wraparound {
         my ($max,$msg) = (0,'?');
         for my $r (@{$db->{slurp}}) {
             my ($dbname,$dbtxns) = ($r->{datname},$r->{age});
-            $db->{perf} .= " '$dbname'=$dbtxns;";
-            $db->{perf} .= $warning if length $warning;
-            $db->{perf} .= ';';
-            $db->{perf} .= $critical if length $critical;
-            $db->{perf} .= ';0;2000000000';
+            $db->{perf} .= sprintf ' %s=%s;%s;%s;%s;%s',
+                perfname($dbname), $dbtxns, $warning, $critical, 0, 2000000000;
             next SLURP if skip_item($dbname);
             if ($dbtxns > $max) {
                 $max = $dbtxns;
