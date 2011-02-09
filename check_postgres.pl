@@ -901,6 +901,7 @@ our $action_info = {
  locks               => [0, 'Checks the number of locks.'],
  logfile             => [1, 'Checks that the logfile is being written to correctly.'],
  new_version_bc      => [0, 'Checks if a newer version of Bucardo is available.'],
+ new_version_box     => [0, 'Checks if a newer version of boxinfo is available.'],
  new_version_cp      => [0, 'Checks if a newer version of check_postgres.pl is available.'],
  new_version_pg      => [0, 'Checks if a newer version of Postgres is available.'],
  new_version_tnm     => [0, 'Checks if a newer version of tail_n_mail is available.'],
@@ -1597,6 +1598,9 @@ check_new_version_pg() if $action eq 'new_version_pg';
 
 ## Check for new versions of Bucardo
 check_new_version_bc() if $action eq 'new_version_bc';
+
+## Check for new versions of boxinfo
+check_new_version_boxinfo() if $action eq 'new_version_box';
 
 ## Check for new versions of tail_n_mail
 check_new_version_tnm() if $action eq 'new_version_tnm';
@@ -4600,6 +4604,18 @@ sub check_new_version_bc {
 
     my $url = 'http://bucardo.org/bucardo/latest_version.txt';
     find_new_version('Bucardo', 'bucardo_ctl', $url);
+
+    return;
+
+} ## end of check_new_version_bc
+
+
+sub check_new_version_boxinfo {
+
+    ## Check if a newer version of boxinfo is available
+
+    my $url = 'http://bucardo.org/boxinfo/latest_version.txt';
+    find_new_version('boxinfo', 'boxinfo.pl', $url);
 
     return;
 
@@ -7610,11 +7626,12 @@ which determine if the output is displayed or not, where 'a' = all, 'c' = critic
 =item B<--get_method=VAL>
 
 Allows specification of the method used to fetch information for the C<new_version_cp>, 
-C<new_version_pg>, C<new_version_bc>, and C<new_version_tnm> checks. The following programs are tried, 
-in order, to grab the information from the web: GET, wget, fetch, curl, lynx, links. To force the use of just 
-one (and thus remove the overhead of trying all the others until one of those works), 
-enter one of the names as the argument to get_method. For example, a BSD box might enter 
-the following line in their C<.check_postgresrc> file:
+C<new_version_pg>, C<new_version_bc>, C<new_version_box>, and C<new_version_tnm> checks. 
+The following programs are tried, in order, to grab the information from the web: 
+GET, wget, fetch, curl, lynx, links. To force the use of just one (and thus remove the 
+overhead of trying all the others until one of those works), enter one of the names as 
+the argument to get_method. For example, a BSD box might enter the following line in 
+their C<.check_postgresrc> file:
 
   get_method=fetch
 
@@ -8283,6 +8300,16 @@ If a major upgrade is available, a warning is returned. If a revision upgrade is
 available, a critical is returned. (Bucardo is a master to slave, and master to master 
 replication system for Postgres: see http://bucardo.org for more information).
 See also the information on the C<--get_method> option.
+
+=head2 B<new_version_box>
+
+(C<symlink: check_postgres_new_version_box>) Checks if a newer version of the boxinfo 
+program is available. The current version is obtained by running C<boxinfo.pl --version>.
+If a major upgrade is available, a warning is returned. If a revision upgrade is 
+available, a critical is returned. (boxinfo is a program for grabbing important 
+information from a server and putting it into a HTML format: see 
+http://bucardo.org/wiki/boxinfo for more information). See also the information on 
+the C<--get_method> option.
 
 =head2 B<new_version_cp>
 
@@ -8983,6 +9010,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
     (Michel Sijmons and Gurjeet Singh, bug #66)
 
   Allow "and", "or" inside arguments (David E. Wheeler)
+
+  Add the "new_version_box" action.
 
   Fix psql version regex (Peter Eisentraut, bug #69)
 
