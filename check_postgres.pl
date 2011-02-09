@@ -1562,7 +1562,7 @@ check_new_version_pg() if $action eq 'new_version_pg';
 check_new_version_bc() if $action eq 'new_version_bc';
 
 ## Check for new versions of boxinfo
-check_new_version_boxinfo() if $action eq 'new_version_box';
+check_new_version_box() if $action eq 'new_version_box';
 
 ## Check for new versions of tail_n_mail
 check_new_version_tnm() if $action eq 'new_version_tnm';
@@ -4586,7 +4586,7 @@ sub check_new_version_bc {
 } ## end of check_new_version_bc
 
 
-sub check_new_version_boxinfo {
+sub check_new_version_box {
 
     ## Check if a newer version of boxinfo is available
 
@@ -4595,7 +4595,7 @@ sub check_new_version_boxinfo {
 
     return;
 
-} ## end of check_new_version_bc
+} ## end of check_new_version_box
 
 
 sub check_new_version_cp {
