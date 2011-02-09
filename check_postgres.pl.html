@@ -62,6 +62,7 @@
 		<li><a href="#locks"><strong>locks</strong></a></li>
 		<li><a href="#logfile"><strong>logfile</strong></a></li>
 		<li><a href="#new_version_bc"><strong>new_version_bc</strong></a></li>
+		<li><a href="#new_version_box"><strong>new_version_box</strong></a></li>
 		<li><a href="#new_version_cp"><strong>new_version_cp</strong></a></li>
 		<li><a href="#new_version_pg"><strong>new_version_pg</strong></a></li>
 		<li><a href="#new_version_tnm"><strong>new_version_tnm</strong></a></li>
@@ -117,7 +118,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.17.1</p>
+<p>This documents describes check_postgres.pl version 2.17.0</p>
 <p>
 </p>
 <hr />
@@ -403,11 +404,12 @@ which determine if the output is displayed or not, where 'a' = all, 'c' = critic
 
 <dd>
 <p>Allows specification of the method used to fetch information for the <code>new_version_cp</code>, 
-<code>new_version_pg</code>, <code>new_version_bc</code>, and <code>new_version_tnm</code> checks. The following programs are tried, 
-in order, to grab the information from the web: GET, wget, fetch, curl, lynx, links. To force the use of just 
-one (and thus remove the overhead of trying all the others until one of those works), 
-enter one of the names as the argument to get_method. For example, a BSD box might enter 
-the following line in their <code>.check_postgresrc</code> file:</p>
+<code>new_version_pg</code>, <code>new_version_bc</code>, <code>new_version_box</code>, and <code>new_version_tnm</code> checks. 
+The following programs are tried, in order, to grab the information from the web: 
+GET, wget, fetch, curl, lynx, links. To force the use of just one (and thus remove the 
+overhead of trying all the others until one of those works), enter one of the names as 
+the argument to get_method. For example, a BSD box might enter the following line in 
+their <code>.check_postgresrc</code> file:</p>
 <pre>
   get_method=fetch</pre>
 </dd>
@@ -582,11 +584,12 @@ Takes no <em>--warning</em> or <em>--critical</em> options.</p>
 <p>
 </p>
 <h2><a name="custom_query"><strong>custom_query</strong></a></h2>
-<p>(<code>symlink: check_postgres_custom_query</code>) Runs a custom query of your choosing, and parses the results. The query itself is passed in through 
-the <code>custom_query</code> argument, and should be kept as simple as possible. If at all possible, wrap it in 
-a view or a function to keep things easier to manage. The query should return one or two columns: the first 
-is the result that will be checked, and the second is any performance data you want sent. They must be returned 
-as columns named <em>result</em> and <em>data</em>.</p>
+<p>(<code>symlink: check_postgres_custom_query</code>) Runs a custom query of your choosing, and parses the results. 
+The query itself is passed in through the <code>query</code> argument, and should be kept as simple as possible. 
+If at all possible, wrap it in a view or a function to keep things easier to manage. The query should 
+return one or two columns. It is required that one of the coumns be named &quot;result&quot; and is the item 
+that will be checked against your warning and critical values. The second column is for the performance 
+data and any name can be used: this will be the 'value' inside the performance data section.</p>
 <p>At least one warning or critical argument must be specified. What these are set to depends on the type of 
 query you are running. There are four types of custom_queries that can be run, specified by the <code>valtype</code> 
 argument. If none is specified, this action defaults to 'integer'. The four types are:</p>
@@ -608,15 +611,17 @@ bytes are assumed. The first column should be an integer representing the number
 <p>Normally, an alert is triggered if the values returned are <strong>greater than</strong> or equal to the critical or warning 
 value. However, an option of <em>--reverse</em> will trigger the alert if the returned value is 
 <strong>lower than</strong> or equal to the critical or warning value.</p>
-<p>Example 1: Warn if any relation over 100 pages is named &quot;rad&quot;:</p>
+<p>Example 1: Warn if any relation over 100 pages is named &quot;rad&quot;, put the number of pages 
+inside the performance data section.</p>
 <pre>
-  check_postgres_custom_query --valtype=string -w &quot;rad&quot; --query=&quot;SELECT relname FROM pg_class WHERE relpages &gt; 100&quot; --port=5432</pre>
+  check_postgres_custom_query --valtype=string -w &quot;rad&quot; --query=
+    &quot;SELECT relname AS result, relpages AS pages FROM pg_class WHERE relpages &gt; 100&quot;</pre>
 <p>Example 2: Give a critical if the &quot;foobar&quot; function returns a number over 5MB:</p>
 <pre>
-  check_postgres_custom_query --port=5432 --critical='5MB'--valtype=size --query=&quot;SELECT foobar()&quot;</pre>
+  check_postgres_custom_query --critical='5MB'--valtype=size --query=&quot;SELECT foobar() AS result&quot;</pre>
 <p>Example 2: Warn if the function &quot;snazzo&quot; returns less than 42:</p>
 <pre>
-  check_postgres_custom_query --port=5432 --critical=42 --query=&quot;SELECT snazzo()&quot; --reverse</pre>
+  check_postgres_custom_query --critical=42 --query=&quot;SELECT snazzo() AS result&quot; --reverse</pre>
 <p>If you come up with a useful custom_query, consider sending in a patch to this program 
 to make it into a standard action that other people can use.</p>
 <p>This action does not support MRTG or simple output yet.</p>
@@ -1002,6 +1007,16 @@ replication system for Postgres: see <a href="http://bucardo.org">http://bucardo
 See also the information on the <code>--get_method</code> option.</p>
 <p>
 </p>
+<h2><a name="new_version_box"><strong>new_version_box</strong></a></h2>
+<p>(<code>symlink: check_postgres_new_version_box</code>) Checks if a newer version of the boxinfo 
+program is available. The current version is obtained by running <code>boxinfo.pl --version</code>.
+If a major upgrade is available, a warning is returned. If a revision upgrade is 
+available, a critical is returned. (boxinfo is a program for grabbing important 
+information from a server and putting it into a HTML format: see 
+<a href="http://bucardo.org/wiki/boxinfo">http://bucardo.org/wiki/boxinfo</a> for more information). See also the information on 
+the <code>--get_method</code> option.</p>
+<p>
+</p>
 <h2><a name="new_version_cp"><strong>new_version_cp</strong></a></h2>
 <p>(<code>symlink: check_postgres_new_version_cp</code>) Checks if a newer version of this program 
 (check_postgres.pl) is available, by grabbing the version from a small text file 
@@ -1126,9 +1141,9 @@ line lists the database.</p>
 <p>
 </p>
 <h2><a name="query_time"><strong>query_time</strong></a></h2>
-<p>(<code>symlink: check_postgres_query_time</code>) Checks the length of running queries on one or more databases. There is 
-no need to run this more than once on the same database cluster.
-Databases can be filtered 
+<p>(<code>symlink: check_postgres_query_time</code>) Checks the length of running queries on one or more databases. 
+There is no need to run this more than once on the same database cluster. Note that 
+this already excludes queries that are &quot;idle in transaction&quot;. Databases can be filtered 
 by using the <em>--include</em> and <em>--exclude</em> options. See the <a href="#basic_filtering">BASIC FILTERING</a>
 section for more details. You can also filter on the user running the 
 query with the <em>--includeuser</em> and <em>--excludeuser</em> options.
@@ -1340,12 +1355,12 @@ the 'stats_command_string' parameter must be set to 'on'.</p>
 <p>Example 2: Give a warning if there are 50 or more transactions</p>
 <pre>
   check_postgres_txn_idle --port=5432 --warning='+50'</pre>
-<p>Example 4: Give a critical if 5 or more connections have been idle in
+<p>Example 3: Give a critical if 5 or more connections have been idle in
 transaction for more than 10 seconds:</p>
 <pre>
   check_postgres_txn_idle --port=5432 --critical='5 for 10 seconds'</pre>
 <p>For MRTG output, returns the time in seconds the longest idle transaction has been running. The fourth 
-line returns the name of the database.</p>
+line returns the name of the database and other information about the longest transaction.</p>
 <p>
 </p>
 <h2><a name="txn_time"><strong>txn_time</strong></a></h2>
@@ -1604,21 +1619,32 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
-<dt><strong><a name="version_2_17_1" class="item"><strong>Version 2.17.1</strong></a></strong></dt>
-
-<dd>
-<pre>
-    Set maxliagn to 8 in the bloat check if box identified as '64-bit'
-      (Michel Sijmons, bug #66)</pre>
-<pre>
-    Support non-standard version strings in the bloat check.
-      (Michel Sijmons and Gurjeet Singh, bug #66)</pre>
-</dd>
 <dt><strong><a name="version_2_17_0" class="item"><strong>Version 2.17.0</strong></a></strong></dt>
 
 <dd>
 <pre>
+  Give detailed information and refactor txn_idle, txn_time, and query_time
+    (Per request from bug #61)</pre>
+<pre>
+  Set maxliagn to 8 in the bloat check if box identified as '64-bit'
+    (Michel Sijmons, bug #66)</pre>
+<pre>
+  Support non-standard version strings in the bloat check.
+    (Michel Sijmons and Gurjeet Singh, bug #66)</pre>
+<pre>
   Allow &quot;and&quot;, &quot;or&quot; inside arguments (David E. Wheeler)</pre>
+<pre>
+  Add the &quot;new_version_box&quot; action.</pre>
+<pre>
+  Fix psql version regex (Peter Eisentraut, bug #69)</pre>
+<pre>
+  Standardize and clean up all perfdata ouput (bug #52)</pre>
+<pre>
+  Exclude &quot;idle in transaction&quot; from the query_time check (bug #43)</pre>
+<pre>
+  Fix the perflimit for the bloat action (bug #50)</pre>
+<pre>
+  Clean up the custom_query action a bit.</pre>
 </dd>
 <dt><strong><a name="version_2_16_0_january_20_2011" class="item"><strong>Version 2.16.0</strong> January 20, 2011</a></strong></dt>
 
