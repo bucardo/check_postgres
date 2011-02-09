@@ -111,7 +111,7 @@ $t=qq{$S works when exclude and include make a match};
 like ($cp->run('-w 5g --include=postgres --exclude=postgres'), qr{$label OK: DB "postgres"}, $t);
 
 $t=qq{$S returned correct performance data with include};
-like ($cp->run('-w 5g --include=postgres'), qr{ \| time=\d\.\d\d  postgres=\d+}, $t);
+like ($cp->run('-w 5g --include=postgres'), qr{ \| time=\d\.\d\ds postgres=\d+}, $t);
 
 $t=qq{$S with includeuser option returns nothing};
 like ($cp->run('--includeuser postgres --includeuser mycatbeda -w 10g'), qr{No matching entries found due to user exclusion}, $t);

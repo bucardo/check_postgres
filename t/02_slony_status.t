@@ -62,46 +62,46 @@ my $res = $cp->run('-w 230 --schema slony_testing');
 like ($res, qr{$label OK:.*\b123\b}, $t);
 
 $t=qq{$S reports correct stats for raw seconds warning input};
-like ($res, qr{\| time=\d+\.\d+ 'postgres Node 1\(First node\) -> Node 2\(Second node\)'=123;230;\s*$}, $t);
+like ($res, qr{\| time=\d+\.\d+s 'postgres Node 1\(First node\) -> Node 2\(Second node\)'=123;230\s*$}, $t);
 
 $t=qq{$S reports warning correctly for raw seconds};
 $res = $cp->run('-w 30');
 like ($res, qr{$label WARNING:.*\b123\b}, $t);
 
 $t=qq{$S reports correct stats for raw seconds warning input};
-like ($res, qr{\| time=\d+\.\d+ 'postgres Node 1\(First node\) -> Node 2\(Second node\)'=123;30;\s*$}, $t);
+like ($res, qr{\| time=\d+\.\d+s 'postgres Node 1\(First node\) -> Node 2\(Second node\)'=123;30\s*$}, $t);
 
 $t=qq{$S reports warning correctly for minutes input};
 $res = $cp->run('-w "1 minute"');
 like ($res, qr{$label WARNING:.*\b123\b}, $t);
 
 $t=qq{$S reports correct stats for minutes warning input};
-like ($res, qr{\| time=\d+\.\d+ 'postgres Node 1\(First node\) -> Node 2\(Second node\)'=123;60;\s*$}, $t);
+like ($res, qr{\| time=\d+\.\d+s 'postgres Node 1\(First node\) -> Node 2\(Second node\)'=123;60\s*$}, $t);
 
 $t=qq{$S reports okay when lag threshhold not reached, with critical};
 $res = $cp->run('-c 235');
 like ($res, qr{$label OK:.*\b123\b}, $t);
 
 $t=qq{$S reports correct stats for raw seconds critical input};
-like ($res, qr{\| time=\d+\.\d+ 'postgres Node 1\(First node\) -> Node 2\(Second node\)'=123;;235\s*$}, $t);
+like ($res, qr{\| time=\d+\.\d+s 'postgres Node 1\(First node\) -> Node 2\(Second node\)'=123;;235\s*$}, $t);
 
 $t=qq{$S reports critical correctly for raw seconds};
 $res = $cp->run('-c 35');
 like ($res, qr{$label CRITICAL:.*\b123\b}, $t);
 
 $t=qq{$S reports correct stats for raw seconds critical input};
-like ($res, qr{\| time=\d+\.\d+ 'postgres Node 1\(First node\) -> Node 2\(Second node\)'=123;;35\s*$}, $t);
+like ($res, qr{\| time=\d+\.\d+s 'postgres Node 1\(First node\) -> Node 2\(Second node\)'=123;;35\s*$}, $t);
 
 $t=qq{$S reports critical correctly for minutes input};
 $res = $cp->run('-c "1 minute"');
 like ($res, qr{$label CRITICAL:.*\b123\b}, $t);
 
 $t=qq{$S reports correct stats for minutes critical input};
-like ($res, qr{\| time=\d+\.\d+ 'postgres Node 1\(First node\) -> Node 2\(Second node\)'=123;;60\s*$}, $t);
+like ($res, qr{\| time=\d+\.\d+s 'postgres Node 1\(First node\) -> Node 2\(Second node\)'=123;;60\s*$}, $t);
 
 $t=qq{$S reports correct stats for both warning and critical};
 $res = $cp->run('-c "3 days" -w "23 hours"');
-like ($res, qr{\| time=\d+\.\d+ 'postgres Node 1\(First node\) -> Node 2\(Second node\)'=123;82800;259200\s*$}, $t);
+like ($res, qr{\| time=\d+\.\d+s 'postgres Node 1\(First node\) -> Node 2\(Second node\)'=123;82800;259200\s*$}, $t);
 
 cleanup_schema();
 

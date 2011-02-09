@@ -55,10 +55,10 @@ $t = qq{$S identifies host};
 like ($result, qr{host:$host}, $t);
 
 $t = qq{$S processes 'perflimit=1'};
-like ($cp->run(q{-w 1 --perflimit 1}), qr{time=\d+\.\d\d(?:\s+(?:\w+\.)?\w+=\d+){1}\s+\Z}, $t);
+like ($cp->run(q{-w 1 --perflimit 1}), qr{time=\d+\.\d\ds \w+\.\w+=\d+B;1\s+\Z}, $t);
 
 $t = qq{$S processes 'perflimit=2'};
-like ($cp->run(q{-w 1 --perflimit 2}), qr{time=\d+\.\d\d(?:\s+(?:\w+\.)?\w+=\d+){2}\s+\Z}, $t);
+like ($cp->run(q{-w 1 --perflimit 2}), qr{time=\d+\.\d\ds \w+\.\w+=\d+B;1 \w+\.\w+=\d+B}, $t);
 
 $t = qq{$S detects no matching tables due to unknown user};
 like ($cp->run(q{-w 1 --includeuser foo}), qr{$label OK:.*No matching entries found due to user exclusion/inclusion options}, $t);

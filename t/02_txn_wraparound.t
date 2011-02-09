@@ -29,8 +29,8 @@ $result = $cp->run();
 like ($result, qr{^$label}, $t);
 
 $t = qq{$S identifies each database};
-like ($result, qr{'ardala'=\d+;1300000000;1400000000;0;2000000000 'beedeebeedee'=\d+;1300000000;1400000000;0;2000000000 'postgres'=\d+;1300000000;1400000000;0;2000000000 'template1'=\d+;1300000000;1400000000;0;2000000000}, $t);
-$result =~ /'ardala'=(\d+)/;
+like ($result, qr{ardala=\d+;1300000000;1400000000;0;2000000000 beedeebeedee=\d+;1300000000;1400000000;0;2000000000 postgres=\d+;1300000000;1400000000;0;2000000000 template1=\d+;1300000000;1400000000;0;2000000000}, $t);
+$result =~ /ardala=(\d+)/;
 my $txn_measure = $1;
 
 $t = qq{$S identifies host};

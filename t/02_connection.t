@@ -29,10 +29,10 @@ $t=qq{$S returned expected text and OK value};
 like ($result, qr{^$label OK:}, $t);
 
 $t=qq{$S returned correct performance data};
-like ($result, qr{ \| time=(?:\d\.\d\d)\s$}, $t);
+like ($result, qr{ \| time=\d\.\d\ds\s$}, $t);
 
 $t=qq{$S returned correct version};
-like ($result, qr{ \| time=(?:\d\.\d\d)\s$}, $t);
+like ($result, qr{ \| time=\d\.\d\ds\s$}, $t);
 
 $t=qq{$S fails when called with an invalid option};
 like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);

@@ -44,10 +44,10 @@ $t=qq{$S fails when called with an invalid --critical option};
 like ($cp->run('--critical=50'), qr{ERROR:.+must be a percentage}, $t);
 
 $t=qq{$S flags when database is over freeze threshold};
-like ($cp->run('-w 0%'), qr{$label WARNING:.*'ardala'=\d+%.*?'beedeebeedee'=\d+%.*?'postgres'=\d+%.*?'template1'=\d+%}, $t);
+like ($cp->run('-w 0%'), qr{$label WARNING:.*ardala=\d+%.*?beedeebeedee=\d+%.*?postgres=\d+%.*?template1=\d+%}, $t);
 
 $t=qq{$S flags when database is under freeze threshold};
-like ($cp->run('-w 99%'), qr{$label OK:.*'ardala'=\d+%.*?'beedeebeedee'=\d+%.*?'postgres'=\d+%.*?'template1'=\d+%}, $t);
+like ($cp->run('-w 99%'), qr{$label OK:.*ardala=\d+%.*?beedeebeedee=\d+%.*?postgres=\d+%.*?template1=\d+%}, $t);
 
 $t=qq{$S produces MRTG output};
 like ($cp->run('--output=mrtg -w 99%'), qr{0\n\d+\n\nardala \| beedeebeedee}, $t);
