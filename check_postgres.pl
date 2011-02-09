@@ -250,6 +250,7 @@ our %msg = (
     'seq-die'            => q{Could not determine information about sequence $1},
     'seq-msg'            => q{$1=$2% (calls left=$3)},
     'seq-none'           => q{No sequences found},
+    'size'               => q{size},
     'slony-noschema'     => q{Could not determine the schema for Slony},
     'slony-nonumber'     => q{Call to sl_status did not return a number},
     'slony-noparse'      => q{Could not parse call to sl_status},
@@ -471,6 +472,7 @@ our %msg = (
     'runtime-msg'        => q{durée d'exécution de la requête : $1 secondes},
     'same-failed'        => q{Les bases de données sont différentes. Éléments différents : $1},
     'same-matched'       => q{Les bases de données ont les mêmes éléments},
+'size'               => q{size},
     'slony-noschema'     => q{N'a pas pu déterminer le schéma de Slony},
     'slony-nonumber'     => q{L'appel à sl_status n'a pas renvoyé un numéro},
     'slony-noparse'      => q{N'a pas pu analyser l'appel à sl_status},
@@ -1105,7 +1107,7 @@ sub add_response {
     my $header = sprintf q{%s%s%s},
         $action_info->{$action}[0] ? '' : (defined $dbservice and length $dbservice) ?
             qq{service=$dbservice } : qq{DB "$dbname" },
-                $db->{host} eq '<none>' ? '' : qq{(host:$db->{host}) },
+                (!$db->{host} or $db->{host} eq '<none>') ? '' : qq{(host:$db->{host}) },
                     defined $db->{port} ? ($db->{port} eq $opt{defaultport} ? '' : qq{(port=$db->{port}) }) : '';
     $header =~ s/\s+$//;
     my $perf = ($opt{showtime} and $db->{totaltime} and $action ne 'bloat') ? "time=$db->{totaltime}s" : '';
@@ -1238,14 +1240,16 @@ sub finishup {
                 join $SEP => map { $_->[0] } @{$info->{$_}};
         }
         if ($opt{showperf}) {
-            print '| ';
+            my $pmsg = '';
             for (sort keys %$info) {
                 my $m = sprintf '%s ', join ' ' => map { $_->[1] } @{$info->{$_}};
                 if ($VERBOSE) {
                     $m =~ s/  /\n/g;
                 }
-                print $m;
+                $pmsg .= $m;
             }
+            $pmsg =~ s/^\s+//;
+            $pmsg and print "| ($pmsg) GOGO";
         }
         print "\n";
 
@@ -3464,7 +3468,8 @@ JOIN pg_user u ON (u.usesysid=d.datdba)$USERWHERECLAUSE
         my $msg = '';
         for (sort {$s{$b}[0] <=> $s{$a}[0] or $a cmp $b } keys %s) {
             $msg .= "$_: $s{$_}[0] ($s{$_}[1]) ";
-            $db->{perf} .= " $_=$s{$_}[0]";
+            $db->{perf} .= sprintf ' %s=%s;%s;%s',
+                perfname($_), $s{$_}[0], $warning, $critical;
         }
         if (length $critical and $max >= $critical) {
             add_critical $msg;
@@ -3734,7 +3739,8 @@ WHERE spclocation <> ''
 
             my $msg = msg('diskspace-msg', $fs, $mount, $prettyused, $prettytotal, $percent);
 
-            $db->{perf} = "$fs=$used";
+            $db->{perf} = sprintf '%s=%sB',
+                perfname(msg('size')), $used;
 
             my $ok = 1;
             if ($critical->($used, $percent)) {
