@@ -1253,7 +1253,7 @@ sub finishup {
                 $pmsg .= $m;
             }
             $pmsg =~ s/^\s+//;
-            $pmsg and print "| ($pmsg) GOGO";
+            $pmsg and print "| ($pmsg)";
         }
         print "\n";
 
