@@ -429,7 +429,7 @@ INTFORTIME: {
     );
 
     is_deeply [ check_postgres::validate_integer_for_time() ],
-        [undef, 1200, undef, 3600],
+        ['', 1200, '', 3600],
         'validate_integer_for_time() should parse time';
 
     # Try integers, which default to time for backcompat.
@@ -438,7 +438,7 @@ INTFORTIME: {
         warning  => '7200'
     );
     is_deeply [ check_postgres::validate_integer_for_time() ],
-        [ undef, 7200, undef, 1200 ],
+        [ '', 7200, '', 1200 ],
         'validate_integer_for_time() should parse unsigned ints as time';
 
 
@@ -448,7 +448,7 @@ INTFORTIME: {
         warning  => '-45'
     );
     is_deeply [ check_postgres::validate_integer_for_time() ],
-        [ -45, undef, 60, undef ],
+        [ -45, '', 60, '' ],
         'validate_integer_for_time() should parse signed ints as ints';
 
     # Try both.
