@@ -7337,7 +7337,8 @@ sub check_wal_files {
             next;
         }
         my $msg = qq{$numfiles};
-        $db->{perf} .= " '$db->{host}'=$numfiles;$warning;$critical";
+        $db->{perf} .= sprintf '%s=%s;%s;%s',
+            perfname(msg('files')), $numfiles, $warning, $critical;
         if (length $critical and $numfiles > $critical) {
             add_critical $msg;
         }
