@@ -3080,6 +3080,9 @@ FROM (
 	my $max = -1;
 	my $maxmsg = '?';
 
+    ## The perf must be added before the add_x, so we defer the settings:
+    my (@addwarn, @addcrit);
+
 	for my $r (@{ $db->{slurp} }) {
 
 		for my $v (values %$r) {
@@ -3100,7 +3103,6 @@ FROM (
 		## Do the table first if we haven't seen it
 		if (! $seenit{"$dbname.$schema.$table"}++) {
 			my $nicename = perfname("$schema.$table");
-			$db->{perf} = "$nicename:${wb}B";
 			$perf{$wb}{$nicename}++;
 			my $msg = msg('bloat-table', $dbname, $schema, $table, $tups, $pages, $otta, $bloat, $wb, $ws);
 			my $ok = 1;
@@ -3111,12 +3113,12 @@ FROM (
 				next;
 			}
 			if ($critical->($wb, $perbloat)) {
-				add_critical $msg;
+                push @addcrit => $msg;
 				$ok = 0;
 			}
 
 			if ($ok and $warning->($wb, $perbloat)) {
-				add_warning $msg;
+                push @addwarn => $msg;
 				$ok = 0;
 			}
 			($max = $wb, $maxmsg = $msg) if $wb > $max and $ok;
@@ -3125,7 +3127,6 @@ FROM (
 		## Now the index, if it exists
 		if ($index ne '?') {
 			my $nicename = perfname($index);
-			$db->{perf} = "$nicename:${iwb}B";
 			$perf{$iwb}{$nicename}++;
 			my $msg = msg('bloat-index', $dbname, $index, $irows, $ipages, $iotta, $ibloat, $iwb, $iws);
 			my $ok = 1;
@@ -3136,29 +3137,42 @@ FROM (
 				next;
 			}
 			if ($critical->($iwb, $iperbloat)) {
-				add_critical $msg;
+                push @addcrit => $msg;
 				$ok = 0;
 			}
 
 			if ($ok and $warning->($iwb, $iperbloat)) {
-				add_warning $msg;
+                push @addwarn => $msg;
 				$ok = 0;
 			}
 			($max = $iwb, $maxmsg = $msg) if $iwb > $max and $ok;
 		}
 	}
 
+    ## Set a sorted limited perf
+    $db->{perf} = '';
+    my $count = 0;
+  PERF: for my $size (sort {$b <=> $a } keys %perf) {
+        for my $name (sort keys %{ $perf{$size} }) {
+            $db->{perf} .= "$name=${size}B ";
+            last PERF if $opt{perflimit} and ++$count >= $opt{perflimit};
+        }
+    }
+
+    ## Now we can set the critical and warning
+    for (@addcrit) {
+        add_critical $_;
+        $db->{perf} = '';
+    }
+    for (@addwarn) {
+        add_warning $_;
+        $db->{perf} = '';
+    }
+
 	if ($max == -1) {
 		add_unknown msg('no-match-rel');
 	}
 	elsif ($max != -1) {
-		## Show the sorted perf
-		$db->{perf} = '';
-		for my $size (sort {$b <=> $a } keys %perf) {
-			for my $name (sort keys %{ $perf{$size} }) {
-				$db->{perf} .= "$name=${size}B ";
-			}
-		}
 		add_ok $maxmsg;
 	}
 
@@ -9019,6 +9033,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Standardize and clean up all perfdata ouput (bug #52)
 
   Exclude "idle in transaction" from the query_time check (bug #43)
+
+  Fix the perflimit for the bloat action (bug #50)
 
   Clean up the custom_query action a bit.
 
