@@ -141,8 +141,8 @@ our %msg = (
     'hs-replay-delay'    => q{replay_delay},
     'invalid-option'     => q{Invalid option},
     'invalid-query'      => q{Invalid query returned: $1},
-    'listener-count'     => q{ listening=$1}, ## needs leading space
     'listener-msg'       => q{listeners found: $1},
+    'listening'          => q{listening},
     'locks-msg'          => q{total "$1" locks: $2},
     'locks-msg2'         => q{total locks: $1},
     'logfile-bad'        => q{Invalid logfile "$1"},
@@ -193,8 +193,9 @@ our %msg = (
     'qtime-for-msg'      => q{$1 queries longer than $2s, longest: $3s$4 $5},
     'qtime-msg'          => q{longest query: $1s$2 $3},
     'qtime-none'         => q{no queries},
-    'Query'              => q{Query: $1},
     'queries'            => q{queries},
+    'Query'              => q{Query: $1},
+    'query-time'         => q{query_time},
     'range-badcs'        => q{Invalid '$1' option: must be a checksum},
     'range-badlock'      => q{Invalid '$1' option: must be number of locks, or "type1=#;type2=#"},
     'range-badpercent'   => q{Invalid '$1' option: must be a percentage},
@@ -289,6 +290,7 @@ our %msg = (
     'timesync-msg'       => q{timediff=$1 DB=$2 Local=$3},
     'transactions'       => q{transactions},
     'trigger-msg'        => q{Disabled triggers: $1},
+    'txn-time'           => q{transaction_time},
     'txnidle-count-msg'  => q{Total idle in transaction: $1},
     'txnidle-count-none' => q{not more than $1 idle in transaction},
     'txnidle-for-msg'    => q{$1 idle transactions longer than $2s, longest: $3s$4 $5},
@@ -368,8 +370,8 @@ our %msg = (
 'hs-replay-delay'    => q{replay_delay},
     'invalid-option'     => q{Option invalide},
     'invalid-query'      => q{Une requête invalide a renvoyé : $1},
-    'listener-count'     => q{ en écoute=$1}, ## needs leading space
     'listener-msg'       => q{processus LISTEN trouvés : $1},
+    'listening'          => q{en écoute},
     'locks-msg'          => q{total des verrous « $1 » : $2},
     'locks-msg2'         => q{total des verrous : $1},
     'logfile-bad'        => q{Option logfile invalide « $1 »},
@@ -422,6 +424,7 @@ our %msg = (
 'qtime-none'         => q{no queries},
 'queries'            => q{queries},
     'Query'              => q{Requ??te : $1},
+'query-time'         => q{query_time},
     'range-badcs'        => q{Option « $1 » invalide : doit être une somme de contrôle},
     'range-badlock'      => q{Option « $1 » invalide : doit être un nombre de verrou ou « type1=#;type2=# »},
     'range-badpercent'   => q{Option « $1 » invalide : doit être un pourcentage},
@@ -516,6 +519,7 @@ our %msg = (
     'timesync-msg'       => q{timediff=$1 Base de données=$2 Local=$3},
 'transactions'       => q{transactions},
     'trigger-msg'        => q{Triggers désactivés : $1},
+'txn-time'           => q{transaction_time},
 'txnidle-count-msg'  => q{Total idle in transaction: $1},
     'txnidle-count-none' => q{pas plus de $1 transaction en attente},
 'txnidle-for-msg'    => q{$1 idle transactions longer than $2s, longest: $3s$4 $5},
@@ -1253,7 +1257,7 @@ sub finishup {
                 $pmsg .= $m;
             }
             $pmsg =~ s/^\s+//;
-            $pmsg and print "| ($pmsg)";
+            $pmsg and print "| $pmsg";
         }
         print "\n";
 
@@ -4114,7 +4118,10 @@ FROM (SELECT nspname, relname, $criteria AS v
                 $maxtime = -2 if $maxtime < 1;
                 next ROW;
             }
-            $db->{perf} .= " $dbname.$schema.$name=${time}s;$warning;$critical" if $time >= 0;
+            if ($time >= 0) {
+                $db->{perf} .= sprintf ' %s=%ss;%s;%s',
+                    perfname("$dbname.$schema.$name"),$time, $warning, $critical;
+            }
             if ($time > $maxtime) {
                 $maxtime = $time;
                 $maxrel = "$schema.$name";
@@ -4188,7 +4195,8 @@ sub check_listener {
         if ($MRTG) {
             do_mrtg({one => $count});
         }
-        $db->{perf} .= msg('listener-count', $count);
+        $db->{perf} .= sprintf '%s=%s',
+            perfname(msg('listening')), $count;
         my $msg = msg('listener-msg', $count);
         if ($count >= 1) {
             add_ok $msg;
@@ -4273,13 +4281,13 @@ sub check_locks {
             for my $type (sort keys %{ $dblock{$dbname} }) {
                 next if ((! $critical or ! exists $critical->{$type})
                              and (!$warning or ! exists $warning->{$type}));
-                $db->{perf} .= " '$dbname.$type'=$dblock{$dbname}{$type};";
+                $db->{perf} .= sprintf ' %s=%s;',
+                    perfname("$dbname.$type"), $dblock{$dbname}{$type};
                 if ($warning and exists $warning->{$type}) {
                     $db->{perf} .= $warning->{$type};
                 }
-                $db->{perf} .= ';';
                 if ($critical and $critical->{$type}) {
-                    $db->{perf} .= $critical->{$type};
+                    $db->{perf} .= ";$critical->{$type}";
                 }
             }
         }
@@ -4869,7 +4877,8 @@ sub check_query_runtime {
             $stats{$db->{dbname}} = $totalseconds;
             next;
         }
-        $db->{perf} = " qtime=$totalseconds";
+        $db->{perf} = sprintf '%s=%ss;%s;%s',
+            perfname(msg('query-time')), $totalseconds, $warning, $critical;
         my $msg = msg('runtime-msg', $totalseconds);
         if (length $critical and $totalseconds >= $critical) {
             add_critical $msg;
@@ -4895,6 +4904,7 @@ sub check_query_time {
 
     check_txn_idle('qtime',
                    msg('queries'),
+                   msg('query-time'),
                    'query_start',
                    q{query_start IS NOT NULL});
 
@@ -6991,6 +7001,7 @@ sub check_txn_idle {
 
     my $type = shift || 'txnidle';
     my $thing = shift || msg('transactions');
+    my $perf  = shift || msg('txn-time');
     my $start = shift || 'query_start';
     my $clause = shift || q{current_query = '<IDLE> in transaction'};
 
@@ -7055,7 +7066,7 @@ sub check_txn_idle {
     ## We don't care which at the moment, and return the same message
     if (! $count) {
         $MRTG and do_mrtg({one => 0, msg => $whodunit});
-		$db->{perf} = "$thing=0;$wtime;$ctime";
+		$db->{perf} = "$perf=0;$wtime;$ctime";
 
         add_ok msg("$type-none");
         return;
@@ -7067,7 +7078,7 @@ sub check_txn_idle {
     ## See if we have a minimum number of matches
     my $base_count = $wcount || $ccount;
     if ($base_count and $count < $base_count) {
-		$db->{perf} = "$type=$count;$wcount;$ccount";
+		$db->{perf} = "$perf=$count;$wcount;$ccount";
         add_ok msg("$type-count-none", $base_count);
         return;
     }
@@ -7093,7 +7104,7 @@ sub check_txn_idle {
 
     ## Show the maximum number of seconds in the perf section
 	$db->{perf} .= sprintf q{%s=%ss;%s;%s},
-		$type,
+		$perf,
         $max,
         $wtime,
         $ctime;
@@ -7149,6 +7160,7 @@ sub check_txn_time {
     ## as well as excluding any idle in transactions
 
     check_txn_idle('txntime',
+                   '',
                    '',
                    'xact_start',
                    q{xact_start IS NOT NULL});
