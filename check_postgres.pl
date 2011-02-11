@@ -4936,7 +4936,7 @@ sub check_query_time {
                    msg('queries'),
                    msg('query-time'),
                    'query_start',
-                   q{query_start IS NOT NULL AND current_query <> '<IDLE> in transaction'});
+                   q{query_start IS NOT NULL AND current_query NOT LIKE '<IDLE>%'});
 
     return;
 
