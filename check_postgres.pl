@@ -2629,33 +2629,7 @@ sub check_archive_ready {
     ## Critical and warning are the number of files
     ## Example: --critical=10
 
-    my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
-
-    $SQL = q{SELECT count(*) FROM pg_ls_dir('pg_xlog/archive_status') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}.ready$';};
-
-    my $info = run_command($SQL, {regex => qr[\d] });
-
-    my $found = 0;
-    for $db (@{$info->{db}}) {
-        my $r = $db->{slurp}[0];
-        my $numfiles = $r->{count};
-        if ($MRTG) {
-            do_mrtg({one => $numfiles});
-        }
-        my $msg = qq{$numfiles};
-        $db->{perf} .= ' ' . msg('files') . "=$numfiles;$warning;$critical";
-        if (length $critical and $numfiles > $critical) {
-            add_critical $msg;
-        }
-        elsif (length $warning and $numfiles > $warning) {
-            add_warning $msg;
-        }
-        else {
-            add_ok $msg;
-        }
-    }
-
-    return;
+    return check_wal_files('.ready');
 
 } ## end of check_archive_ready
 
@@ -7291,16 +7265,18 @@ sub check_version {
 
 sub check_wal_files {
 
-    ## Check on the number of WAL files in use
+    ## Check on the number of WAL, or WAL "ready", files in use
     ## Supports: Nagios, MRTG
     ## Must run as a superuser
     ## Critical and warning are the number of files
     ## Example: --critical=40
 
+    my $extrabit = shift || '';
+
     my ($warning, $critical) = validate_range({type => 'positive integer', leastone => 1});
 
     ## Figure out where the pg_xlog directory is
-    $SQL = q{SELECT count(*) AS count FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$'}; ## no critic (RequireInterpolationOfMetachars)
+    $SQL = q{SELECT count(*) AS count FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$extrabit$'}; ## no critic (RequireInterpolationOfMetachars)
 
     my $info = run_command($SQL, {regex => qr[\d] });
 
@@ -7309,9 +7285,7 @@ sub check_wal_files {
         my $r = $db->{slurp}[0];
         my $numfiles = $r->{count};
         if ($MRTG) {
-            $stats{$db->{dbname}} = $numfiles;
-            $statsmsg{$db->{dbname}} = '';
-            next;
+            do_mrtg({one => $numfiles});
         }
         my $msg = qq{$numfiles};
         $db->{perf} .= sprintf '%s=%s;%s;%s',
