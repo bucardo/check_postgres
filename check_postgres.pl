@@ -4066,13 +4066,14 @@ FROM (SELECT nspname, relname, $criteria AS v
         my ($minrel,$maxrel) = ('?','?'); ## no critic
         my $mintime = 0; ## used for MRTG only
         my $count = 0;
+        my $found = 0;
       ROW: for my $r (@{$db->{slurp}}) {
             my ($dbname,$schema,$name,$time,$ptime) = @$r{qw/ datname sname tname ltime ptime/};
-            $maxtime = -3 if $maxtime == -1;
             if (skip_item($name, $schema)) {
                 $maxtime = -2 if $maxtime < 1;
                 next ROW;
             }
+            $found++;
             if ($time >= 0) {
                 $db->{perf} .= sprintf ' %s=%ss;%s;%s',
                     perfname("$dbname.$schema.$name"),$time, $warning, $critical;
@@ -4095,9 +4096,8 @@ FROM (SELECT nspname, relname, $criteria AS v
             $statsmsg{$db->{dbname}} = msg('vac-msg', $db->{dbname}, $minrel);
             return;
         }
-
         if ($maxtime == -2) {
-            add_unknown msg('no-match-table');
+            add_unknown msg($found ? $type eq 'vacuum' ? 'vac-nomatch-v' : 'vac-nomatch-a' : 'no-match-table');
         }
         elsif ($maxtime < 0) {
             add_unknown $type eq 'vacuum' ? msg('vac-nomatch-v') : msg('vac-nomatch-a');
