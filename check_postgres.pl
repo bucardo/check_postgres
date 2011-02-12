@@ -4226,8 +4226,7 @@ sub check_locks {
         }
 
         if ($MRTG) {
-            $stats{$db->{dbname}} = $totallock{total};
-            next;
+            do_mrtg( {one => $totallock{total}, msg => "DB: $db->{dbname}" } );
         }
 
         # Nagios perfdata output
