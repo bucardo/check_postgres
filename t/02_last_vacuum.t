@@ -77,11 +77,11 @@ like ($cp->run("-w 0 --exclude=~.* --include=$testtbl"),
 
 $t = qq{$S returns correct MRTG information (OK case)};
 like ($cp->run("--output=mrtg -w 0 --exclude=~.* --include=$testtbl"),
-      qr{\d+\n0\n\nDB: $dbname TABLE: public.$testtbl\n}, $t);
+      qr{\d+\n0\n\n\n}, $t);
 
 $t = qq{$S returns correct MRTG information (fail case)};
 like ($cp->run('--output=mrtg -w 0 --exclude=~.* --include=no_such_table'),
-      qr{0\n0\n\nDB: $dbname TABLE: \?\n}, $t);
+      qr{0\n0\n\n\n}, $t);
 
 }
 

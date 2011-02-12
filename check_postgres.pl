@@ -4092,8 +4092,7 @@ FROM (SELECT nspname, relname, $criteria AS v
             }
         }
         if ($MRTG) {
-            $stats{$db->{dbname}} = $mintime;
-            $statsmsg{$db->{dbname}} = msg('vac-msg', $db->{dbname}, $minrel);
+            do_mrtg({one => $mintime});
             return;
         }
         if ($maxtime == -2) {
