@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 15;
+use Test::More tests => 14;
 use lib 't','.';
 use CP_Testing;
 

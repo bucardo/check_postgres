@@ -185,6 +185,11 @@ our %msg = (
     'psa-disabled'       => q{No queries - is stats_command_string or track_activities off?},
     'psa-noexact'        => q{Unknown error},
     'psa-nosuper'        => q{No matches - please run as a superuser},
+    'qtime-count-msg'    => q{Total queries: $1},
+    'qtime-count-none'   => q{not more than $1 queries},
+    'qtime-for-msg'      => q{$1 queries longer than $2s, longest: $3s$4 $5},
+    'qtime-msg'          => q{longest query: $1s$2 $3},
+    'qtime-none'         => q{no queries},
     'queries'            => q{queries},
     'query-time'         => q{query_time},
     'range-badcs'        => q{Invalid '$1' option: must be a checksum},
@@ -282,12 +287,21 @@ our %msg = (
     'transactions'       => q{transactions},
     'trigger-msg'        => q{Disabled triggers: $1},
     'txn-time'           => q{transaction_time},
+    'txnidle-count-msg'  => q{Total idle in transaction: $1},
+    'txnidle-count-none' => q{not more than $1 idle in transaction},
+    'txnidle-for-msg'    => q{$1 idle transactions longer than $2s, longest: $3s$4 $5},
+    'txnidle-msg'        => q{longest idle in txn: $1s$2 $3},
+    'txnidle-none'       => q{no idle in transaction},
+    'txntime-count-msg'  => q{Total transactions: $1},
+    'txntime-count-none' => q{not more than $1 transactions},
+    'txntime-for-msg'    => q{$1 transactions longer than $2s, longest: $3s$4 $5},
+    'txntime-msg'        => q{longest txn: $1s$2 $3},
+    'txntime-none'       => q{No transactions},
     'txnwrap-cbig'       => q{The 'critical' value must be less than 2 billion},
     'txnwrap-wbig'       => q{The 'warning' value must be less than 2 billion},
     'unknown-error'      => q{Unknown error},
     'usage'              => qq{\nUsage: \$1 <options>\n Try "\$1 --help" for a complete list of options\n Try "\$1 --man" for the full manual\n},
     'username'           => q{username},
-    'vac-msg'            => q{DB: $1 TABLE: $2},
     'vac-nomatch-a'      => q{No matching tables have ever been analyzed},
     'vac-nomatch-v'      => q{No matching tables have ever been vacuumed},
     'version'            => q{version $1},
@@ -395,6 +409,11 @@ our %msg = (
     'psa-disabled'       => q{Pas de requ??te - est-ce que stats_command_string ou track_activities sont d??sactiv??s ?},
     'psa-noexact'        => q{Erreur inconnue},
     'psa-nosuper'        => q{Aucune correspondance - merci de m'ex??cuter en tant que superutilisateur},
+'qtime-count-msg'    => q{Total queries: $1},
+'qtime-count-none'   => q{not more than $1 queries},
+'qtime-for-msg'      => q{$1 queries longer than $2s, longest: $3s$4 $5},
+    'qtime-msg'          => q{requête la plus longue : $1s$2 $3},
+'qtime-none'         => q{no queries},
 'queries'            => q{queries},
 'query-time'         => q{query_time},
     'range-badcs'        => q{Option « $1 » invalide : doit être une somme de contrôle},
@@ -492,12 +511,21 @@ our %msg = (
 'transactions'       => q{transactions},
     'trigger-msg'        => q{Triggers désactivés : $1},
 'txn-time'           => q{transaction_time},
+'txnidle-count-msg'  => q{Total idle in transaction: $1},
+    'txnidle-count-none' => q{pas plus de $1 transaction en attente},
+'txnidle-for-msg'    => q{$1 idle transactions longer than $2s, longest: $3s$4 $5},
+    'txnidle-msg'        => q{transaction en attente la plus longue : $1s$2 $3},
+    'txnidle-none'       => q{Aucun processus en attente dans une transaction},
+'txntime-count-msg'  => q{Total transactions: $1},
+'txntime-count-none' => q{not more than $1 transactions},
+'txntime-for-msg'    => q{$1 transactions longer than $2s, longest: $3s$4 $5},
+    'txntime-msg'        => q{Transaction la plus longue : $1s$2 $3},
+    'txntime-none'       => q{Aucune transaction},
     'txnwrap-cbig'       => q{La valeur critique doit être inférieure à 2 milliards},
     'txnwrap-wbig'       => q{La valeur d'avertissement doit être inférieure à 2 milliards},
     'unknown-error'      => q{erreur inconnue},
     'usage'              => qq{\nUsage: \$1 <options>\n Essayez « \$1 --help » pour liste complète des options\n\n},
     'username'           => q{nom utilisateur},
-    'vac-msg'            => q{Base de données : $1 Table : $2},
     'vac-nomatch-a'      => q{Aucune des tables correspondantes n'a eu d'opération ANALYZE},
     'vac-nomatch-v'      => q{Aucune des tables correspondantes n'a eu d'opération VACUUM},
     'version'            => q{version $1},
@@ -4096,7 +4124,11 @@ FROM (SELECT nspname, relname, $criteria AS v
             return;
         }
         if ($maxtime == -2) {
-            add_unknown msg($found ? $type eq 'vacuum' ? 'vac-nomatch-v' : 'vac-nomatch-a' : 'no-match-table');
+            add_unknown (
+                $found ? $type eq 'vacuum' ? msg('vac-nomatch-v')
+                : msg('vac-nomatch-a')
+                : msg('no-match-table')
+            );
         }
         elsif ($maxtime < 0) {
             add_unknown $type eq 'vacuum' ? msg('vac-nomatch-v') : msg('vac-nomatch-a');

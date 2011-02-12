@@ -102,7 +102,11 @@ for my $call (sort keys %call) {
 $ok and pass $t;
 
 my %ok2notuse = map { $_ => 1 }
-    qw/time-week time-weeks time-month time-months time-year time-years/;
+    qw/time-week time-weeks time-month time-months time-year time-years
+qtime-count-msg qtime-count-none qtime-for-msg qtime-msg qtime-none
+txntime-count-msg txntime-count-none txntime-for-msg txntime-msg txntime-none
+txnidle-count-msg txnidle-count-none txnidle-for-msg txnidle-msg txnidle-none
+/;
 
 my %ok2nottrans;
 for my $msg (qw/timesync-diff time-minute time-minutes maxtime version version-ok/) {
