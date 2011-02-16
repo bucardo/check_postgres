@@ -15,7 +15,17 @@ if (!$ENV{RELEASE_TESTING}) {
     plan (skip_all =>  'Test skipped unless environment variable RELEASE_TESTING is set');
 }
 
-plan tests => 2;
+## Grab all files from the MANIFEST to generate a test count
+my $file = 'MANIFEST';
+my @mfiles;
+open my $mfh, '<', $file or die qq{Could not open "$file": $!\n};
+while (<$mfh>) {
+	next if /^#/;
+	push @mfiles => $1 if /(\S.+)/o;
+}
+close $mfh or warn qq{Could not close "$file": $!\n};
+
+plan tests => 2 + @mfiles;
 
 my %v;
 my $vre = qr{(\d+\.\d+\.\d+)};
@@ -93,6 +103,51 @@ else {
         }
     }
     fail 'Cannot check git tag until we have a single version number!';
+}
+
+## Make sure all files in the MANIFEST are "clean": no tabs, no unusual characters
+
+for my $mfile (@mfiles) {
+	file_is_clean($mfile);
+}
+
+exit;
+
+sub file_is_clean {
+
+	my $file = shift or die;
+
+	if (!open $fh, '<', $file) {
+		fail qq{Could not open "$file": $!\n};
+		return;
+	}
+	$good = 1;
+	my $inside_copy = 0;
+	while (<$fh>) {
+		if (/^COPY .+ FROM stdin/i) {
+			$inside_copy = 1;
+		}
+		if (/^\\./ and $inside_copy) {
+			$inside_copy = 0;
+		}
+		if (/\t/ and $file ne 'Makefile.PL' and $file !~ /\.html$/ and ! $inside_copy) {
+			diag "Found a tab at line $. of $file\n";
+			$good = 0;
+		}
+		if (! /^[\S ]*/) {
+			diag "Invalid character at line $. of $file: $_\n";
+			$good = 0; die;
+		}
+	}
+	close $fh or warn qq{Could not close "$file": $!\n};
+
+	if ($good) {
+		pass "The $file file has no tabs or unusual characters";
+	}
+	else {
+		fail "The $file file did not pass inspection!";
+	}
+
 }
 
 exit;

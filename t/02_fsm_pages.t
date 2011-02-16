@@ -65,7 +65,7 @@ if ($ver >= 80400) {
     $t=qq{$S gives an unknown when running against a 8.4 or higher version};
     like ($cp->run('--warning=10%'), qr{^$label UNKNOWN.*Cannot check fsm_pages}, $t);
 
-	exit;
+    exit;
 
 }
 

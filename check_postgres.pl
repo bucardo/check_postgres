@@ -714,7 +714,7 @@ die $USAGE unless
                \%opt,
                'version|V',
                'verbose|v+',
-			   'vv',
+               'vv',
                'help|h',
                'quiet|q',
                'man',
@@ -2633,18 +2633,18 @@ sub validate_integer_for_time {
 
 sub perfname {
 
-	## Return a safe label name for Nagios performance data
-	my $name = shift;
+    ## Return a safe label name for Nagios performance data
+    my $name = shift;
 
-	my $escape = 0;
+    my $escape = 0;
 
-	$name =~ s/'/''/g and $escape++;
+    $name =~ s/'/''/g and $escape++;
 
-	if ($escape or index($name, ' ') >=0) {
-		$name = qq{'$name'};
-	}
+    if ($escape or index($name, ' ') >=0) {
+        $name = qq{'$name'};
+    }
 
-	return $name;
+    return $name;
 
 } ## end of perfname;
 
@@ -3027,92 +3027,92 @@ FROM (
 
     my %seenit;
 
-	## Store the perf data for sorting at the end
-	my %perf;
+    ## Store the perf data for sorting at the end
+    my %perf;
 
-	$db = $info->{db}[0];
+    $db = $info->{db}[0];
 
-	if ($db->{slurp} !~ /\w+/o) {
-		add_ok msg('bloat-nomin') unless $MRTG;
-		return;
-	}
-	## Not a 'regex' to run_command as we need to check the above first.
-	if ($db->{slurp} !~ /\d+/) {
-		add_unknown msg('invalid-query', $db->{slurp}) unless $MRTG;
-		return;
-	}
+    if ($db->{slurp} !~ /\w+/o) {
+        add_ok msg('bloat-nomin') unless $MRTG;
+        return;
+    }
+    ## Not a 'regex' to run_command as we need to check the above first.
+    if ($db->{slurp} !~ /\d+/) {
+        add_unknown msg('invalid-query', $db->{slurp}) unless $MRTG;
+        return;
+    }
 
-	my $max = -1;
-	my $maxmsg = '?';
+    my $max = -1;
+    my $maxmsg = '?';
 
     ## The perf must be added before the add_x, so we defer the settings:
     my (@addwarn, @addcrit);
 
-	for my $r (@{ $db->{slurp} }) {
+    for my $r (@{ $db->{slurp} }) {
 
-		for my $v (values %$r) {
-			$v =~ s/(\d+) bytes/pretty_size($1,1)/ge;
-		}
+        for my $v (values %$r) {
+            $v =~ s/(\d+) bytes/pretty_size($1,1)/ge;
+        }
 
-		my ($dbname,$schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws) = @$r{
-			qw/ db schemaname tablename tups pages otta tbloat wastedpages wastedbytes wastedsize/};
+        my ($dbname,$schema,$table,$tups,$pages,$otta,$bloat,$wp,$wb,$ws) = @$r{
+            qw/ db schemaname tablename tups pages otta tbloat wastedpages wastedbytes wastedsize/};
 
-		next if skip_item($table, $schema);
+        next if skip_item($table, $schema);
 
-		my ($index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws) = @$r{
-			qw/ iname irows ipages iotta ibloat wastedipgaes wastedibytes wastedisize/};
+        my ($index,$irows,$ipages,$iotta,$ibloat,$iwp,$iwb,$iws) = @$r{
+            qw/ iname irows ipages iotta ibloat wastedipgaes wastedibytes wastedisize/};
 
-		## Made it past the exclusions
-		$max = -2 if $max == -1;
+        ## Made it past the exclusions
+        $max = -2 if $max == -1;
 
-		## Do the table first if we haven't seen it
-		if (! $seenit{"$dbname.$schema.$table"}++) {
-			my $nicename = perfname("$schema.$table");
-			$perf{$wb}{$nicename}++;
-			my $msg = msg('bloat-table', $dbname, $schema, $table, $tups, $pages, $otta, $bloat, $wb, $ws);
-			my $ok = 1;
-			my $perbloat = $bloat * 100;
+        ## Do the table first if we haven't seen it
+        if (! $seenit{"$dbname.$schema.$table"}++) {
+            my $nicename = perfname("$schema.$table");
+            $perf{$wb}{$nicename}++;
+            my $msg = msg('bloat-table', $dbname, $schema, $table, $tups, $pages, $otta, $bloat, $wb, $ws);
+            my $ok = 1;
+            my $perbloat = $bloat * 100;
 
-			if ($MRTG) {
-				$stats{table}{"DB=$dbname TABLE=$schema.$table"} = [$wb, $bloat];
-				next;
-			}
-			if ($critical->($wb, $perbloat)) {
+            if ($MRTG) {
+                $stats{table}{"DB=$dbname TABLE=$schema.$table"} = [$wb, $bloat];
+                next;
+            }
+            if ($critical->($wb, $perbloat)) {
                 push @addcrit => $msg;
-				$ok = 0;
-			}
+                $ok = 0;
+            }
 
-			if ($ok and $warning->($wb, $perbloat)) {
+            if ($ok and $warning->($wb, $perbloat)) {
                 push @addwarn => $msg;
-				$ok = 0;
-			}
-			($max = $wb, $maxmsg = $msg) if $wb > $max and $ok;
-		}
+                $ok = 0;
+            }
+            ($max = $wb, $maxmsg = $msg) if $wb > $max and $ok;
+        }
 
-		## Now the index, if it exists
-		if ($index ne '?') {
-			my $nicename = perfname($index);
-			$perf{$iwb}{$nicename}++;
-			my $msg = msg('bloat-index', $dbname, $index, $irows, $ipages, $iotta, $ibloat, $iwb, $iws);
-			my $ok = 1;
-			my $iperbloat = $ibloat * 100;
+        ## Now the index, if it exists
+        if ($index ne '?') {
+            my $nicename = perfname($index);
+            $perf{$iwb}{$nicename}++;
+            my $msg = msg('bloat-index', $dbname, $index, $irows, $ipages, $iotta, $ibloat, $iwb, $iws);
+            my $ok = 1;
+            my $iperbloat = $ibloat * 100;
 
-			if ($MRTG) {
-				$stats{index}{"DB=$dbname INDEX=$index"} = [$iwb, $ibloat];
-				next;
-			}
-			if ($critical->($iwb, $iperbloat)) {
+            if ($MRTG) {
+                $stats{index}{"DB=$dbname INDEX=$index"} = [$iwb, $ibloat];
+                next;
+            }
+            if ($critical->($iwb, $iperbloat)) {
                 push @addcrit => $msg;
-				$ok = 0;
-			}
+                $ok = 0;
+            }
 
-			if ($ok and $warning->($iwb, $iperbloat)) {
+            if ($ok and $warning->($iwb, $iperbloat)) {
                 push @addwarn => $msg;
-				$ok = 0;
-			}
-			($max = $iwb, $maxmsg = $msg) if $iwb > $max and $ok;
-		}
-	}
+                $ok = 0;
+            }
+            ($max = $iwb, $maxmsg = $msg) if $iwb > $max and $ok;
+        }
+    }
 
     ## Set a sorted limited perf
     $db->{perf} = '';
@@ -3134,12 +3134,12 @@ FROM (
         $db->{perf} = '';
     }
 
-	if ($max == -1) {
-		add_unknown msg('no-match-rel');
-	}
-	elsif ($max != -1) {
-		add_ok $maxmsg;
-	}
+    if ($max == -1) {
+        add_unknown msg('no-match-rel');
+    }
+    elsif ($max != -1) {
+        add_ok $maxmsg;
+    }
 
     if ($MRTG) {
         keys %stats or bad_mrtg(msg('unknown-error'));
@@ -4964,11 +4964,11 @@ FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace
 
             next ROW if skip_item($name, $schema);
 
-			my $nicename = $kind eq 'r' ? "$schema.$name" : $name;
+            my $nicename = $kind eq 'r' ? "$schema.$name" : $name;
 
             $db->{perf} .= sprintf "%s%s=%sB;%s;%s",
                 $VERBOSE==1 ? "\n" : ' ',
-				perfname($nicename), $size, $warning, $critical;
+                perfname($nicename), $size, $warning, $critical;
             ($max=$size, $pmax=$psize, $kmax=$kind, $nmax=$name, $smax=$schema) if $size > $max;
         }
         if ($max < 0) {
@@ -6745,7 +6745,7 @@ FROM $seqname) foo
                 ndie msg('seq-die', $seqname);
             }
             my $msg = msg('seq-msg', $seqname, $percent, $left);
-			my $nicename = perfname("$multidb$seqname");
+            my $nicename = perfname("$multidb$seqname");
             $seqperf{$percent}{$seqname} = [$left, " $nicename=$percent%;$w%;$c%"];
             if ($percent >= $maxp) {
                 $maxp = $percent;
@@ -7037,24 +7037,24 @@ sub check_txn_idle {
         ## Skip if we don't care about this database
         next if skip_item($r->{datname});
 
-		## Detect cases where pg_stat_activity is not fully populated
-		if (length $r->{xact_start} and $r->{xact_start} !~ /\d/o) {
-			## Perhaps this is a non-superuser?
-			if ($r->{current_query} =~ /insufficient/) {
-				add_unknown msg('psa-nosuper');
-				return;
-			}
+        ## Detect cases where pg_stat_activity is not fully populated
+        if (length $r->{xact_start} and $r->{xact_start} !~ /\d/o) {
+            ## Perhaps this is a non-superuser?
+            if ($r->{current_query} =~ /insufficient/) {
+                add_unknown msg('psa-nosuper');
+                return;
+            }
 
-			## Perhaps stats_command_string / track_activities is off?
-			if ($r->{current_query} =~ /disabled/) {
-				add_unknown msg('psa-disabled');
-				return;
-			}
+            ## Perhaps stats_command_string / track_activities is off?
+            if ($r->{current_query} =~ /disabled/) {
+                add_unknown msg('psa-disabled');
+                return;
+            }
 
-			## Something else is going on
-			add_unknown msg('psa-noexact');
-			return;
-		}
+            ## Something else is going on
+            add_unknown msg('psa-noexact');
+            return;
+        }
 
         ## Keep track of the longest overall time
         $maxr = $r if $r->{seconds} >= $maxr->{seconds};
@@ -7066,7 +7066,7 @@ sub check_txn_idle {
     ## We don't care which at the moment, and return the same message
     if (! $count) {
         $MRTG and do_mrtg({one => 0, msg => $whodunit});
-		$db->{perf} = "$perf=0;$wtime;$ctime";
+        $db->{perf} = "$perf=0;$wtime;$ctime";
 
         add_ok msg("$type-none");
         return;
@@ -7078,7 +7078,7 @@ sub check_txn_idle {
     ## See if we have a minimum number of matches
     my $base_count = $wcount || $ccount;
     if ($base_count and $count < $base_count) {
-		$db->{perf} = "$perf=$count;$wcount;$ccount";
+        $db->{perf} = "$perf=$count;$wcount;$ccount";
         add_ok msg("$type-count-none", $base_count);
         return;
     }
@@ -7103,8 +7103,8 @@ sub check_txn_idle {
     my $ptime = $max > 300 ? ' (' . pretty_time($max) . ')' : '';
 
     ## Show the maximum number of seconds in the perf section
-	$db->{perf} .= sprintf q{%s=%ss;%s;%s},
-		$perf,
+    $db->{perf} .= sprintf q{%s=%ss;%s;%s},
+        $perf,
         $max,
         $wtime,
         $ctime;

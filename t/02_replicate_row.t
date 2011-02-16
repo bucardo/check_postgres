@@ -22,10 +22,10 @@ my $label = 'POSTGRES_REPLICATE_ROW';
 
 $SQL = q{CREATE TABLE reptest(id INT, foo TEXT)};
 if (! $cp->table_exists($dbh, 'reptest')) {
-	$dbh->do($SQL);
+    $dbh->do($SQL);
 }
 if (! $cp->table_exists($dbh2, 'reptest')) {
-	$dbh2->do($SQL);
+    $dbh2->do($SQL);
 }
 $SQL = q{TRUNCATE TABLE reptest};
 $dbh->do($SQL);
@@ -109,62 +109,62 @@ $dbh->{InactiveDestroy} = 1;
 $dbh2->{InactiveDestroy} = 1;
 ## Use fork to 'replicate' behind the back of the other process
 if (fork) {
-	like ($cp->run('DB2replicate-row', '-c 5 -repinfo=reptest,id,1,foo,yin,yang'),
-		  qr{^$label OK:.+Row was replicated}, $t);
+    like ($cp->run('DB2replicate-row', '-c 5 -repinfo=reptest,id,1,foo,yin,yang'),
+          qr{^$label OK:.+Row was replicated}, $t);
 }
 else {
-	sleep 1;
-	$SQL = q{UPDATE reptest SET foo = 'yin' WHERE id = 1};
-	$dbh2->do($SQL);
-	$dbh2->commit();
-	exit;
+    sleep 1;
+    $SQL = q{UPDATE reptest SET foo = 'yin' WHERE id = 1};
+    $dbh2->do($SQL);
+    $dbh2->commit();
+    exit;
 }
 
 $t=qq{$S works when rows match, reports proper delay};
 $dbh->commit();
 if (fork) {
-	$result = $cp->run('DB2replicate-row', '-c 10 -repinfo=reptest,id,1,foo,yin,yang');
-	like ($result, qr{^$label OK:.+Row was replicated}, $t);
-	$result =~ /time=(\d+)/ or die 'No time?';
-	my $time = $1;
-	cmp_ok ($time, '>=', 3, $t);
+    $result = $cp->run('DB2replicate-row', '-c 10 -repinfo=reptest,id,1,foo,yin,yang');
+    like ($result, qr{^$label OK:.+Row was replicated}, $t);
+    $result =~ /time=(\d+)/ or die 'No time?';
+    my $time = $1;
+    cmp_ok ($time, '>=', 3, $t);
 }
 else {
-	sleep 3;
-	$SQL = q{UPDATE reptest SET foo = 'yang' WHERE id = 1};
-	$dbh2->do($SQL);
-	$dbh2->commit();
-	exit;
+    sleep 3;
+    $SQL = q{UPDATE reptest SET foo = 'yang' WHERE id = 1};
+    $dbh2->do($SQL);
+    $dbh2->commit();
+    exit;
 }
 
 $t=qq{$S works when rows match, with MRTG output};
 $dbh->commit();
 if (fork) {
-	is ($cp->run('DB2replicate-row', '-c 20 --output=MRTG -repinfo=reptest,id,1,foo,yin,yang'),
-		qq{1\n0\n\n\n}, $t);
+    is ($cp->run('DB2replicate-row', '-c 20 --output=MRTG -repinfo=reptest,id,1,foo,yin,yang'),
+        qq{1\n0\n\n\n}, $t);
 }
 else {
-	sleep 1;
-	$SQL = q{UPDATE reptest SET foo = 'yin' WHERE id = 1};
-	$dbh2->do($SQL);
-	$dbh2->commit();
-	exit;
+    sleep 1;
+    $SQL = q{UPDATE reptest SET foo = 'yin' WHERE id = 1};
+    $dbh2->do($SQL);
+    $dbh2->commit();
+    exit;
 }
 
 $t=qq{$S works when rows match, with simple output};
 $dbh->commit();
 if (fork) {
-	$result = $cp->run('DB2replicate-row', '-c 20 --output=simple -repinfo=reptest,id,1,foo,yin,yang');
-	$result =~ /^(\d+)/ or die 'No time?';
-	my $time = $1;
-	cmp_ok ($time, '>=', 3, $t);
+    $result = $cp->run('DB2replicate-row', '-c 20 --output=simple -repinfo=reptest,id,1,foo,yin,yang');
+    $result =~ /^(\d+)/ or die 'No time?';
+    my $time = $1;
+    cmp_ok ($time, '>=', 3, $t);
 }
 else {
-	sleep 3;
-	$SQL = q{UPDATE reptest SET foo = 'yang' WHERE id = 1};
-	$dbh2->do($SQL);
-	$dbh2->commit();
-	exit;
+    sleep 3;
+    $SQL = q{UPDATE reptest SET foo = 'yang' WHERE id = 1};
+    $dbh2->do($SQL);
+    $dbh2->commit();
+    exit;
 }
 
 $dbh2->disconnect();

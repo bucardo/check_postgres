@@ -30,7 +30,7 @@ if ($ver >= 90000) {
         skip 'Cannot test listener on Postgres 9.0 or higher', 8;
     }
 
-	exit;
+    exit;
 
 }
 
