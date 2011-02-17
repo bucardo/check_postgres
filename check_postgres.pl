@@ -2862,9 +2862,7 @@ ORDER BY datname
     }
 
     if ($MRTG) {
-        $stats{$db->{dbname}} = $total;
-        $statsmsg{$db->{dbname}} = msg('backends-mrtg', $db->{dbname}, $limit);
-        return;
+        do_mrtg({one => $total, msg => msg('backends-mrtg', $db->{dbname}, $limit)});
     }
 
     if (!$total) {
@@ -3442,8 +3440,7 @@ JOIN pg_user u ON (u.usesysid=d.datdba)$USERWHERECLAUSE
         }
 
         if ($MRTG) {
-            $stats{$db->{dbname}} = $max;
-            next;
+            do_mrtg({one => $max, msg => "DB: $db->{dbname}"});
         }
         if ($max < 0) {
             $stats{$db->{dbname}} = 0;
@@ -4108,19 +4105,20 @@ FROM (SELECT nspname, relname, $criteria AS v
             }
             if ($time > $maxtime) {
                 $maxtime = $time;
-                $maxrel = "$schema.$name";
+                $maxrel = "DB: $dbname TABLE: $schema.$name";
                 $maxptime = $ptime;
             }
             if ($time > 0 and ($time < $mintime or !$mintime)) {
                 $mintime = $time;
-                $minrel = "$schema.$name";
+                $minrel = "DB: $dbname TABLE: $schema.$name";
             }
             if ($opt{perflimit}) {
                 last if ++$count >= $opt{perflimit};
             }
         }
         if ($MRTG) {
-            do_mrtg({one => $mintime});
+            $maxrel eq '?' and $maxrel = "DB: $db->{dbname} TABLE: ?";
+            do_mrtg({one => $mintime, msg => $maxrel});
             return;
         }
         if ($maxtime == -2) {
@@ -4976,9 +4974,12 @@ FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace
             next;
         }
         if ($MRTG) {
-            $stats{$db->{dbname}} = $max;
-            $statsmsg{$db->{dbname}} = sprintf "DB: $db->{dbname} %s %s$nmax",
-                $kmax eq 'i' ? 'INDEX:' : 'TABLE:', $kmax eq 'i' ? '' : "$smax.";
+            my $msg = sprintf 'DB: %s %s %s%s',
+                $db->{dbname},
+                $kmax eq 'i' ? 'INDEX:' : 'TABLE:',
+                $kmax eq 'i' ? '' : "$smax.",
+                $nmax;
+            do_mrtg({one => $max, msg => $msg});
             next;
         }
 
@@ -6962,8 +6963,7 @@ sub check_timesync {
 
         my $diff = abs($pgepoch - $localepoch);
         if ($MRTG) {
-            $stats{$db->{dbname}} = $diff;
-            next;
+            do_mrtg({one => $diff, msg => "DB: $db->{dbname}"});
         }
         $db->{perf} = sprintf '%s=%ss;%s;%s',
             perfname(msg('timesync-diff')), $diff, $warning, $critical;
