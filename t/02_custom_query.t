@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 11;
+use Test::More tests => 12;
 use lib 't','.';
 use CP_Testing;
 
@@ -35,8 +35,12 @@ like ($result, qr{host:$host}, $t);
 $t = qq{$S fails when called with an invalid option};
 like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
 
-$t = qq{$S handles 'string' type};
+$t = qq{$S handles 'string' type for non-match};
 like ($cp->run(qq{--query="$good_query" --valtype=string --warning=abc}),
+      qr{$label OK}, $t);
+
+$t = qq{$S handles 'string' type for match};
+like ($cp->run(qq{--query="SELECT 'abc' AS result" --valtype=string --warning=abc}),
       qr{$label WARNING}, $t);
 
 $t = qq{$S handles 'time' type};
