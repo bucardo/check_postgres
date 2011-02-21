@@ -7821,7 +7821,7 @@ For MRTG output, simply outputs a 1 (good connection) or a 0 (bad connection) on
 (C<symlink: check_postgres_custom_query>) Runs a custom query of your choosing, and parses the results. 
 The query itself is passed in through the C<query> argument, and should be kept as simple as possible. 
 If at all possible, wrap it in a view or a function to keep things easier to manage. The query should 
-return one or two columns. It is required that one of the coumns be named "result" and is the item 
+return one or two columns. It is required that one of the columns be named "result" and is the item 
 that will be checked against your warning and critical values. The second column is for the performance 
 data and any name can be used: this will be the 'value' inside the performance data section.
 
