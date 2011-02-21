@@ -8985,7 +8985,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Give detailed information and refactor txn_idle, txn_time, and query_time
     (Per request from bug #61)
 
-  Set maxliagn to 8 in the bloat check if box identified as '64-bit'
+  Set maxalign to 8 in the bloat check if box identified as '64-bit'
     (Michel Sijmons, bug #66)
 
   Support non-standard version strings in the bloat check.
@@ -8997,7 +8997,7 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
   Fix psql version regex (Peter Eisentraut, bug #69)
 
-  Standardize and clean up all perfdata ouput (bug #52)
+  Standardize and clean up all perfdata output (bug #52)
 
   Exclude "idle in transaction" from the query_time check (bug #43)
 

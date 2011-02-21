@@ -17,7 +17,7 @@ elsif (!eval { require Text::SpellChecker; 1 }) {
 }
 else {
     opendir my $dir, 't' or die qq{Could not open directory 't': $!\n};
-    @testfiles = map { "t/$_" } grep { /^.+\.(t|pl|pm)$/ } readdir $dir;
+    @testfiles = map { "t/$_" } grep { /^\d.+\.(t|pl|pm)$/ } readdir $dir;
     closedir $dir or die qq{Could not closedir "$dir": $!\n};
     plan tests => 3+@testfiles;
 }
@@ -164,6 +164,7 @@ Slony
 slony
 stderr
 syslog
+tnm
 txn
 txns
 tuples
@@ -222,6 +223,7 @@ baz
 bigint
 blks
 Boes
+boxinfo
 Bucardo
 burrick
 cd
@@ -283,6 +285,7 @@ Glaesemann
 greg
 grimm
 gtld
+Gurjeet
 hardcode
 HiRes
 hong
@@ -313,6 +316,7 @@ maindatabase
 Makefile
 Mallett
 mallory
+maxalign
 maxwait
 mcp
 MINIPAGES
@@ -350,6 +354,7 @@ parens
 perf
 perfdata
 perflimit
+perfname
 perfs
 petabytes
 pgb
@@ -377,6 +382,7 @@ quirm
 Raudsepp
 rc
 Redistributions
+refactor
 refactoring
 regex
 regexes
@@ -398,6 +404,8 @@ scott
 sda
 Seklecki
 showperf
+Sijmons
+Singh
 Sivakumar
 sl
 slon
@@ -445,3 +453,4 @@ wilkins
 xact
 xlog
 Zwerschke
+
