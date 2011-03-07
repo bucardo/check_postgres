@@ -3878,7 +3878,7 @@ FROM (SELECT
     for $db (@{$info->{db}}) {
 
         for my $r (@{$db->{slurp}}) {
-            my ($max,$cur,$percent) = ($r->{maxx},$r->{cur},$r->{percent});
+            my ($max,$cur,$percent) = ($r->{maxx},$r->{cur},$r->{percent}||0);
 
             $MRTG and do_mrtg({one => $percent, two => $cur});
 
