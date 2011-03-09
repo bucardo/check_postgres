@@ -9005,6 +9005,8 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
   Clean up the custom_query action a bit.
 
+  Handle undef percents in check_fsm_relations (Andy Lester)
+
 =item B<Version 2.16.0> January 20, 2011
 
   Add new action 'hot_standby_delay' (Nicolas Thauvin)
