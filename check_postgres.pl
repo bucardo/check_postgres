@@ -315,7 +315,7 @@ our %msg = (
 },
 'fr' => {
     'address'            => q{adresse},
-	'age'                => q{âge},
+'age'                => q{âge},
     'backends-fatal'     => q{N'a pas pu se connecter : trop de connexions},
     'backends-mrtg'      => q{DB=$1 Connexions maximum=$2},
     'backends-msg'       => q{$1 connexions sur $2 ($3%)},
@@ -639,16 +639,6 @@ our $ERROR = '';
 $opt{test} = 0;
 $opt{timeout} = 30;
 
-## Check if we should assume that server is in standby (continious recovery)
-## mode, if so all SQL based actions will return zero (success).
-
-for my $arg (@ARGV) {
-    if ($arg eq '--assume-standby-mode') {
-	$opt{'assume-standby-mode'} = 1;
-	last;
-    }
-}
-
 ## Look for any rc files to control additional parameters
 ## Command line options always overwrite these
 ## Format of these files is simply name=val
@@ -742,7 +732,7 @@ die $USAGE unless
                'symlinks',
                'debugoutput=s',
                'no-check_postgresrc',
-	       'assume-standby-mode',
+               'assume-standby-mode',
 
                'action=s',
                'warning=s',
@@ -1019,7 +1009,7 @@ if ($opt{showtime}) {
 
 ## Check the current database mode
 our $STANDBY = 0;
-check_mode() if $opt{'assume-standby-mode'};
+check_standby_mode() if $opt{'assume-standby-mode'};
 
 ## We don't (usually) want to die, but want a graceful Nagios-like exit instead
 sub ndie {
@@ -1105,7 +1095,7 @@ sub add_response {
     $db->{host} ||= '';
 
     if ($STANDBY) {
-	$action_info->{$action}[0] = 1;
+        $action_info->{$action}[0] = 1;
     }
 
     if (defined $opt{dbname2} and defined $opt{dbname2}->[0] and length $opt{dbname2}->[0]
@@ -1227,67 +1217,67 @@ sub do_mrtg_stats {
     do_mrtg({one => $one, two => $two, msg => $msg});
 }
 
-sub check_mode {
+sub check_standby_mode {
 
-	## Checks if database in standby mode
-	## Requires $ENV{PGDATA} or --datadir
+    ## Checks if database in standby mode
+    ## Requires $ENV{PGDATA} or --datadir
 
-	## Find the data directory, make sure it exists
-	my $dir = $opt{datadir} || $ENV{PGDATA};
+    ## Find the data directory, make sure it exists
+    my $dir = $opt{datadir} || $ENV{PGDATA};
 
-	if (!defined $dir or ! length $dir) {
-		ndie msg('checkpoint-nodir');
-	}
+    if (!defined $dir or ! length $dir) {
+        ndie msg('checkpoint-nodir');
+    }
 
-	if (! -d $dir) {
-		ndie msg('checkpoint-baddir', $dir);
-	}
+    if (! -d $dir) {
+        ndie msg('checkpoint-baddir', $dir);
+    }
 
-	$db->{host} = '<none>';
+    $db->{host} = '<none>';
 
-	## Run pg_controldata, grab the mode
-	my $pgc
-		= $ENV{PGCONTROLDATA} ? $ENV{PGCONTROLDATA}
-		: $ENV{PGBINDIR}      ? "$ENV{PGBINDIR}/pg_controldata"
-		:                       'pg_controldata';
-	$COM = qq{$pgc "$dir"};
-	eval {
-		$res = qx{$COM 2>&1};
-	};
-	if ($@) {
-		ndie msg('checkpoint-nosys', $@);
-	}
+    ## Run pg_controldata, grab the mode
+    my $pgc
+        = $ENV{PGCONTROLDATA} ? $ENV{PGCONTROLDATA}
+        : $ENV{PGBINDIR}      ? "$ENV{PGBINDIR}/pg_controldata"
+        :                       'pg_controldata';
+    $COM = qq{$pgc "$dir"};
+    eval {
+        $res = qx{$COM 2>&1};
+    };
+    if ($@) {
+        ndie msg('checkpoint-nosys', $@);
+    }
 
-	## If the path is echoed back, we most likely have an invalid data dir
-	if ($res =~ /$dir/) {
-		ndie msg('checkpoint-baddir2', $dir);
-	}
+    ## If the path is echoed back, we most likely have an invalid data dir
+    if ($res =~ /$dir/) {
+        ndie msg('checkpoint-baddir2', $dir);
+    }
 
-	if ($res =~ /WARNING: Calculated CRC checksum/) {
-		ndie msg('checkpoint-badver');
-	}
-	if ($res !~ /^pg_control.+\d+/) {
-		ndie msg('checkpoint-badver2');
-	}
+    if ($res =~ /WARNING: Calculated CRC checksum/) {
+        ndie msg('checkpoint-badver');
+    }
+    if ($res !~ /^pg_control.+\d+/) {
+        ndie msg('checkpoint-badver2');
+    }
 
-	my $regex = msg('checkmode-state');
-	if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
-		## Just in case, check the English one as well
-		$regex = msg_en('checkmode-state');
-		if ($res !~ /$regex\s*(.+)/) {
-			ndie msg('checkpoint-noregex', $dir);
-		}
-	}
-	my $last = $1;
-        
-        $regex = msg('checkmode-recovery');
-        if ($last =~ /$regex/) {
-                $STANDBY = 1; 
+    my $regex = msg('checkmode-state');
+    if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
+        ## Just in case, check the English one as well
+        $regex = msg_en('checkmode-state');
+        if ($res !~ /$regex\s*(.+)/) {
+            ndie msg('checkpoint-noregex', $dir);
         }
+    }
+    my $last = $1;
+    $regex = msg('checkmode-recovery');
+    if ($last =~ /$regex/) {
+        $STANDBY = 1;
+    }
 
-	return;
+    return;
 
-} ## end of check_mode
+} ## end of check_standby_mode
+
 
 sub finishup {
 
@@ -1824,14 +1814,14 @@ sub run_command {
     ## with OK status.
 
     if ($STANDBY) {
-	$db->{'totaltime'} = '0.00';
-	add_ok msg('mode-standby');
-	if ($MRTG) {
-	    do_mrtg({one => 1});
-	}
-	finishup();
-	exit 0;
-    }    
+        $db->{'totaltime'} = '0.00';
+        add_ok msg('mode-standby');
+        if ($MRTG) {
+            do_mrtg({one => 1});
+        }
+        finishup();
+        exit 0;
+    }
 
     ## Run a command string against each of our databases using psql
     ## Optional args in a hashref:
