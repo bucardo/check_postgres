@@ -2853,10 +2853,10 @@ ORDER BY datname
         elsif ($w3) {
             $nwarn = (int $w2*$limit/100)
         }
-        $db->{perf} .= sprintf ' %s=%s;%s;%s;0;%s',
-            perfname($r->{datname}), $r->{current}, $nwarn, $ncrit, $limit;
 
         if (! skip_item($r->{datname})) {
+            $db->{perf} .= sprintf ' %s=%s;%s;%s;0;%s',
+                perfname($r->{datname}), $r->{current}, $nwarn, $ncrit, $limit;
             $total += $r->{current};
         }
     }
