@@ -183,6 +183,13 @@ our %msg = (
     'opt-psql-nover'     => q{Could not determine psql version},
     'opt-psql-restrict'  => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
     'pgbouncer-pool'     => q{Pool=$1 $2=$3},
+    'pgb-backends-mrtg'  => q{DB=$1 Max connections=$2},
+    'pgb-backends-msg'   => q{$1 of $2 connections ($3%)},
+    'pgb-backends-oknone'=> q{No connections},
+    'pgb-backends-users' => q{$1 for number of users must be a number or percentage},
+    'pgb-maxwait-msg'    => q{longest wait: $1s},
+    'pgb-nomatches'      => q{No matching rows were found},
+    'pgb-skipped'        => q{No matching rows were found (skipped rows: $1)},
     'PID'                => q{PID},
     'port'               => q{port},
     'preptxn-none'       => q{No prepared transactions found},
@@ -909,6 +916,9 @@ our $action_info = {
  pgb_pool_sv_tested  => [1, 'Check the number of tested server connections in each pgbouncer pool.'],
  pgb_pool_sv_login   => [1, 'Check the number of login server connections in each pgbouncer pool.'],
  pgb_pool_maxwait    => [1, 'Check the current maximum wait time for client connections in pgbouncer pools.'],
+ pgbouncer_backends  => [0, 'Check how many clients are connected to pgbouncer compared to max_client_conn.'],
+ pgbouncer_checksum  => [0, 'Check that no pgbouncer settings have changed since the last check.'],
+ pgbouncer_maxwait   => [0, 'Check how long the first (oldest) client in queue has been waiting.'],
  prepared_txns       => [1, 'Checks number and age of prepared transactions.'],
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
@@ -1086,7 +1096,7 @@ our $psql_version = $1;
 $VERBOSE >= 2 and warn qq{psql=$PSQL version=$psql_version\n};
 
 $opt{defaultdb} = $psql_version >= 8.0 ? 'postgres' : 'template1';
-$opt{defaultdb} = 'pgbouncer' if ($action eq 'pgbouncer_checksum' || $action =~ /^pgb_/);
+$opt{defaultdb} = 'pgbouncer' if $action =~ /^pgb/;
 
 sub add_response {
 
@@ -1651,6 +1661,12 @@ check_pgb_pool('sv_login') if $action eq 'pgb_pool_sv_login';
 ## Check the current maximum wait time for client connections in pgbouncer pools
 check_pgb_pool('maxwait') if $action eq 'pgb_pool_maxwait';
 
+## Check how long the first (oldest) client in queue has been waiting.
+check_pgbouncer_maxwait() if $action eq 'pgbouncer_maxwait';
+
+## Check how many clients are connected to pgbouncer compared to max_client_conn.
+check_pgbouncer_backends() if $action eq 'pgbouncer_backends';
+
 ##
 ## Everything past here does not hit a Postgres database
 ##
@@ -2037,7 +2053,7 @@ sub run_command {
         my $dbtimeout = $timeout * 1000;
         alarm 0;
 
-        if ($action ne 'pgbouncer_checksum' and $action !~ /^pgb_/) {
+        if ($action !~ /^pgb/) {
             $string = "BEGIN;SET statement_timeout=$dbtimeout;COMMIT;$string";
         }
 
@@ -4799,6 +4815,264 @@ sub check_pgbouncer_checksum {
     return;
 
 } ## end of check_pgbouncer_checksum
+
+sub check_pgbouncer_maxwait {
+
+    ## Check how long the first (oldest) client in queue has waited, in
+    ## seconds.
+    ## Supports: Nagios, MRTG
+    ## Warning and critical are time limits - defaults to seconds
+    ## Valid units: s[econd], m[inute], h[our], d[ay]
+    ## All above may be written as plural as well (e.g. "2 hours")
+    ## Can also ignore databases with exclude and limit with include
+    ## Limit to a specific user with the includeuser option
+    ## Exclude users with the excludeuser option
+
+    my $arg = shift || {};
+
+    my ($warning, $critical) = validate_range
+    ({
+            type             => 'time',
+    });
+
+    ## Grab information from the pg_stat_activity table
+    ## Since we clobber old info on a qtime "tie", use an ORDER BY
+    $SQL = qq{SHOW POOLS};
+
+    my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1 } );
+
+    ## Default values for information gathered
+    my ($maxwait, $database, $user, $cl_active, $cl_waiting) =
+    (0,'?','?',0,0);
+
+    for $db (@{$info->{db}}) {
+
+        ## Parse the psql output and gather stats from the winning row
+        ## Read in and parse the psql output
+        my $skipped = 0;
+        ROW: for my $r (@{$db->{slurp}}) {
+
+            ## Apply --exclude and --include arguments to the database name
+            if (skip_item($r->{database})) {
+                $skipped++;
+                next ROW;
+            }
+
+            ## Assign stats if we have a new winner
+            if ($r->{maxwait} > $maxwait) {
+                $database    = $r->{database};
+                $user        = $r->{user};
+                $cl_active   = $r->{cl_active};
+                $cl_waiting  = $r->{cl_waiting};
+                $maxwait     = $r->{maxwait};
+            }
+        }
+
+        ## We don't really care why things matches as far as the final output
+        ## But it's nice to report what we can
+        if ($database eq '?') {
+            $MRTG and do_mrtg({one => 0, msg => 'No rows'});
+            $db->{perf} = "0;$warning;$critical";
+
+            if ($skipped) {
+                add_ok msg('pgb-skipped', $skipped);
+            }
+            else {
+                add_ok msg('pgb-nomatches', $maxwait)
+            }
+            return;
+        }
+
+        ## Details on who the offender was
+        my $whodunit = sprintf q{%s:%s %s:%s cl_active:%s cl_waiting:%s},
+        msg('database'),
+        $database,
+        msg('username'),
+        $user,
+        $cl_active,
+        $cl_waiting;
+
+        $MRTG and do_mrtg({one => $maxwait, msg => "$whodunit"});
+
+        $db->{perf} .= sprintf q{'%s'=%s;%s;%s},
+        $whodunit,
+        $maxwait,
+        $warning,
+        $critical;
+
+        my $m = msg('pgb-maxwait-msg', $maxwait);
+        my $msg = sprintf '%s (%s)', $m, $whodunit;
+
+        if (length $critical and $maxwait >= $critical) {
+            add_critical $msg;
+        }
+        elsif (length $warning and $maxwait >= $warning) {
+            add_warning $msg;
+        }
+        else {
+            add_ok $msg;
+        }
+    }
+
+    return;
+
+
+} ## end of check_pgbouncer_maxwait
+
+sub check_pgbouncer_backends {
+
+    ## Check the number of connections to pgbouncer compared to
+    ## max_client_conn
+    ## Supports: Nagios, MRTG
+    ## It makes no sense to run this more than once on the same cluster
+    ## Need to be superuser, else only your queries will be visible
+    ## Warning and criticals can take three forms:
+    ## critical = 12 -- complain if there are 12 or more connections
+    ## critical = 95% -- complain if >= 95% of available connections are used
+    ## critical = -5 -- complain if there are only 5 or fewer connection slots left
+    ## The former two options only work with simple numbers - no percentage or negative
+    ## Can also ignore databases with exclude, and limit with include
+
+    my $warning  = $opt{warning}  || '90%';
+    my $critical = $opt{critical} || '95%';
+    my $noidle   = $opt{noidle}   || 0;
+
+    ## If only critical was used, remove the default warning
+    if ($opt{critical} and !$opt{warning}) {
+        $warning = $critical;
+    }
+
+    my $validre = qr{^(\-?)(\d+)(\%?)$};
+    if ($critical !~ $validre) {
+        ndie msg('pgb-backends-users', 'Critical');
+    }
+    my ($e1,$e2,$e3) = ($1,$2,$3);
+    if ($warning !~ $validre) {
+        ndie msg('pgb-backends-users', 'Warning');
+    }
+    my ($w1,$w2,$w3) = ($1,$2,$3);
+
+    ## If number is greater, all else is same, and not minus
+    if ($w2 > $e2 and $w1 eq $e1 and $w3 eq $e3 and $w1 eq '') {
+        ndie msg('range-warnbig');
+    }
+    ## If number is less, all else is same, and minus
+    if ($w2 < $e2 and $w1 eq $e1 and $w3 eq $e3 and $w1 eq '-') {
+        ndie msg('range-warnsmall');
+    }
+    if (($w1 and $w3) or ($e1 and $e3)) {
+        ndie msg('range-neg-percent');
+    }
+
+    ## Grab information from the config
+    $SQL = qq{SHOW CONFIG};
+
+    my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1 } );
+
+    ## Default values for information gathered
+    my $limit = 0;
+
+    ## Determine max_client_conn
+    for my $r (@{$info->{db}[0]{slurp}}) {
+        if ($r->{key} eq 'max_client_conn') {
+            $limit = $r->{value};
+            last;
+        }
+    }
+
+    ## Grab information from pools
+    $SQL = qq{SHOW POOLS};
+
+    $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1 } );
+
+    $db = $info->{db}[0];
+
+    my $total = 0;
+    my $grandtotal = @{$db->{slurp}};
+
+    for my $r (@{$db->{slurp}}) {
+
+        ## Always want perf to show all
+        my $nwarn=$w2;
+        my $ncrit=$e2;
+        if ($e1) {
+            $ncrit = $limit-$e2;
+        }
+        elsif ($e3) {
+            $ncrit = (int $e2*$limit/100);
+        }
+        if ($w1) {
+            $nwarn = $limit-$w2;
+        }
+        elsif ($w3) {
+            $nwarn = (int $w2*$limit/100)
+        }
+
+        if (! skip_item($r->{database})) {
+            my $current = $r->{cl_active} + $r->{cl_waiting};
+            $db->{perf} .= " '$r->{database}'=$current;$nwarn;$ncrit;0;$limit";
+            $total += $current;
+        }
+    }
+
+    if ($MRTG) {
+        $stats{$db->{dbname}} = $total;
+        $statsmsg{$db->{dbname}} = msg('pgb-backends-mrtg', $db->{dbname}, $limit);
+        return;
+    }
+
+    if (!$total) {
+        if ($grandtotal) {
+            ## We assume that exclude/include rules are correct, and we simply had no entries
+            ## at all in the specific databases we wanted
+            add_ok msg('pgb-backends-oknone');
+        }
+        else {
+            add_unknown msg('no-match-db');
+        }
+        return;
+    }
+
+    my $percent = (int $total / $limit*100) || 1;
+    my $msg = msg('pgb-backends-msg', $total, $limit, $percent);
+    my $ok = 1;
+
+    if ($e1) { ## minus
+        $ok = 0 if $limit-$total <= $e2;
+    }
+    elsif ($e3) { ## percent
+        my $nowpercent = $total/$limit*100;
+        $ok = 0 if $nowpercent >= $e2;
+    }
+    else { ## raw number
+        $ok = 0 if $total >= $e2;
+    }
+    if (!$ok) {
+        add_critical $msg;
+        return;
+    }
+
+    if ($w1) {
+        $ok = 0 if $limit-$total <= $w2;
+    }
+    elsif ($w3) {
+        my $nowpercent = $total/$limit*100;
+        $ok = 0 if $nowpercent >= $w2;
+    }
+    else {
+        $ok = 0 if $total >= $w2;
+    }
+    if (!$ok) {
+        add_warning $msg;
+        return;
+    }
+
+    add_ok $msg;
+
+    return;
+
+} ## end of check_pgbouncer_backends
+
 
 
 sub check_pgb_pool {
@@ -8478,7 +8752,71 @@ a client), "idle" (standing by for a client connection to link with), "used"
 (just unlinked from a client, and not yet returned to the idle pool), "tested"
 (currently being tested) and "login" (in the process of logging in). The
 maxwait value shows how long in seconds the oldest waiting client connection
-has been waiting. 
+has been waiting.
+
+<=head2 B<pgbouncer_backends>
+
+(C<symlink: check_postgres_pgbouncer_backends>) Checks the current number of
+connections for one or more databases through pgbouncer, and optionally
+compares it to the maximum allowed, which is determined by the pgbouncer
+configuration variable B<max_client_conn>. The I<--warning> and I<--critical>
+options can take one of three forms. First, a simple number can be given,
+which represents the number of connections at which the alert will be given.
+This choice does not use the B<max_connections> setting. Second, the
+percentage of available connections can be given. Third, a negative number can
+be given which represents the number of connections left until
+B<max_connections> is reached. The default values for I<--warning> and
+I<--critical> are '90%' and '95%'.  You can also filter the databases by use
+of the I<--include> and I<--exclude> options.  See the L</"BASIC FILTERING">
+section for more details.
+
+To view only non-idle processes, you can use the I<--noidle> argument. Note
+that the user you are connecting as must be a superuser for this to work
+properly.
+
+Example 1: Give a warning when the number of connections on host quirm reaches
+120, and a critical if it reaches 150.
+
+  check_postgres_pgbouncer_backends --host=quirm --warning=120 --critical=150 -p 6432 -u pgbouncer
+
+Example 2: Give a critical when we reach 75% of our max_connections setting on
+hosts lancre or lancre2.
+
+  check_postgres_pgbouncer_backends --warning='75%' --critical='75%' --host=lancre,lancre2 -p 6432 -u pgbouncer
+
+Example 3: Give a warning when there are only 10 more connection slots left on
+host plasmid, and a critical when we have only 5 left.
+
+  check_postgres_pgbouncer_backends --warning=-10 --critical=-5 --host=plasmid -p 6432 -u pgbouncer
+
+For MRTG output, the number of connections is reported on the first line, and
+the fourth line gives the name of the database, plus the current
+max_client_conn. If more than one database has been queried, the one with the
+highest number of connections is output.
+
+=head2 B<pgbouncer_maxwait>
+
+(C<symlink: check_postgres_pgbouncer_maxwait>) Checks how long the first
+(oldest) client in the queue has been waiting, in seconds. If this starts
+increasing, then the current pool of servers does not handle requests quick
+enough. Reason may be either overloaded server or just too small of a
+pool_size setting in pbouncer config file.  Databases can be filtered by use
+of the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING">
+section for more details.  The values or the I<--warning> and I<--critical>
+options are units of time, and must be provided (no default). Valid units are
+'seconds', 'minutes', 'hours', or 'days'. Each may be written singular or
+abbreviated to just the first letter.  If no units are given, the units are
+assumed to be seconds.
+
+This action requires Postgres 8.3 or better.
+
+Example 1: Give a critical if any transaction has been open for more than 10
+minutes:
+
+  check_postgres_pgbouncer_maxwait -p 6432 -u pgbouncer --critical='10 minutes'
+
+For MRTG output, returns the maximum time in seconds a transaction has been
+open on the first line. The fourth line gives the name of the database.
 
 =head2 B<prepared_txns>
 
