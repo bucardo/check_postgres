@@ -99,6 +99,8 @@ our %msg = (
     'bloat-nomin'        => q{no relations meet the minimum bloat criteria},
     'bloat-table'        => q{(db $1) table $2.$3 rows:$4 pages:$5 shouldbe:$6 ($7X) wasted size:$8 ($9)},
     'bug-report'         => q{Please report these details to check_postgres@bucardo.org:},
+    'checkmode-state'    => q{Database cluster state:},
+    'checkmode-recovery' => q{in archive recovery},
     'checkpoint-baddir'  => q{Invalid data_directory: "$1"},
     'checkpoint-baddir2' => q{pg_controldata could not read the given data directory: "$1"},
     'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version ($1)},
@@ -155,6 +157,8 @@ our %msg = (
     'logfile-seekfail'   => q{Seek on $1 failed: $2},
     'logfile-stderr'     => q{Logfile output has been redirected to stderr: please provide a filename},
     'logfile-syslog'     => q{Database is using syslog, please specify path with --logfile option (fac=$1)},
+    'maxtime'            => q{ maxtime=$1}, ## needs leading space
+    'mode-standby'       => q{Server in standby mode},
     'mrtg-fail'          => q{Action $1 failed: $2},
     'new-ver-nocver'     => q{Could not download version information for $1},
     'new-ver-badver'     => q{Could not parse version information for $1},
@@ -635,6 +639,16 @@ our $ERROR = '';
 $opt{test} = 0;
 $opt{timeout} = 30;
 
+## Check if we should assume that server is in standby (continious recovery)
+## mode, if so all SQL based actions will return zero (success).
+
+for my $arg (@ARGV) {
+    if ($arg eq '--assume-standby-mode') {
+	$opt{'assume-standby-mode'} = 1;
+	last;
+    }
+}
+
 ## Look for any rc files to control additional parameters
 ## Command line options always overwrite these
 ## Format of these files is simply name=val
@@ -728,6 +742,7 @@ die $USAGE unless
                'symlinks',
                'debugoutput=s',
                'no-check_postgresrc',
+	       'assume-standby-mode',
 
                'action=s',
                'warning=s',
@@ -957,12 +972,13 @@ Limit options:
   --excludeuser=exclude objects owned by certain users
 
 Other options:
-  --PSQL=FILE        location of the psql executable; avoid using if possible
-  -v, --verbose      verbosity level; can be used more than once to increase the level
-  -h, --help         display this help information
-  --man              display the full manual
-  -t X, --timeout=X  how long in seconds before we timeout. Defaults to 30 seconds.
-  --symlinks         create named symlinks to the main program for each action
+  --assume-standby-mode assume that server in continious WAL recovery mode
+  --PSQL=FILE           location of the psql executable; avoid using if possible
+  -v, --verbose         verbosity level; can be used more than once to increase the level
+  -h, --help            display this help information
+  --man                 display the full manual
+  -t X, --timeout=X     how long in seconds before we timeout. Defaults to 30 seconds.
+  --symlinks            create named symlinks to the main program for each action
 
 Actions:
 Which test is determined by the --action option, or by the name of the program
@@ -1000,6 +1016,10 @@ if ($opt{showtime}) {
         die msg('no-time-hires');
     }
 }
+
+## Check the current database mode
+our $STANDBY = 0;
+check_mode() if $opt{'assume-standby-mode'};
 
 ## We don't (usually) want to die, but want a graceful Nagios-like exit instead
 sub ndie {
@@ -1083,6 +1103,10 @@ sub add_response {
     my ($type,$msg) = @_;
 
     $db->{host} ||= '';
+
+    if ($STANDBY) {
+	$action_info->{$action}[0] = 1;
+    }
 
     if (defined $opt{dbname2} and defined $opt{dbname2}->[0] and length $opt{dbname2}->[0]
         and $opt{dbname}->[0] ne $opt{dbname2}->[0]) {
@@ -1203,6 +1227,67 @@ sub do_mrtg_stats {
     do_mrtg({one => $one, two => $two, msg => $msg});
 }
 
+sub check_mode {
+
+	## Checks if database in standby mode
+	## Requires $ENV{PGDATA} or --datadir
+
+	## Find the data directory, make sure it exists
+	my $dir = $opt{datadir} || $ENV{PGDATA};
+
+	if (!defined $dir or ! length $dir) {
+		ndie msg('checkpoint-nodir');
+	}
+
+	if (! -d $dir) {
+		ndie msg('checkpoint-baddir', $dir);
+	}
+
+	$db->{host} = '<none>';
+
+	## Run pg_controldata, grab the mode
+	my $pgc
+		= $ENV{PGCONTROLDATA} ? $ENV{PGCONTROLDATA}
+		: $ENV{PGBINDIR}      ? "$ENV{PGBINDIR}/pg_controldata"
+		:                       'pg_controldata';
+	$COM = qq{$pgc "$dir"};
+	eval {
+		$res = qx{$COM 2>&1};
+	};
+	if ($@) {
+		ndie msg('checkpoint-nosys', $@);
+	}
+
+	## If the path is echoed back, we most likely have an invalid data dir
+	if ($res =~ /$dir/) {
+		ndie msg('checkpoint-baddir2', $dir);
+	}
+
+	if ($res =~ /WARNING: Calculated CRC checksum/) {
+		ndie msg('checkpoint-badver');
+	}
+	if ($res !~ /^pg_control.+\d+/) {
+		ndie msg('checkpoint-badver2');
+	}
+
+	my $regex = msg('checkmode-state');
+	if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
+		## Just in case, check the English one as well
+		$regex = msg_en('checkmode-state');
+		if ($res !~ /$regex\s*(.+)/) {
+			ndie msg('checkpoint-noregex', $dir);
+		}
+	}
+	my $last = $1;
+        
+        $regex = msg('checkmode-recovery');
+        if ($last =~ /$regex/) {
+                $STANDBY = 1; 
+        }
+
+	return;
+
+} ## end of check_mode
 
 sub finishup {
 
@@ -1734,6 +1819,19 @@ sub pretty_time {
 
 
 sub run_command {
+
+    ## First of all check if the server in standby mode, if so end this
+    ## with OK status.
+
+    if ($STANDBY) {
+	$db->{'totaltime'} = '0.00';
+	add_ok msg('mode-standby');
+	if ($MRTG) {
+	    do_mrtg({one => 1});
+	}
+	finishup();
+	exit 0;
+    }    
 
     ## Run a command string against each of our databases using psql
     ## Optional args in a hashref:
@@ -7532,6 +7630,17 @@ option depends on the action used.
 Sets the timeout in seconds after which the script will abort whatever it is doing 
 and return an UNKNOWN status. The timeout is per Postgres cluster, not for the entire 
 script. The default value is 10; the units are always in seconds.
+
+=item B<--assume-standby-mode>
+
+If specified, first the check if server in standby mode will be performed
+(--datadir is required), if so, all checks that require SQL queries will be
+ignored and "Server in standby mode" with OK status will be returned instead.
+
+Example:
+
+    postgres@db$./check_postgres.pl --action=version --warning=8.1 --datadir /var/lib/postgresql/8.3/main/ --assume-standby-mode
+    POSTGRES_VERSION OK:  Server in standby mode | time=0.00
 
 =item B<-h> or B<--help>
 
