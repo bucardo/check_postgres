@@ -8754,7 +8754,7 @@ a client), "idle" (standing by for a client connection to link with), "used"
 maxwait value shows how long in seconds the oldest waiting client connection
 has been waiting.
 
-<=head2 B<pgbouncer_backends>
+=head2 B<pgbouncer_backends>
 
 (C<symlink: check_postgres_pgbouncer_backends>) Checks the current number of
 connections for one or more databases through pgbouncer, and optionally
