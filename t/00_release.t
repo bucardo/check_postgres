@@ -31,7 +31,7 @@ my %v;
 my $vre = qr{(\d+\.\d+\.\d+)};
 
 ## Grab version from various files
-my $file = 'META.yml';
+$file = 'META.yml';
 open my $fh, '<', $file or die qq{Could not open "$file": $!\n};
 while (<$fh>) {
     push @{$v{$file}} => [$1,$.] if /version\s*:\s*$vre/;
