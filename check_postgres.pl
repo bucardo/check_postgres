@@ -8235,31 +8235,31 @@ If the dbname argument is given, seven additional items are returned:
 
 =over 4
 
-=item idx_scan
+=item idxscan
 
 Total number of user index scans.
 
-=item idx_tup_read
+=item idxtupread
 
 Total number of user index entries returned.
 
-=item idx_tup_fetch
+=item idxtupfetch
 
 Total number of rows fetched by simple user index scans.
 
-=item idx_blks_read
+=item idxblksread
 
 Total number of disk blocks read for all user indexes.
 
-=item idx_blks_hit
+=item idxblkshit
 
 Total number of buffer hits for all user indexes.
 
-=item seq_scan
+=item seqscan
 
 Total number of sequential scans against all user tables.
 
-=item seq_tup_read
+=item seqtupread
 
 Total number of tuples returned from all user tables.
 
@@ -8268,6 +8268,12 @@ Total number of tuples returned from all user tables.
 Example 1: Grab the stats for a database named "products" on host "willow":
 
   check_postgres_dbstats --dbhost willow --dbname products
+
+The output returned will be like this (all on one line, not wrapped):
+
+    backends:82 commits:58374408 rollbacks:1651 read:268435543 hit:2920381758 idxscan:310931294 idxtupread:2777040927
+    idxtupfetch:1840241349 idxblksread:62860110 idxblkshit:1107812216 seqscan:5085305 seqtupread:5370500520
+    ret:0 fetch:0 ins:0 upd:0 del:0 dbname:willow
 
 =head2 B<disabled_triggers>
 
