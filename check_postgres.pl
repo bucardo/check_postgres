@@ -7560,7 +7560,7 @@ sub check_wal_files {
     my ($warning, $critical) = validate_range({type => 'positive integer', leastone => 1});
 
     ## Figure out where the pg_xlog directory is
-    $SQL = q{SELECT count(*) AS count FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$extrabit$'}; ## no critic (RequireInterpolationOfMetachars)
+    $SQL = qq{SELECT count(*) AS count FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$extrabit$'}; ## no critic (RequireInterpolationOfMetachars)
 
     my $info = run_command($SQL, {regex => qr[\d] });
 
