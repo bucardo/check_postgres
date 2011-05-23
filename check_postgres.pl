@@ -30,7 +30,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.17.0';
+our $VERSION = '2.17.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
