@@ -4035,6 +4035,14 @@ sub check_hot_standby_delay {
         return;
     }
 
+    ## If the slave is "db1" and master "db2", go ahead and switch them around for clearer output
+    if (1 == $slave == 1) {
+        ($slave, $master) = (2, 1);
+        for my $k (qw(host port dbname dbuser dbpass)) {
+            ($opt{$k}, $opt{$k . 2}) = ($opt{$k . 2}, $opt{$k});
+        }
+    }
+
     ## Get xlog positions
     my ($moffset, $s_rec_offset, $s_rep_offset);
     ## On master
@@ -9290,6 +9298,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by Greg Sabino Mullane.
 
 =over 4
+
+=item B<Version 2.18.0>
+
+  Swap db1 and db2 if the slave is 1 for the hot standby check (David E. Wheeler)
 
 =item B<Version 2.17.0>
 
