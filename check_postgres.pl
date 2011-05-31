@@ -4036,7 +4036,7 @@ sub check_hot_standby_delay {
     }
 
     ## If the slave is "db1" and master "db2", go ahead and switch them around for clearer output
-    if (1 == $slave == 1) {
+    if (1 == $slave) {
         ($slave, $master) = (2, 1);
         for my $k (qw(host port dbname dbuser dbpass)) {
             ($opt{$k}, $opt{$k . 2}) = ($opt{$k . 2}, $opt{$k});
