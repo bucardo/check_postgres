@@ -2199,11 +2199,19 @@ sub run_command {
                     warn "$msg\n";
                     my $cline = (caller)[2];
                     my $args = join ' ' => @args;
-                    warn "Version:      $VERSION\n";
-                    warn "Action:       $action\n";
-                    warn "Calling line: $cline\n";
-                    warn "Output:       $line\n";
-                    warn "Command:      $PSQL $args\n";
+                    warn "Version:          $VERSION\n";
+                    warn "Action:           $action\n";
+                    warn "Calling line:     $cline\n";
+                    warn "Output:           $line\n";
+                    warn "Command:          $PSQL $args\n";
+                    ## Last thing is to see if we can grab the PG version
+                    if (! $opt{stop_looping}) {
+                        ## Just in case...
+                        $opt{stop_looping} = 1;
+                        my $info = run_command('SELECT version() AS version');
+                        (my $v = $info->{db}[0]{slurp}[0]{version}) =~ s/(\w+ \S+).+/$1/;
+                        warn "Postgres version: $v\n";
+                    }
                     exit 1;
                 }
             }
