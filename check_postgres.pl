@@ -20,7 +20,7 @@ use strict;
 use warnings;
 use utf8;
 use Getopt::Long qw/GetOptions/;
-Getopt::Long::Configure(qw/no_ignore_case/);
+Getopt::Long::Configure(qw/ no_ignore_case pass_through  /);
 use File::Basename qw/basename/;
 use File::Temp qw/tempfile tempdir/;
 File::Temp->safe_level( File::Temp::MEDIUM );
@@ -695,17 +695,18 @@ if (defined $rcfile) {
         elsif ($name eq 'u' or $name eq 'u1' or $name eq 'dbuser1') {
             $name = 'dbuser';
         }
-        if ($name eq 'dbport2' or $name eq 'p2') {
-            $name = 'port2';
+        ## Now for all the additional non-1 databases
+        elsif ($name =~ /^dbport(\d+)$/o or $name eq /^p(\d+)$/o) {
+            $name = "port$1";
         }
-        elsif ($name eq 'dbhost2' or $name eq 'H2') {
-            $name = 'host2';
+        elsif ($name =~ /^dbhost(\d+)$/o or $name eq /^H(\d+)$/o) {
+            $name = "host$1";
         }
-        elsif ($name eq 'db2') {
-            $name = 'dbname2';
+        elsif ($name =~ /^db(\d)$/o) {
+            $name = "dbname$1";
         }
-        elsif ($name eq 'u2') {
-            $name = 'dbuser2';
+        elsif ($name =~ /^u(\d+)$/o) {
+            $name = 'dbuser$1';
         }
 
         ## These options are multiples ('@s')
@@ -720,67 +721,103 @@ if (defined $rcfile) {
     close $rc or die;
 }
 
-die $USAGE unless
-    GetOptions(
-               \%opt,
-               'version|V',
-               'verbose|v+',
-               'vv',
-               'help|h',
-               'quiet|q',
-               'man',
-               'output=s',
-               'simple',
-               'showperf=i',
-               'perflimit=i',
-               'showtime=i',
-               'timeout|t=i',
-               'test',
-               'symlinks',
-               'debugoutput=s',
-               'no-check_postgresrc',
-               'assume-standby-mode',
+die $USAGE if ! @ARGV;
 
-               'action=s',
-               'warning=s',
-               'critical=s',
-               'include=s@',
-               'exclude=s@',
-               'includeuser=s@',
-               'excludeuser=s@',
+GetOptions(
+    \%opt,
+    'version|V',
+    'verbose|v+',
+    'vv',
+    'help|h',
+    'quiet|q',
+    'man',
+    'output=s',
+    'simple',
+    'showperf=i',
+    'perflimit=i',
+    'showtime=i',
+    'timeout|t=i',
+    'test',
+    'symlinks',
+    'debugoutput=s',
+    'no-check_postgresrc',
+    'assume-standby-mode',
 
-               'host|dbhost|H|dbhost1|H1=s@',
-               'port|dbport|p|port1|dbport1|p1=s@',
-               'dbname|db|dbname1|db1=s@',
-               'dbuser|u|dbuser1|u1=s@',
-               'dbpass|dbpass1=s@',
-               'dbservice|dbservice1=s@',
+    'action=s',
+    'warning=s',
+    'critical=s',
+    'include=s@',
+    'exclude=s@',
+    'includeuser=s@',
+    'excludeuser=s@',
 
-               'host2|dbhost2|H2=s@',
-               'port2|dbport2|p2=s@',
-               'dbname2|db2=s@',
-               'dbuser2|u2=s@',
-               'dbpass2=s@',
-               'dbservice2=s@',
+    'host|dbhost|H|dbhost1|H1=s@',
+    'port|dbport|p|port1|dbport1|p1=s@',
+    'dbname|db|dbname1|db1=s@',
+    'dbuser|u|dbuser1|u1=s@',
+    'dbpass|dbpass1=s@',
+    'dbservice|dbservice1=s@',
 
-               'PSQL=s',
+    'PSQL=s',
 
-               'tempdir=s',
-               'get_method=s',
-               'language=s',
-               'mrtg=s',      ## used by MRTG checks only
-               'logfile=s',   ## used by check_logfile only
-               'queryname=s', ## used by query_runtime only
-               'query=s',     ## used by custom_query only
-               'valtype=s',   ## used by custom_query only
-               'reverse',     ## used by custom_query only
-               'repinfo=s',   ## used by replicate_row only
-               'noidle',      ## used by backends only
-               'datadir=s',   ## used by checkpoint only
-               'schema=s',    ## used by slony_status only
-               )
-    and keys %opt
-    and ! @ARGV;
+    'tempdir=s',
+    'get_method=s',
+    'language=s',
+    'mrtg=s',      ## used by MRTG checks only
+    'logfile=s',   ## used by check_logfile only
+    'queryname=s', ## used by query_runtime only
+    'query=s',     ## used by custom_query only
+    'valtype=s',   ## used by custom_query only
+    'reverse',     ## used by custom_query only
+    'repinfo=s',   ## used by replicate_row only
+    'noidle',      ## used by backends only
+    'datadir=s',   ## used by checkpoint only
+    'schema=s',    ## used by slony_status only
+);
+
+die $USAGE if ! keys %opt and ! @ARGV;
+
+## Process the args that are not so easy for Getopt::Long
+my @badargs;
+
+while (my $arg = pop @ARGV) {
+
+    ## These must be of the form x=y
+    if ($arg =~ /^\-?\-?(\w+)\s*=\s*(.+)/o) {
+        my ($name,$value) = (lc $1, $2);
+        if ($name =~ /^(?:db)?port(\d+)$/o or $name =~ /^p(\d+)$/o) {
+            $opt{"port$1"} = $value;
+        }
+        elsif ($name =~ /^(?:db)?host(\d+)$/o or $name =~ /^H(\d+)$/o) {
+            $opt{"host$1"} = $value;
+        }
+        elsif ($name =~ /^db(?:name)?(\d+)$/o) {
+            $opt{"dbname$1"} = $value;
+        }
+        elsif ($name =~ /^dbuser(\d+)$/o or $name =~ /^u(\d+)/o) {
+            $opt{"dbuser$1"} = $value;
+        }
+        elsif ($name =~ /^dbpass(\d+)$/o) {
+            $opt{"dbpass$1"} = $value;
+        }
+        elsif ($name =~ /^dbservice(\d+)$/o) {
+            $opt{"dbservice$1"} = $value;
+        }
+        else {
+            push @badargs => $arg;
+        }
+        next;
+    }
+    push @badargs => $arg;
+}
+
+if (@badargs) {
+    warn "Invalid arguments:\n";
+    for (@badargs) {
+        print "  $_\n";
+    }
+    die $USAGE;
+}
 
 if ( $opt{man} ) {
     require Pod::Usage;
