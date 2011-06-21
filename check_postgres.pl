@@ -2232,6 +2232,10 @@ sub run_command {
                 elsif ($line =~ /^\s+\| (.+)/) {
                     $stuff[$num]{$lastval} .= "\n$1";
                 }
+                ## No content: can happen in the source of functions, for example
+                elsif ($line =~ /^\s+\|\s+$/) {
+                    $stuff[$num]{$lastval} .= "\n";
+                }
                 else {
                     my $msg = msg('no-parse-psql');
                     warn "$msg\n";
