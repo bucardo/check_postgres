@@ -1078,6 +1078,8 @@ sub msg { ## no critic
         $msg = $msg{'en'}{$name};
     }
     else {
+        ## Allow for non-matches in certain rare cases
+        return '' if $opt{nomsgok};
         my $line = (caller)[2];
         die qq{Invalid message "$name" from line $line\n};
     }
