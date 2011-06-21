@@ -322,7 +322,7 @@ our %msg = (
 },
 'fr' => {
     'address'            => q{adresse},
-'age'                => q{âge},
+    'age'                => q{âge},
     'backends-fatal'     => q{N'a pas pu se connecter : trop de connexions},
     'backends-mrtg'      => q{DB=$1 Connexions maximum=$2},
     'backends-msg'       => q{$1 connexions sur $2 ($3%)},
