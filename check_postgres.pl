@@ -814,7 +814,7 @@ while (my $arg = pop @ARGV) {
 if (@badargs) {
     warn "Invalid arguments:\n";
     for (@badargs) {
-        print "  $_\n";
+        warn "  $_\n";
     }
     die $USAGE;
 }
@@ -1175,6 +1175,7 @@ sub add_response {
         $db->{perf} =~ s/^ +//;
         $perf .= sprintf '%s%s', length($perf) ? ' ' : '', $db->{perf};
     }
+
     ## Strip trailing semicolons as allowed by the Nagios spec
     $perf =~ s/; / /;
     $perf =~ s/;$//;
