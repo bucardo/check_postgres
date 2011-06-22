@@ -7405,7 +7405,8 @@ sub check_txn_idle {
             msg('database'), $maxr->{datname},
             msg('username'), $maxr->{usename},
             $maxr->{client_addr} eq '' ? '' : (sprintf ' %s:%s', msg('address'), $maxr->{client_addr}),
-            $maxr->{client_port} < 1 ? '' : (sprintf ' %s:%s', msg('port'), $maxr->{client_port});
+            ($maxr->{client_port} eq '' or $maxr->{client_port} < 1)
+                ? '' : (sprintf ' %s:%s', msg('port'), $maxr->{client_port});
     }
 
     ## For MRTG, we can simply exit right now
