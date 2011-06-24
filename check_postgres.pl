@@ -901,7 +901,7 @@ our $SIMPLE = $OUTPUT eq 'simple' ? 1 : 0;
 
 ## See if we need to invoke something based on our name
 our $action = $opt{action} || '';
-if ($ME =~ /check_postgres_(\w+)/) {
+if ($ME =~ /check_postgres_(\w+)/ and ! defined $opt{action}) {
     $action = $1;
 }
 
