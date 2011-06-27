@@ -2817,7 +2817,7 @@ sub check_archive_ready {
     ## Critical and warning are the number of files
     ## Example: --critical=10
 
-    return check_wal_files('.ready');
+    return check_wal_files('/archive_status', '.ready');
 
 } ## end of check_archive_ready
 
@@ -7805,12 +7805,13 @@ sub check_wal_files {
     ## Critical and warning are the number of files
     ## Example: --critical=40
 
+    my $subdir = shift || '';
     my $extrabit = shift || '';
 
     my ($warning, $critical) = validate_range({type => 'positive integer', leastone => 1});
 
     ## Figure out where the pg_xlog directory is
-    $SQL = qq{SELECT count(*) AS count FROM pg_ls_dir('pg_xlog') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$extrabit$'}; ## no critic (RequireInterpolationOfMetachars)
+    $SQL = qq{SELECT count(*) AS count FROM pg_ls_dir('pg_xlog$subdir') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)
 
     my $info = run_command($SQL, {regex => qr[\d] });
 
