@@ -4338,9 +4338,9 @@ sub check_hot_standby_delay {
 
     $MRTG and do_mrtg({one => $rep_delta, two => $rec_delta});
 
-    $db->{perf} = sprintf '%s=%s;%s;%s',
+    $db->{perf} = sprintf ' %s=%s;%s;%s',
         perfname(msg('hs-replay-delay')), $rep_delta, $warning, $critical;
-    $db->{perf} .= sprintf '%s=%s;%s;%s',
+    $db->{perf} .= sprintf ' %s=%s;%s;%s',
         perfname(msg('hs-receive-delay')), $rec_delta, $warning, $critical;
 
     ## Do the check on replay delay in case SR has disconnected because it way too far behind
