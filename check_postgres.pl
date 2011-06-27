@@ -923,6 +923,7 @@ our $action_info = {
  connection          => [0, 'Simple connection check.'],
  custom_query        => [0, 'Run a custom query.'],
  database_commitratio   => [0, 'Report if the commitratio of a database is too low.'],
+ database_hitratio   => [0, 'Report if the hitratio of a database is too low.'],
  database_size       => [0, 'Report if a database is too big.'],
  dbstats             => [1, 'Returns stats from pg_stat_database: Cacti output only'],
  disabled_triggers   => [0, 'Check if any triggers are disabled'],
@@ -1574,6 +1575,9 @@ check_connection() if $action eq 'connection';
 
 ## Check the commitratio of one or more databases
 check_database_commitratio() if $action eq 'database_commitratio';
+
+## Check the hitratio of one or more databases
+check_database_hitratio() if $action eq 'database_hitratio';
 
 ## Check the size of one or more databases
 check_database_size() if $action eq 'database_size';
@@ -3636,6 +3640,96 @@ $USERWHERECLAUSE
     return;
 
 } ## end of check_database_commitratio
+
+
+sub check_database_hitratio {
+
+    ## Check the hitratio of one or more databases
+    ## Supports: Nagios, MRTG
+    ## mrtg reports the largest two databases
+    ## By default, checks all databases
+    ## Can check specific one(s) with include
+    ## Can ignore some with exclude
+    ## Warning and criticals are percentages
+    ## Limit to a specific user (db owner) with the includeuser option
+    ## Exclude users with the excludeuser option
+
+    my ($warning, $critical) = validate_range({type => 'percent'});
+
+    $SQL = qq{
+SELECT
+  round(100.*sd.blks_hit/(sd.blks_read+sd.blks_hit), 2) AS dhitratio,
+  d.datname,
+  u.usename
+FROM pg_stat_database sd
+JOIN pg_database d ON (d.oid=sd.datid)
+JOIN pg_user u ON (u.usesysid=d.datdba)
+WHERE sd.blks_read+sd.blks_hit<>0
+$USERWHERECLAUSE
+};
+    if ($opt{perflimit}) {
+        $SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
+    }
+
+    my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1, } );
+    my $found = 0;
+
+    for $db (@{$info->{db}}) {
+        my $min = 101;
+        $found = 1;
+        my %s;
+        for my $r (@{$db->{slurp}}) {
+
+            next if skip_item($r->{datname});
+
+            if ($r->{dhitratio} <= $min) {
+                $min = $r->{dhitratio};
+            }
+            $s{$r->{datname}} = $r->{dhitratio};
+        }
+
+        if ($MRTG) {
+            do_mrtg({one => $min, msg => "DB: $db->{dbname}"});
+        }
+        if ($min > 100) {
+            $stats{$db->{dbname}} = 0;
+            if ($USERWHERECLAUSE) {
+                add_ok msg('no-match-user');
+            }
+            else {
+                add_unknown msg('no-match-db');
+            }
+            next;
+        }
+
+        my $msg = '';
+        for (reverse sort {$s{$b} <=> $s{$a} or $a cmp $b } keys %s) {
+            $msg .= "$_: $s{$_} ";
+            $db->{perf} .= sprintf ' %s=%s;%s;%s',
+                perfname($_), $s{$_}, $warning, $critical;
+        }
+        if (length $critical and $min <= $critical) {
+            add_critical $msg;
+        }
+        elsif (length $warning and $min <= $warning) {
+            add_warning $msg;
+        }
+        else {
+            add_ok $msg;
+        }
+    }
+
+    ## If no results, probably a version problem
+    if (!$found and keys %unknown) {
+        (my $first) = values %unknown;
+        if ($first->[0][0] =~ /pg_database_size/) {
+            ndie msg('dbsize-version');
+        }
+    }
+
+    return;
+
+} ## end of check_database_hitratio
 
 
 sub check_database_size {
@@ -8313,6 +8407,29 @@ Example: Warn if any database on host flagg is less than 90% in commitratio, and
   check_postgres_database_commitratio --host=flagg --warning='90%' --critical='80%'
 
 For MRTG output, returns the percentage of the database with the smallest commitratio on the first line, 
+and the name of the database on the fourth line.
+    
+=head2 B<database_hitratio>
+
+(C<symlink: check_postgres_database_hitratio>) Checks the hit ratio of all databases and complains when they are too low.
+There is no need to run this command more than once per database cluster. 
+Databases can be filtered with 
+the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
+for more details. 
+They can also be filtered by the owner of the database with the 
+I<--includeuser> and I<--excludeuser> options.
+See the L</"USER NAME FILTERING"> section for more details.
+
+The warning and critical options should be specified as percentages. There are not
+defaults for this action: the warning and critical must be specified. The warning value
+cannot be greater than the critical value. The output returns all databases sorted by
+hitratio, smallest first.
+
+Example: Warn if any database on host flagg is less than 90% in hitratio, and critical if less then 80%.
+
+  check_postgres_database_hitratio --host=flagg --warning='90%' --critical='80%'
+
+For MRTG output, returns the percentage of the database with the smallest hitratio on the first line, 
 and the name of the database on the fourth line.
     
 =head2 B<database_size>
