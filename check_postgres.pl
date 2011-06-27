@@ -4414,7 +4414,7 @@ FROM (SELECT nspname, relname, $criteria AS v
       ORDER BY 3) AS foo
 };
     if ($opt{perflimit}) {
-        $SQL .= ' ORDER BY 3 DESC';
+        $SQL .= ' ORDER BY 4 DESC';
     }
 
     if ($USERWHERECLAUSE) {
