@@ -30,7 +30,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.17.1';
+our $VERSION = '2.18.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -7474,7 +7474,7 @@ sub check_wal_files {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.17.0
+This documents describes check_postgres.pl version 2.18.0
 
 =head1 SYNOPSIS
 
@@ -9223,9 +9223,32 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
 =item B<Version 2.18.0>
 
+  Redo the same_schema action. Use new --filter argument for all filtering.
+  Allow comparisons between any number of databases.
+  Remove the db*2 arguments.
+  Allow comparison of the same db over time.
+
   Swap db1 and db2 if the slave is 1 for the hot standby check (David E. Wheeler)
 
-=item B<Version 2.17.0>
+  Fix ORDER BY in the last vacuum/analyze action (Nicolas Thauvin)
+
+  Fix check_hot_standby_delay perfdata output (Nicolas Thauvin)
+
+  Look in the correct place for the .ready files with the archive_ready action ((Nicolas Thauvin)
+
+  New action: commitratio (Guillaume Lelarge)
+
+  New action: hitratio (Guillaume Lelarge)
+
+  Make sure --action overrides the symlink naming trick.
+
+  Fix warning when client_port set to empty string (bug #79)
+
+  Account for "empty row" in -x output (i.e. source of functions).
+
+  Fix some incorrectly named data fields (Andy Lester)
+
+  Expand the number of pgbouncer actions (Ruslan Kabalin)
 
   Give detailed information and refactor txn_idle, txn_time, and query_time
     (Per request from bug #61)
@@ -9236,11 +9259,15 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Support non-standard version strings in the bloat check.
     (Michel Sijmons and Gurjeet Singh, bug #66)
 
+  Do not show excluded databases in some output (Ruslan Kabalin)
+
   Allow "and", "or" inside arguments (David E. Wheeler)
 
   Add the "new_version_box" action.
 
   Fix psql version regex (Peter Eisentraut, bug #69)
+
+  Add the --assume-standby-mode option (Ruslan Kabalin)
 
   Standardize and clean up all perfdata output (bug #52)
 
@@ -9251,6 +9278,10 @@ Items not specifically attributed are by Greg Sabino Mullane.
   Clean up the custom_query action a bit.
 
   Handle undef percents in check_fsm_relations (Andy Lester)
+
+  Fix MRTG for last vacuum and last_analyze actions.
+
+=item B<Version 2.17.0> no public release
 
 =item B<Version 2.16.0> January 20, 2011
 

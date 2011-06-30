@@ -42,6 +42,7 @@
 		<li><a href="#backends"><strong>backends</strong></a></li>
 		<li><a href="#bloat"><strong>bloat</strong></a></li>
 		<li><a href="#checkpoint"><strong>checkpoint</strong></a></li>
+		<li><a href="#commitratio"><strong>commitratio</strong></a></li>
 		<li><a href="#connection"><strong>connection</strong></a></li>
 		<li><a href="#custom_query"><strong>custom_query</strong></a></li>
 		<li><a href="#database_size"><strong>database_size</strong></a></li>
@@ -50,6 +51,7 @@
 		<li><a href="#disk_space"><strong>disk_space</strong></a></li>
 		<li><a href="#fsm_pages"><strong>fsm_pages</strong></a></li>
 		<li><a href="#fsm_relations"><strong>fsm_relations</strong></a></li>
+		<li><a href="#hitratio"><strong>hitratio</strong></a></li>
 		<li><a href="#hot_standby_delay"><strong>hot_standby_delay</strong></a></li>
 		<li><a href="#index_size"><strong>index_size</strong></a></li>
 		<li><a href="#table_size"><strong>table_size</strong></a></li>
@@ -75,6 +77,7 @@
 		<li><a href="#pgb_pool_sv_tested"><strong>pgb_pool_sv_tested</strong></a></li>
 		<li><a href="#pgb_pool_sv_login"><strong>pgb_pool_sv_login</strong></a></li>
 		<li><a href="#pgb_pool_maxwait"><strong>pgb_pool_maxwait</strong></a></li>
+		<li><a href="#pgbouncer_backends"><strong>pgbouncer_backends</strong></a></li>
 		<li><a href="#prepared_txns"><strong>prepared_txns</strong></a></li>
 		<li><a href="#query_runtime"><strong>query_runtime</strong></a></li>
 		<li><a href="#query_time"><strong>query_time</strong></a></li>
@@ -118,7 +121,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.17.1</p>
+<p>This documents describes check_postgres.pl version 2.18.0</p>
 <p>
 </p>
 <hr />
@@ -314,6 +317,17 @@ option depends on the action used.</p>
 <p>Sets the timeout in seconds after which the script will abort whatever it is doing 
 and return an UNKNOWN status. The timeout is per Postgres cluster, not for the entire 
 script. The default value is 10; the units are always in seconds.</p>
+</dd>
+<dt><strong><a name="assume_standby_mode" class="item"><strong>--assume-standby-mode</strong></a></strong></dt>
+
+<dd>
+<p>If specified, first the check if server in standby mode will be performed
+(--datadir is required), if so, all checks that require SQL queries will be
+ignored and &quot;Server in standby mode&quot; with OK status will be returned instead.</p>
+<p>Example:</p>
+<pre>
+    postgres@db$./check_postgres.pl --action=version --warning=8.1 --datadir /var/lib/postgresql/8.3/main/ --assume-standby-mode
+    POSTGRES_VERSION OK:  Server in standby mode | time=0.00</pre>
 </dd>
 <dt><strong><a name="h_or_help" class="item"><strong>-h</strong> or <strong>--help</strong></a></strong></dt>
 
@@ -577,6 +591,26 @@ executable, or you can specify <code>PGBINDIR</code> as the directory that it li
 <p>For MRTG or simple output, returns the number of seconds.</p>
 <p>
 </p>
+<h2><a name="commitratio"><strong>commitratio</strong></a></h2>
+<p>(<code>symlink: check_postgres_commitratio</code>) Checks the commit ratio of all databases and complains when they are too low.
+There is no need to run this command more than once per database cluster. 
+Databases can be filtered with 
+the <em>--include</em> and <em>--exclude</em> options. See the <a href="#basic_filtering">BASIC FILTERING</a> section 
+for more details. 
+They can also be filtered by the owner of the database with the 
+<em>--includeuser</em> and <em>--excludeuser</em> options.
+See the <a href="#user_name_filtering">USER NAME FILTERING</a> section for more details.</p>
+<p>The warning and critical options should be specified as percentages. There are not
+defaults for this action: the warning and critical must be specified. The warning value
+cannot be greater than the critical value. The output returns all databases sorted by
+commitratio, smallest first.</p>
+<p>Example: Warn if any database on host flagg is less than 90% in commitratio, and critical if less then 80%.</p>
+<pre>
+  check_postgres_database_commitratio --host=flagg --warning='90%' --critical='80%'</pre>
+<p>For MRTG output, returns the percentage of the database with the smallest commitratio on the first line, 
+and the name of the database on the fourth line.</p>
+<p>
+</p>
 <h2><a name="connection"><strong>connection</strong></a></h2>
 <p>(<code>symlink: check_postgres_connection</code>) Simply connects, issues a 'SELECT version()', and leaves.
 Takes no <em>--warning</em> or <em>--critical</em> options.</p>
@@ -587,7 +621,7 @@ Takes no <em>--warning</em> or <em>--critical</em> options.</p>
 <p>(<code>symlink: check_postgres_custom_query</code>) Runs a custom query of your choosing, and parses the results. 
 The query itself is passed in through the <code>query</code> argument, and should be kept as simple as possible. 
 If at all possible, wrap it in a view or a function to keep things easier to manage. The query should 
-return one or two columns. It is required that one of the coumns be named &quot;result&quot; and is the item 
+return one or two columns. It is required that one of the columns be named &quot;result&quot; and is the item 
 that will be checked against your warning and critical values. The second column is for the performance 
 data and any name can be used: this will be the 'value' inside the performance data section.</p>
 <p>At least one warning or critical argument must be specified. What these are set to depends on the type of 
@@ -724,37 +758,37 @@ space. The items are:</p>
 not available in those versions.</p>
 <p>If the dbname argument is given, seven additional items are returned:</p>
 <dl>
-<dt><strong><a name="idx_scan" class="item">idx_scan</a></strong></dt>
+<dt><strong><a name="idxscan" class="item">idxscan</a></strong></dt>
 
 <dd>
 <p>Total number of user index scans.</p>
 </dd>
-<dt><strong><a name="idx_tup_read" class="item">idx_tup_read</a></strong></dt>
+<dt><strong><a name="idxtupread" class="item">idxtupread</a></strong></dt>
 
 <dd>
 <p>Total number of user index entries returned.</p>
 </dd>
-<dt><strong><a name="idx_tup_fetch" class="item">idx_tup_fetch</a></strong></dt>
+<dt><strong><a name="idxtupfetch" class="item">idxtupfetch</a></strong></dt>
 
 <dd>
 <p>Total number of rows fetched by simple user index scans.</p>
 </dd>
-<dt><strong><a name="idx_blks_read" class="item">idx_blks_read</a></strong></dt>
+<dt><strong><a name="idxblksread" class="item">idxblksread</a></strong></dt>
 
 <dd>
 <p>Total number of disk blocks read for all user indexes.</p>
 </dd>
-<dt><strong><a name="idx_blks_hit" class="item">idx_blks_hit</a></strong></dt>
+<dt><strong><a name="idxblkshit" class="item">idxblkshit</a></strong></dt>
 
 <dd>
 <p>Total number of buffer hits for all user indexes.</p>
 </dd>
-<dt><strong><a name="seq_scan" class="item">seq_scan</a></strong></dt>
+<dt><strong><a name="seqscan" class="item">seqscan</a></strong></dt>
 
 <dd>
 <p>Total number of sequential scans against all user tables.</p>
 </dd>
-<dt><strong><a name="seq_tup_read" class="item">seq_tup_read</a></strong></dt>
+<dt><strong><a name="seqtupread" class="item">seqtupread</a></strong></dt>
 
 <dd>
 <p>Total number of tuples returned from all user tables.</p>
@@ -763,6 +797,11 @@ not available in those versions.</p>
 <p>Example 1: Grab the stats for a database named &quot;products&quot; on host &quot;willow&quot;:</p>
 <pre>
   check_postgres_dbstats --dbhost willow --dbname products</pre>
+<p>The output returned will be like this (all on one line, not wrapped):</p>
+<pre>
+    backends:82 commits:58374408 rollbacks:1651 read:268435543 hit:2920381758 idxscan:310931294 idxtupread:2777040927
+    idxtupfetch:1840241349 idxblksread:62860110 idxblkshit:1107812216 seqscan:5085305 seqtupread:5370500520
+    ret:0 fetch:0 ins:0 upd:0 del:0 dbname:willow</pre>
 <p>
 </p>
 <h2><a name="disabled_triggers"><strong>disabled_triggers</strong></a></h2>
@@ -845,6 +884,26 @@ checking this information does require obtaining special locks on the free-space
 run this check with short intervals.</p>
 <p>For MRTG output, returns the percent of free-space-map on the first line, the number of relations currently used on 
 the second line.</p>
+<p>
+</p>
+<h2><a name="hitratio"><strong>hitratio</strong></a></h2>
+<p>(<code>symlink: check_postgres_database_hitratio</code>) Checks the hit ratio of all databases and complains when they are too low.
+There is no need to run this command more than once per database cluster. 
+Databases can be filtered with 
+the <em>--include</em> and <em>--exclude</em> options. See the <a href="#basic_filtering">BASIC FILTERING</a> section 
+for more details. 
+They can also be filtered by the owner of the database with the 
+<em>--includeuser</em> and <em>--excludeuser</em> options.
+See the <a href="#user_name_filtering">USER NAME FILTERING</a> section for more details.</p>
+<p>The warning and critical options should be specified as percentages. There are not
+defaults for this action: the warning and critical must be specified. The warning value
+cannot be greater than the critical value. The output returns all databases sorted by
+hitratio, smallest first.</p>
+<p>Example: Warn if any database on host flagg is less than 90% in hitratio, and critical if less then 80%.</p>
+<pre>
+  check_postgres_database_hitratio --host=flagg --warning='90%' --critical='80%'</pre>
+<p>For MRTG output, returns the percentage of the database with the smallest hitratio on the first line, 
+and the name of the database on the fourth line.</p>
 <p>
 </p>
 <h2><a name="hot_standby_delay"><strong>hot_standby_delay</strong></a></h2>
@@ -1106,6 +1165,41 @@ maxwait value shows how long in seconds the oldest waiting client connection
 has been waiting.</p>
 <p>
 </p>
+<h2><a name="pgbouncer_backends"><strong>pgbouncer_backends</strong></a></h2>
+<p>(<code>symlink: check_postgres_pgbouncer_backends</code>) Checks the current number of
+connections for one or more databases through pgbouncer, and optionally
+compares it to the maximum allowed, which is determined by the pgbouncer
+configuration variable <strong>max_client_conn</strong>. The <em>--warning</em> and <em>--critical</em>
+options can take one of three forms. First, a simple number can be given,
+which represents the number of connections at which the alert will be given.
+This choice does not use the <strong>max_connections</strong> setting. Second, the
+percentage of available connections can be given. Third, a negative number can
+be given which represents the number of connections left until
+<strong>max_connections</strong> is reached. The default values for <em>--warning</em> and
+<em>--critical</em> are '90%' and '95%'.  You can also filter the databases by use
+of the <em>--include</em> and <em>--exclude</em> options.  See the <a href="#basic_filtering">BASIC FILTERING</a>
+section for more details.</p>
+<p>To view only non-idle processes, you can use the <em>--noidle</em> argument. Note
+that the user you are connecting as must be a superuser for this to work
+properly.</p>
+<p>Example 1: Give a warning when the number of connections on host quirm reaches
+120, and a critical if it reaches 150.</p>
+<pre>
+  check_postgres_pgbouncer_backends --host=quirm --warning=120 --critical=150 -p 6432 -u pgbouncer</pre>
+<p>Example 2: Give a critical when we reach 75% of our max_connections setting on
+hosts lancre or lancre2.</p>
+<pre>
+  check_postgres_pgbouncer_backends --warning='75%' --critical='75%' --host=lancre,lancre2 -p 6432 -u pgbouncer</pre>
+<p>Example 3: Give a warning when there are only 10 more connection slots left on
+host plasmid, and a critical when we have only 5 left.</p>
+<pre>
+  check_postgres_pgbouncer_backends --warning=-10 --critical=-5 --host=plasmid -p 6432 -u pgbouncer</pre>
+<p>For MRTG output, the number of connections is reported on the first line, and
+the fourth line gives the name of the database, plus the current
+max_client_conn. If more than one database has been queried, the one with the
+highest number of connections is output.</p>
+<p>
+</p>
 <h2><a name="prepared_txns"><strong>prepared_txns</strong></a></h2>
 <p>(<code>symlink: check_postgres_prepared_txns</code>) Check on the age of any existing prepared transactions. 
 Note that most people will NOT use prepared transactions, as they are part of two-part commit 
@@ -1205,19 +1299,16 @@ a time, an error is thrown.</p>
 <p>
 </p>
 <h2><a name="same_schema"><strong>same_schema</strong></a></h2>
-<p>(<code>symlink: check_postgres_same_schema</code>) Verifies that two databases are identical as far as their 
+<p>(<code>symlink: check_postgres_same_schema</code>) Verifies that two or more databases are identical as far as their 
 schema (but not the data within). This is particularly handy for making sure your slaves have not 
 been modified or corrupted in any way when using master to slave replication. Unlike most other 
 actions, this has no warning or critical criteria - the databases are either in sync, or are not. 
-If they are not, a detailed list of the differences is presented. To make the list more readable, 
-provide a <code>--verbose</code> argument, which will output one item per line.</p>
+If they are different, a detailed list of the differences is presented.</p>
 <p>You may want to exclude or filter out certain differences. The way to do this is to add strings 
-to the <code>--warning</code> option. To exclude a type of object, use &quot;noobjectnames&quot;. To exclude 
-objects of a certain type by a regular expression against their name, use &quot;noobjectname=regex&quot;. 
-See the examples for a better understanding.</p>
-<p>You may exclude all objects of a certain name by using the <code>exclude</code> option. It takes a Perl 
-regular expression as its argument.</p>
-<p>The types of objects that can be filtered are:</p>
+to the <code>--filter</code> option. To exclude a type of object, use &quot;noname&quot;, where 'name' is the type of 
+object, for example, &quot;noschema&quot;. To exclude objects of a certain type by a regular expression against 
+their name, use &quot;noname=regex&quot;. See the examples below for a better understanding.</p>
+<p>The types of objects that can be filtered include:</p>
 <dl>
 <dt><strong><a name="user" class="item">user</a></strong></dt>
 
@@ -1242,27 +1333,36 @@ regular expression as its argument.</p>
 columns within a table.</p>
 <p>The filter option &quot;nofuncbody&quot; prevents comparison of the bodies of all 
 functions.</p>
-<p>The filter option &quot;noperms&quot; prevents comparison of object permissions.</p>
-<p>The filter option &quot;nolanguage&quot; prevents comparison of language existence.</p>
-<p>You must provide information on how to reach the second database by a connection 
-parameter ending in the number 2, such as &quot;--dbport2=5543&quot;. If if it not given, 
-it uses the the same information as database number 1, or the default if neither 
-is given.</p>
+<p>The filter option &quot;noperm&quot; prevents comparison of object permissions.</p>
+<p>To provide the second database, just append the differences to the first one 
+by a call to the appropriate connection argument. For example, to compare 
+databases on hosts alpha and bravo, use &quot;--dbhost=alpha,bravo&quot;. Also see the 
+examples below.</p>
+<p>If only a single host is given, it is assumed we are doing a &quot;time-based&quot; report. 
+The first time this is run a snapshot of all the items in the database is 
+saved to a local file. When you run it again, that snapshot is read in and 
+becomes &quot;database #2&quot; and is compared to the current database.</p>
+<p>To enable snapshots at various points in time, you can use the &quot;--suffix&quot; 
+argument to make the filenames unique to each run. See the examples below.</p>
 <p>Example 1: Verify that two databases on hosts star and line are the same:</p>
 <pre>
-  check_postgres_same_schema --dbhost=star --dbhost2=line</pre>
+  check_postgres_same_schema --dbhost=star,line</pre>
 <p>Example 2: Same as before, but exclude any triggers with &quot;slony&quot; in their name</p>
 <pre>
-  check_postgres_same_schema --dbhost=star --dbhost2=line --warning=&quot;notrigger=slony&quot;</pre>
+  check_postgres_same_schema --dbhost=star,line --filter=&quot;notrigger=slony&quot;</pre>
 <p>Example 3: Same as before, but also exclude all indexes</p>
 <pre>
-  check_postgres_same_schema --dbhost=star --dbhost2=line --warning=&quot;notrigger=slony noindexes&quot;</pre>
-<p>Example 4: Don't show anything starting with &quot;pg_catalog&quot;</p>
+  check_postgres_same_schema --dbhost=star,line --filter=&quot;notrigger=slony noindexes&quot;</pre>
+<p>Example 4: Check differences for the database &quot;battlestar&quot; on different ports</p>
 <pre>
-  check_postgres_same_schema --dbhost=star --dbhost2=line --exclude=&quot;^pg_catalog&quot;</pre>
-<p>Example 5: Check differences for the database &quot;battlestar&quot; on different ports</p>
+  check_postgres_same_schema --dbname=battlestar --dbport=5432,5544</pre>
+<p>Example 5: Create a daily and weekly snapshot file</p>
 <pre>
-  check_postgres_same_schema --dbname=battlestar --dbport=5432 --dbport2=5544</pre>
+  check_postgres_same_schema --dbname=cylon --suffix=daily
+  check_postgres_same_schema --dbname=cylon --suffix=weekly</pre>
+<p>Example 6: Run a historical comparison</p>
+<pre>
+  check_postgres_same_schema --dbname=cylon --suffix=daily</pre>
 <p>
 </p>
 <h2><a name="sequence"><strong>sequence</strong></a></h2>
@@ -1619,18 +1719,47 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by Greg Sabino Mullane.</p>
 <dl>
-<dt><strong><a name="version_2_17_0" class="item"><strong>Version 2.17.0</strong></a></strong></dt>
+<dt><strong><a name="version_2_18_0" class="item"><strong>Version 2.18.0</strong></a></strong></dt>
 
 <dd>
+<pre>
+  Redo the same_schema action. Use new --filter argument for all filtering.
+  Allow comparisons between any number of databases.
+  Remove the db*2 arguments.
+  Allow comparison of the same db over time.</pre>
+<pre>
+  Swap db1 and db2 if the slave is 1 for the hot standby check (David E. Wheeler)</pre>
+<pre>
+  Fix ORDER BY in the last vacuum/analyze action (Nicolas Thauvin)</pre>
+<pre>
+  Fix check_hot_standby_delay perfdata output (Nicolas Thauvin)</pre>
+<pre>
+  Look in the correct place for the .ready files with the archive_ready action ((Nicolas Thauvin)</pre>
+<pre>
+  New action: commitratio (Guillaume Lelarge)</pre>
+<pre>
+  New action: hitratio (Guillaume Lelarge)</pre>
+<pre>
+  Make sure --action overrides the symlink naming trick.</pre>
+<pre>
+  Fix warning when client_port set to empty string (bug #79)</pre>
+<pre>
+  Account for &quot;empty row&quot; in -x output (i.e. source of functions).</pre>
+<pre>
+  Fix some incorrectly named data fields (Andy Lester)</pre>
+<pre>
+  Expand the number of pgbouncer actions (Ruslan Kabalin)</pre>
 <pre>
   Give detailed information and refactor txn_idle, txn_time, and query_time
     (Per request from bug #61)</pre>
 <pre>
-  Set maxliagn to 8 in the bloat check if box identified as '64-bit'
+  Set maxalign to 8 in the bloat check if box identified as '64-bit'
     (Michel Sijmons, bug #66)</pre>
 <pre>
   Support non-standard version strings in the bloat check.
     (Michel Sijmons and Gurjeet Singh, bug #66)</pre>
+<pre>
+  Do not show excluded databases in some output (Ruslan Kabalin)</pre>
 <pre>
   Allow &quot;and&quot;, &quot;or&quot; inside arguments (David E. Wheeler)</pre>
 <pre>
@@ -1638,14 +1767,22 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
   Fix psql version regex (Peter Eisentraut, bug #69)</pre>
 <pre>
-  Standardize and clean up all perfdata ouput (bug #52)</pre>
+  Add the --assume-standby-mode option (Ruslan Kabalin)</pre>
+<pre>
+  Standardize and clean up all perfdata output (bug #52)</pre>
 <pre>
   Exclude &quot;idle in transaction&quot; from the query_time check (bug #43)</pre>
 <pre>
   Fix the perflimit for the bloat action (bug #50)</pre>
 <pre>
   Clean up the custom_query action a bit.</pre>
+<pre>
+  Handle undef percents in check_fsm_relations (Andy Lester)</pre>
+<pre>
+  Fix MRTG for last vacuum and last_analyze actions.</pre>
 </dd>
+<dt><strong><a name="version_2_17_0_no_public_release" class="item"><strong>Version 2.17.0</strong> no public release</a></strong></dt>
+
 <dt><strong><a name="version_2_16_0_january_20_2011" class="item"><strong>Version 2.16.0</strong> January 20, 2011</a></strong></dt>
 
 <dd>
