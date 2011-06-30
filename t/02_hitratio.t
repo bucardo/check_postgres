@@ -1,6 +1,6 @@
 #!perl
 
-## Test the "database_size" action
+## Test the "hitratio" action
 
 use 5.006;
 use strict;
@@ -12,12 +12,12 @@ use CP_Testing;
 
 use vars qw/$dbh $dbh2 $SQL $count $host $t $result $user/;
 
-my $cp = CP_Testing->new({default_action => 'database_hitratio'});
+my $cp = CP_Testing->new({default_action => 'hitratio'});
 
 $dbh = $cp->test_database_handle();
 
-my $S = q{Action 'database_hitratio'};
-my $label = 'POSTGRES_DATABASE_HITRATIO';
+my $S = q{Action 'hitratio'};
+my $label = 'POSTGRES_HITRATIO';
 
 $cp->drop_all_tables();
 

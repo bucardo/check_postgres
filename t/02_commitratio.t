@@ -1,6 +1,6 @@
 #!perl
 
-## Test the "database_size" action
+## Test the "commitratio" action
 
 use 5.006;
 use strict;
@@ -12,12 +12,12 @@ use CP_Testing;
 
 use vars qw/$dbh $dbh2 $SQL $count $host $t $result $user/;
 
-my $cp = CP_Testing->new({default_action => 'database_commitratio'});
+my $cp = CP_Testing->new({default_action => 'commitratio'});
 
 $dbh = $cp->test_database_handle();
 
-my $S = q{Action 'database_commitratio'};
-my $label = 'POSTGRES_DATABASE_COMMITRATIO';
+my $S = q{Action 'commitratio'};
+my $label = 'POSTGRES_COMMITRATIO';
 
 $cp->drop_all_tables();
 
