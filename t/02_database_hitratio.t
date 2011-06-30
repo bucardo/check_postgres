@@ -34,7 +34,7 @@ $t=qq{$S returned expected text when warning level and critical level are specif
 like ($cp->run('-w 0% -c 0%'), qr{^$label OK:}, $t);
 
 $t=qq{$S fails when called with an invalid option};
-like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
+like ($cp->run('foobar=12'), qr{Usage:}, $t);
 
 $t=qq{$S fails when called with an invalid warning option};
 like ($cp->run('-w felz'),     qr{^ERROR: Invalid 'warning' option: must be a percentage}, $t);

@@ -20,7 +20,7 @@ my $S = q{Action 'slony_status'};
 my $label = 'POSTGRES_SLONY_STATUS';
 
 $t=qq{$S fails when called with an invalid option};
-like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
+like ($cp->run('foobar=12'), qr{Usage:}, $t);
 
 $t=qq{$S fails when called with invalid warning};
 like ($cp->run('-w foo'), qr{ERROR:.+'warning' must be a valid time}, $t);

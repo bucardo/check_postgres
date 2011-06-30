@@ -20,7 +20,7 @@ my $S = q{Action 'wal_files'};
 my $label = 'POSTGRES_WAL_FILES';
 
 $t=qq{$S fails when called with an invalid option};
-like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
+like ($cp->run('foobar=12'), qr{Usage:}, $t);
 
 $t=qq{$S fails when called with an invalid option};
 like ($cp->run('--warning=30%'), qr{ERROR:.+must be a positive integer}, $t);

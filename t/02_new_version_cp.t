@@ -20,7 +20,7 @@ my $S = q{Action 'new_version_cp'};
 my $label = 'POSTGRES_NEW_VERSION_CP';
 
 $t=qq{$S fails when called with an invalid option};
-like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
+like ($cp->run('foobar=12'), qr{Usage:}, $t);
 
 $t=qq{$S returns warning for mismatched major version};
 $cp->fake_self_version('1.2.3');

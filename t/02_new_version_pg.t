@@ -20,7 +20,7 @@ my $S = q{Action 'new_version_pg'};
 my $label = 'POSTGRES_NEW_VERSION_PG';
 
 $t=qq{$S fails when called with an invalid option};
-like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
+like ($cp->run('foobar=12'), qr{Usage:}, $t);
 
 $t=qq{$S returns unknown for bizarre Postgres version};
 $cp->fake_version('7.8.12');

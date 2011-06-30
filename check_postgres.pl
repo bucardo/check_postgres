@@ -1394,6 +1394,7 @@ sub add_response {
         $dbhost,
         $dbport;
     $header =~ s/\s+$//;
+    $header =~ s/^ //;
     my $perf = ($opt{showtime} and $db->{totaltime} and $action ne 'bloat') ? "time=$db->{totaltime}s" : '';
     if ($db->{perf}) {
         $db->{perf} =~ s/^ +//;

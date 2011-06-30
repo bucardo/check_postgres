@@ -22,7 +22,7 @@ my $label = 'POSTGRES_BLOAT';
 my $tname = 'cp_bloat_test';
 
 $t=qq{$S fails when called with an invalid option};
-like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
+like ($cp->run('foobar=12'), qr{Usage:}, $t);
 
 $t=qq{$S fails when called with an invalid option};
 like ($cp->run('-w=abc'), qr{must be a size or a percentage}, $t);

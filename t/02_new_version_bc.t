@@ -20,7 +20,7 @@ my $S = q{Action 'new_version_bc'};
 my $label = 'POSTGRES_NEW_VERSION_BC';
 
 $t=qq{$S fails when called with an invalid option};
-like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
+like ($cp->run('foobar=12'), qr{Usage:}, $t);
 
 ## No other tests for now
 

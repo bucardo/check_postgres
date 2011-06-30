@@ -20,7 +20,7 @@ my $S = q{Action 'version'};
 my $label = 'POSTGRES_VERSION';
 
 $t=qq{$S fails when called with an invalid option};
-like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
+like ($cp->run('foobar=12'), qr{Usage:}, $t);
 
 $t=qq{$S fails when called with MRTG but no option};
 like ($cp->run('--output=mrtg'), qr{ERROR: Invalid mrtg}, $t);

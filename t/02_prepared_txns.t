@@ -20,7 +20,7 @@ my $S = q{Action 'prepare_txns'};
 my $label = 'POSTGRES_PREPARED_TXNS';
 
 $t=qq{$S fails when called with an invalid option};
-like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
+like ($cp->run('foobar=12'), qr{Usage:}, $t);
 
 my $ver = $dbh->{pg_server_version};
 if ($ver < 80100) {

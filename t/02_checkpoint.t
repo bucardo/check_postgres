@@ -20,7 +20,7 @@ my $S = q{Action 'checkpoint'};
 my $label = 'POSTGRES_CHECKPOINT';
 
 $t=qq{$S fails when called with an invalid option};
-like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
+like ($cp->run('foobar=12'), qr{Usage:}, $t);
 
 $t=qq{$S fails when called without warning or critical};
 like ($cp->run(''), qr{Must provide a warning and/or critical}, $t);

@@ -20,7 +20,7 @@ my $S = q{Action 'locks'};
 my $label = 'POSTGRES_LOCKS';
 
 $t=qq{$S fails when called with an invalid option};
-like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
+like ($cp->run('foobar=12'), qr{Usage:}, $t);
 
 $t=qq{$S fails when invalid database used};
 like ($cp->run('--dbname=foo'), qr{database "foo" does not exist}, $t);

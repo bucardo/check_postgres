@@ -33,7 +33,7 @@ $t = qq{$S identifies host};
 like ($result, qr{host:$host}, $t);
 
 $t = qq{$S fails when called with an invalid option};
-like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
+like ($cp->run('foobar=12'), qr{Usage:}, $t);
 
 $t = qq{$S handles 'string' type for non-match};
 like ($cp->run(qq{--query="$good_query" --valtype=string --warning=abc}),

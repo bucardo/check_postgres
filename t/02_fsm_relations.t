@@ -20,7 +20,7 @@ my $S = q{Action 'fsm_relations'};
 my $label = 'POSTGRES_FSM_RELATIONS';
 
 $t=qq{$S fails when called with an invalid option};
-like ($cp->run('foobar=12'), qr{^\s*Usage:}, $t);
+like ($cp->run('foobar=12'), qr{Usage:}, $t);
 
 $t=qq{$S fails when called with an invalid option};
 like ($cp->run('--warning=40'), qr{ERROR:.+must be a percentage}, $t);
