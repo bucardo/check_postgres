@@ -141,8 +141,10 @@ our %msg = (
     'hs-no-location'     => q{Could not get current xlog location on $1},
     'hs-receive-delay'   => q{receive-delay},
     'hs-replay-delay'    => q{replay_delay},
+    'index'              => q{Index},
     'invalid-option'     => q{Invalid option},
     'invalid-query'      => q{Invalid query returned: $1},
+    'language'           => q{Language},
     'listener-msg'       => q{listeners found: $1},
     'listening'          => q{listening},
     'locks-msg'          => q{total "$1" locks: $2},
@@ -157,7 +159,6 @@ our %msg = (
     'logfile-seekfail'   => q{Seek on $1 failed: $2},
     'logfile-stderr'     => q{Logfile output has been redirected to stderr: please provide a filename},
     'logfile-syslog'     => q{Database is using syslog, please specify path with --logfile option (fac=$1)},
-    'maxtime'            => q{ maxtime=$1}, ## needs leading space
     'mode-standby'       => q{Server in standby mode},
     'mrtg-fail'          => q{Action $1 failed: $2},
     'new-ver-nocver'     => q{Could not download version information for $1},
@@ -255,8 +256,16 @@ our %msg = (
     'runtime-badmrtg'    => q{invalid queryname?},
     'runtime-badname'    => q{Invalid queryname option: must be a simple view name},
     'runtime-msg'        => q{query runtime: $1 seconds},
-    'same-failed'        => q{Databases were different. Items not matched: $1},
-    'same-matched'       => q{Both databases have identical items},
+    'schema'             => q{Schema},
+    'ss-createfile'      => q{Created file $1},
+    'ss-different'       => q{"$1" is different:},
+    'ss-existson'        => q{Exists on:},
+    'ss-failed'          => q{Databases were different. Items not matched: $1},
+    'ss-matched'         => q{All databases have identical items},
+    'ss-missingon'       => q{Missing on:},
+    'ss-noexist'         => q{$1 "$2" does not exist on all databases:},
+    'ss-notset'          => q{"$1" is not set on all databases:},
+    'ss-suffix'          => q{Error: cannot use suffix unless looking at time-based schemas},
     'seq-die'            => q{Could not determine information about sequence $1},
     'seq-msg'            => q{$1=$2% (calls left=$3)},
     'seq-none'           => q{No sequences found},
@@ -272,6 +281,7 @@ our %msg = (
     'symlink-fail2'      => q{Could not symlink $1 to $2: $3},
     'symlink-name'       => q{This command will not work unless the program has the word "postgres" in it},
     'symlink-unlink'     => q{Unlinking "$1":$2 },
+    'table'              => q{Table},
     'testmode-end'       => q{END OF TEST MODE},
     'testmode-fail'      => q{Connection failed: $1 $2},
     'testmode-norun'     => q{Cannot run "$1" on $2: version must be >= $3, but is $4},
@@ -312,6 +322,7 @@ our %msg = (
     'txnwrap-wbig'       => q{The 'warning' value must be less than 2 billion},
     'unknown-error'      => q{Unknown error},
     'usage'              => qq{\nUsage: \$1 <options>\n Try "\$1 --help" for a complete list of options\n Try "\$1 --man" for the full manual\n},
+    'user'               => q{User},
     'username'           => q{username},
     'vac-nomatch-a'      => q{No matching tables have ever been analyzed},
     'vac-nomatch-v'      => q{No matching tables have ever been vacuumed},
@@ -374,8 +385,10 @@ our %msg = (
     'hs-no-location'     => q{N'a pas pu obtenir l'emplacement courant dans le journal des transactions sur $1},
     'hs-receive-delay'   => q{délai de réception},
     'hs-replay-delay'    => q{délai de rejeu},
+'index'              => q{Index},
     'invalid-option'     => q{Option invalide},
     'invalid-query'      => q{Une requête invalide a renvoyé : $1},
+'language'           => q{Language},
     'listener-msg'       => q{processus LISTEN trouvés : $1},
     'listening'          => q{en écoute},
     'locks-msg'          => q{total des verrous « $1 » : $2},
@@ -479,8 +492,16 @@ our %msg = (
     'runtime-badmrtg'    => q{queryname invalide ?},
     'runtime-badname'    => q{Option invalide pour queryname option : doit être le nom d'une vue},
     'runtime-msg'        => q{durée d'exécution de la requête : $1 secondes},
-    'same-failed'        => q{Les bases de données sont différentes. Éléments différents : $1},
-    'same-matched'       => q{Les bases de données ont les mêmes éléments},
+'schema'             => q{Schema},
+'ss-createfile'      => q{Created file $1},
+'ss-different'       => q{"$1" is different:},
+'ss-existson'        => q{Exists on:},
+    'ss-failed'          => q{Les bases de données sont différentes. Éléments différents : $1},
+    'ss-matched'         => q{Les bases de données ont les mêmes éléments},
+'ss-missingon'       => q{Missing on:},
+'ss-noexist'         => q{$1 "$2" does not exist on all databases:},
+'ss-notset'          => q{"$1" is not set on all databases:},
+'ss-suffix'          => q{Error: cannot use suffix unless looking at time-based schemas},
     'size'               => q{taille},
     'slony-noschema'     => q{N'a pas pu déterminer le schéma de Slony},
     'slony-nonumber'     => q{L'appel à sl_status n'a pas renvoyé un numéro},
@@ -496,6 +517,7 @@ our %msg = (
     'symlink-fail2'      => q{N'a pas pu supprimer le lien symbolique $1 vers $2 : $3},
     'symlink-name'       => q{Cette commande ne fonctionnera pas sauf si le programme contient le mot « postgres »},
     'symlink-unlink'     => q{Supression de « $1 » :$2 },
+'table'              => q{Table},
     'testmode-end'       => q{FIN DU MODE DE TEST},
     'testmode-fail'      => q{Échec de la connexion : $1 $2},
     'testmode-norun'     => q{N'a pas pu exécuter « $1 » sur $2 : la version doit être supérieure ou égale à $3, mais est $4},
@@ -519,7 +541,7 @@ our %msg = (
     'time-years'         => q{années},
     'timesync-diff'      => q{diff},
     'timesync-msg'       => q{timediff=$1 Base de données=$2 Local=$3},
-    'transactions'       => q{transactions},
+'transactions'       => q{transactions},
     'trigger-msg'        => q{Triggers désactivés : $1},
     'txn-time'           => q{durée de la transaction},
     'txnidle-count-msg'  => q{Transactions en attente totales : $1},
@@ -537,6 +559,7 @@ our %msg = (
     'unknown-error'      => q{erreur inconnue},
     'usage'              => qq{\nUsage: \$1 <options>\n Essayez « \$1 --help » pour liste complète des options\n\n},
     'username'           => q{nom utilisateur},
+'user'               => q{User},
     'vac-nomatch-a'      => q{Aucune des tables correspondantes n'a eu d'opération ANALYZE},
     'vac-nomatch-v'      => q{Aucune des tables correspondantes n'a eu d'opération VACUUM},
     'version'            => q{version $1},
@@ -658,6 +681,158 @@ for my $arg (@ARGV) {
     }
 }
 
+## Used by same_schema in the find_catalog_info sub
+my %catalog_info = (
+
+    user => {
+        SQL        => q{
+SELECT *, usename AS name, quote_ident(usename) AS safeusename
+FROM pg_user},
+        deletecols => [ qw{ passwd } ],
+    },
+
+    schema => {
+        SQL       => q{
+SELECT n.oid, quote_ident(nspname) AS name, quote_ident(usename) AS owner, nspacl
+FROM pg_namespace n
+JOIN pg_user u ON (u.usesysid = n.nspowner)},
+        deletecols => [ ],
+        exclude    => 'temp_schemas',
+    },
+    language => {
+        SQL       => q{
+SELECT l.*, lanname AS name, quote_ident(usename) AS owner
+FROM pg_language l
+JOIN pg_user u ON (u.usesysid = l.lanowner)},
+    },
+    type => {
+        SQL       => q{
+SELECT t.oid AS oid, t.*, quote_ident(usename) AS owner, quote_ident(nspname) AS schema,
+  nspname||'.'||typname AS name
+FROM pg_type t
+JOIN pg_user u ON (u.usesysid = t.typowner)
+JOIN pg_namespace n ON (n.oid = t.typnamespace)
+WHERE t.typtype NOT IN ('b','c')},
+        exclude    => 'system',
+    },
+    sequence => {
+        SQL       => q{
+SELECT c.*, nspname||'.'||relname AS name, quote_ident(usename) AS owner,
+  quote_ident(relname) AS safename, quote_ident(nspname) AS schema
+FROM pg_class c
+JOIN pg_user u ON (u.usesysid = c.relowner)
+JOIN pg_namespace n ON (n.oid = c.relnamespace)
+WHERE c.relkind = 'S'},
+        innerSQL   => 'SELECT * FROM ROWSAFENAME',
+    },
+    view => {
+        SQL       => q{
+SELECT c.*, nspname||'.'||relname AS name, quote_ident(usename) AS owner,
+  quote_ident(relname) AS safename, quote_ident(nspname) AS schema,
+  TRIM(pg_get_viewdef(c.oid, TRUE)) AS viewdef, spcname AS tablespace
+FROM pg_class c
+JOIN pg_user u ON (u.usesysid = c.relowner)
+JOIN pg_namespace n ON (n.oid = c.relnamespace)
+LEFT JOIN pg_tablespace s ON (s.oid = c.reltablespace)
+WHERE c.relkind = 'v'},
+        exclude    => 'system',
+    },
+    table => {
+        SQL       => q{
+SELECT c.*, nspname||'.'||relname AS name, quote_ident(usename) AS owner,
+  quote_ident(relname) AS safename, quote_ident(nspname) AS schema,
+  spcname AS tablespace
+FROM pg_class c
+JOIN pg_user u ON (u.usesysid = c.relowner)
+JOIN pg_namespace n ON (n.oid = c.relnamespace)
+LEFT JOIN pg_tablespace s ON (s.oid = c.reltablespace)
+WHERE c.relkind = 'r'},
+        exclude    => 'system',
+    },
+    index => {
+        SQL       => q{
+SELECT c.*, i.*, nspname||'.'||relname AS name, quote_ident(usename) AS owner,
+  quote_ident(relname) AS safename, quote_ident(nspname) AS schema,
+  spcname AS tablespace, amname,
+  pg_get_indexdef(c.oid) AS indexdef
+FROM pg_class c
+JOIN pg_user u ON (u.usesysid = c.relowner)
+JOIN pg_namespace n ON (n.oid = c.relnamespace)
+JOIN pg_index i ON (c.oid = i.indexrelid)
+LEFT JOIN pg_tablespace s ON (s.oid = c.reltablespace)
+LEFT JOIN pg_am a ON (a.oid = c.relam)
+WHERE c.relkind = 'i'},
+        exclude    => 'system',
+    },
+    operator => {
+        SQL       => q{
+SELECT o.*, o.oid, nspname||'.'||o.oprname AS name, quote_ident(o.oprname) AS safename,
+  usename AS owner, nspname AS schema,
+  t1.typname AS resultname,
+  t2.typname AS leftname, t3.typname AS rightname
+FROM pg_operator o
+JOIN pg_user u ON (u.usesysid = o.oprowner)
+JOIN pg_namespace n ON (n.oid = o.oprnamespace)
+JOIN pg_proc p1 ON (p1.oid = o.oprcode)
+JOIN pg_type t1 ON (t1.oid = o.oprresult)
+LEFT JOIN pg_type t2 ON (t2.oid = o.oprleft)
+LEFT JOIN pg_type t3 ON (t3.oid = o.oprright)},
+        exclude    => 'system',
+    },
+    trigger => {
+        SQL       => q{
+SELECT t.*, n1.nspname||'.'||t.tgname AS name, quote_ident(t.tgname) AS safename, quote_ident(usename) AS owner,
+  n1.nspname AS tschema, c1.relname AS tname,
+  n2.nspname AS cschema, c2.relname AS cname,
+  n3.nspname AS procschema, p.proname AS procname
+FROM pg_trigger t
+JOIN pg_class c1 ON (c1.oid = t.tgrelid)
+JOIN pg_user u ON (u.usesysid = c1.relowner)
+JOIN pg_namespace n1 ON (n1.oid = c1.relnamespace)
+JOIN pg_proc p ON (p.oid = t.tgfoid)
+JOIN pg_namespace n3 ON (n3.oid = p.pronamespace)
+LEFT JOIN pg_class c2 ON (c2.oid = t.tgconstrrelid)
+LEFT JOIN pg_namespace n2 ON (n2.oid = c2.relnamespace)
+WHERE t.tgconstrrelid = 0 AND tgname !~ '^pg_'},
+    },
+    function => {
+        SQL       => q{
+SELECT p.*, p.oid, nspname||'.'||p.proname AS name, quote_ident(p.proname) AS safename,
+  md5(prosrc) AS source_checksum,
+  usename AS owner, nspname AS schema
+FROM pg_proc p
+JOIN pg_user u ON (u.usesysid = p.proowner)
+JOIN pg_namespace n ON (n.oid = p.pronamespace)},
+        exclude    => 'system',
+    },
+    constraint => {
+        SQL       => q{
+SELECT c.*, c.oid, n.nspname||'.'||c.conname AS name, quote_ident(c.conname) AS safename,
+ n.nspname AS schema, relname AS tname
+FROM pg_constraint c
+JOIN pg_namespace n ON (n.oid = c.connamespace)
+JOIN pg_class r ON (r.oid = c.conrelid)
+JOIN pg_namespace n2 ON (n2.oid = r.relnamespace)},
+        exclude    => 'system',
+    },
+    column => {
+        SQL       => q{
+SELECT a.*, n.nspname||'.'||c.relname||'.'||attname AS name, quote_ident(a.attname) AS safename,
+  n.nspname||'.'||c.relname AS tname,
+  typname, quote_ident(nspname) AS schema,
+  pg_get_expr(d.adbin, a.attrelid, true) AS default
+FROM pg_attribute a
+JOIN pg_type t ON (t.oid = a.atttypid)
+JOIN pg_class c ON (c.oid = a.attrelid AND c.relkind = 'r')
+JOIN pg_namespace n ON (n.oid = c.relnamespace)
+LEFT JOIN pg_attrdef d ON (d.adrelid = a.attrelid AND d.adnum = a.attnum)
+WHERE attnum >= 1
+AND NOT attisdropped},
+        postSQL    => q{ORDER BY n.nspname, c.relname, a.attnum},
+        exclude    => 'system',
+    },
+);
+
 my $rcfile;
 if (! $opt{'no-check_postgresrc'}) {
     if (-e '.check_postgresrc') {
@@ -773,6 +948,8 @@ GetOptions(
     'noidle',      ## used by backends only
     'datadir=s',   ## used by checkpoint only
     'schema=s',    ## used by slony_status only
+    'filter=s@',   ## used by same_schema only
+    'suffix=s',    ## used by same_schema only
 );
 
 die $USAGE if ! keys %opt and ! @ARGV;
@@ -1137,6 +1314,9 @@ $VERBOSE >= 2 and warn qq{psql=$PSQL version=$psql_version\n};
 $opt{defaultdb} = $psql_version >= 8.0 ? 'postgres' : 'template1';
 $opt{defaultdb} = 'pgbouncer' if $action =~ /^pgb/;
 
+## Create the list of databases we are going to connect to
+my @targetdb = setup_target_databases();
+
 sub add_response {
 
     my ($type,$msg) = @_;
@@ -1147,40 +1327,90 @@ sub add_response {
         $action_info->{$action}[0] = 1;
     }
 
-    if (defined $opt{dbname2} and defined $opt{dbname2}->[0] and length $opt{dbname2}->[0]
-        and $opt{dbname}->[0] ne $opt{dbname2}->[0]) {
-        $db->{dbname} .= " => $opt{dbname2}->[0]";
-    }
-    if (defined $opt{host2} and defined $opt{host2}->[0] and length $opt{host2}->[0]
-        and $opt{host}->[0] ne $opt{host2}->[0]) {
-        $db->{host} .= " => $opt{host2}->[0]";
-    }
-    if (defined $opt{port2} and defined $opt{port2}->[0] and length $opt{port2}->[0]
-        and $opt{port}->[0] ne $opt{port2}->[0]) {
-        $db->{port} .= " => $opt{port2}->[0]) ";
-    }
     if ($nohost) {
         push @{$type->{''}} => [$msg, length $nohost > 1 ? $nohost : ''];
         return;
     }
 
     my $dbservice = $db->{dbservice};
-    my $dbname    = $db->{dbname};
+    my $dbname    = qq{DB "$db->{dbname}"};
+    my $dbhost    = (!$db->{host} or $db->{host} eq '<none>') ? '' : qq{ (host:$db->{host})};
+    my $dbport    = defined $db->{port} ? ($db->{port} eq $opt{defaultport} ? '' : qq{ (port=$db->{port}) }) : '';
+
+    ## Same_schema gets some different output
+    my $same_schema_header = '';
+    if ($action eq 'same_schema') {
+
+        ## Pretty display of what exactly those numbers mean!
+        my $number = 0;
+        for my $row (@targetdb) {
+            $number++;
+            if (exists $row->{filename}) {
+                $same_schema_header .= sprintf "\nDB %s: File=%s\nDB %s: %s: %s  %s: %s",
+                    $number,
+                    $row->{filename},
+                    $number,
+                    'Creation date',
+                    $row->{ctime},
+                    'CP version',
+                    $row->{cversion};
+            }
+            $same_schema_header .= sprintf "\nDB %s: %s%s%s%s",
+                $number,
+                defined $row->{port} ? qq{port=$row->{port} } : '',
+                defined $row->{host} ? qq{host=$row->{host} } : '',
+                defined $row->{dbname} ? qq{dbname=$row->{dbname} } : '',
+                defined $row->{dbuser} ? qq{user=$row->{dbuser} } : '';
+            $same_schema_header .= "\nDB $number: PG version: $row->{pgversion}";
+            $same_schema_header .= "\nDB $number: Total objects: $row->{objects}";
+        }
+
+        ## Databases
+        $number = 1;
+        my %dlist = map { $_->{dbname}, $number++; } @targetdb;
+        if (keys %dlist > 1) {
+            my $dblist = join ',' => sort { $dlist{$a} <=> $dlist{$b} } keys %dlist;
+            $dbname = qq{ (databases:$dblist)};
+        }
+        ## Hosts
+        $number = 1;
+        my %hostlist = map { $_->{host}, $number++; } @targetdb;
+        if (keys %hostlist > 1) {
+            my $dblist = join ',' => sort { $hostlist{$a} <=> $hostlist{$b} } keys %hostlist;
+            $dbhost = qq{ (hosts:$dblist)};
+        }
+        ## Ports
+        $number = 1;
+        my %portlist = map { $_->{port}, $number++; } @targetdb;
+        if (keys %portlist > 1) {
+            my $dblist = join ',' => sort { $portlist{$a} <=> $portlist{$b} } keys %portlist;
+            $dbport = qq{ (ports:$dblist)};
+        }
+    }
+
     my $header = sprintf q{%s%s%s},
         $action_info->{$action}[0] ? '' : (defined $dbservice and length $dbservice) ?
-            qq{service=$dbservice } : qq{DB "$dbname" },
-                (!$db->{host} or $db->{host} eq '<none>') ? '' : qq{(host:$db->{host}) },
-                    defined $db->{port} ? ($db->{port} eq $opt{defaultport} ? '' : qq{(port=$db->{port}) }) : '';
+        qq{service=$dbservice} : $dbname,
+        $dbhost,
+        $dbport;
     $header =~ s/\s+$//;
     my $perf = ($opt{showtime} and $db->{totaltime} and $action ne 'bloat') ? "time=$db->{totaltime}s" : '';
     if ($db->{perf}) {
         $db->{perf} =~ s/^ +//;
+        if (length $same_schema_header) {
+            $db->{perf} =~ s/^\n//;
+            $db->{perf} = "$same_schema_header\n$db->{perf}";
+        }
         $perf .= sprintf '%s%s', length($perf) ? ' ' : '', $db->{perf};
     }
 
     ## Strip trailing semicolons as allowed by the Nagios spec
-    $perf =~ s/; / /;
-    $perf =~ s/;$//;
+    ## But not for same_schema, where we might have (for example) a view def
+    if ($action ne 'same_schema') {
+        $perf =~ s/; / /;
+        $perf =~ s/;$//;
+    }
+
     push @{$type->{$header}} => [$msg,$perf];
 
     return;
@@ -1368,9 +1598,6 @@ sub finishup {
             my $pmsg = '';
             for (sort keys %$info) {
                 my $m = sprintf '%s ', join ' ' => map { $_->[1] } @{$info->{$_}};
-                if ($VERBOSE) {
-                    $m =~ s/  /\n/g;
-                }
                 $pmsg .= $m;
             }
             $pmsg =~ s/^\s+//;
@@ -1869,6 +2096,22 @@ sub pretty_time {
 
 sub run_command {
 
+    ## Run a command string against each of our databases using psql
+    ## Optional args in a hashref:
+    ## "failok" - don't report if we failed
+    ## "fatalregex" - allow this FATAL regex through
+    ## "target" - use this targetlist instead of generating one
+    ## "timeout" - change the timeout from the default of $opt{timeout}
+    ## "regex" - the query must match this or we throw an error
+    ## "emptyok" - it's okay to not match any rows at all
+    ## "version" - alternate versions for different versions
+    ## "dbnumber" - connect with this specific entry from @targetdb
+    ## "conninfo" - return the connection information string without doing anything
+
+    my $string = shift || '';
+    my $arg = shift || {};
+    my $info = { command => $string, db => [], hosts => 0 };
+
     ## First of all check if the server in standby mode, if so end this
     ## with OK status.
 
@@ -1882,131 +2125,14 @@ sub run_command {
         exit 0;
     }
 
-    ## Run a command string against each of our databases using psql
-    ## Optional args in a hashref:
-    ## "failok" - don't report if we failed
-    ## "fatalregex" - allow this FATAL regex through
-    ## "target" - use this targetlist instead of generating one
-    ## "timeout" - change the timeout from the default of $opt{timeout}
-    ## "regex" - the query must match this or we throw an error
-    ## "emptyok" - it's okay to not match any rows at all
-    ## "version" - alternate versions for different versions
-    ## "dbnumber" - connect with an alternate set of params, e.g. port2 dbname2
-
-    my $string = shift || '';
-    my $arg = shift || {};
-    my $info = { command => $string, db => [], hosts => 0 };
-
     $VERBOSE >= 3 and warn qq{Starting run_command with: $string\n};
 
     my (%host,$passfile,$passfh,$tempdir,$tempfile,$tempfh,$errorfile,$errfh);
     my $offset = -1;
 
-    ## Build a list of all databases to connect to.
-    ## Number is determined by host, port, and db arguments
-    ## Multi-args are grouped together: host, port, dbuser, dbpass
-    ## Grouped are kept together for first pass
-    ## The final arg in a group is passed on
-    ##
-    ## Examples:
-    ## --host=a,b --port=5433 --db=c
-    ## Connects twice to port 5433, using database c, to hosts a and b
-    ## a-5433-c b-5433-c
-    ##
-    ## --host=a,b --port=5433 --db=c,d
-    ## Connects four times: a-5433-c a-5433-d b-5433-c b-5433-d
-    ##
-    ## --host=a,b --host=foo --port=1234 --port=5433 --db=e,f
-    ## Connects six times: a-1234-e a-1234-f b-1234-e b-1234-f foo-5433-e foo-5433-f
-    ##
-    ## --host=a,b --host=x --port=5432,5433 --dbuser=alice --dbuser=bob -db=baz
-    ## Connects three times: a-5432-alice-baz b-5433-alice-baz x-5433-bob-baz
+    ## The final list of targets has been set inside @targetdb
 
-    ## The final list of targets:
-    my @target;
-
-    ## Default connection options
-    my $conn =
-        {
-         host   =>    [$ENV{PGHOST}     || '<none>'],
-         port   =>    [$ENV{PGPORT}     || $opt{defaultport}],
-         dbname =>    [$ENV{PGDATABASE} || $opt{defaultdb}],
-         dbuser =>    [$ENV{PGUSER}     || $arg->{dbuser} || $opt{defaultuser}],
-         dbpass =>    [$ENV{PGPASSWORD} || ''],
-         dbservice => [''],
-         };
-
-    ## Don't set any default values if a service is being used
-    if (defined $opt{dbservice} and defined $opt{dbservice}->[0] and length $opt{dbservice}->[0]) {
-        $conn->{dbname} = [];
-        $conn->{port} = [];
-        $conn->{dbuser} = [];
-    }
-    my $gbin = 0;
-    GROUP: {
-        ## This level controls a "group" of targets
-
-        ## If we were passed in a target, use that and move on
-        if (exists $arg->{target}) {
-            ## Make a copy, in case we are passed in a ref
-            my $newtarget;
-            for my $key (keys %$conn) {
-                $newtarget->{$key} = exists $arg->{target}{$key} ? $arg->{target}{$key} : $conn->{$key};
-            }
-            push @target, $newtarget;
-            last GROUP;
-        }
-
-        my %group;
-        my $foundgroup = 0;
-        for my $v (keys %$conn) {
-            my $vname = $v;
-            ## Something new?
-            if ($arg->{dbnumber} and $arg->{dbnumber} ne '1') {
-                $v .= "$arg->{dbnumber}";
-            }
-            if (defined $opt{$v}->[$gbin]) {
-                my $new = $opt{$v}->[$gbin];
-                $new =~ s/\s+//g unless $vname eq 'dbservice' or $vname eq 'host';
-                ## Set this as the new default
-                $conn->{$vname} = [split /,/ => $new];
-                $foundgroup = 1;
-            }
-            $group{$vname} = $conn->{$vname};
-        }
-
-        last GROUP if ! $foundgroup and @target;
-
-        $gbin++;
-
-        ## Now break the newly created group into individual targets
-        my $tbin = 0;
-        TARGET: {
-            my $foundtarget = 0;
-            my %temptarget;
-            for my $g (keys %group) {
-                if (defined $group{$g}->[$tbin]) {
-                    $conn->{$g} = [$group{$g}->[$tbin]];
-                    $foundtarget = 1;
-                }
-                $temptarget{$g} = $conn->{$g}[0];
-            }
-
-            ## Leave if nothing new
-            last TARGET if ! $foundtarget;
-
-            ## Add to our master list
-            push @target, \%temptarget;
-
-            $tbin++;
-            redo TARGET;
-        } ## end TARGET
-
-        last GROUP if ! $foundgroup;
-        redo GROUP;
-    } ## end GROUP
-
-    if (! @target) {
+    if (! @targetdb) {
         ndie msg('runcommand-nodb');
     }
 
@@ -2015,13 +2141,34 @@ sub run_command {
     if ($opt{tempdir}) {
         push @tempdirargs => 'DIR', $opt{tempdir};
     }
+
     $tempdir = tempdir(@tempdirargs);
     ($tempfh,$tempfile) = tempfile('check_postgres_psql.XXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
 
     ## Create another one to catch any errors
     ($errfh,$errorfile) = tempfile('check_postgres_psql_stderr.XXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
 
-    for $db (@target) {
+    ## Mild cleanup of the query
+    $string =~ s/^\s*(.+?)\s*$/$1/s;
+
+    ## Set a statement_timeout, as a last-ditch safety measure
+    my $timeout = $arg->{timeout} || $opt{timeout};
+    my $dbtimeout = $timeout * 1000;
+    if ($action !~ /^pgb/) {
+        $string = "BEGIN;SET statement_timeout=$dbtimeout;COMMIT;$string";
+    }
+
+    ## Keep track of which database we are on, to allow dbnumber to work
+    my $num = 0;
+
+    ## Loop through and run the command on each target database
+    for $db (@targetdb) {
+
+        ## Skip this one if we are using dbnumber and this is not our choice
+        $num++;
+        if ($arg->{dbnumber} and $arg->{dbnumber} != $num) {
+            next;
+        }
 
         ## Just to keep things clean:
         truncate $tempfh, 0;
@@ -2038,6 +2185,12 @@ sub run_command {
         else {
             $db->{pname} = "port=$db->{port} host=$db->{host} db=$db->{dbname} user=$db->{dbuser}";
         }
+
+        ## If all we want is a connection string, give it and leave now
+        if ($arg->{conninfo}) {
+            return $db->{pname};
+        }
+
         defined $db->{dbname} and push @args, '-d', $db->{dbname};
         defined $db->{dbuser} and push @args, '-U', $db->{dbuser};
         defined $db->{port} and push @args => '-p', $db->{port};
@@ -2092,13 +2245,7 @@ sub run_command {
         }
 
         local $SIG{ALRM} = sub { die 'Timed out' };
-        my $timeout = $arg->{timeout} || $opt{timeout};
-        my $dbtimeout = $timeout * 1000;
         alarm 0;
-
-        if ($action !~ /^pgb/) {
-            $string = "BEGIN;SET statement_timeout=$dbtimeout;COMMIT;$string";
-        }
 
         push @args, '-c', $string;
 
@@ -2158,7 +2305,7 @@ sub run_command {
                 ndie msg('runcommand-timeout', $timeout);
             }
 
-            if (!$db->{ok} and !$arg->{failok} and !$arg->{noverify}) {
+            if ($db->{fail} and !$arg->{failok} and !$arg->{noverify}) {
 
                 ## Check if problem is due to backend being too old for this check
                 verify_version();
@@ -2222,6 +2369,7 @@ sub run_command {
             my $num = 0;
             my $lastval;
             for my $line (split /\n/ => $db->{slurp}) {
+
                 if (index($line,'-')==0) {
                     $num++;
                     next;
@@ -2269,9 +2417,7 @@ sub run_command {
                 }
             }
             $db->{slurp} = \@stuff;
-
         } ## end valid system call
-
 
     } ## end each database
 
@@ -2295,6 +2441,144 @@ sub run_command {
     return $info;
 
 } ## end of run_command
+
+
+sub setup_target_databases {
+
+    ## Build a list of all databases to connect to.
+    ## Returns a list of all such databases with conenction information:
+    ## -- dbuser, --dbpass, --dbservice, --port, --dbname, --host
+    ##
+    ## Items are determined by host, port, and db arguments
+    ## Multi-args are grouped together: host, port, dbuser, dbpass
+    ## Groups are kept together for first pass
+    ## The final arg in a group is passed on
+    ##
+    ## Examples:
+    ## --host=a,b --port=5433 --db=c
+
+    ## Connects twice to port 5433, using database c, to hosts a and b
+    ## a-5433-c b-5433-c
+    ##
+    ## --host=a,b --port=5433 --db=c,d
+    ## Connects four times: a-5433-c a-5433-d b-5433-c b-5433-d
+    ##
+    ## --host=a,b --host=foo --port=1234 --port=5433 --db=e,f
+    ## Connects six times: a-1234-e a-1234-f b-1234-e b-1234-f foo-5433-e foo-5433-f
+    ##
+    ## --host=a,b --host=x --port=5432,5433 --dbuser=alice --dbuser=bob --db=baz
+    ## Connects three times: a-5432-alice-baz b-5433-alice-baz x-5433-bob-baz
+
+    ## Returns a list of targets as as hashref
+
+    my $arg = shift || {};
+
+    ## The final list of targets:
+    my @target;
+
+    ## Default connection options
+    my $conn =
+        {
+         host   =>    [$ENV{PGHOST}     || '<none>'],
+         port   =>    [$ENV{PGPORT}     || $opt{defaultport}],
+         dbname =>    [$ENV{PGDATABASE} || $opt{defaultdb}],
+         dbuser =>    [$ENV{PGUSER}     || $opt{defaultuser}],
+         dbpass =>    [$ENV{PGPASSWORD} || ''],
+         dbservice => [''],
+          };
+
+    ## Don't set any default values if a service is being used
+    if (defined $opt{dbservice} and defined $opt{dbservice}->[0] and length $opt{dbservice}->[0]) {
+        $conn->{dbname} = [];
+        $conn->{port} = [];
+        $conn->{dbuser} = [];
+    }
+
+    ## If we were passed in a target, use that and move on
+    if (exists $arg->{target}) {
+        ## Make a copy, in case we are passed in a ref
+        my $newtarget;
+        for my $key (keys %$conn) {
+            $newtarget->{$key} = exists $arg->{target}{$key} ? $arg->{target}{$key} : $conn->{$key};
+        }
+        return [$newtarget];
+    }
+
+    ## Global count of total places we are connecting to
+    ## We don't mess with this if using {target} above
+    $opt{numdbs} = 0;
+
+    ## The current group number we are looking at
+    my $group_num = 0;
+
+    GROUP: {
+
+        ## This level controls a "group" of targets
+
+        ## Start bubbling all our targets into other stuff
+        my %group;
+        my $found_new_var = 0;
+
+        for my $v (keys %$conn) { ## For each connection var such as port, host...
+            my $vname = $v;
+
+            ## Check if something exists at the current slot number for this var
+            if (defined $opt{$v}->[$group_num]) {
+
+                my $new = $opt{$v}->[$group_num];
+
+                ## Strip out whitespace unless this is a service or host
+                $new =~ s/\s+//g unless $vname eq 'dbservice' or $vname eq 'host';
+
+                ## Set this as the new default for this connection var moving forward
+                $conn->{$vname} = [split /,/ => $new];
+
+                ## Make a note that we found something new this round
+                $found_new_var = 1;
+            }
+
+            $group{$vname} = $conn->{$vname};
+        }
+
+        ## If we found nothing new, we must be done building our groups
+        last GROUP if ! $found_new_var and @target;
+
+        $group_num++;
+
+        ## Now break the newly created group into individual targets
+        my $tbin = 0;
+        TARGET: {
+            my $foundtarget = 0;
+            my %temptarget;
+            for my $g (keys %group) {
+                if (defined $group{$g}->[$tbin]) {
+                    $conn->{$g} = [$group{$g}->[$tbin]];
+                    $foundtarget = 1;
+                }
+                $temptarget{$g} = $conn->{$g}[0];
+            }
+
+            ## Leave if nothing new
+            last TARGET if ! $foundtarget;
+
+            ## Add to our master list
+            push @target => \%temptarget;
+
+            $tbin++;
+
+            redo TARGET;
+
+        } ## end TARGET
+
+        last GROUP if ! $found_new_var;
+
+        redo GROUP;
+
+    } ## end GROUP
+
+    return @target;
+
+} ## end of setup_target_databases
 
 
 sub verify_version {
@@ -5663,1495 +5947,837 @@ sub check_replicate_row {
 
 sub check_same_schema {
 
-    ## Verify that all relations inside two databases are the same
+    ## Verify that all relations inside two or more databases are the same
     ## Supports: Nagios
-    ## Include and exclude should be supported
-    ## Warning and critical are not used as normal
-    ## Warning is used to do filtering
+    ## Include and exclude are supported
+    ## Warning and critical are not used
+    ## The filter argument is supported
 
-    ## Check for filtering rules
+    ## Check for filtering rules, then store inside opt{filtered}
     my %filter;
-    if (exists $opt{warning} and length $opt{warning}) {
-        for my $phrase (split /[\s,]+/ => $opt{warning}) {
-            for my $type (qw/schema user table view index sequence constraint trigger function perm language owner/) {
-                if ($phrase =~ /^no${type}s?$/i) {
-                    $filter{"no${type}s"} = 1;
-                }
-                elsif ($phrase =~ /^no$type=(.+)/i) {
-                    push @{$filter{"no${type}_regex"}} => $1;
-                }
-            }
-            if ($phrase =~ /^noposition$/io) { ## no critic (ProhibitFixedStringMatches)
-                $filter{noposition} = 1;
-            }
-            if ($phrase =~ /^nofuncbody$/io) { ## no critic (ProhibitFixedStringMatches)
-                $filter{nofuncbody} = 1;
-            }
-        }
-        $VERBOSE >= 3 and warn Dumper \%filter;
-    }
+    if (exists $opt{filter}) {
+        for my $item (@{ $opt{filter} }) {
+            ## Can separate by whitespace or commas
+            for my $phrase (split /[\s,]+/ => $item) {
 
-    my (%thing,$info);
+                ## Can be plain (e.g. nouser) or regex based exclusion, e.g. nouser=bob
+                next if $phrase !~ /(\w+)=?\s*(.*)/o;
+                my ($name,$regex) = (lc $1,$2||'');
 
-    ## Do some synchronizations: assume db "1" is the default for "2" unless explicitly set
-    for my $setting (qw/ host port dbname dbuser dbpass dbservice /) {
-        my $two = "${setting}2";
-        if (exists $opt{$setting} and ! exists $opt{$two}) {
-            $opt{$two} = $opt{$setting};
+                ## Names are standardized with regards to plurals and casing
+                $name =~ s/([aeiou])s$/$1/o;
+                $name =~ s/s$//o;
+
+                if (! length $regex) {
+                    $filter{"$name"} = 1;
+                }
+                else {
+                    push @{$filter{"${name}_regex"}} => $regex;
+                }
+            }
+            $VERBOSE >= 3 and warn Dumper \%filter;
         }
     }
+    $opt{filtered} = \%filter;
+
+    ## See how many databases we are using
+    my $numdbs = @targetdb;
+    $VERBOSE >= 3 and warn "Number of databases is $numdbs\n";
+
+    ## If only a single database is given, this is a time-based comparison
+    ## In other words, we write and read a local file
+    my $samedb = 0;
+    if (1 == $numdbs) {
+        $samedb = 1;
+        $numdbs = 2;
+    }
+
+    ## Sanity check
+    if ($opt{suffix} and ! $samedb) {
+        ndie msg('ss-suffix');
+    }
+
+    ## Version information about each database, by number
+    my %dbver;
+
+    ## Verify we can connect to each database, and grab version information
+    for my $num (1..$numdbs) {
+
+        ## No need to check the same database twice!
+        last if $samedb and $num > 1;
+
+        $SQL = 'SELECT version()';
+        my $info = run_command($SQL, { dbnumber => $num } );
+
+        ## We need a global $db, so we'll use the first database
+        $db = $info->{db}[0] if 1 == $num;
+
+        my $foo = $info->{db}[0];
+        my $version = $foo->{slurp}[0]{version};
+        $version =~ /\D+(\d+\.\d+)(\S+)/i or die qq{Invalid version: $version\n};
+        my ($full,$major,$revision) = ("$1$2",$1,$2);
+        $revision =~ s/^\.//;
+        $dbver{$num} = {
+            full     => $version,
+            version  => $full,
+            major    => $major,
+            revision => $revision,
+        };
+
+        $targetdb[$num-1]{pgversion} = $full;
+
+    }
+
+    ## An ordered list of all the things we check.
+    ## Order is important here, as when reporting, some things
+    ## can mask reporting on others (e.g. no need to report missing tables
+    ## if the entire schema has already been reported as missing)
+    ## We also indicate which columns should be ignored when comparing,
+    ## as well as which columns are of a 'list' nature
+    my @catalog_items = (
+        [user       => 'usesysid',                                'useconfig' ],
+        [language   => 'laninline,lanplcallfoid,lanvalidator',    ''          ],
+        [operator   => '',                                        ''          ],
+        [type       => '',                                        ''          ],
+        [schema     => '',                                        ''          ],
+        [function   => 'source_checksum,prolang,prorettype',      ''          ],
+        [table      => 'reltype,relfrozenxid,relpages,
+                        reltuples,relnatts',                      ''          ],
+        [view       => 'reltype',                                 ''          ],
+        [sequence   => 'reltype,log_cnt,relnatts,is_called',      ''          ],
+        [index      => 'relpages,reltuples,indpred,indclass,
+                        indexprs,indcheckxmin',                   ''          ],
+        [trigger    => '',                                        ''          ],
+        [constraint => 'conbin',                                  ''          ],
+        [column     => 'atttypid,attnum,attbyval',                ''          ],
+    );
+
+    ## Where we store all the information, per-database
+    my %thing;
 
     my $saved_db;
-    for my $x (1..2) {
+    for my $x (1..$numdbs) {
 
-        ## Get a list of all users
-        if (! exists $filter{nousers}) {
-            $SQL = q{
-SELECT usesysid, quote_ident(usename) AS usename, usecreatedb, usesuper
-FROM pg_user
-};
-            $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
-            for $db (@{$info->{db}}) {
-                for my $r (@{$db->{slurp}}) {
-                    $thing{$x}{users}{$r->{usename}} = {
-                        oid=>$r->{usesysid},
-                        createdb=>$r->{usecreatedb},
-                        superuser=>$r->{usesuper}
-                    };
-                    $thing{$x}{useroid}{$r->{usesysid}} = $r->{usename};
-                }
+        if ($x > 1 and $samedb) {
+            ## This means we are looking at a single database over time
+            ## We load the stored information into the current $dbinfo
+            my $filename = audit_filename();
+
+            if (! -e $filename) {
+                ## We've not saved any information about this database yet
+                ## Store the info and exit!
+                my $version = $dbver{1}{version};
+                write_audit_file({ file => $filename, 'same_schema' => 1,
+                                   info => $thing{1}, pgversion => $version });
+                print msg('ss-createfile', $filename) . "\n";
+                exit 0;
             }
+
+            ## Meta-information from the file
+            my ($conninfo,$ctime,$cversion,$pgversion,$cdbname,$chost,$cport,$cuser);
+
+            ($thing{$x},$conninfo,$ctime,$cversion,$pgversion,$cdbname,$chost,$cport,$cuser)
+                = read_audit_file($filename);
+
+            ## Count total objects
+            my $totalcount = 0;
+            for (keys %{ $thing{$x} }) {
+                $totalcount += keys %{ $thing{$x}{$_} };
+            }
+
+            ## Add the meta info back into the targetdb
+            push @targetdb, {
+                filename  => $filename,
+                conninfo  => $conninfo,
+                ctime     => $ctime,
+                cversion  => $cversion,
+                dbname    => $cdbname,
+                port      => $cport,
+                host      => $chost,
+                dbuser    => $cuser,
+                pgversion => $pgversion,
+                objects   => $totalcount,
+            };
+
+            next;
+
+        } ## end if samedb
+
+        ## Hash of this round's information
+        my $dbinfo;
+
+        for (@catalog_items) {
+            my $name = $_->[0];
+            $dbinfo->{$name} = find_catalog_info($name, $x);
         }
 
-        ## Get a list of all schemas (aka namespaces)
-        if (! exists $filter{noschemas}) {
-            $SQL = q{
-SELECT quote_ident(nspname) AS nspname, n.oid, quote_ident(usename) AS usename, nspacl
-FROM pg_namespace n
-JOIN pg_user u ON (u.usesysid = n.nspowner)
-WHERE nspname !~ '^pg_t'
-};
-            $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
-            for $db (@{$info->{db}}) {
-                for my $r (@{$db->{slurp}}) {
-                    $thing{$x}{schemas}{$r->{nspname}} = {
-                        oid   => $r->{oid},
-                        owner => $r->{usename},
-                        acl   => (exists $filter{noperms} or !$r->{nspacl}) ? '(none)' : $r->{nspacl},
-                    };
-                }
-            }
+        ## TODO:
+        ## operator class, cast, aggregate, conversion, domain, tablespace, foreign tables
+        ## foreign server, wrapper, collation, extensions, roles?
+
+        ## Map the oid back to the user, for ease later on
+        for my $row (values %{ $dbinfo->{user} }) {
+            $dbinfo->{useroid}{$row->{usesysid}} = $row->{usename};
         }
 
-        ## Get a list of all relations
-        if (! exists $filter{notables} or !exists $filter{noconstraints}) {
-            $SQL = q{
-SELECT relkind, quote_ident(nspname) AS nspname, quote_ident(relname) AS relname, 
-  quote_ident(usename) AS usename, relacl,
-  CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid) ELSE '' END AS viewdef
-FROM pg_class c
-JOIN pg_namespace n ON (n.oid = c.relnamespace)
-JOIN pg_user u ON (u.usesysid = c.relowner)
-WHERE nspname !~ '^pg_t'
-};
-            exists $filter{noviews}     and $SQL .= q{ AND relkind <> 'v'};
-            exists $filter{noindexes}   and $SQL .= q{ AND relkind <> 'i'};
-            exists $filter{nosequences} and $SQL .= q{ AND relkind <> 'S'};
-            $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
-            for $db (@{$info->{db}}) {
-                for my $r (@{$db->{slurp}}) {
-                    my ($kind,$schema,$name,$owner,$acl,$def) = @$r{
-                        qw/ relkind nspname relname usename relacl viewdef /};
-                     $acl = '(none)' if exists $filter{noperms};
-                    if ($kind eq 'r') {
-                        $thing{$x}{tables}{"$schema.$name"} =
-                        {
-                         schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
-                    }
-                    elsif ($kind eq 'v') {
-                        $thing{$x}{views}{"$schema.$name"} =
-                        {
-                         schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)', def=>$def };
-                    }
-                    elsif ($kind eq 'i') {
-                        $thing{$x}{indexes}{"$schema.$name"} =
-                        {
-                         schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
-                    }
-                    elsif ($kind eq 'S') {
-                        $thing{$x}{sequences}{"$schema.$name"} =
-                        {
-                         schema=>$schema, table=>$name, owner=>$owner, acl=>$acl||'(none)' };
-                    }
-                }
-            }
+        $thing{$x} = $dbinfo;
+
+        ## Count total objects
+        my $totalcount = 0;
+        for (keys %{ $thing{$x} }) {
+            $totalcount += keys %{ $thing{$x}{$_} };
         }
 
-        ## Get a list of all types
-        $SQL = q{SELECT typname, oid FROM pg_type};
-        $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
-        for $db (@{$info->{db}}) {
-            for my $r (@{$db->{slurp}}) {
-                $thing{$x}{type}{$r->{oid}} = $r->{typname};
-            }
-            $saved_db = $db if ! defined $saved_db;
-        }
-
-        ## Get a list of all triggers
-        if (! exists $filter{notriggers}) {
-            $SQL = q{
-SELECT tgname, quote_ident(relname) AS relname, proname, proargtypes
-FROM pg_trigger
-JOIN pg_class c ON (c.oid = tgrelid)
-JOIN pg_proc p ON (p.oid = tgfoid)
-WHERE NOT tgisconstraint
-}; ## constraints checked separately
-            (my $SQL2 = $SQL) =~ s/NOT tgisconstraint/tgconstraint = 0/;
-
-            $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x, version  => [ ">8.4 $SQL2" ] } );
-            for $db (@{$info->{db}}) {
-                for my $r (@{$db->{slurp}}) {
-                    my ($name,$table,$func,$args) = @$r{qw/ tgname relname proname proargtypes /};
-                    $args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
-                    $args =~ s/^\s*(.*)\s*$/($1)/;
-                    $thing{$x}{triggers}{$name} = { table=>$table, func=>$func, args=>$args };
-                }
-            }
-        }
-
-        ## Get a list of all columns
-        ## We'll use information_schema for this one
-        $SQL = q{
-SELECT table_schema AS ts, table_name AS tn, column_name AS cn, ordinal_position AS op,
-  COALESCE(column_default, '(none)') AS df,
-  is_nullable AS in, data_type AS dt,
-  COALESCE(character_maximum_length, 0) AS ml,
-  COALESCE(numeric_precision, 0) AS np,
-  COALESCE(numeric_scale,0) AS ns
-FROM information_schema.columns
-ORDER BY table_schema, table_name, ordinal_position, column_name
-};
-        $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
-        my $oldrelation = '';
-        my $col = 0;
-        my $position;
-        for $db (@{$info->{db}}) {
-            for my $r (@{$db->{slurp}}) {
-
-                my ($schema,$table) = @$r{qw/ ts tn /};
-
-                ## If this is a new relation, reset the column numbering
-                if ($oldrelation ne "$schema.$table") {
-                    $oldrelation = "$schema.$table";
-                    $col = 1;
-                }
-
-                ## Rather than use ordinal_position directly, count the live columns
-                $position = $col++;
-
-                $thing{$x}{columns}{"$schema.$table"}{$r->{cn}} = {
-                    schema     => $schema,
-                    table      => $table,
-                    name       => $r->{cn},
-                    position   => exists $filter{noposition} ? 0 : $position,
-                    attnum     => $r->{op},
-                    default    => $r->{df},
-                    nullable   => $r->{in},
-                    type       => $r->{dt},
-                    length     => $r->{ml},
-                    precision  => $r->{np},
-                    scale      => $r->{ns},
-                };
-            }
-        }
-
-        ## Get a list of all constraints
-        ## We'll use information_schema for this one too
-        if (! exists $filter{noconstraints}) {
-            $SQL = q{
-SELECT n1.nspname AS cschema, conname, contype, n1.nspname AS tschema, relname AS tname, conkey, consrc
-FROM pg_constraint c
-JOIN pg_namespace n1 ON (n1.oid = c.connamespace)
-JOIN pg_class r ON (r.oid = c.conrelid)
-JOIN pg_namespace n2 ON (n2.oid = r.relnamespace)
-WHERE n1.nspname !~ 'pg_'
-};
-
-            $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
-            for $db (@{$info->{db}}) {
-                for my $r (@{$db->{slurp}}) {
-                    my ($cs,$name,$type,$ts,$tn,$key,$src) =
-                        @$r{qw/ cschema conname contype tschema tname conkey consrc/};
-                    $thing{$x}{constraints}{"$ts.$tn"}{$name} = [$type,$key,$src];
-                }
-            }
-        } ## end of constraints
-
-        ## Get a list of all index information
-        if (! exists $filter{noindexes}) {
-            $SQL = q{
-SELECT n.nspname, c1.relname AS tname, c2.relname AS iname,
-  indisprimary, indisunique, indisclustered, indisvalid,
-  pg_get_indexdef(c2.oid,0,false) AS statement
-FROM pg_index i
-JOIN pg_class c1 ON (c1.oid = indrelid)
-JOIN pg_class c2 ON (c2.oid = indexrelid)
-JOIN pg_namespace n ON (n.oid = c1.relnamespace)
-WHERE nspname !~ 'pg_'
-};
-            $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
-            for $db (@{$info->{db}}) {
-                for my $r (@{$db->{slurp}}) {
-                    my ($tschema,$tname,$iname,$pri,$uniq,$clust,$valid,$statement) = @$r{
-                        qw/ nspname tname iname indisprimary indisunique indisclustered indisvalid statement/};
-                    $thing{$x}{indexinfo}{"$tschema.$iname"} = {
-                        table       => "$tschema.$tname",
-                        isprimary   => $pri,
-                        isunique    => $uniq,
-                        isclustered => $clust,
-                        isvalid     => $valid,
-                        statement   => $statement,
-                    };
-                }
-            }
-        } ## end of indexes
-
-        ## Get a list of all functions
-        if (! exists $filter{nofunctions}) {
-            $SQL = q{
-SELECT quote_ident(nspname) AS nspname, quote_ident(proname) AS proname, proargtypes, md5(prosrc) AS md,
-  proisstrict, proretset, provolatile
-FROM pg_proc
-JOIN pg_namespace n ON (n.oid = pronamespace)
-};
-            $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
-            for $db (@{$info->{db}}) {
-                for my $r (@{$db->{slurp}}) {
-                    my ($schema,$name,$args,$md5,$isstrict,$retset,$volatile) = @$r{
-                        qw/ nspname proname proargtypes md proisstrict proretset provolatile /};
-                    $args =~ s/ /,/g;
-                    $args =~ s/(\d+)/$thing{$x}{type}{$1}/g;
-                    $args =~ s/^\s*(.*)\s*$/($1)/;
-                    $thing{$x}{functions}{"${schema}.${name}${args}"} = {
-                        md5 => $md5,
-                        isstrict => $isstrict,
-                        retset => $retset,
-                        volatile => $volatile,
-                    };
-                }
-            }
-        } ## end of functions
-
-        ## Get a list of all languages
-        if (! exists $filter{nolanguages}) {
-            $SQL = q{SELECT lanname FROM pg_language};
-            $info = run_command($SQL, { dbuser => $opt{dbuser}[$x-1], dbnumber => $x } );
-            for $db (@{$info->{db}}) {
-                for my $r (@{$db->{slurp}}) {
-                    $thing{$x}{language}{$r->{lanname}} = 1;
-                }
-            }
-        }
+        $targetdb[$x-1]{objects} = $totalcount;
 
 
     } ## end each database to query
 
-
-    $db = $saved_db;
-
-    ## Build a list of what has failed
+    ## Start comparing, and put any differences into %fail
     my %fail;
-    my $failcount = 0;
 
-    ## Compare users
+    ## Ugly, but going to use this as a global for the subroutines below:
+    $opt{failcount} = 0;
 
-    ## Any users on 1 but not 2?
-    USER1:
-    for my $user (sort keys %{$thing{1}{users}}) {
-        next if exists $thing{2}{users}{$user};
-
-        if (exists $filter{nouser_regex}) {
-            for my $regex (@{$filter{nouser_regex}}) {
-                next USER1 if $user =~ /$regex/;
-            }
-        }
-
-        push @{$fail{users}{notexist}{1}} => $user;
-        $failcount++;
+    ## Simple checks that items exist on each database
+    for (@catalog_items) {
+        my $name = $_->[0];
+        $fail{$name}{exists} = schema_item_exists($name, \%thing);
     }
 
-    ## Any users on 2 but not 1?
-    USER2:
-    for my $user (sort keys %{$thing{2}{users}}) {
+    ## Now check for some more specific items for each item class.
+    ## For many of these, we want to compare all columns except for
+    ## certain known exceptions (e.g. anything oid-based)
+    ## Because we may go across versions, if the column does not exist
+    ## somewhere, it is simply silently ignored
+    ## Some items are lists (e.g. acls) and must be treated differently
 
-        if (exists $filter{nouser_regex}) {
-            for my $regex (@{$filter{nouser_regex}}) {
-                next USER2 if $user =~ /$regex/;
-            }
-        }
+    for (@catalog_items) {
+        my ($name,$ignore,$lists) = @$_;
+        $fail{$name}{diff} = schema_item_differences({
+            items  => \%thing,
+            name   => $name,
+            ignore => $ignore,
+            lists  => $lists,
+        });
+    }
 
-        if (! exists $thing{1}{users}{$user}) {
-            push @{$fail{users}{notexist}{2}} => $user;
-            $failcount++;
-            next;
-        }
-        ## Do the matching users have the same superpowers?
-
-        if ($thing{1}{users}{$user}{createdb} ne $thing{2}{users}{$user}{createdb}) {
-            push @{$fail{users}{createdb}{1}{$thing{1}{users}{$user}{createdb}}} => $user;
-            $failcount++;
-        }
-
-        if ($thing{1}{users}{$user}{superuser} ne $thing{2}{users}{$user}{superuser}) {
-            push @{$fail{users}{superuser}{1}{$thing{1}{users}{$user}{superuser}}} => $user;
-            $failcount++;
+    ## Remove empty hashes for a cleaner debug dump
+    for (keys %fail) {
+        if (exists $fail{$_}{diff} and ! keys %{ $fail{$_}{diff} }) {
+            delete $fail{$_}{diff};
         }
     }
 
-    ## Compare schemas
-
-    ## Any schemas on 1 but not 2?
-    SCHEMA1:
-    for my $name (sort keys %{$thing{1}{schemas}}) {
-        next if exists $thing{2}{schemas}{$name};
-
-        if (exists $filter{noschema_regex}) {
-            for my $regex (@{$filter{noschema_regex}}) {
-                next SCHEMA1 if $name =~ /$regex/;
-            }
-        }
-
-        push @{$fail{schemas}{notexist}{1}} => $name;
-        $failcount++;
-    }
-
-    ## Any schemas on 2 but not 1?
-    SCHEMA2:
-    for my $name (sort keys %{$thing{2}{schemas}}) {
-
-        if (exists $filter{noschema_regex}) {
-            for my $regex (@{$filter{noschema_regex}}) {
-                next SCHEMA2 if $name =~ /$regex/;
-            }
-        }
-
-        if (! exists $thing{1}{schemas}{$name}) {
-            push @{$fail{schemas}{notexist}{2}} => $name;
-            $failcount++;
-            next;
-        }
-
-        ## Do the schemas have same owner and permissions?
-        if (! exists $filter{noowners}) {
-            if ($thing{1}{schemas}{$name}{owner} ne $thing{2}{schemas}{$name}{owner}) {
-                push @{$fail{schemas}{diffowners}} =>
-                    [
-                        $name,
-                        $thing{1}{schemas}{$name}{owner},
-                        $thing{2}{schemas}{$name}{owner},
-                ];
-                $failcount++;
-            }
-        }
-
-        if ($thing{1}{schemas}{$name}{acl} ne $thing{2}{schemas}{$name}{acl}) {
-            push @{$fail{schemas}{diffacls}} =>
-                [
-                    $name,
-                    $thing{1}{schemas}{$name}{acl},
-                    $thing{2}{schemas}{$name}{acl},
-                ];
-            $failcount++;
-        }
-
-    }
-
-    ## Compare tables
-
-    ## Any tables on 1 but not 2?
-    ## We treat the name as a unified "schema.relname"
-    TABLE1:
-    for my $name (sort keys %{$thing{1}{tables}}) {
-
-        next if exists $filter{notables};
-
-        next if exists $thing{2}{tables}{$name};
-
-        ## If the schema does not exist, don't bother reporting it
-        next if ! exists $thing{2}{schemas}{ $thing{1}{tables}{$name}{schema} };
-
-        if (exists $filter{notable_regex}) {
-            for my $regex (@{$filter{notable_regex}}) {
-                next TABLE1 if $name =~ /$regex/;
-            }
-        }
-
-        for my $exclude (@{$opt{exclude}}) {
-            next TABLE1 if $name =~ /$exclude/;
-        }
-
-        push @{$fail{tables}{notexist}{1}} => $name;
-        $failcount++;
-    }
-
-    ## Any tables on 2 but not 1?
-    TABLE2:
-    for my $name (sort keys %{$thing{2}{tables}}) {
-
-        next if exists $filter{notables};
-
-        if (exists $filter{notable_regex}) {
-            for my $regex (@{$filter{notable_regex}}) {
-                next TABLE2 if $name =~ /$regex/;
-            }
-        }
-
-        for my $exclude (@{$opt{exclude}}) {
-            next TABLE2 if $name =~ /$exclude/;
-        }
-
-        if (! exists $thing{1}{tables}{$name}) {
-            ## If the schema does not exist, don't bother reporting it
-            if (exists $thing{1}{schemas}{ $thing{2}{tables}{$name}{schema} }) {
-                push @{$fail{tables}{notexist}{2}} => $name;
-                $failcount++;
-            }
-            next;
-        }
-
-        ## Do the tables have same owner and permissions?
-        if (! exists $filter{noowners}) {
-            if ($thing{1}{tables}{$name}{owner} ne $thing{2}{tables}{$name}{owner}) {
-                push @{$fail{tables}{diffowners}} =>
-                    [
-                        $name,
-                        $thing{1}{tables}{$name}{owner},
-                        $thing{2}{tables}{$name}{owner},
-                ];
-                $failcount++;
-            }
-        }
-
-        if ($thing{1}{tables}{$name}{acl} ne $thing{2}{tables}{$name}{acl}) {
-            push @{$fail{tables}{diffacls}} =>
-                [
-                    $name,
-                    $thing{1}{tables}{$name}{acl},
-                    $thing{2}{tables}{$name}{acl}
-                ];
-            $failcount++;
-        }
-
-    }
-
-    ## Compare sequences
-
-    ## Any sequences on 1 but not 2?
-    ## We treat the name as a unified "schema.relname"
-    SEQUENCE1:
-    for my $name (sort keys %{$thing{1}{sequences}}) {
-        next if exists $thing{2}{sequences}{$name};
-
-        ## If the schema does not exist, don't bother reporting it
-        next if ! exists $thing{2}{schemas}{ $thing{1}{sequences}{$name}{schema} };
-
-        if (exists $filter{nosequence_regex}) {
-            for my $regex (@{$filter{nosequence_regex}}) {
-                next SEQUENCE1 if $name =~ /$regex/;
-            }
-        }
-
-        for my $exclude (@{$opt{exclude}}) {
-            next SEQUENCE2 if $name =~ /$exclude/;
-        }
-
-        push @{$fail{sequences}{notexist}{1}} => $name;
-        $failcount++;
-    }
-
-    ## Any sequences on 2 but not 1?
-    SEQUENCE2:
-    for my $name (sort keys %{$thing{2}{sequences}}) {
-
-        if (exists $filter{nosequence_regex}) {
-            for my $regex (@{$filter{nosequence_regex}}) {
-                next SEQUENCE2 if $name =~ /$regex/;
-            }
-        }
-
-        for my $exclude (@{$opt{exclude}}) {
-            next SEQUENCE2 if $name =~ /$exclude/;
-        }
-
-        if (! exists $thing{1}{sequences}{$name}) {
-            ## If the schema does not exist, don't bother reporting it
-            if (exists $thing{1}{schemas}{ $thing{2}{sequences}{$name}{schema} }) {
-                push @{$fail{sequences}{notexist}{2}} => $name;
-                $failcount++;
-            }
-            next;
-        }
-
-        ## Do the sequences have same owner and permissions?
-        if (! exists $filter{noowners}) {
-            if ($thing{1}{sequences}{$name}{owner} ne $thing{2}{sequences}{$name}{owner}) {
-                push @{$fail{sequences}{diffowners}} =>
-                    [
-                        $name,
-                        $thing{1}{sequences}{$name}{owner},
-                        $thing{2}{sequences}{$name}{owner},
-                ];
-                $failcount++;
-            }
-        }
-
-        if ($thing{1}{sequences}{$name}{acl} ne $thing{2}{sequences}{$name}{acl}) {
-            push @{$fail{sequences}{diffacls}} =>
-                [
-                    $name,
-                    $thing{1}{sequences}{$name}{acl},
-                    $thing{2}{sequences}{$name}{acl}
-                ];
-            $failcount++;
-        }
-    }
-
-    ## Compare views
-
-    ## Any views on 1 but not 2?
-    ## We treat the name as a unified "schema.relname"
-    VIEW1:
-    for my $name (sort keys %{$thing{1}{views}}) {
-        next if exists $thing{2}{views}{$name};
-
-        ## If the schema does not exist, don't bother reporting it
-        next if ! exists $thing{2}{schemas}{ $thing{1}{views}{$name}{schema} };
-
-        if (exists $filter{noview_regex}) {
-            for my $regex (@{$filter{noview_regex}}) {
-                next VIEW1 if $name =~ /$regex/;
-            }
-        }
-
-        for my $exclude (@{$opt{exclude}}) {
-            next VIEW1 if $name =~ /$exclude/;
-        }
-
-        push @{$fail{views}{notexist}{1}} => $name;
-        $failcount++;
-    }
-
-    ## Any views on 2 but not 1?
-    VIEW2:
-    for my $name (sort keys %{$thing{2}{views}}) {
-
-        if (exists $filter{noview_regex}) {
-            for my $regex (@{$filter{noview_regex}}) {
-                next VIEW2 if $name =~ /$regex/;
-            }
-        }
-
-        for my $exclude (@{$opt{exclude}}) {
-            next VIEW2 if $name =~ /$exclude/;
-        }
-
-        if (! exists $thing{1}{views}{$name}) {
-            ## If the schema does not exist, don't bother reporting it
-            if (exists $thing{1}{schemas}{ $thing{2}{views}{$name}{schema} }) {
-                push @{$fail{views}{notexist}{2}} => $name;
-                $failcount++;
-            }
-            next;
-        }
-
-        ## Do the views have same owner and permissions?
-        if (! exists $filter{noowners}) {
-            if ($thing{1}{views}{$name}{owner} ne $thing{2}{views}{$name}{owner}) {
-                push @{$fail{views}{diffowners}} =>
-                    [
-                        $name,
-                        $thing{1}{views}{$name}{owner},
-                        $thing{2}{views}{$name}{owner},
-                ];
-                $failcount++;
-            }
-        }
-
-        if ($thing{1}{views}{$name}{acl} ne $thing{2}{views}{$name}{acl}) {
-            push @{$fail{views}{diffacls}} =>
-                [
-                    $name,
-                    $thing{1}{views}{$name}{acl},
-                    $thing{2}{views}{$name}{acl}
-                ];
-            $failcount++;
-        }
-
-        ## Do the views have same definitions?
-        if ($thing{1}{views}{$name}{def} ne $thing{2}{views}{$name}{def}) {
-            push @{$fail{views}{diffdef}} => $name;
-            $failcount++;
-        }
-
-
-    }
-
-    ## Compare triggers
-
-    ## Any triggers on 1 but not 2?
-    TRIGGER1:
-    for my $name (sort keys %{$thing{1}{triggers}}) {
-        next if exists $thing{2}{triggers}{$name};
-        if (exists $filter{notrigger_regex}) {
-            for my $regex (@{$filter{notrigger_regex}}) {
-                next TRIGGER1 if $name =~ /$regex/;
-            }
-        }
-
-        for my $exclude (@{$opt{exclude}}) {
-            next TRIGGER1 if $name =~ /$exclude/;
-        }
-
-        my $tabname = $thing{1}{triggers}{$name}->{table};
-        push @{$fail{triggers}{notexist}{1}} => [$name,$tabname];
-        $failcount++;
-    }
-
-    ## Any triggers on 2 but not 1?
-    TRIGGER2:
-    for my $name (sort keys %{$thing{2}{triggers}}) {
-        if (! exists $thing{1}{triggers}{$name}) {
-            if (exists $filter{notrigger_regex}) {
-                for my $regex (@{$filter{notrigger_regex}}) {
-                    next TRIGGER2 if $name =~ /$regex/;
-                }
-            }
-            my $tabname = $thing{2}{triggers}{$name}->{table};
-            push @{$fail{triggers}{notexist}{2}} => [$name,$tabname];
-            $failcount++;
-            next;
-        }
-
-        for my $exclude (@{$opt{exclude}}) {
-            next TRIGGER2 if $name =~ /$exclude/;
-        }
-
-        ## Do the triggers call the same function?
-        if (
-            $thing{1}{triggers}{$name}{func} ne $thing{2}{triggers}{$name}{func}
-                or $thing{1}{triggers}{$name}{args} ne $thing{2}{triggers}{$name}{args}
-        ) {
-            push @{$fail{triggers}{difffunc}} =>
-                [$name,
-                 $thing{1}{triggers}{$name}{func} . $thing{1}{triggers}{$name}{args},
-                 $thing{2}{triggers}{$name}{func} . $thing{2}{triggers}{$name}{args},
-                 ];
-            $failcount++;
-        }
-    }
-
-    ## Compare indexes
-
-    ## Indexes on 1 but not 2
-  INDEX1:
-    for my $name (sort keys %{$thing{1}{indexes}}) {
-        next if exists $thing{2}{indexes}{$name};
-        for my $exclude (@{$opt{exclude}}) {
-            next INDEX1 if $name =~ /$exclude/;
-        }
-        my $tname = exists $thing{1}{indexinfo}{$name}
-            ? $thing{1}{indexinfo}{$name}{table} : '';
-        push @{$fail{indexes}{notexist}{1}} => [$name, $tname];
-        $failcount++;
-    }
-    ## Indexes on 2 but not 1
-  INDEX2:
-    for my $name (sort keys %{$thing{2}{indexes}}) {
-        for my $exclude (@{$opt{exclude}}) {
-            next INDEX2 if $name =~ /$exclude/;
-        }
-
-        if (! exists $thing{1}{indexes}{$name}) {
-            my $tname = exists $thing{2}{indexinfo}{$name}
-                ? $thing{2}{indexinfo}{$name}{table} : '';
-            push @{$fail{indexes}{notexist}{2}} => [$name, $tname];
-            $failcount++;
-            next;
-        }
-
-        ## Do they both have the same information?
-        next if ! exists $thing{1}{indexinfo}{$name}
-            or ! exists $thing{2}{indexinfo}{$name};
-
-        my $one = $thing{1}{indexinfo}{$name};
-        my $two = $thing{2}{indexinfo}{$name};
-
-        ## Must point to the same table
-        if ($one->{table} ne $two->{table}) {
-            $fail{indexes}{table}{$name} = [$one->{table},$two->{table}];
-            $failcount++;
-            next;
-        }
-
-        ## Parse the statement to get columns, index type, expression, and predicate
-        if ($one->{statement} !~ /\ACREATE (\w* ?INDEX .+? ON .+? USING (\w+) (.+))/) {
-            die "Could not parse index statement: $one->{statement}\n";
-        }
-        my ($def1, $method1,$col1) = ($1,$2,$3);
-        my $where1 = $col1 =~ s/WHERE (.+)// ? $1 : '';
-        1 while $col1   =~ s/\A\s*\((.+)\)\s*\z/$1/;
-        1 while $where1 =~ s/\A\s*\((.+)\)\s*\z/$1/;
-
-        if ($two->{statement} !~ /\ACREATE (\w* ?INDEX .+? ON .+? USING (\w+) (.+))/) {
-            die "Could not parse index statement: $two->{statement}\n";
-        }
-        my ($def2,$method2,$col2) = ($1,$2,$3);
-        my $where2 = $col2 =~ s/WHERE (.+)// ? $1 : '';
-        1 while $col2   =~ s/\A\s*\((.+)\)\s*\z/$1/;
-        1 while $where2 =~ s/\A\s*\((.+)\)\s*\z/$1/;
-
-        my $table = $one->{table};
-
-        ## Same columns (also checks expression)
-        if ($col1 ne $col2) {
-            $fail{indexes}{cols}{$name} = [$table, $def1, $def2, $col1, $col2];
-            $failcount++;
-            next;
-        }
-
-        ## Same predicate?
-        if ($where1 ne $where2) {
-            $fail{indexes}{pred}{$name} = [$table, $def1, $def2, $where1, $where2];
-            $failcount++;
-            next;
-        }
-
-        ## Same method?
-        if ($method1 ne $method2) {
-            $fail{indexes}{method}{$name} = [$table, $def1, $def2, $method1, $method2];
-            $failcount++;
-            next;
-        }
-
-        ## Must have same meta information
-        for my $var (qw/isprimary isunique isclustered isvalid/) {
-            if ($one->{$var} ne $two->{$var}) {
-                $fail{indexes}{$var}{$name} = [$table, $one->{$var}, $two->{$var}];
-                $failcount++;
-            }
-        }
-
-    } ## end of index info
-
-    ## Compare columns
-
-    ## Any columns on 1 but not 2, or 2 but not 1?
-    COLUMN1:
-    for my $name (sort keys %{$thing{1}{columns}}) {
-        ## Skip any mismatched tables - already handled above
-        next if ! exists $thing{2}{columns}{$name};
-
-        for my $exclude (@{$opt{exclude}}) {
-            next COLUMN1 if $name =~ /$exclude/;
-        }
-
-        my ($t1,$t2) = ($thing{1}{columns}{$name},$thing{2}{columns}{$name});
-        for my $col (sort keys %$t1) {
-            if (! exists $t2->{$col}) {
-                push @{$fail{columns}{notexist}{1}} => [$name,$col];
-                $failcount++;
-            }
-        }
-        for my $col (sort keys %$t2) {
-            if (! exists $t1->{$col}) {
-                push @{$fail{columns}{notexist}{2}} => [$name,$col];
-                $failcount++;
-                next;
-            }
-            ## They exist, so dig deeper for differences. Done in two passes.
-            my $newtype = 0;
-            for my $var (qw/position type default nullable/) {
-                if ($t1->{$col}{$var} ne $t2->{$col}{$var}) {
-                    $fail{columns}{diff}{$name}{$col}{$var} = [$t1->{$col}{$var}, $t2->{$col}{$var}];
-                    $failcount++;
-                    $newtype = 1 if $var eq 'type';
-                }
-            }
-            ## Now the rest, with the caveat that we don't care about the rest if the type has changed
-            if (!$newtype) {
-                for my $var (qw/length precision scale/) {
-                    if ($t1->{$col}{$var} ne $t2->{$col}{$var}) {
-                        $fail{columns}{diff}{$name}{$col}{$var} = [$t1->{$col}{$var}, $t2->{$col}{$var}];
-                        $failcount++;
-                    }
-                }
-            }
-        }
-    }
-
-    ## Compare constraints
-
-    ## Constraints - any exists on 1 but not 2?
-    for my $tname (sort keys %{$thing{1}{constraints}}) {
-
-        ## If the table does not exist, no sense in going on
-        next if ! exists $thing{2}{tables}{$tname};
-
-      C11: for my $cname (sort keys %{$thing{1}{constraints}{$tname}}) {
-
-            ## Move on if it exists on 2
-            next if exists $thing{2}{constraints}{$tname}{$cname};
-
-            if (exists $filter{noconstraint_regex}) {
-                for my $regex (@{$filter{noconstraint_regex}}) {
-                    next C11 if $cname =~ /$regex/;
-                }
-            }
-
-            for my $exclude (@{$opt{exclude}}) {
-                next C11 if $cname =~ /$exclude/;
-            }
-
-            push @{$fail{constraints}{notexist}{1}} => [$cname, $tname];
-            $failcount++;
-        }
-    }
-
-    ## Check for constraints that exist on 2 but not 1
-    ## Also dig in and compare ones that do match
-    for my $tname (sort keys %{$thing{2}{constraints}}) {
-
-        ## If the table does not exist, no sense in going on
-        next if ! exists $thing{1}{tables}{$tname};
-
-      C22: for my $cname (sort keys %{$thing{2}{constraints}{$tname}}) {
-
-            if (exists $filter{noconstraint_regex}) {
-                for my $regex (@{$filter{noconstraint_regex}}) {
-                    next C22 if $cname =~ /$regex/;
-                }
-            }
-
-            for my $exclude (@{$opt{exclude}}) {
-                next C22 if $cname =~ /$exclude/;
-            }
-
-            if (! exists $thing{1}{constraints}{$tname}{$cname}) {
-                push @{$fail{constraints}{notexist}{2}} => [$cname, $tname];
-                $failcount++;
-                next C22;
-            }
-
-            my ($type1,$key1,$cdef1) = @{$thing{1}{constraints}{$tname}{$cname}};
-            my ($type2,$key2,$cdef2) = @{$thing{2}{constraints}{$tname}{$cname}};
-
-            ## Are they the same type?
-            if ($type1 ne $type2) {
-                push @{$fail{constraints}{difftype}} => [$cname, $tname, $type1, $type2];
-                $failcount++;
-                next C22;
-            }
-
-            ## Are they on the same key?
-            ## May be just column reordering, so we dig deep before calling it a problem
-            if (! exists $thing{1}{colmap}{$tname}) {
-                for my $col (keys %{$thing{1}{columns}{$tname}}) {
-                    my $attnum = $thing{1}{columns}{$tname}{$col}{attnum};
-                    $thing{1}{colmap}{$tname}{$attnum} = $col;
-                }
-            }
-            if (! exists $thing{2}{colmap}{$tname}) {
-                for my $col (keys %{$thing{2}{columns}{$tname}}) {
-                    my $attnum = $thing{2}{columns}{$tname}{$col}{attnum};
-                    $thing{2}{colmap}{$tname}{$attnum} = $col;
-                }
-            }
-            (my $ckey1 = $key1) =~ s/(\d+)/$thing{1}{colmap}{$tname}{$1}/g;
-            (my $ckey2 = $key2) =~ s/(\d+)/$thing{2}{colmap}{$tname}{$1}/g;
-
-            if ($ckey1 ne $ckey2) {
-                push @{$fail{constraints}{diffkey}} => [$cname, $tname, $ckey1, $ckey2];
-                $failcount++;
-            }
-            ## No next here: we want to check the source as well
-
-            ## Only bother with the source for check constraints
-            next C22 if $type1 ne 'c';
-
-            ## Is the source the same?
-            if ($cdef1 eq $cdef2) {
-                next C22;
-            }
-
-            ## It may be because 8.2 and earlier over-quoted things
-            ## Just in case, we'll compare sans double quotes
-            (my $cdef11 = $cdef1) =~ s/"//g;
-            (my $cdef22 = $cdef2) =~ s/"//g;
-            if ($cdef11 eq $cdef22) {
-                $VERBOSE >= 1 and warn "Constraint $cname on $tname matched when quotes were removed\n";
-                next C22;
-            }
-
-            ## Constraints are written very differently according to the Postgres version
-            ## We'll try to do some normalizing here
-            my $var = qr{(?:''|'?\w+[\w ]*'?)(?:::\w[\w ]+\w+)?};
-            my $equiv = qr{$var (?:=|>=|<=) $var};
-
-            ## Change double cast using parens to three cast form
-            my %dtype = (
-                'int2' => 'smallint',
-                'int4' => 'integer',
-                'int8' => 'bigint',
-                'text' => 'text',
-            );
-            my $dtype = join '|' => keys %dtype;
-
-            for my $s1 ($cdef1, $cdef2) {
-
-                ## Remove parens about left side of cast: (foo)::bar => foo::bar
-                $s1 =~ s/\((\w+)\)::(\w+)/${1}::$2/g;
-
-                ## Remove parens around any array: ANY ((ARRAY...)) => ANY (ARRAY...)
-                $s1 =~ s{ANY \(\((ARRAY.+?)\)\)}{ANY ($1)}g;
-
-                ## Remove parens around casts: (foo::bar = baz) => foo::bar = baz
-                $s1 =~ s{\(($equiv)\)}{$1}g;
-
-                ## Replace foo = ANY(ARRAY[x,y]) with foo=x or foo=y
-                my $cvar = qr{'?(\w+)'?:?:?(\w[\w ]+\w+)?};
-                $s1 =~ s{($cvar = ANY \(ARRAY\[($var(?:, $var)*)\](\)?):?:?(\w[\w ]+\w)?\[?\]?\))}{
-                    my $flat;
-                    my ($all,$col,$type1,$array,$extraparen,$type2) = ($1,$2,$3,$4,$5,$6);
-                  FOO: {
-                        if (! defined $type1 or !defined $type2 or $type1 eq $type2) {
-                            my @item;
-                            for my $item (split /\s*,\s*/ => $array) {
-                                last FOO if $item !~ m{(.+)::(.+)};
-                                push @item => $1;
-                                $type2 ||= $2;
-                            }
-                            my $t1 = defined $type1 ? ('::'.$type1) : '';
-                            my $t2 = defined $type2 ? ('::'.$type2) : '';
-                            $flat = join ' OR ' => map { "$col$t1 = $_$t2" } @item;
-                        }
-                    }
-                    $flat ? $extraparen ? "$flat)" : $flat : $all;
-                }ge;
-
-                ## Strip left to right three part casting parens
-                ## (foo::text)::integer => foo::text::integer
-                $s1 =~ s{\((\w[\w ]*?::\w[\w ]*?)\)(::\w[\w ]*\w* )}{$1$2}g;
-
-                ## Get rid of excess parens in OR clauses
-                1 while $s1 =~ s{\(($equiv(?: OR $equiv)+)\)}{$1};
-
-                ## Remove parens around entire thing
-                $s1 =~ s{^\s*\((.+)\)\s*$}{$1};
-
-                ## Remove parens around entire thing (with CHECK)
-                $s1 =~ s{^\s*CHECK \((.+)\)\s*$}{CHECK $1};
-
-                $s1 =~ s{($dtype)\((\w+)::($dtype)\)}{$2::$3::$dtype{$1}}g;
-
-            } ## end of normalizing
-
-            if ($cdef1 ne $cdef2) {
-                push @{$fail{constraints}{diffsrc}} => [$cname, $tname, $cdef1, $cdef2];
-                $failcount++;
-            }
-
-        } ## end each constraint on this table
-    } ## end each table
-
-    ## Compare languages
-    for my $name (sort keys %{$thing{1}{language}}) {
-        if (!exists $thing{2}{language}{$name}) {
-            push @{$fail{language}{notexist}{1}} => $name;
-            $failcount++;
-            next;
-        }
-    }
-    for my $name (sort keys %{$thing{2}{language}}) {
-        if (!exists $thing{1}{language}{$name}) {
-            push @{$fail{language}{notexist}{2}} => $name;
-            $failcount++;
-            next;
-        }
-    }
-
-    ## Compare functions
-
-    ## Functions on 1 but not 2?
-    FUNCTION1:
-    for my $name (sort keys %{$thing{1}{functions}}) {
-        next if exists $thing{2}{functions}{$name};
-
-        if (exists $filter{nofunction_regex}) {
-            for my $regex (@{$filter{nofunction_regex}}) {
-                next FUNCTION1 if $name =~ /$regex/;
-            }
-        }
-
-        for my $exclude (@{$opt{exclude}}) {
-            next FUNCTION1 if $name =~ /$exclude/;
-        }
-
-        ## Skip if these are a side effect of having a language
-        for my $l (@{$fail{language}{notexist}{1}}) {
-            $l =~ s/u$//;
-            next FUNCTION1 if
-                $name eq "pg_catalog.${l}_call_handler()"
-                or $name eq "pg_catalog.${l}_validator(oid)";
-        }
-
-        push @{$fail{functions}{notexist}{1}} => $name;
-        $failcount++;
-    }
-
-    ## Functions on 2 but not 1 and check for identity
-    FUNCTION2:
-    for my $name (sort keys %{$thing{2}{functions}}) {
-
-        if (exists $filter{nofunction_regex}) {
-            for my $regex (@{$filter{nofunction_regex}}) {
-                next FUNCTION2 if $name =~ /$regex/;
-            }
-        }
-
-        for my $exclude (@{$opt{exclude}}) {
-            next FUNCTION2 if $name =~ /$exclude/;
-        }
-
-        ## Skip if these are a side effect of having a language
-        for my $l (@{$fail{language}{notexist}{2}}) {
-            $l =~ s/u$//;
-            next FUNCTION2 if
-                $name =~ "pg_catalog.${l}_call_handler()"
-                or $name eq "pg_catalog.${l}_validator(oid)";
-        }
-
-        if (! exists $thing{1}{functions}{$name}) {
-            push @{$fail{functions}{notexist}{2}} => $name;
-            $failcount++;
-            next;
-        }
-
-        ## Are the insides exactly the same
-        if (! $filter{nofuncbody}) {
-            if ($thing{1}{functions}{$name}{md5} ne $thing{2}{functions}{$name}{md5}) {
-                push @{$fail{functions}{diffbody}}, $name;
-                $failcount++;
-            }
-        }
-
-        if (! $filter{nofuncstrict}) {
-            if ($thing{1}{functions}{$name}{isstrict} ne $thing{2}{functions}{$name}{isstrict}) {
-                push @{$fail{functions}{diffstrict}}, $name;
-                $failcount++;
-            }
-        }
-
-        if (! $filter{nofuncret}) {
-            if ($thing{1}{functions}{$name}{retset} ne $thing{2}{functions}{$name}{retset}) {
-                push @{$fail{functions}{diffretset}}, $name;
-                $failcount++;
-            }
-        }
-        if (! $filter{nofuncvol}) {
-            if ($thing{1}{functions}{$name}{volatile} ne $thing{2}{functions}{$name}{volatile}) {
-                push @{$fail{functions}{diffvol}}, $name;
-                $failcount++;
-            }
-        }
-    }
-
-
-    ##
     ## Comparison is done, let's report the results
-    ##
-
-    if (! $failcount) {
-        add_ok msg('same-matched');
+    if (! $opt{failcount}) {
+        add_ok msg('ss-matched');
         return;
     }
 
     ## Build a pretty message giving all the gory details
+    my $msg = '';
 
-    $db->{perf} = '';
+    ## Adjust the output based on the leading message sizes
+    my $maxsize = 1;
+    my $msg_exists = msg('ss-existson');
+    my $msg_missing = msg('ss-missingon');
+    $maxsize = length $msg_exists if length $msg_exists > $maxsize;
+    $maxsize = length $msg_missing if length $msg_missing > $maxsize;
 
-    ## User differences
-    if (exists $fail{users}) {
-        if (exists $fail{users}{notexist}) {
-            if (exists $fail{users}{notexist}{1}) {
-                $db->{perf} .= ' Users in 1 but not 2: ';
-                $db->{perf} .= join ', ' => @{$fail{users}{notexist}{1}};
-                $db->{perf} .= ' ';
-            }
-            if (exists $fail{users}{notexist}{2}) {
-                $db->{perf} .= ' Users in 2 but not 1: ';
-                $db->{perf} .= join ', ' => @{$fail{users}{notexist}{2}};
-                $db->{perf} .= ' ';
-            }
-        }
-        if (exists $fail{users}{createdb}) {
-            if (exists $fail{users}{createdb}{1}) {
-                if (exists $fail{users}{createdb}{1}{t}) {
-                    $db->{perf} .= ' Users with createdb on 1 but not 2: ';
-                    $db->{perf} .= join ', ' => @{$fail{users}{createdb}{1}{t}};
-                    $db->{perf} .= ' ';
-                }
-                if (exists $fail{users}{createdb}{1}{f}) {
-                    $db->{perf} .= ' Users with createdb on 2 but not 1: ';
-                    $db->{perf} .= join ', ' => @{$fail{users}{createdb}{1}{f}};
-                    $db->{perf} .= ' ';
-                }
-            }
-        }
-        if (exists $fail{users}{superuser}) {
-            if (exists $fail{users}{superuser}{1}) {
-                if (exists $fail{users}{superuser}{1}{t}) {
-                    $db->{perf} .= ' Users with superuser on 1 but not 2: ';
-                    $db->{perf} .= join ', ' => @{$fail{users}{superuser}{1}{t}};
-                    $db->{perf} .= ' ';
-                }
-                if (exists $fail{users}{superuser}{1}{f}) {
-                    $db->{perf} .= ' Users with superuser on 2 but not 1: ';
-                    $db->{perf} .= join ', ' => @{$fail{users}{superuser}{1}{f}};
-                    $db->{perf} .= ' ';
-                }
-            }
-        }
-    }
+    ## Walk through each item type in alphabetical order and output the differences
+    for (@catalog_items) {
+        my $item = $_->[0];
 
-    ## Schema differences
-    if (exists $fail{schemas}) {
-        if (exists $fail{schemas}{notexist}) {
-            if (exists $fail{schemas}{notexist}{1}) {
-                for my $name (@{$fail{schemas}{notexist}{1}}) {
-                    $db->{perf} .= " Schema in 1 but not 2: $name ";
-                }
-            }
-            if (exists $fail{schemas}{notexist}{2}) {
-                for my $name (@{$fail{schemas}{notexist}{2}}) {
-                    $db->{perf} .= " Schema in 2 but not 1: $name ";
-                }
-            }
-        }
-        if (exists $fail{schemas}{diffowners}) {
-            for my $item (@{$fail{schemas}{diffowners}}) {
-                my ($name,$owner1,$owner2) = @$item;
-                $db->{perf} .= qq{ Schema "$name" owned by "$owner1" on 1, but by "$owner2" on 2. };
-            }
-        }
-        if (exists $fail{schemas}{diffacls}) {
-            for my $item (@{$fail{schemas}{diffacls}}) {
-                my ($name,$acl1,$acl2) = @$item;
-                $db->{perf} .= qq{ Schema "$name" has $acl1 perms on 1, but $acl2 perms on 2. };
-            }
-        }
-    }
+        ## Pretty name for this type of item. No matches is okay!
+        $opt{nomsgok} = 1;
+        my $pitem = msg($item) || ucfirst $item;
+        $opt{nomsgok} = 0;
 
-    ## Table differences
-    if (exists $fail{tables}) {
-        if (exists $fail{tables}{notexist}) {
-            if (exists $fail{tables}{notexist}{1}) {
-                for my $name (@{$fail{tables}{notexist}{1}}) {
-                    $db->{perf} .= " Table in 1 but not 2: $name ";
+        ## See if there are any items of this class that only exist on some
+        my $e = $fail{$item}{exists};
+        if (keys %$e) {
+            for my $name (sort keys %$e) {
+                ## We do not want to report twice on things that appear inside of schemas
+                ## However, we do report if the schema *does* exist on any of the missing databases
+                if ($item ne 'schema' and $name =~ /(.+?)\./) {
+                    my $schema = $1;
+                    ## How many databases do not have this?
+                    my $missingcount = keys %{ $e->{$name}{nothere} };
+                    my $noschemacount = 0;
+                    for my $db (keys %{ $e->{$name}{nothere} }) {
+                        if (exists $fail{schema}{exists}{$schema}{nothere}{$db}) {
+                            $noschemacount++;
+                        }
+                    }
+                    if ($missingcount == $noschemacount) {
+                        next;
+                    }
                 }
-            }
-            if (exists $fail{tables}{notexist}{2}) {
-                for my $name (@{$fail{tables}{notexist}{2}}) {
-                    $db->{perf} .= " Table in 2 but not 1: $name ";
-                }
-            }
-        }
-        if (exists $fail{tables}{diffowners}) {
-            for my $item (@{$fail{tables}{diffowners}}) {
-                my ($name,$owner1,$owner2) = @$item;
-                $db->{perf} .= qq{ Table "$name" owned by "$owner1" on 1, but by "$owner2" on 2. };
-            }
-        }
-        if (exists $fail{tables}{diffacls}) {
-            for my $item (@{$fail{tables}{diffacls}}) {
-                my ($name,$acl1,$acl2) = @$item;
-                $db->{perf} .= qq{ Table "$name" has $acl1 perms on 1, but $acl2 perms on 2. };
-            }
-        }
-    }
 
-    ## Sequence differences
-    if (exists $fail{sequences}) {
-        if (exists $fail{sequences}{notexist}) {
-            if (exists $fail{sequences}{notexist}{1}) {
-                for my $name (@{$fail{sequences}{notexist}{1}}) {
-                    $db->{perf} .= " Sequence in 1 but not 2: $name ";
-                }
-            }
-            if (exists $fail{sequences}{notexist}{2}) {
-                for my $name (@{$fail{sequences}{notexist}{2}}) {
-                    $db->{perf} .= " Sequence in 2 but not 1: $name ";
-                }
-            }
-        }
-        if (exists $fail{sequences}{diffowners}) {
-            for my $item (@{$fail{sequences}{diffowners}}) {
-                my ($name,$owner1,$owner2) = @$item;
-                $db->{perf} .= qq{ Sequence "$name" owned by "$owner1" on 1, but by "$owner2" on 2. };
-            }
-        }
-        if (exists $fail{sequences}{diffacls}) {
-            for my $item (@{$fail{sequences}{diffacls}}) {
-                my ($name,$acl1,$acl2) = @$item;
-                $db->{perf} .= qq{ Sequence "$name" has $acl1 perms on 1, but $acl2 perms on 2. };
-            }
-        }
-    }
-
-    ## View differences
-    if (exists $fail{views}) {
-        if (exists $fail{views}{notexist}) {
-            if (exists $fail{views}{notexist}{1}) {
-                for my $name (@{$fail{views}{notexist}{1}}) {
-                    $db->{perf} .= " View in 1 but not 2: $name ";
-                }
-            }
-            if (exists $fail{views}{notexist}{2}) {
-                for my $name (@{$fail{views}{notexist}{2}}) {
-                    $db->{perf} .= " View in 2 but not 1: $name ";
-                }
-            }
-        }
-        if (exists $fail{views}{diffowners}) {
-            for my $item (@{$fail{views}{diffowners}}) {
-                my ($name,$owner1,$owner2) = @$item;
-                $db->{perf} .= qq{ View "$name" owned by "$owner1" on 1, but by "$owner2" on 2. };
-            }
-        }
-        if (exists $fail{views}{diffacls}) {
-            for my $item (@{$fail{views}{diffacls}}) {
-                my ($name,$acl1,$acl2) = @$item;
-                $db->{perf} .= qq{ View "$name" has $acl1 perms on 1, but $acl2 perms on 2. };
-            }
-        }
-        if (exists $fail{views}{diffdef}) {
-            for my $item (@{$fail{views}{diffdef}}) {
-                $db->{perf} .= qq{ View "$item" is different on 1 and 2. };
-            }
-        }
-    }
-
-    ## Trigger differences
-    if (exists $fail{triggers}) {
-        if (exists $fail{triggers}{notexist}) {
-            if (exists $fail{triggers}{notexist}{1}) {
-                for my $row (@{$fail{triggers}{notexist}{1}}) {
-                    my ($name,$tabname) = @$row;
-                    $db->{perf} .= " Trigger in 1 but not 2: $name (on $tabname) ";
-                }
-            }
-            if (exists $fail{triggers}{notexist}{2}) {
-                for my $row (@{$fail{triggers}{notexist}{2}}) {
-                    my ($name,$tabname) = @$row;
-                    $db->{perf} .= " Trigger in 2 but not 1: $name (on $tabname) ";
-                }
-            }
-        }
-        if (exists $fail{triggers}{difffunc}) {
-            for my $item (@{$fail{triggers}{diffowners}}) {
-                my ($name,$func1,$func2) = @$item;
-                $db->{perf} .= qq{ Trigger "$name" calls function "$func1" on 1, but function "$func2" on 2. };
-            }
-        }
-    }
-
-    ## Index differences
-    if (exists $fail{indexes}){
-        if (exists $fail{indexes}{notexist}) {
-            if (exists $fail{indexes}{notexist}{1}) {
-                for my $row (@{$fail{indexes}{notexist}{1}}) {
-                    my ($name,$tname) = @$row;
-                    $db->{perf} .= " Index on 1 but not 2: $name ON $tname ";
-                }
-            }
-            if (exists $fail{indexes}{notexist}{2}) {
-                for my $row (@{$fail{indexes}{notexist}{2}}) {
-                    my ($name,$tname) = @$row;
-                    $db->{perf} .= " Index on 2 but not 1: $name ON $tname ";
-                }
+                ## Show the list of the item, and a CSV of which databases have it and which don't
+                my $isthere = join ', ' => sort { $a<=>$b } keys %{ $e->{$name}{isthere} };
+                my $nothere = join ', ' => sort { $a<=>$b } keys %{ $e->{$name}{nothere} };
+                $msg .= sprintf "%s\n  %-*s %s\n  %-*s %s\n",
+                    msg('ss-noexist', $pitem, $name),
+                    $maxsize, $msg_exists,
+                    $isthere,
+                    $maxsize, $msg_missing,
+                    $nothere;
             }
         }
 
-        for my $name (sort keys %{$fail{indexes}{table}}) {
-            my ($one,$two) = @{$fail{indexes}{table}{$name}};
-            $db->{perf} .= sprintf ' Index %s is applied to table %s on 1, but to table %s on 2 ',
-                $name,
-                $one,
-                $two;
-        }
+        ## See if there are any items for this class that have differences
+        my $d = $fail{$item}{diff};
+        if (keys %$d) {
 
-        for my $name (sort keys %{$fail{indexes}{cols}}) {
-            my ($tname,$def1,$def2,$col1,$col2) = @{$fail{indexes}{cols}{$name}};
-            $db->{perf} .= sprintf ' Index %s on table %s applied to (%s) on 1 but (%s) on 2 ',
-                $name,
-                $tname,
-                $col1,
-                $col2;
-        }
+            for my $name (sort keys %$d) {
+                my $tdiff = $d->{$name};
 
-        for my $name (sort keys %{$fail{indexes}{pred}}) {
-            my ($tname,$def1,$def2,$w1,$w2) = @{$fail{indexes}{pred}{$name}};
-            $db->{perf} .= sprintf ' Index %s on table %s has predicate (%s) on 1 but (%s) on 2 ',
-                $name,
-                $tname,
-                $w1,
-                $w2;
-        }
+                ## Any raw column differences?
+                if (exists $tdiff->{coldiff}) {
+                    my @msg;
 
-        for my $name (sort keys %{$fail{indexes}{method}}) {
-            my ($tname,$def1,$def2,$m1,$m2) = @{$fail{indexes}{method}{$name}};
-            $db->{perf} .= sprintf ' Index %s on table %s has method (%s) on 1 but (%s) on 2 ',
-                $name,
-                $tname,
-                $m1,
-                $m2;
-        }
+                    for my $col (sort keys %{ $tdiff->{coldiff} }) {
 
-        for my $var (qw/isprimary isunique isclustered isvalid/) {
-            for my $name (sort keys %{$fail{indexes}{$var}}) {
-                my ($one,$two) = @{$fail{indexes}{$var}{$name}};
-                (my $pname = $var) =~ s/^is//;
-                $pname = 'primary key' if $pname eq 'primary';
-                $db->{perf} .= sprintf ' Index %s is %s as %s on 1, but %s as %s on 2 ',
-                    $name,
-                    $one eq 't' ? 'set' : 'not set',
-                    $pname,
-                    $two eq 't' ? 'set' : 'not set',
-                    $pname;
-            }
-        }
+                        ## Do not show index 'owners': already covered by the table itself
+                        if ($col eq 'owner' and $item eq 'index') {
+                            next;
+                        }
 
-    } ## end of indexes
+                        ## Do not show column number differences if filtered out with "noposition"
+                        if ($item eq 'column'
+                            and $col eq 'column_number'
+                            and $opt{filtered}{noposition}) {
+                            next;
+                        }
 
+                        ## Do not show function body differences if filtered out with "nofuncbody"
+                        if ($item eq 'function'
+                            and $col eq 'prosrc'
+                            and $opt{filtered}{nofuncbody}) {
+                            next;
+                        }
 
-    ## Column differences
-    if (exists $fail{columns}) {
-        if (exists $fail{columns}{notexist}) {
-            if (exists $fail{columns}{notexist}{1}) {
-                for my $row (@{$fail{columns}{notexist}{1}}) {
-                    my ($tname,$cname) = @$row;
-                    $db->{perf} .= qq{ Table "$tname" on 1 has column "$cname", but 2 does not. };
+                        push @msg => sprintf " %s\n", msg('ss-different', $col);
+                        for my $db (sort keys %{ $tdiff->{coldiff}{$col} }) {
+                            push @msg => sprintf "    %s %s: %s\n",
+                                ucfirst msg('database'),
+                                $db,
+                                $tdiff->{coldiff}{$col}{$db};
+                        }
+                    }
+
+                    if (@msg) {
+                        $msg .= qq{$pitem "$name":\n};
+                        $msg .= $_ for @msg;
+                    }
+                    else {
+                        ## Everything got filtered out, so decrement this item
+                        $opt{failcount}--;
+                    }
                 }
-            }
-            if (exists $fail{columns}{notexist}{2}) {
-                for my $row (@{$fail{columns}{notexist}{2}}) {
-                    my ($tname,$cname) = @$row;
-                    $db->{perf} .= qq{ Table "$tname" on 2 has column "$cname", but 1 does not. };
-                }
-            }
-        }
-        if (exists $fail{columns}{diff}) {
-            for my $tname (sort keys %{$fail{columns}{diff}}) {
-                for my $cname (sort keys %{$fail{columns}{diff}{$tname}}) {
-                    for my $var (sort keys %{$fail{columns}{diff}{$tname}{$cname}}) {
-                        my ($v1,$v2) = @{$fail{columns}{diff}{$tname}{$cname}{$var}};
-                        $db->{perf} .= qq{ Column "$cname" of "$tname": $var is $v1 on 1, but $v2 on 2. };
+
+                ## Any multi-item column differences?
+                if (exists $tdiff->{list}) {
+
+                    my @msg;
+                    for my $col (sort keys %{ $tdiff->{list} }) {
+
+                        ## Exclude permissions if 'noperm' filter is set
+                        if ($col =~ /.acl$/ and $opt{filtered}{noperm}) {
+                            next;
+                        }
+
+                        if (exists $tdiff->{list}{$col}{exists}) {
+                            my $e = $tdiff->{list}{$col}{exists};
+                            for my $name (sort keys %$e) {
+                                push @msg => sprintf qq{  "%s":\n    %s\n},
+                                    $col,
+                                    msg('ss-notset', $name);
+                                my $isthere = join ', ' => sort { $a<=>$b } keys %{ $e->{$name}{isthere} };
+                                my $nothere = join ', ' => sort { $a<=>$b } keys %{ $e->{$name}{nothere} };
+                                push @msg => sprintf "      %-*s %s\n      %-*s %s\n",
+                                    $maxsize, $msg_exists,
+                                    $isthere,
+                                    $maxsize, $msg_missing,
+                                    $nothere;
+                            }
+                        }
+                        if (exists $tdiff->{list}{$col}{diff}) {
+                            for my $setting (sort keys %{ $tdiff->{list}{$col}{diff} }) {
+
+                                push @msg => sprintf qq{  "%s":\n    %s\n},
+                                    $col,
+                                    msg('ss-different', $setting);
+                                for my $db (sort keys %{ $tdiff->{list}{$col}{diff}{$setting} }) {
+                                    my $val = $tdiff->{list}{$col}{diff}{$setting}{$db};
+                                    push @msg => sprintf "      %s %s: %s\n",
+                                        ucfirst msg('database'),
+                                        $db,
+                                        $val;
+                                }
+                            }
+                        }
+                    }
+
+                    if (@msg) {
+                        $msg .= qq{$pitem "$name":\n};
+                        $msg .= $_ for @msg;
+                    }
+                    else {
+                        ## No message means it was all filtered out, so we decrment the master count
+                        $opt{failcount}--;
                     }
                 }
             }
         }
     }
 
-    ## Constraint differences
-    if (exists $fail{constraints}) {
-
-        ## Exists on 1 but not 2
-        for my $row (@{$fail{constraints}{notexist}{1}}) {
-            my ($cname,$tname) = @$row;
-            $db->{perf} .= qq{ Table "$tname" on 1 has constraint "$cname", but 2 does not. };
-        }
-        ## Exists on 2 but not 1
-        for my $row (@{$fail{constraints}{notexist}{2}}) {
-            my ($cname,$tname) = @$row;
-            $db->{perf} .= qq{ Table "$tname" on 2 has constraint "$cname", but 1 does not. };
-        }
-
-        ## Constraints are of differnet types (!)
-        for my $row (@{$fail{constraints}{difftype}}) {
-            my ($cname,$tname,$type1,$type2) = @$row;
-            $db->{perf} .= qq{ Constraint "$cname" on table "$tname" is type $type1 on 1, but $type2 on 2. };
-        }
-
-        ## Constraints have a different key
-        for my $row (@{$fail{constraints}{diffkey}}) {
-            my ($cname,$tname,$key1,$key2) = @$row;
-            $db->{perf} .= qq{ Constraint "$cname" on table "$tname" is on column $key1 on 1, but $key2 on 2. };
-        }
-
-        ## Constraints have different source (as near as we can tell)
-        for my $row (@{$fail{constraints}{diffsrc}}) {
-            my ($cname,$tname,$cdef1,$cdef2) = @$row;
-            $db->{perf} .= qq{ Constraint "$cname" on table "$tname" differs in source: $cdef1 vs. $cdef2. };
-        }
+    ## We may have no items due to exclusions!
+    if (! $opt{failcount}) {
+        add_ok msg('ss-matched');
+        return;
     }
 
-    ## Function differences
-    if (exists $fail{functions}) {
-        if (exists $fail{functions}{notexist}) {
-            if (exists $fail{functions}{notexist}{1}) {
-                for my $name (@{$fail{functions}{notexist}{1}}) {
-                    $db->{perf} .= " Function on 1 but not 2: $name ";
-                }
-            }
-            if (exists $fail{functions}{notexist}{2}) {
-                for my $name (@{$fail{functions}{notexist}{2}}) {
-                    $db->{perf} .= " Function on 2 but not 1: $name ";
-                }
-            }
-        }
-        if (exists $fail{functions}{diffbody}) {
-            for my $name (sort @{$fail{functions}{diffbody}}) {
-                $db->{perf} .= " Function body different on 1 than 2: $name ";
-            }
-        }
-        if (exists $fail{functions}{diffstrict}) {
-            for my $name (sort @{$fail{functions}{diffbody}}) {
-                $db->{perf} .= " Function strictness different on 1 than 2: $name ";
-            }
-        }
-        if (exists $fail{functions}{diffretset}) {
-            for my $name (sort @{$fail{functions}{diffretset}}) {
-                $db->{perf} .= " Function return-set different on 1 than 2: $name ";
-            }
-        }
-        if (exists $fail{functions}{diffvol}) {
-            for my $name (sort @{$fail{functions}{diffvol}}) {
-                $db->{perf} .= " Function volatility different on 1 than 2: $name ";
-            }
-        }
-    }
-
-    ## Language differences
-    if (exists $fail{language}) {
-        if (exists $fail{language}{notexist}) {
-            if (exists $fail{language}{notexist}{1}) {
-                for my $name (@{$fail{language}{notexist}{1}}) {
-                    $db->{perf} .= " Language on 1 but not 2: $name ";
-                }
-            }
-            if (exists $fail{language}{notexist}{2}) {
-                for my $name (@{$fail{language}{notexist}{2}}) {
-                    $db->{perf} .= " Language on 2 but not 1: $name ";
-                }
-            }
-        }
-    }
-
-
-    add_critical msg('same-failed', $failcount);
-
+    $db->{perf} = "\n$msg";
+    add_critical msg('ss-failed', $opt{failcount});
     return;
 
 } ## end of check_same_schema
+
+
+sub audit_filename {
+
+    ## Generate the name of the file to store audit information
+
+    ## Get the connection information for this connection
+    my $filename = run_command('foo', { conninfo => 1 });
+    ## Do not care about the username
+    $filename =~ s/ user=(.+)//;
+    ## Strip out the host if not used
+    $filename =~ s/ host=<none>//;
+    ## Replace any other spaces
+    $filename =~ s/ /./g;
+    ## Equals have to be escaped, so we'll change them to a dot
+    $filename =~ s/=/./g;
+    ## The final filename to use
+    $filename = "check_postgres.audit.$filename";
+
+    ## The host name may have slashes, so change to underscores
+    $filename =~ s{\/}{_}g;
+
+    ## Got a user-supplied extension? Add it now.
+    if ($opt{suffix}) {
+        $filename .= ".$opt{suffix}";
+    }
+
+    return $filename;
+
+} ## end of audit_filename
+
+
+sub write_audit_file {
+
+    ## Save a new copy of the audit file
+    my $arg = shift || {};
+    my $filename = $arg->{filename} || audit_filename();
+    my $info = $arg->{info} || die;
+
+    ## Create a connection information string
+    my $row = $targetdb[0];
+    my $conninfo = sprintf '%s%s%s%s',
+        defined $row->{port} ? qq{port=$row->{port} } : '',
+        defined $row->{host} ? qq{host=$row->{host} } : '',
+        defined $row->{dbname} ? qq{dbname=$row->{dbname} } : '',
+        defined $row->{dbuser} ? qq{user=$row->{dbuser} } : '';
+
+    open my $fh, '>', $filename or die qq{Could not open "$filename": $!\n};
+    print {$fh} "## Audit file for check_postgres\n";
+    print {$fh} "## CP version: $VERSION\n";
+    print {$fh} "## PG version: $arg->{pgversion}\n";
+    printf {$fh} "## Created: %s\n", scalar localtime();
+    print {$fh} "## Connection: $conninfo\n";
+    print {$fh} "## Database name: $row->{dbname}\n";
+    print {$fh} "## Host: $row->{host}\n";
+    print {$fh} "## Port: $row->{port}\n";
+    print {$fh} "## User: $row->{dbuser}\n";
+    if ($arg->{same_schema}) {
+        printf {$fh} "## Start of same_schema information:\n";
+        {
+            local $Data::Dumper::Indent = 1;
+            printf {$fh} Dumper $info;
+        }
+        print {$fh} "## End of same_schema information\n";
+    }
+
+    close $fh or warn qq{Could not close "$filename": $!\n};
+
+} ## end of write_audit_file
+
+
+sub read_audit_file {
+
+    ## Read in the data from a historical file
+    ## Returns four items:
+    ## 1. The standard catalog structure that was saved
+    ## 2. Connection information string
+    ## 3. Date the file was created
+    ## 4. The version it was created with
+
+    my $filename = shift;
+
+    open my $fh, '<', $filename or die qq{Could not open "$filename": $!\n};
+    my $inside = 0;
+    my $data = '';
+    my ($conninfo,$ctime,$cversion,$pgversion) = ('???','???','???','???');
+    my ($cdbname,$chost,$cport,$cuser) = ('???','???','???','???');
+    while (<$fh>) {
+        if (!$inside) {
+            if (/Start of same_schema/) {
+                $inside = 1;
+            }
+            elsif (/CP version: (.+)/) {
+                $cversion = $1;
+            }
+            elsif (/PG version: (.+)/) {
+                $pgversion = $1;
+            }
+            elsif (/Created: (.+)/) {
+                $ctime = $1;
+            }
+            elsif (/Connection: (.+)/) {
+                $conninfo = $1;
+            }
+            elsif (/Database name: (.+)/) {
+                $cdbname = $1;
+            }
+            elsif (/Host: (.+)/) {
+                $chost = $1;
+            }
+            elsif (/Port: (.+)/) {
+                $cport = $1;
+            }
+            elsif (/User: (.+)/) {
+                $cuser = $1;
+            }
+        }
+        elsif (/End of same_schema/) {
+            last;
+        }
+        else {
+            $data .= $_;
+        }
+    }
+    close $fh or warn qq{Could not close "$filename": $!\n};
+
+    my $POSTGRES1;
+    eval $data;
+    if ($@) {
+        die qq{Failed to parse file "$filename": $@\n};
+    }
+    return $POSTGRES1, $conninfo, $ctime, $cversion,
+           $pgversion, $cdbname, $chost, $cport, $cuser;
+
+} ## end of read_audit_file
+
+
+sub schema_item_exists {
+
+    ## Compare a certain class of items across all databases for existence
+    ## Returns a hashref of item names, with "isthere" and "nothere"
+    ## with keys of database numbers underneath that
+
+    my $item_class = shift;
+    my $itemhash = shift;
+
+    ## Things that failed to match:
+    my %nomatch;
+
+    my $key = "no${item_class}_regex";
+    my $exclude_regex = exists $opt{filtered}->{$key} ? $opt{filtered}->{$key} : [];
+
+    for my $db1 (sort keys %$itemhash) {
+        for my $db2 (sort keys %$itemhash) {
+            next if $db1 == $db2;
+            for my $name (sort keys %{ $itemhash->{$db1}{$item_class} }) {
+
+                ## Can exclude by 'filter' based regex
+                next if grep { $name eq $_ } @$exclude_regex;
+
+                if (! exists $itemhash->{$db2}{$item_class}{$name}) {
+
+                    ## Special exception for columns: do not add if the table is non-existent
+                    if ($item_class eq 'column') {
+                        (my $tablename = $name) =~ s/(.+)\..+/$1/;
+                        next if ! exists $itemhash->{$db2}{table}{$tablename};
+                    }
+
+                    ## Special exception for triggers: do not add if the table is non-existent
+                    if ($item_class eq 'trigger') {
+                        my $it = $itemhash->{$db1}{$item_class}{$name};
+                        my $tablename = "$it->{tschema}.$it->{tname}";
+                        next if ! exists $itemhash->{$db2}{table}{$tablename};
+                    }
+
+                    $nomatch{$name}{isthere}{$db1} = 1;
+                    $nomatch{$name}{nothere}{$db2} = 1;
+                }
+            }
+        }
+    }
+
+    ## Increment our fail count once per item mismatch
+    $opt{failcount} += keys %nomatch;
+
+    return \%nomatch;
+
+} ## end of schema_item_exists
+
+
+sub schema_item_differences {
+
+    ## Compare a certain class of items across all databases for differences
+    ## Takes a hashref of argument, including:
+    ##   name: the item class name
+    ##   items: the main hashref of all items
+    ##   ignore: which fields to ignore. CSV
+    ##   lists: which fields are lists. CSV
+    ## Modified the items hashref by incrementing items->{failcount}
+    ## Returns s hashref of item names, with details as to the diffs therein
+
+    my $arg = shift;
+
+    my $item_class = $arg->{name} or die;
+    my $itemhash = $arg->{items} or die;
+
+    ## Things we completely ignore:
+    my $ignore = { oid => 1 };
+    if (exists $arg->{ignore}) {
+        for my $item (split /\s*,\s*/ => $arg->{ignore}) {
+            $ignore->{$item} = 1;
+        }
+    }
+
+    ## Things that are handled as lists:
+    my $lists = {};
+    if (exists $arg->{lists}) {
+        for my $item (split /\s*,\s*/ => $arg->{lists}) {
+            $lists->{$item} = 1;
+        }
+    }
+
+    ## The final lists of mismatched items we pass back
+    my %nomatch;
+
+    my $key = "no${item_class}_regex";
+    my $exclude_regex = exists $opt{filtered}->{$key} ? $opt{filtered}->{$key} : [];
+
+    for my $db1 (sort keys %$itemhash) {
+        for my $db2 (sort keys %$itemhash) {
+            next if $db1 >= $db2;
+            for my $name (sort keys %{ $itemhash->{$db1}{$item_class} }) {
+
+                ## Can exclude by 'filter' based regex
+                next if grep { $name eq $_ } @$exclude_regex;
+
+                ## This case has already been handled:
+                next if ! exists $itemhash->{$db2}{$item_class}{$name};
+
+                ## Special exception for columns: do not add if the table is non-existent
+                if ($item_class eq 'column') {
+                    (my $tablename = $name) =~ s/(.+)\..+/$1/;
+                    next if ! exists $itemhash->{$db2}{table}{$tablename};
+                }
+
+                my $one = $itemhash->{$db1}{$item_class}{$name};
+                my $two = $itemhash->{$db2}{$item_class}{$name};
+
+                for my $col (keys %$one) {
+
+                    ## Skip if this col is ignored
+                    next if exists $ignore->{$col};
+
+                    ## If it doesn't exist on the other, just ignore it
+                    next if ! exists $two->{$col};
+
+                    ## If they are the same, move on!
+                    next if $one->{$col} eq $two->{$col};
+
+                    ## Skip certain known numeric fields that have text versions:
+                    next if $col =~ /.(?:namespace|owner|filenode|oid|relid)$/;
+
+                    ## If not a list, just report on the exact match here and move on:
+                    if (! exists $lists->{$col} and $col !~ /.acl$/) {
+                        $nomatch{$name}{coldiff}{$col}{$db1} = $one->{$col};
+                        $nomatch{$name}{coldiff}{$col}{$db2} = $two->{$col};
+                        next;
+                    }
+
+                    ## This is a list, so we have to break it down to see if it is really different
+                    ## May be empty or of the form {foo=bar,baz=yak}
+
+                    my (%list1,%list2);
+                    my ($uno,$dos) = ($one->{$col}, $two->{$col});
+
+                    if (length $uno) {
+                        die "Invalid list: $uno for db $db1:$name:$col\n" if $uno !~ /^{(.+)}$/;
+                        %list1 = map { /(.*)=(.+)/ or die "Invalid list: $uno"; $1,$2 } split /,/ => $1;
+                    }
+                    if (length $dos) {
+                        die "Invalid list: $dos for db $db2:$name:$col\n" if $dos !~ /^{(.+)}$/;
+                        %list2 = map { /(.*)=(.+)/ or die "Invalid list: $uno"; $1,$2 } split /,/ => $1;
+                    }
+
+                    ## Items in 1 but not 2?
+                    for my $setting (sort keys %list1) {
+                        if (! exists $list2{$setting}) {
+                            $nomatch{$name}{list}{$col}{exists}{$setting}{isthere}{$db1} = 1;
+                            $nomatch{$name}{list}{$col}{exists}{$setting}{nothere}{$db2} = 1;
+                        }
+                    }
+
+                    ## Items in 2 but not 1? Value diferences?
+                    for my $setting (sort keys %list2) {
+                        if (! exists $list1{$setting}) {
+                            $nomatch{$name}{list}{$col}{exists}{$setting}{isthere}{$db2} = 1;
+                            $nomatch{$name}{list}{$col}{exists}{$setting}{nothere}{$db1} = 1;
+                        }
+                        elsif ($list1{$setting} ne $list2{$setting}) {
+                            $nomatch{$name}{list}{$col}{diff}{$setting}{$db1} = $list1{$setting};
+                            $nomatch{$name}{list}{$col}{diff}{$setting}{$db2} = $list2{$setting};
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    $opt{failcount} += keys %nomatch;
+
+    return \%nomatch;
+
+} ## end of schema_item_differences
+
+
+sub find_catalog_info {
+
+    ## Grab information from one or more catalog tables
+    ## Convert into a happy hashref and return it
+
+    ## What type of catalog object this is
+    my $type = shift;
+
+    ## We must know about this type
+    if (! exists $catalog_info{$type}) {
+        die "Unknown type of '$type' sent to find_catalog_info";
+    }
+    my $ci = $catalog_info{$type};
+
+    ## The final hashref of rows we return
+    my $result = {};
+
+    ## Do nothing if we are excluding this type of object entirely
+    return $result if $opt{filtered}{"no$type"};
+
+    ## Which database to run this against
+    my $dbnum = shift or die;
+
+    ## The SQL we use
+    my $SQL = $ci->{SQL} or die;
+
+    if (exists $ci->{exclude}) {
+        if ('temp_schemas' eq $ci->{exclude}) {
+            if (! $opt{filtered}{system}) {
+                $SQL .= q{ WHERE nspname !~ '^pg_t'};
+            }
+        }
+        elsif ('system' eq $ci->{exclude}) {
+            if (! $opt{filtered}{system}) {
+                $SQL .= sprintf
+                    q{ %s n.nspname !~ '^pg' AND n.nspname <> 'information_schema'},
+                        $SQL =~ /WHERE/ ? 'AND' : 'WHERE';
+            }
+        }
+        else {
+            die "Unknown exclude '$ci->{exclude}' called";
+        }
+    }
+
+    ## Final wrapup
+    if (exists $ci->{postSQL}) {
+        $SQL .= " $ci->{postSQL}";
+    }
+
+    ## Send our SQL to the correct database via psql and grab the results
+    my $info = run_command($SQL, { dbnumber => $dbnum });
+
+    ## The row column we use as the main hash key
+    my $key = $ci->{keyname} || 'name';
+
+    ## Keep track of the actual column numbers
+    my $last_table = '';
+    my $colnum = 1;
+
+    ## Only need to pull back the first and only db, so we can say [0] here
+    for my $row (@{$info->{db}[0]{slurp}}) {
+
+        ## Remove any information that should be deleted
+        for ( @{$info->{deletecols}}) {
+            delete $row->{$_};
+        }
+
+        ## Determine the name to use. For most things this is simply the passed in key
+        my $name = $row->{$key};
+
+        ## For a function, we also want to put the args into the name
+        if ($type eq 'function') {
+            ## Grab all type mappings
+            $SQL = 'SELECT oid, typname FROM pg_type';
+            my %oid2type;
+            my $tinfo = run_command($SQL, { dbnumber => $dbnum });
+            for my $row (@{ $tinfo->{db}[0]{slurp} }) {
+                $oid2type{$row->{oid}} = $row->{typname};
+            }
+            (my $args = $row->{proargtypes}) =~ s/(\d+)/$oid2type{$1}||$1/ge;
+            $args =~ s/ /,/g;
+            $args =~ s/ints/smallint/g;
+            $args =~ s/int4/int/g;
+            $args =~ s/int8/bigint/g;
+            $name .= "($args)";
+
+            ## Special transform for probin, which may be different depending on the version
+            $row->{probin} = '' if $row->{probin} eq '-';
+
+        }
+
+        ## For columns, reduce the attnum to a simpler canonical form without holes
+        if ($type eq 'column') {
+            if ($row->{tname} ne $last_table) {
+                $last_table = $row->{tname};
+                $colnum = 1;
+            }
+            $row->{column_number} = $colnum++;
+        }
+
+        ## Store this row into our result hash, using a good key
+        $result->{$name} = $row;
+
+        ## We may want to run additional SQL per row returned
+        if (exists $ci->{innerSQL}) {
+            (my $SQL2 = $ci->{innerSQL}) =~ s/ROW(\w+)/$row->{lc $1}/g;
+            my $info2 = run_command($SQL2, { dbnumber => $dbnum } );
+            for my $row2 (@{ $info2->{db}[0]{slurp} }) {
+                for my $inner (keys %{ $row2 }) {
+                    $result->{$row->{$key}}{$inner} = $row2->{$inner};
+                }
+            }
+        }
+    }
+
+    return $result;
+
+} ## end of find_catalog_info
 
 
 sub check_sequence {
@@ -9103,22 +8729,18 @@ a time, an error is thrown.
 
 =head2 B<same_schema>
 
-(C<symlink: check_postgres_same_schema>) Verifies that two databases are identical as far as their 
+(C<symlink: check_postgres_same_schema>) Verifies that two or more databases are identical as far as their 
 schema (but not the data within). This is particularly handy for making sure your slaves have not 
 been modified or corrupted in any way when using master to slave replication. Unlike most other 
 actions, this has no warning or critical criteria - the databases are either in sync, or are not. 
-If they are not, a detailed list of the differences is presented. To make the list more readable, 
-provide a C<--verbose> argument, which will output one item per line.
+If they are different, a detailed list of the differences is presented.
 
 You may want to exclude or filter out certain differences. The way to do this is to add strings 
-to the C<--warning> option. To exclude a type of object, use "noobjectnames". To exclude 
-objects of a certain type by a regular expression against their name, use "noobjectname=regex". 
-See the examples for a better understanding.
+to the C<--filter> option. To exclude a type of object, use "noname", where 'name' is the type of 
+object, for example, "noschema". To exclude objects of a certain type by a regular expression against 
+their name, use "noname=regex". See the examples below for a better understanding.
 
-You may exclude all objects of a certain name by using the C<exclude> option. It takes a Perl 
-regular expression as its argument.
-
-The types of objects that can be filtered are:
+The types of objects that can be filtered include:
 
 =over 4
 
@@ -9148,34 +8770,45 @@ columns within a table.
 The filter option "nofuncbody" prevents comparison of the bodies of all 
 functions.
 
-The filter option "noperms" prevents comparison of object permissions.
+The filter option "noperm" prevents comparison of object permissions.
 
-The filter option "nolanguage" prevents comparison of language existence.
+To provide the second database, just append the differences to the first one 
+by a call to the appropriate connection argument. For example, to compare 
+databases on hosts alpha and bravo, use "--dbhost=alpha,bravo". Also see the 
+examples below.
 
-You must provide information on how to reach the second database by a connection 
-parameter ending in the number 2, such as "--dbport2=5543". If if it not given, 
-it uses the the same information as database number 1, or the default if neither 
-is given.
+If only a single host is given, it is assumed we are doing a "time-based" report. 
+The first time this is run a snapshot of all the items in the database is 
+saved to a local file. When you run it again, that snapshot is read in and 
+becomes "database #2" and is compared to the current database.
+
+To enable snapshots at various points in time, you can use the "--suffix" 
+argument to make the filenames unique to each run. See the examples below.
 
 Example 1: Verify that two databases on hosts star and line are the same:
 
-  check_postgres_same_schema --dbhost=star --dbhost2=line
+  check_postgres_same_schema --dbhost=star,line
 
 Example 2: Same as before, but exclude any triggers with "slony" in their name
 
-  check_postgres_same_schema --dbhost=star --dbhost2=line --warning="notrigger=slony"
+  check_postgres_same_schema --dbhost=star,line --filter="notrigger=slony"
 
 Example 3: Same as before, but also exclude all indexes
 
-  check_postgres_same_schema --dbhost=star --dbhost2=line --warning="notrigger=slony noindexes"
+  check_postgres_same_schema --dbhost=star,line --filter="notrigger=slony noindexes"
 
-Example 4: Don't show anything starting with "pg_catalog"
+Example 4: Check differences for the database "battlestar" on different ports
 
-  check_postgres_same_schema --dbhost=star --dbhost2=line --exclude="^pg_catalog"
+  check_postgres_same_schema --dbname=battlestar --dbport=5432,5544
 
-Example 5: Check differences for the database "battlestar" on different ports
+Example 5: Create a daily and weekly snapshot file
 
-  check_postgres_same_schema --dbname=battlestar --dbport=5432 --dbport2=5544
+  check_postgres_same_schema --dbname=cylon --suffix=daily
+  check_postgres_same_schema --dbname=cylon --suffix=weekly
+
+Example 6: Run a historical comparison
+
+  check_postgres_same_schema --dbname=cylon --suffix=daily
 
 =head2 B<sequence>
 
