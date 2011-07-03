@@ -1671,8 +1671,8 @@ our %testaction = (
                   sequence          => 'VERSION: 8.1',
                   table_size        => 'VERSION: 8.1',
                   index_size        => 'VERSION: 8.1',
-                  query_time        => 'ON: stats_command_string(<8.3) VERSION: 8.0',
-                  txn_idle          => 'ON: stats_command_string(<8.3) VERSION: 8.0',
+                  query_time        => 'VERSION: 8.3',
+                  txn_idle          => 'VERSION: 8.3',
                   txn_time          => 'VERSION: 8.3',
                   wal_files         => 'VERSION: 8.1',
                   archive_ready     => 'VERSION: 8.1',
@@ -8713,6 +8713,8 @@ are 'seconds', 'minutes', 'hours', or 'days'. Each may be written singular or
 abbreviated to just the first letter. If no units are given, the unit is 
 assumed to be seconds.
 
+This action requires Postgres 8.3 or better.
+
 Example 1: Give a warning if any query has been running longer than 3 minutes, and a critical if longer than 5 minutes.
 
   check_postgres_query_time --port=5432 --warning='3 minutes' --critical='5 minutes'
@@ -8952,8 +8954,7 @@ no defaults). Valid units are 'seconds', 'minutes', 'hours', or 'days'. Each
 may be written singular or abbreviated to just the first letter. If no units
 are given and the numbers are unsigned, the units are assumed to be seconds.
 
-This action requires Postgres 8.0 or better. Additionally, if the version is less than 8.3, 
-the 'stats_command_string' parameter must be set to 'on'.
+This action requires Postgres 8.3 or better.
 
 Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:
 
@@ -9317,6 +9318,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Fix psql version regex (Peter Eisentraut, bug #69)
 
   Add the --assume-standby-mode option (Ruslan Kabalin)
+
+  Note that txn_idle and query_time require 8.3 (Thomas Guettler)
 
   Standardize and clean up all perfdata output (bug #52)
 
