@@ -330,6 +330,8 @@ our %msg = (
     'version-badmrtg'    => q{Invalid mrtg version argument},
     'version-fail'       => q{version $1, but expected $2},
     'version-ok'         => q{version $1},
+    'wal-numfound'       => q{WAL files found: $1},
+    'wal-numfound2'      => q{WAL "$2" files found: $1},
 },
 'fr' => {
     'address'            => q{adresse},
@@ -566,6 +568,8 @@ our %msg = (
     'version-badmrtg'    => q{Argument invalide pour la version de mrtg},
     'version-fail'       => q{version $1, alors que la version attendue est $2},
     'version-ok'         => q{version $1},
+'wal-numfound'       => q{WAL files found: $1},
+'wal-numfound2'      => q{WAL "$2" files found: $1},
 },
 'af' => {
 },
@@ -3104,7 +3108,7 @@ sub check_archive_ready {
     ## Critical and warning are the number of files
     ## Example: --critical=10
 
-    return check_wal_files('/archive_status', '.ready');
+    return check_wal_files('/archive_status', '.ready', 10, 15);
 
 } ## end of check_archive_ready
 
@@ -7459,7 +7463,18 @@ sub check_wal_files {
     my $subdir = shift || '';
     my $extrabit = shift || '';
 
-    my ($warning, $critical) = validate_range({type => 'positive integer', leastone => 1});
+    my $default_warning = shift || 10;
+    my $default_critical = shift || 15;
+
+    my $arg = {type => 'positive integer', leastone => 1};
+    if ($default_warning) {
+        $arg->{default_warning} = $default_warning;
+    }
+    if ($default_critical) {
+        $arg->{default_critical} = $default_critical;
+    }
+
+    my ($warning, $critical) = validate_range($arg);
 
     ## Figure out where the pg_xlog directory is
     $SQL = qq{SELECT count(*) AS count FROM pg_ls_dir('pg_xlog$subdir') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)
@@ -7473,7 +7488,8 @@ sub check_wal_files {
         if ($MRTG) {
             do_mrtg({one => $numfiles});
         }
-        my $msg = qq{$numfiles};
+        my $msg = $extrabit ? msg('wal-numfound2', $numfiles, $extrabit)
+            : msg('wal-numfound', $numfiles);
         $db->{perf} .= sprintf '%s=%s;%s;%s',
             perfname(msg('files')), $numfiles, $warning, $critical;
         if (length $critical and $numfiles > $critical) {
