@@ -9285,6 +9285,10 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Make sure --action overrides the symlink naming trick.
 
+  Set defaults for archive_ready and wal_files (Thomas Guettler, GSM)
+
+  Better output for wal_files and archive_ready (GSM)
+
   Fix warning when client_port set to empty string (bug #79)
 
   Account for "empty row" in -x output (i.e. source of functions).
