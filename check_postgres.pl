@@ -8672,8 +8672,8 @@ Example 1: Give a warning on detecting any prepared transactions:
 Example 2: Give a critical if any prepared transaction has been open longer than 10 seconds, but allow 
 up to 360 seconds for the database 'shrike':
 
-  check_postgres_listener --critical=10 --exclude=shrike
-  check_postgres_listener --critical=360 --include=shrike
+  check_postgres_prepared_txns --critical=10 --exclude=shrike
+  check_postgres_prepared_txns --critical=360 --include=shrike
 
 For MRTG output, returns the number of seconds the oldest transaction has been open as the first line, 
 and which database is came from as the final line.
