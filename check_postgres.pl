@@ -9242,7 +9242,7 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 
 =head1 HISTORY
 
-Items not specifically attributed are by Greg Sabino Mullane.
+Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
@@ -9250,16 +9250,18 @@ Items not specifically attributed are by Greg Sabino Mullane.
 
   Redo the same_schema action. Use new --filter argument for all filtering.
   Allow comparisons between any number of databases.
-  Remove the db*2 arguments.
+  Remove the dbname2, dbport2, etc. arguments.
   Allow comparison of the same db over time.
 
   Swap db1 and db2 if the slave is 1 for the hot standby check (David E. Wheeler)
+
+  Allow multiple --schema arguments for the slony_status action (GSM and Jehan-Guillaume de Rorthais)
 
   Fix ORDER BY in the last vacuum/analyze action (Nicolas Thauvin)
 
   Fix check_hot_standby_delay perfdata output (Nicolas Thauvin)
 
-  Look in the correct place for the .ready files with the archive_ready action ((Nicolas Thauvin)
+  Look in the correct place for the .ready files with the archive_ready action (Nicolas Thauvin)
 
   New action: commitratio (Guillaume Lelarge)
 
