@@ -8443,9 +8443,11 @@ last vacuumed or analyzed. The fourth line returns the name of the database and 
 
 =head2 B<listener>
 
-(C<symlink: check_postgres_listener>) Confirm that someone is listening for one or more specific strings. Only one of warning or critical is needed. The format 
-is a simple string representing the LISTEN target, or a tilde character followed by a string for a regular expression 
-check.
+(C<symlink: check_postgres_listener>) Confirm that someone is listening for one or more 
+specific strings (using the LISTEN/NOTIFY system), by looking at the pg_listener table. 
+Only one of warning or critical is needed. The format is a simple string representing the 
+LISTEN target, or a tilde character followed by a string for a regular expression check.
+Note that this check will not work on versions of Postgres 9.0 or higher.
 
 Example 1: Give a warning if nobody is listening for the string bucardo_mcp_ping on ports 5555 and 5556
 
