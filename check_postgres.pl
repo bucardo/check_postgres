@@ -885,7 +885,8 @@ if (defined $rcfile) {
         }
 
         ## These options are multiples ('@s')
-        for my $arr (qw/include exclude includeuser excludeuser host port dbuser dbname dbpass dbservice/) {
+        for my $arr (qw/include exclude includeuser excludeuser host port
+                        dbuser dbname dbpass dbservice schema/) {
             next if $name ne $arr and $name ne "${arr}2";
             push @{$tempopt{$name}} => $value;
             ## Don't set below as a normal value
@@ -947,7 +948,7 @@ GetOptions(
     'repinfo=s',   ## used by replicate_row only
     'noidle',      ## used by backends only
     'datadir=s',   ## used by checkpoint only
-    'schema=s',    ## used by slony_status only
+    'schema=s@',   ## used by slony_status only
     'filter=s@',   ## used by same_schema only
     'suffix=s',    ## used by same_schema only
 );
@@ -1388,9 +1389,10 @@ sub add_response {
         }
     }
 
-    my $header = sprintf q{%s%s%s},
-        $action_info->{$action}[0] ? '' : (defined $dbservice and length $dbservice) ?
+    my $header = sprintf q{%s%s%s%s},
+        ($action_info->{$action}[0] ? '' : (defined $dbservice and length $dbservice)) ?
         qq{service=$dbservice} : $dbname,
+        (defined $db->{showschema} ? qq{ schema:$db->{showschema} } : ''),
         $dbhost,
         $dbport;
     $header =~ s/\s+$//;
@@ -7003,20 +7005,25 @@ sub check_slony_status {
           default_critical  => '300',
         });
 
-    my $schema = $opt{schema} || '';
-
-    if (!$schema) {
-        $SQL = q{SELECT quote_ident(nspname) AS nspname FROM pg_namespace WHERE oid = }.
-               q{(SELECT relnamespace FROM pg_class WHERE relkind = 'v' AND relname = 'sl_status' LIMIT 1)};
-        my $res = run_command($SQL);
-        if (! defined $res->{db}[0]{slurp}[0]{nspname}) {
-            add_unknown msg('slony-noschema');
-            return;
+    ## If given schemas on the command-line, map back to targetdbs
+    if (defined $opt{schema}) {
+        my $x = 0;
+        for my $db (@targetdb) {
+            $db->{schemalist} = $opt{schema}->[$x] || '';
+            $x++;
         }
-        $schema = $res->{db}[0]{slurp}[0]{nspname};
+    }
+    else {
+        ## Otherwise, find all slony schemas and put them in ourselves
+        $SQL = q{SELECT quote_ident(nspname) AS nspname FROM pg_namespace WHERE oid IN }.
+        q{(SELECT relnamespace FROM pg_class WHERE relkind = 'v' AND relname = 'sl_status')};
+        my $info = run_command($SQL);
+        for my $db (@{ $info->{db} }) {
+            $db->{schemalist} = join ',' => map { $_->{nspname} } @{ $db->{slurp} };
+        }
     }
 
-    my $SQL =
+    my $SLSQL =
 qq{SELECT
  ROUND(EXTRACT(epoch FROM st_lag_time)) AS lagtime,
  st_origin,
@@ -7024,45 +7031,62 @@ qq{SELECT
  current_database() AS cd,
  COALESCE(n1.no_comment, '') AS com1,
  COALESCE(n2.no_comment, '') AS com2
-FROM $schema.sl_status
-JOIN $schema.sl_node n1 ON (n1.no_id=st_origin)
-JOIN $schema.sl_node n2 ON (n2.no_id=st_received)};
+FROM SCHEMA.sl_status
+JOIN SCHEMA.sl_node n1 ON (n1.no_id=st_origin)
+JOIN SCHEMA.sl_node n2 ON (n2.no_id=st_received)};
 
-    my $info = run_command($SQL);
-    $db = $info->{db}[0];
-    if (! defined $db->{slurp}[0]{lagtime}) {
-        add_unknown msg('slony-nonumber');
-        return;
-    }
-    my $maxlagtime = 0;
-    my @perf;
-    for my $r (@{$db->{slurp}}) {
-        if (! defined $r->{lagtime}) {
-            add_unknown msg('slony-noparse');
+    my $maxlagtime = -1;
+
+    my $x = 1;
+    for $db (@targetdb) {
+        next if ! $db->{schemalist};
+        $db->{perf} = '';
+        my @perf;
+        for my $schema (split /,/ => $db->{schemalist}) {
+            ## Set for output
+            $db->{showschema} = $schema;
+
+            (my $SQL = $SLSQL) =~ s/SCHEMA/$schema/g;
+            my $info = run_command($SQL, { dbnumber => $x });
+            my $slurp = $info->{db}[0]{slurp}[0];
+            if (! defined $slurp->{lagtime}) {
+                add_unknown msg('slony-nonumber');
+                return;
+            }
+            my ($lag,$from,$to,$dbname,$fromc,$toc) = @$slurp{qw/ lagtime st_origin st_received cd com1 com2/};
+            $maxlagtime = $lag if $lag > $maxlagtime;
+            push @perf => [
+                $lag,
+                $from,
+                qq{'$dbname.$schema Node $from($fromc) -> Node $to($toc)'=$lag;$warning;$critical},
+            ];
+
+        } ## end each schema in this database
+
+        if ($MRTG) {
+            do_mrtg({one => $maxlagtime});
+            return;
         }
-        my ($lag,$from,$to,$dbname,$fromc,$toc) = @$r{qw/ lagtime st_origin st_received cd com1 com2/};
-        $maxlagtime = $lag if $lag > $maxlagtime;
-        push @perf => [
-                   $lag,
-                   $from,
-                   qq{'$dbname Node $from($fromc) -> Node $to($toc)'=$lag;$warning;$critical},
-                   ];
+
+        $db->{perf} .= join "\n" => map { $_->[2] } sort { $b->[0]<=>$a->[0] or $a->[1] cmp $b->[1] } @perf;
+
+        my $msg = msg('slony-lagtime', $maxlagtime);
+        $msg .= sprintf ' (%s)', pretty_time($maxlagtime, $maxlagtime > 500 ? 'S' : '');
+        if (length $critical and $maxlagtime >= $critical) {
+            add_critical $msg;
+        }
+        elsif (length $warning and $maxlagtime >= $warning) {
+            add_warning $msg;
+        }
+        else {
+            add_ok $msg;
+        }
+
+        $x++;
     }
-    $db->{perf} = join "\n" => map { $_->[2] } sort { $b->[0]<=>$a->[0] or $a->[1]<=>$b->[1] } @perf;
-    if ($MRTG) {
-        do_mrtg({one => $maxlagtime});
-        return;
-    }
-    my $msg = msg('slony-lagtime', $maxlagtime);
-    $msg .= sprintf ' (%s)', pretty_time($maxlagtime, $maxlagtime > 500 ? 'S' : '');
-    if (length $critical and $maxlagtime >= $critical) {
-        add_critical $msg;
-    }
-    elsif (length $warning and $maxlagtime >= $warning) {
-        add_warning $msg;
-    }
-    else {
-        add_ok $msg;
+
+    if ($maxlagtime < 1) { ## No schemas found
+        add_unknown msg('slony-noschema');
     }
 
     return;
