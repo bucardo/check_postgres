@@ -38,17 +38,17 @@ $t=qq{$S returned expected text and OK value};
 like ($result, qr{^$label OK:}, $t);
 
 $t=qq{$S returned correct host name};
-like ($result, qr{^$label OK: \(host:$host\)}, $t);
+like ($result, qr{^$label OK:.* \(host:$host\)}, $t);
 
 $t=qq{$S returned correct connection count};
 SKIP: {
 
     $goodver or skip 'Cannot test backends completely with older versions of Postgres', 3;
 
-    like ($result, qr{^$label OK: \(host:$host\).* 2 of 10 connections}, $t);
+    like ($result, qr{^$label OK:.* \(host:$host\).* 2 of 10 connections}, $t);
 
     $t=qq{$S returned correct percentage};
-    like ($result, qr{^$label OK: \(host:$host\).* 2 of 10 connections \(20%\)}, $t);
+    like ($result, qr{^$label OK:.* \(host:$host\).* 2 of 10 connections \(20%\)}, $t);
 
     $t=qq{$S returned correct performance data};
     like ($result, qr{ \| time=\d\.\d\ds ardala=0;9;9;0;10 beedeebeedee=0;9;9;0;10 postgres=2;9;9;0;10 template0=0;9;9;0;10 template1=0;9;9;0;10\s$}, $t);
