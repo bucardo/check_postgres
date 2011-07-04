@@ -1338,7 +1338,7 @@ sub add_response {
     }
 
     my $dbservice = $db->{dbservice};
-    my $dbname    = qq{DB "$db->{dbname}"};
+    my $dbname    = defined $db->{dbname} ? qq{DB "$db->{dbname}"} : '';
     my $dbhost    = (!$db->{host} or $db->{host} eq '<none>') ? '' : qq{ (host:$db->{host})};
     my $dbport    = defined $db->{port} ? ($db->{port} eq $opt{defaultport} ? '' : qq{ (port=$db->{port}) }) : '';
 
