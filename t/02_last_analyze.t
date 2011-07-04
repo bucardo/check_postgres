@@ -64,7 +64,7 @@ $dbh->commit();
 
 $t = qq{$S correctly finds no matching tables};
 like ($cp->run("-w 0 --include=$testtbl"),
-      qr{No matching tables found due to exclusion}, $t);
+      qr{ever been analyzed}, $t);
 
 $t = qq{$S sees a recent ANALYZE};
 $dbh->do(q{SET default_statistics_target = 1000});

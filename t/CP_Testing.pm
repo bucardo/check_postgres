@@ -444,7 +444,7 @@ sub run {
     }
 
     if ($double) {
-        $com .= qq{ --dbhost2="$dbhost" --dbname2=ardala --dbuser2=$dbuser};
+        $com .= qq{ --dbhost="$dbhost" --dbname=ardala --dbuser=$dbuser};
     }
 
     $extra and $com .= " $extra";

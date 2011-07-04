@@ -2336,7 +2336,7 @@ sub run_command {
             $db->{ok} = 1;
 
             ## Unfortunately, psql outputs "(No rows)" even with -t and -x
-            $db->{slurp} = '' if index($db->{slurp},'(')==0;
+            $db->{slurp} = '' if ! defined $db->{slurp} or index($db->{slurp},'(')==0;
 
             ## Allow an empty query (no matching rows) if requested
             if ($arg->{emptyok} and $db->{slurp} =~ /^\s*$/o) {
