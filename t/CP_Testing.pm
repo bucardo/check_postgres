@@ -24,6 +24,7 @@ sub new {
         started  => time(),
         dbdir    => $arg->{dbdir}    || 'test_database_check_postgres',
         testuser => $arg->{testuser} || 'check_postgres_testing',
+        testuser2 => $arg->{testuser2} || 'powerless_pete',
     };
     if (exists $arg->{default_action}) {
         $self->{action} = $arg->{default_action};
@@ -228,7 +229,18 @@ sub test_database_handle {
             if ($res !~ /$newuser/) {
                 $COM = qq{psql -d template1 -q -h "$host" -c "CREATE USER $newuser"};
                 system $COM;
-                $SQL = q{UPDATE pg_shadow SET usesuper='t' WHERE usename = 'check_postgres_testing'};
+                $SQL = q{UPDATE pg_shadow SET usesuper='t' WHERE usename = '$newuser'};
+                $COM = qq{psql -d postgres -q -h "$host" -c "$SQL"};
+                system $COM;
+            }
+
+            $newuser = $self->{testuser2};
+            $SQL = qq{SELECT * FROM pg_user WHERE usename = '$newuser'};
+            $res = qx{psql -Ax -qt -d template1 -q -h "$host" -c "$SQL"};
+            if ($res !~ /$newuser/) {
+                $COM = qq{psql -d template1 -q -h "$host" -c "CREATE USER $newuser"};
+                system $COM;
+                $SQL = q{UPDATE pg_shadow SET usesuper='t' WHERE usename = '$newuser'};
                 $COM = qq{psql -d postgres -q -h "$host" -c "$SQL"};
                 system $COM;
             }
@@ -308,6 +320,12 @@ sub test_database_handle {
         $count = $sth->fetchall_arrayref()->[0][0];
         if (!$count) {
             $dbh->do("CREATE USER $dbuser SUPERUSER");
+        }
+		my $user2 = $self->{testuser2};
+        $sth->execute($user2);
+        $count = $sth->fetchall_arrayref()->[0][0];
+        if (!$count) {
+            $dbh->do("CREATE USER $user2");
         }
     }
     $dbh->do('CREATE DATABASE beedeebeedee');

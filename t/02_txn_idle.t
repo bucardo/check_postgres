@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 14;
+use Test::More tests => 15;
 use lib 't','.';
 use CP_Testing;
 
@@ -77,6 +77,11 @@ like ($cp->run(q{-w +0}), qr{Total idle in transaction: \d+\b}, $t);
 sleep(1);
 $t = qq{$S identifies idle using '1 for 2s'};
 like ($cp->run(q{-w '1 for 2s'}), qr{1 idle transactions longer than 2s, longest: \d+s}, $t);
+
+$t = qq{$S returns an unknown if running as a non-superuser};
+my $olduser = $cp->{testuser};
+$cp->{testuser} = 'powerless_pete';
+like ($cp->run('-w 0'), qr{^$label UNKNOWN: .+superuser}, $t);
 
 $idle_dbh->commit;
 

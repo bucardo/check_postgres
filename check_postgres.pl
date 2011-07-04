@@ -7162,7 +7162,7 @@ sub check_txn_idle {
     my $thing = shift || msg('transactions');
     my $perf  = shift || msg('txn-time');
     my $start = shift || 'query_start';
-    my $clause = shift || q{current_query = '<IDLE> in transaction'};
+    my $clause = shift || q{current_query ~ '^<'};
 
     ## Extract the warning and critical seconds and counts.
     ## If not given, items will be an empty string
@@ -7196,24 +7196,29 @@ sub check_txn_idle {
         ## Skip if we don't care about this database
         next if skip_item($r->{datname});
 
-        ## Detect cases where pg_stat_activity is not fully populated
+        ## We do a lot of filtering based on the current_query
+        my $cq = $r->{current_query};
+
+        ## Return unknown if we cannot see because we are a non-superuser?
+        if ($cq =~ /insufficient/o) {
+            add_unknown msg('psa-nosuper');
+            return;
+        }
+
+        ## Return unknown if stats_command_string / track_activities is off?
+        if ($cq =~ /disabled/o) {
+            add_unknown msg('psa-disabled');
+            return;
+        }
+
+        ## Detect other cases where pg_stat_activity is not fully populated
         if (length $r->{xact_start} and $r->{xact_start} !~ /\d/o) {
-            ## Perhaps this is a non-superuser?
-            if ($r->{current_query} =~ /insufficient/) {
-                add_unknown msg('psa-nosuper');
-                return;
-            }
-
-            ## Perhaps stats_command_string / track_activities is off?
-            if ($r->{current_query} =~ /disabled/) {
-                add_unknown msg('psa-disabled');
-                return;
-            }
-
-            ## Something else is going on
             add_unknown msg('psa-noexact');
             return;
         }
+
+        ## Filter out based on the action
+        next if $action eq 'txn_idle' and $cq ne '<IDLE> in transaction';
 
         ## Keep track of the longest overall time
         $maxr = $r if $r->{seconds} >= $maxr->{seconds};
