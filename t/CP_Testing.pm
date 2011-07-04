@@ -321,7 +321,7 @@ sub test_database_handle {
         if (!$count) {
             $dbh->do("CREATE USER $dbuser SUPERUSER");
         }
-		my $user2 = $self->{testuser2};
+        my $user2 = $self->{testuser2};
         $sth->execute($user2);
         $count = $sth->fetchall_arrayref()->[0][0];
         if (!$count) {
