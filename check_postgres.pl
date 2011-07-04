@@ -1597,7 +1597,8 @@ sub finishup {
                 or ($DEBUGOUTPUT =~ /u/io and $type eq 'u');
         }
         for (sort keys %$info) {
-            printf "$_ %s%s ",
+            printf "%s %s%s ",
+                $_,
                 $showdebug ? "[DEBUG: $DEBUG_INFO] " : '',
                 join $SEP => map { $_->[0] } @{$info->{$_}};
         }
@@ -6410,10 +6411,10 @@ sub write_audit_file {
     print {$fh} "## Port: $row->{port}\n";
     print {$fh} "## User: $row->{dbuser}\n";
     if ($arg->{same_schema}) {
-        printf {$fh} "## Start of same_schema information:\n";
+        print {$fh} "## Start of same_schema information:\n";
         {
             local $Data::Dumper::Indent = 1;
-            printf {$fh} Dumper $info;
+            print {$fh} Dumper $info;
         }
         print {$fh} "## End of same_schema information\n";
     }
