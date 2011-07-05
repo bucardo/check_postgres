@@ -36,6 +36,19 @@ If all else fails, email check_postgres\@bucardo.org for help.
 
 }
 
+my @cleanfiles = (
+	'test_database_check_postgres/',
+	'test_database_check_postgres2/',
+	'test_database_check_postgres3/',
+	'test_database_check_postgres4/',
+	'test_database_check_postgres5/',
+    '/tmp/cptesting_socket',
+    '/tmp/cptesting_socket2',
+    '/tmp/cptesting_socket3',
+    '/tmp/cptesting_socket4',
+    '/tmp/cptesting_socket5',
+);
+
 print "Configuring check_postgres $VERSION\n";
 
 my %opts = (
@@ -53,7 +66,7 @@ my %opts = (
     MAN1PODS       => {},
     NEEDS_LINKING  => 0,
     NORECURS       => 1,
-    clean          => { FILES => 'test_database_check_postgres/ test_database_check_postgres2/ /tmp/cptesting_socket' },
+    clean          => { FILES => join ' ' => @cleanfiles },
 );
 
 WriteMakefile(%opts);
