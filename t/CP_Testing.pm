@@ -335,16 +335,6 @@ sub test_database_handle {
     $dbh->{AutoCommit} = 0;
     $dbh->{RaiseError} = 1;
 
-    if (! exists $self->{keep_old_schema}) {
-        $SQL = 'SELECT count(*) FROM pg_namespace WHERE nspname = ' . $dbh->quote($fakeschema);
-        my $count = $dbh->selectall_arrayref($SQL)->[0][0];
-        if ($count) {
-            $dbh->{Warn} = 0;
-            $dbh->do("DROP SCHEMA $fakeschema CASCADE");
-            $dbh->{Warn} = 1;
-        }
-    }
-
     if ($arg->{dbname} ne $self->{dbname}) {
         my $tmp_dsn = $dsn;
         $tmp_dsn =~ s/dbname=\w+/dbname=$arg->{dbname}/;
