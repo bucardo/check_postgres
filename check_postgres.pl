@@ -9337,6 +9337,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Handle undef percents in check_fsm_relations (Andy Lester)
 
+  Fix typo in dbstats action (Stas Vitkovsky)
+
   Fix MRTG for last vacuum and last_analyze actions.
 
 =item B<Version 2.17.0> no public release
