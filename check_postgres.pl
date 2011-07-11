@@ -4051,7 +4051,7 @@ sub check_dbstats {
 };
     }
     $SQL .= q{ FROM pg_stat_database};
-    (my $SQL2 = $SQL) =~ s/AS seq_tup_read/AS seq_tup_read, tup_returned AS ret, tup_fetched AS fetch, tup_inserted AS ins, tup_updated AS upd, tup_deleted AS del/;
+    (my $SQL2 = $SQL) =~ s/AS seqtupread/AS seqtupread, tup_returned AS ret, tup_fetched AS fetch, tup_inserted AS ins, tup_updated AS upd, tup_deleted AS del/;
 
     my $info = run_command($SQL, {regex => qr{\w}, version => [ ">8.2 $SQL2" ] } );
 
