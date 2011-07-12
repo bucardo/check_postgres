@@ -6279,6 +6279,14 @@ sub check_same_schema {
                             next;
                         }
 
+                        ## If we are doing a historical comparison, skip some items
+                        if ($samedb) {
+                            if ($item eq 'sequence'
+                                and $col eq 'last_value') {
+                                next;
+                            }
+                        }
+
                         push @msg => sprintf " %s\n", msg('ss-different', $col);
                         for my $db (sort keys %{ $tdiff->{coldiff}{$col} }) {
                             push @msg => sprintf "    %s %s: %s\n",
