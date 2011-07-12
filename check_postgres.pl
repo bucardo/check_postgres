@@ -708,6 +708,10 @@ JOIN pg_user u ON (u.usesysid = n.nspowner)},
 SELECT l.*, lanname AS name, quote_ident(usename) AS owner
 FROM pg_language l
 JOIN pg_user u ON (u.usesysid = l.lanowner)},
+        SQL2       => q{
+SELECT l.*, lanname AS name
+FROM pg_language l
+    },
     },
     type => {
         SQL       => q{
@@ -6121,7 +6125,7 @@ sub check_same_schema {
 
         for (@catalog_items) {
             my $name = $_->[0];
-            $dbinfo->{$name} = find_catalog_info($name, $x);
+            $dbinfo->{$name} = find_catalog_info($name, $x, $dbver{$x});
         }
 
         ## TODO:
@@ -6680,6 +6684,11 @@ sub find_catalog_info {
 
     ## Grab information from one or more catalog tables
     ## Convert into a happy hashref and return it
+    ## Arguments: three
+    ## 1. Type of object
+    ## 2. Database number
+    ## 3. Version information for the database
+    ## Returns: large hashref of information
 
     ## What type of catalog object this is
     my $type = shift;
@@ -6699,8 +6708,18 @@ sub find_catalog_info {
     ## Which database to run this against
     my $dbnum = shift or die;
 
+    ## The version information
+    my $dbver = shift or die;
+
     ## The SQL we use
-    my $SQL = $ci->{SQL} or die;
+    my $SQL = $ci->{SQL} or die "No SQL found for type '$type'\n";
+
+    ## Switch to alternate SQL for different versions
+    if ($type eq 'language') {
+        if (int $dbver->{major} <= 8.2) {
+            $SQL = $ci->{SQL2};
+        }
+    }
 
     if (exists $ci->{exclude}) {
         if ('temp_schemas' eq $ci->{exclude}) {
