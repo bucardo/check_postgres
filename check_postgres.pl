@@ -6755,7 +6755,7 @@ sub find_catalog_info {
             $name .= "($args)";
 
             ## Special transform for probin, which may be different depending on the version
-            $row->{probin} = '' if $row->{probin} eq '-';
+            $row->{probin} = '-' if $row->{probin} eq '';
 
         }
 
