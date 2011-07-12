@@ -5963,6 +5963,9 @@ sub check_same_schema {
     ## Warning and critical are not used
     ## The filter argument is supported
 
+    ## We override the usual $db->{totaltime} with our own counter
+    my $start = [gettimeofday()];
+
     ## Check for filtering rules, then store inside opt{filtered}
     my %filter;
     if (exists $opt{filter}) {
@@ -6178,6 +6181,9 @@ sub check_same_schema {
             delete $fail{$_}{diff};
         }
     }
+
+    ## Set the total time
+    $db->{totaltime} = sprintf '%.2f', tv_interval($start);
 
     ## Comparison is done, let's report the results
     if (! $opt{failcount}) {
