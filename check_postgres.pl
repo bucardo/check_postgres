@@ -6273,10 +6273,22 @@ sub check_same_schema {
                         }
 
                         ## Do not show function body differences if filtered out with "nofuncbody"
+                        ## Also skip if the equivalent 'dash' and 'empty'
                         if ($item eq 'function'
-                            and $col eq 'prosrc'
-                            and $opt{filtered}{nofuncbody}) {
-                            next;
+                            and $col eq 'prosrc') {
+
+                            next if $opt{filtered}{nofuncbody};
+                            my ($one,$two);
+                            for my $db (sort keys %{ $tdiff->{coldiff}{$col} }) {
+                                if (defined $one) {
+                                    $two = $tdiff->{coldiff}{$col}{$db};
+                                }
+                                else {
+                                    $one = $tdiff->{coldiff}{$col}{$db};
+                                }
+                            }
+                            next if $one eq '-' and $two eq '';
+                            next if $one eq '' and $two eq '-';
                         }
 
                         ## If we are doing a historical comparison, skip some items
@@ -6788,9 +6800,6 @@ sub find_catalog_info {
             $args =~ s/int4/int/g;
             $args =~ s/int8/bigint/g;
             $name .= "($args)";
-
-            ## Special transform for probin, which may be different depending on the version
-            $row->{probin} = '-' if $row->{probin} eq '';
 
         }
 
