@@ -959,6 +959,7 @@ GetOptions(
     'schema=s@',   ## used by slony_status only
     'filter=s@',   ## used by same_schema only
     'suffix=s',    ## used by same_schema only
+    'replace',     ## used by same_schema only
 );
 
 die $USAGE if ! keys %opt and ! @ARGV;
@@ -6188,6 +6189,23 @@ sub check_same_schema {
 
     ## Set the total time
     $db->{totaltime} = sprintf '%.2f', tv_interval($start);
+
+    ## Before we outpu any results, rewrite the audit file if needed
+    ## We do this if we are reading from a saved file,
+    ## and the "replace" argument is set
+    if ($samedb and $opt{replace}) {
+        my $filename = audit_filename();
+        if ( -e $filename) {
+            ## Move the old one to a backup version
+            my $backupfile = "$filename.backup";
+            rename $filename, $backupfile;
+        }
+        my $version = $dbver{1}{version};
+        write_audit_file({ file => $filename, 'same_schema' => 1,
+                           info => $thing{1}, pgversion => $version });
+        ## Cannot print this message as we are outputting Nagios stuff
+        #print msg('ss-createfile', $filename) . "\n";
+    }
 
     ## Comparison is done, let's report the results
     if (! $opt{failcount}) {
