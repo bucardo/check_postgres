@@ -8000,7 +8000,8 @@ Note that this action has two hard-coded values to avoid false alarms on
 smaller relations. Tables must have at least 10 pages, and indexes at least 15, 
 before they can be considered by this test. If you really want to adjust these 
 values, you can look for the variables I<$MINPAGES> and I<$MINIPAGES> at the top of the 
-C<check_bloat> subroutine.
+C<check_bloat> subroutine. These values are ignored if either I<--exclude> or 
+I<--include> is used.
 
 Only the top 10 most bloated relations are shown. You can change this number by 
 using the I<--perflimit> option to set your own limit.
