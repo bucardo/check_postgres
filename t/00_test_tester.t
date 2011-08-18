@@ -6,9 +6,15 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 1;
+use Test::More;
 use lib 't','.';
 use CP_Testing;
+
+if (!$ENV{RELEASE_TESTING}) {
+    plan (skip_all =>  'Test skipped unless environment variable RELEASE_TESTING is set');
+}
+
+plan tests => 1;
 
 use vars qw/$dbh $SQL $t $info/;
 
