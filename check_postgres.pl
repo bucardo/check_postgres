@@ -8896,6 +8896,8 @@ The first time this is run a snapshot of all the items in the database is
 saved to a local file. When you run it again, that snapshot is read in and 
 becomes "database #2" and is compared to the current database.
 
+To replace the old stored file with the new version, use the --replace argument.
+
 To enable snapshots at various points in time, you can use the "--suffix" 
 argument to make the filenames unique to each run. See the examples below.
 
@@ -8920,9 +8922,9 @@ Example 5: Create a daily and weekly snapshot file
   check_postgres_same_schema --dbname=cylon --suffix=daily
   check_postgres_same_schema --dbname=cylon --suffix=weekly
 
-Example 6: Run a historical comparison
+Example 6: Run a historical comparison, then replace the file
 
-  check_postgres_same_schema --dbname=cylon --suffix=daily
+  check_postgres_same_schema --dbname=cylon --suffix=daily --replace
 
 =head2 B<sequence>
 
@@ -9397,6 +9399,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Fix the perflimit for the bloat action (bug #50)
 
   Clean up the custom_query action a bit.
+
+  Fix space in perfdata for hot_standby_delay action (Nicolas Thauvin)
 
   Handle undef percents in check_fsm_relations (Andy Lester)
 
