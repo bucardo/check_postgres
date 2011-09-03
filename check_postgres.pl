@@ -1243,7 +1243,7 @@ if ($opt{showtime}) {
 
 ## Check the current database mode
 our $STANDBY = 0;
-check_standby_mode() if $opt{'assume-standby-mode'};
+make_sure_standby_mode() if $opt{'assume-standby-mode'};
 
 ## We don't (usually) want to die, but want a graceful Nagios-like exit instead
 sub ndie {
@@ -1511,7 +1511,7 @@ sub do_mrtg_stats {
     do_mrtg({one => $one, two => $two, msg => $msg});
 }
 
-sub check_standby_mode {
+sub make_sure_standby_mode {
 
     ## Checks if database in standby mode
     ## Requires $ENV{PGDATA} or --datadir
@@ -1570,7 +1570,7 @@ sub check_standby_mode {
 
     return;
 
-} ## end of check_standby_mode
+} ## end of make_sure_standby_mode
 
 
 sub finishup {
@@ -2461,7 +2461,7 @@ sub run_command {
 sub setup_target_databases {
 
     ## Build a list of all databases to connect to.
-    ## Returns a list of all such databases with conenction information:
+    ## Returns a list of all such databases with connection information:
     ## -- dbuser, --dbpass, --dbservice, --port, --dbname, --host
     ##
     ## Items are determined by host, port, and db arguments
@@ -2484,7 +2484,7 @@ sub setup_target_databases {
     ## --host=a,b --host=x --port=5432,5433 --dbuser=alice --dbuser=bob --db=baz
     ## Connects three times: a-5432-alice-baz b-5433-alice-baz x-5433-bob-baz
 
-    ## Returns a list of targets as as hashref
+    ## Returns a list of targets as a hashref
 
     my $arg = shift || {};
 
@@ -5897,7 +5897,7 @@ sub check_replicate_row {
         ndie msg('rep-wrongvals', $value1, $val1, $val2);
     }
 
-    $info1 = run_command($update, { failok => 1 } );
+    $info1 = run_command($update, { dbnumber => 1, failok => 1 } );
 
     ## Make sure the update worked
     if (! defined $info1->{db}[0]) {
@@ -8628,31 +8628,6 @@ tool that can send mail when interesting events appear in your Postgres logs.
 See: http://bucardo.org/wiki/Tail_n_mail for more information).
 See also the information on the C<--get_method> option.
 
-=head2 B<pgbouncer_checksum>
-
-(C<symlink: check_postgres_pgbouncer_checksum>) Checks that all the
-pgBouncer settings are the same as last time you checked. 
-This is done by generating a checksum of a sorted list of setting names and 
-their values. Note that you shouldn't specify the database name, it will
-automatically default to pgbouncer.  Either the I<--warning> or the I<--critical> option 
-should be given, but not both. The value of each one is the checksum, a 
-32-character hexadecimal value. You can run with the special C<--critical=0> option 
-to find out an existing checksum.
-
-This action requires the Digest::MD5 module.
-
-Example 1: Find the initial checksum for pgbouncer configuration on port 6432 using the default user (usually postgres)
-
-  check_postgres_pgbouncer_checksum --port=6432 --critical=0
-
-Example 2: Make sure no settings have changed and warn if so, using the checksum from above.
-
-  check_postgres_pgbouncer_checksum --port=6432 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231
-
-For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
-checksum must be provided as the C<--mrtg> argument. The fourth line always gives the 
-current checksum.
-
 =head2 B<pgb_pool_cl_active>
 
 =head2 B<pgb_pool_cl_waiting>
@@ -8726,6 +8701,31 @@ For MRTG output, the number of connections is reported on the first line, and
 the fourth line gives the name of the database, plus the current
 max_client_conn. If more than one database has been queried, the one with the
 highest number of connections is output.
+
+=head2 B<pgbouncer_checksum>
+
+(C<symlink: check_postgres_pgbouncer_checksum>) Checks that all the
+pgBouncer settings are the same as last time you checked. 
+This is done by generating a checksum of a sorted list of setting names and 
+their values. Note that you shouldn't specify the database name, it will
+automatically default to pgbouncer.  Either the I<--warning> or the I<--critical> option 
+should be given, but not both. The value of each one is the checksum, a 
+32-character hexadecimal value. You can run with the special C<--critical=0> option 
+to find out an existing checksum.
+
+This action requires the Digest::MD5 module.
+
+Example 1: Find the initial checksum for pgbouncer configuration on port 6432 using the default user (usually postgres)
+
+  check_postgres_pgbouncer_checksum --port=6432 --critical=0
+
+Example 2: Make sure no settings have changed and warn if so, using the checksum from above.
+
+  check_postgres_pgbouncer_checksum --port=6432 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231
+
+For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
+checksum must be provided as the C<--mrtg> argument. The fourth line always gives the 
+current checksum.
 
 =head2 B<prepared_txns>
 

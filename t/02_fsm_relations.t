@@ -28,6 +28,18 @@ like ($cp->run('--warning=40'), qr{ERROR:.+must be a percentage}, $t);
 $t=qq{$S fails when called with an invalid option};
 like ($cp->run('--critical=50'), qr{ERROR:.+must be a percentage}, $t);
 
+my $ver = $dbh->{pg_server_version};
+if ($ver >= 80400) {
+  SKIP: {
+        skip 'Cannot test fsm_relations completely on Postgres 8.4 or higher', 3;
+    }
+
+    $t=qq{$S gives an unknown when running against a 8.4 or higher version};
+    like ($cp->run('--warning=10%'), qr{^$label UNKNOWN.*Cannot check fsm_relations}, $t);
+
+    exit;
+}
+
 ## Create a fake fsm 'view' for testing
 $cp->set_fake_schema();
 my $schema = $cp->get_fake_schema();
@@ -55,18 +67,6 @@ CREATE TABLE $schema.pg_freespacemap_relations (
 );
 });
 $dbh->commit();
-
-my $ver = $dbh->{pg_server_version};
-if ($ver >= 80400) {
-  SKIP: {
-        skip 'Cannot test fsm_relations completely on Postgres 8.4 or higher', 3;
-    }
-
-    $t=qq{$S gives an unknown when running against a 8.4 or higher version};
-    like ($cp->run('--warning=10%'), qr{^$label UNKNOWN.*Cannot check fsm_relations}, $t);
-
-    exit;
-}
 
 $t=qq{$S gives normal output for empty tables};
 like ($cp->run('--warning=10%'), qr{^$label OK: .+fsm relations used: 0 of \d+}, $t);

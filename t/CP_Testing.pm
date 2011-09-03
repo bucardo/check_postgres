@@ -590,7 +590,6 @@ sub drop_schema_if_exists {
     my $dbh = $self->{dbh} || die;
     $name ||= $fakeschema;
 
-	return;
     if (! exists $self->{keep_old_schema}) {
         $SQL = 'SELECT count(*) FROM pg_namespace WHERE nspname = ' . $dbh->quote($name);
         my $count = $dbh->selectall_arrayref($SQL)->[0][0];

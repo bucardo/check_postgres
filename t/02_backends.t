@@ -123,10 +123,10 @@ like ($cp->run("-c ${num}0%"), qr{^$label CRITICAL}, $t);
 like ($cp->run('-c 40%'), qr{^$label OK}, $t);
 
 $t=qq{$S works with critical option as a negative number};
-like ($cp->run('-c -6'), qr{^$label CRITICAL}, $t);
-like ($cp->run('-c -7'), qr{^$label CRITICAL}, $t);
-$num = $goodver ? 8 : 9;
-like ($cp->run("-c -$num"), qr{^$label OK}, $t);
+like ($cp->run('-c -5'), qr{^$label OK}, $t);
+like ($cp->run('-c -6'), qr{^$label OK}, $t);
+$num = $goodver ? 7 : 8;
+like ($cp->run("-c -$num"), qr{^$label CRITICAL}, $t);
 
 $t=qq{$S works when no items caught by pg_stat_activity};
 
@@ -173,7 +173,7 @@ SKIP: {
     like ($cp->run('--include=postgres --exclude=postgres'), qr{^$label OK: .+3 of 10}, $t);
 
     $t=qq{$S returned correct performance data with include};
-    like ($cp->run('--include=postgres'), qr{ \| time=\d\.\d\ds ardala=0;9;9;0;10 beedeebeedee=0;9;9;0;10 postgres=3;9;9;0;10}, $t);
+    like ($cp->run('--include=postgres'), qr{ \| time=\d\.\d\ds postgres=3;9;9;0;10}, $t);
 }
 
 my %dbh;
