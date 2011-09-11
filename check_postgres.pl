@@ -3884,7 +3884,7 @@ sub check_custom_query {
 
         my $goodrow = 0;
 
-        ## The other column tells is the name to use as the perfdata value
+        ## The other column tells it the name to use as the perfdata value
         my $perfname;
 
         for my $r (@{$db->{slurp}}) {
