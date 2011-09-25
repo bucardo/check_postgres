@@ -3836,23 +3836,25 @@ sub check_connection {
 
     my $info = run_command('SELECT version() AS v');
 
-    $db = $info->{db}[0];
+    for $db (@{$info->{db}}) {
 
-    if (exists $info->{fatal}) {
-        $MRTG and do_mrtg({one => 0});
-        add_critical $db->{error};
-        return;
-    }
+        my $err = $db->{error} || '';
+        if ($err =~ /FATAL/) {
+            $MRTG and do_mrtg({one => 0});
+            add_critical $db->{error};
+            return;
+        }
 
-    my $ver = ($db->{slurp}[0]{v} =~ /(\d+\.\d+\S+)/o) ? $1 : '';
+        my $ver = ($db->{slurp}[0]{v} =~ /(\d+\.\d+\S+)/o) ? $1 : '';
 
-    $MRTG and do_mrtg({one => $ver ? 1 : 0});
+        $MRTG and do_mrtg({one => $ver ? 1 : 0});
 
-    if ($ver) {
-        add_ok msg('version', $ver);
-    }
-    else {
-        add_unknown msg('invalid-query', $db->{slurp}[0]{v});
+        if ($ver) {
+            add_ok msg('version', $ver);
+        }
+        else {
+            add_unknown msg('invalid-query', $db->{slurp}[0]{v});
+        }
     }
 
     return;
