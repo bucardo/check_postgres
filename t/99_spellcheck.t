@@ -138,6 +138,7 @@ backends
 bc
 bucardo
 checksum
+commitratio
 cp
 dbh
 dbstats
@@ -146,6 +147,7 @@ DSN
 ENV
 fsm
 goto
+hitratio
 Mullane
 Nagios
 ok
@@ -295,7 +297,9 @@ GetOptions
 Glaesemann
 greg
 grimm
+GSM
 gtld
+Guettler
 Gurjeet
 hardcode
 HiRes
@@ -322,6 +326,7 @@ includeuser
 Ioannis
 ioguix
 Jehan
+Kabalin
 Kirkwood
 klatch
 kong
@@ -424,6 +429,7 @@ ritical
 robert
 Rorthais
 runtime
+Ruslan
 salesrep
 sami
 sb
@@ -450,6 +456,7 @@ sql
 SQL
 ssel
 sslmode
+Stas
 stderr
 sv
 symlink
@@ -477,6 +484,7 @@ USERWHERECLAUSE
 usr
 valtype
 Villemain
+Vitkovsky
 wal
 WAL
 watson
