@@ -106,6 +106,7 @@ my %ok2notuse = map { $_ => 1 }
 qtime-count-msg qtime-count-none qtime-for-msg qtime-msg qtime-none
 txntime-count-msg txntime-count-none txntime-for-msg txntime-msg txntime-none
 txnidle-count-msg txnidle-count-none txnidle-for-msg txnidle-msg txnidle-none
+index language schema table user
 /;
 
 my %ok2nottrans;
@@ -176,7 +177,8 @@ for my $l (sort keys %complete_langs) {
         my $val = $msg{'en'}{$msg}->[1];
         my $lval = $msg{$l}{$msg}->[1];
         my $indent = $msg{$l}{$msg}->[0];
-        next if $language eq 'French' and ($msg eq 'PID' or $msg eq 'port' or $msg eq 'pgbouncer-pool');
+        next if $language eq 'French' and ($msg eq 'PID' or $msg eq 'port' or $msg eq 'pgbouncer-pool'
+								   or $msg eq 'index' or $msg eq 'table' or $msg eq 'transactions');
         if ($val eq $lval and $indent) {
             fail qq{Message '$msg' in language $language appears to not be translated, but it not marked as such};
             $ok = 0;

@@ -186,11 +186,8 @@ our %msg = (
     'pgbouncer-pool'     => q{Pool=$1 $2=$3},
     'pgb-backends-mrtg'  => q{DB=$1 Max connections=$2},
     'pgb-backends-msg'   => q{$1 of $2 connections ($3%)},
-    'pgb-backends-oknone'=> q{No connections},
+    'pgb-backends-none'  => q{No connections},
     'pgb-backends-users' => q{$1 for number of users must be a number or percentage},
-    'pgb-maxwait-msg'    => q{longest wait: $1s},
-    'pgb-nomatches'      => q{No matching rows were found},
-    'pgb-skipped'        => q{No matching rows were found (skipped rows: $1)},
     'PID'                => q{PID},
     'port'               => q{port},
     'preptxn-none'       => q{No prepared transactions found},
@@ -272,7 +269,6 @@ our %msg = (
     'size'               => q{size},
     'slony-noschema'     => q{Could not determine the schema for Slony},
     'slony-nonumber'     => q{Call to sl_status did not return a number},
-    'slony-noparse'      => q{Could not parse call to sl_status},
     'slony-lagtime'      => q{Slony lag time: $1},
     'symlink-create'     => q{Created "$1"},
     'symlink-done'       => q{Not creating "$1": $2 already linked to "$3"},
@@ -347,6 +343,8 @@ our %msg = (
     'bloat-nomin'        => q{aucune relation n'atteint le critère minimum de fragmentation},
     'bloat-table'        => q{(db $1) table $2.$3 lignes:$4 pages:$5 devrait être:$6 ($7X) place perdue:$8 ($9)},
     'bug-report'         => q{Merci de rapporter ces d??tails ?? check_postgres@bucardo.org:},
+'checkmode-state'    => q{Database cluster state:},
+'checkmode-recovery' => q{in archive recovery},
     'checkpoint-baddir'  => q{data_directory invalide : "$1"},
     'checkpoint-baddir2' => q{pg_controldata n'a pas pu lire le répertoire des données indiqué : « $1 »},
     'checkpoint-badver'  => q{Échec lors de l'exécution de pg_controldata - probablement la mauvaise version ($1)},
@@ -405,6 +403,7 @@ our %msg = (
     'logfile-seekfail'   => q{Échec de la recherche dans $1 : $2},
     'logfile-stderr'     => q{La sortie des traces a été redirigés stderr : merci de fournir un nom de fichier},
     'logfile-syslog'     => q{La base de données utiliser syslog, merci de spécifier le chemin avec l'option --logfile (fac=$1)},
+'mode-standby'       => q{Server in standby mode},
     'mrtg-fail'          => q{Échec de l'action $1 : $2},
     'new-ver-nocver'     => q{N'a pas pu t??l??charger les informations de version pour $1},
     'new-ver-badver'     => q{N'a pas pu analyser les informations de version pour $1},
@@ -428,7 +427,11 @@ our %msg = (
     'opt-psql-nofind'    => q{N'a pas pu trouver un psql exécutable},
     'opt-psql-nover'     => q{N'a pas pu déterminer la version de psql},
     'opt-psql-restrict'  => q{Ne peut pas utiliser l'option --PSQL si NO_PSQL_OPTION est activé},
-    'pgbouncer-pool'     => q{Pool=$1 $2=$3},
+'pgbouncer-pool'     => q{Pool=$1 $2=$3},
+'pgb-backends-mrtg'  => q{DB=$1 Max connections=$2},
+'pgb-backends-msg'   => q{$1 of $2 connections ($3%)},
+'pgb-backends-none'  => q{No connections},
+'pgb-backends-users' => q{$1 for number of users must be a number or percentage},
     'PID'                => q{PID},
     'port'               => q{port},
     'preptxn-none'       => q{Aucune transaction préparée trouvée},
@@ -507,7 +510,6 @@ our %msg = (
     'size'               => q{taille},
     'slony-noschema'     => q{N'a pas pu déterminer le schéma de Slony},
     'slony-nonumber'     => q{L'appel à sl_status n'a pas renvoyé un numéro},
-    'slony-noparse'      => q{N'a pas pu analyser l'appel à sl_status},
     'slony-lagtime'      => q{Durée de lag de Slony : $1},
     'seq-die'            => q{N'a pas pu récupérer d'informations sur la séquence $1},
     'seq-msg'            => q{$1=$2% (appels restant=$3)},
@@ -1548,7 +1550,7 @@ sub make_sure_standby_mode {
     }
 
     if ($res =~ /WARNING: Calculated CRC checksum/) {
-        ndie msg('checkpoint-badver');
+        ndie msg('checkpoint-badver', $dir);
     }
     if ($res !~ /^pg_control.+\d+/) {
         ndie msg('checkpoint-badver2');
@@ -5465,7 +5467,7 @@ sub check_pgbouncer_backends {
         if ($grandtotal) {
             ## We assume that exclude/include rules are correct, and we simply had no entries
             ## at all in the specific databases we wanted
-            add_ok msg('pgb-backends-oknone');
+            add_ok msg('pgb-backends-none');
         }
         else {
             add_unknown msg('no-match-db');
