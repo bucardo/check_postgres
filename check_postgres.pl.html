@@ -68,7 +68,6 @@
 		<li><a href="#new_version_cp"><strong>new_version_cp</strong></a></li>
 		<li><a href="#new_version_pg"><strong>new_version_pg</strong></a></li>
 		<li><a href="#new_version_tnm"><strong>new_version_tnm</strong></a></li>
-		<li><a href="#pgbouncer_checksum"><strong>pgbouncer_checksum</strong></a></li>
 		<li><a href="#pgb_pool_cl_active"><strong>pgb_pool_cl_active</strong></a></li>
 		<li><a href="#pgb_pool_cl_waiting"><strong>pgb_pool_cl_waiting</strong></a></li>
 		<li><a href="#pgb_pool_sv_active"><strong>pgb_pool_sv_active</strong></a></li>
@@ -78,6 +77,7 @@
 		<li><a href="#pgb_pool_sv_login"><strong>pgb_pool_sv_login</strong></a></li>
 		<li><a href="#pgb_pool_maxwait"><strong>pgb_pool_maxwait</strong></a></li>
 		<li><a href="#pgbouncer_backends"><strong>pgbouncer_backends</strong></a></li>
+		<li><a href="#pgbouncer_checksum"><strong>pgbouncer_checksum</strong></a></li>
 		<li><a href="#prepared_txns"><strong>prepared_txns</strong></a></li>
 		<li><a href="#query_runtime"><strong>query_runtime</strong></a></li>
 		<li><a href="#query_time"><strong>query_time</strong></a></li>
@@ -542,7 +542,8 @@ used by the table and index, and what we compute that it should be.</p>
 smaller relations. Tables must have at least 10 pages, and indexes at least 15, 
 before they can be considered by this test. If you really want to adjust these 
 values, you can look for the variables <em>$MINPAGES</em> and <em>$MINIPAGES</em> at the top of the 
-<code>check_bloat</code> subroutine.</p>
+<code>check_bloat</code> subroutine. These values are ignored if either <em>--exclude</em> or 
+<em>--include</em> is used.</p>
 <p>Only the top 10 most bloated relations are shown. You can change this number by 
 using the <em>--perflimit</em> option to set your own limit.</p>
 <p>The schema named 'information_schema' is excluded from this test, as the only tables 
@@ -1000,9 +1001,11 @@ last vacuumed or analyzed. The fourth line returns the name of the database and 
 <p>
 </p>
 <h2><a name="listener"><strong>listener</strong></a></h2>
-<p>(<code>symlink: check_postgres_listener</code>) Confirm that someone is listening for one or more specific strings. Only one of warning or critical is needed. The format 
-is a simple string representing the LISTEN target, or a tilde character followed by a string for a regular expression 
-check.</p>
+<p>(<code>symlink: check_postgres_listener</code>) Confirm that someone is listening for one or more 
+specific strings (using the LISTEN/NOTIFY system), by looking at the pg_listener table. 
+Only one of warning or critical is needed. The format is a simple string representing the 
+LISTEN target, or a tilde character followed by a string for a regular expression check.
+Note that this check will not work on versions of Postgres 9.0 or higher.</p>
 <p>Example 1: Give a warning if nobody is listening for the string bucardo_mcp_ping on ports 5555 and 5556</p>
 <pre>
   check_postgres_listener --port=5555,5556 --warning=bucardo_mcp_ping</pre>
@@ -1104,27 +1107,6 @@ See: <a href="http://bucardo.org/wiki/Tail_n_mail">http://bucardo.org/wiki/Tail_
 See also the information on the <code>--get_method</code> option.</p>
 <p>
 </p>
-<h2><a name="pgbouncer_checksum"><strong>pgbouncer_checksum</strong></a></h2>
-<p>(<code>symlink: check_postgres_pgbouncer_checksum</code>) Checks that all the
-pgBouncer settings are the same as last time you checked. 
-This is done by generating a checksum of a sorted list of setting names and 
-their values. Note that you shouldn't specify the database name, it will
-automatically default to pgbouncer.  Either the <em>--warning</em> or the <em>--critical</em> option 
-should be given, but not both. The value of each one is the checksum, a 
-32-character hexadecimal value. You can run with the special <code>--critical=0</code> option 
-to find out an existing checksum.</p>
-<p>This action requires the Digest::MD5 module.</p>
-<p>Example 1: Find the initial checksum for pgbouncer configuration on port 6432 using the default user (usually postgres)</p>
-<pre>
-  check_postgres_pgbouncer_checksum --port=6432 --critical=0</pre>
-<p>Example 2: Make sure no settings have changed and warn if so, using the checksum from above.</p>
-<pre>
-  check_postgres_pgbouncer_checksum --port=6432 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231</pre>
-<p>For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
-checksum must be provided as the <code>--mrtg</code> argument. The fourth line always gives the 
-current checksum.</p>
-<p>
-</p>
 <h2><a name="pgb_pool_cl_active"><strong>pgb_pool_cl_active</strong></a></h2>
 <p>
 </p>
@@ -1200,6 +1182,27 @@ max_client_conn. If more than one database has been queried, the one with the
 highest number of connections is output.</p>
 <p>
 </p>
+<h2><a name="pgbouncer_checksum"><strong>pgbouncer_checksum</strong></a></h2>
+<p>(<code>symlink: check_postgres_pgbouncer_checksum</code>) Checks that all the
+pgBouncer settings are the same as last time you checked. 
+This is done by generating a checksum of a sorted list of setting names and 
+their values. Note that you shouldn't specify the database name, it will
+automatically default to pgbouncer.  Either the <em>--warning</em> or the <em>--critical</em> option 
+should be given, but not both. The value of each one is the checksum, a 
+32-character hexadecimal value. You can run with the special <code>--critical=0</code> option 
+to find out an existing checksum.</p>
+<p>This action requires the Digest::MD5 module.</p>
+<p>Example 1: Find the initial checksum for pgbouncer configuration on port 6432 using the default user (usually postgres)</p>
+<pre>
+  check_postgres_pgbouncer_checksum --port=6432 --critical=0</pre>
+<p>Example 2: Make sure no settings have changed and warn if so, using the checksum from above.</p>
+<pre>
+  check_postgres_pgbouncer_checksum --port=6432 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231</pre>
+<p>For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
+checksum must be provided as the <code>--mrtg</code> argument. The fourth line always gives the 
+current checksum.</p>
+<p>
+</p>
 <h2><a name="prepared_txns"><strong>prepared_txns</strong></a></h2>
 <p>(<code>symlink: check_postgres_prepared_txns</code>) Check on the age of any existing prepared transactions. 
 Note that most people will NOT use prepared transactions, as they are part of two-part commit 
@@ -1213,8 +1216,8 @@ critical are the number of seconds a prepared transaction has been open before a
 <p>Example 2: Give a critical if any prepared transaction has been open longer than 10 seconds, but allow 
 up to 360 seconds for the database 'shrike':</p>
 <pre>
-  check_postgres_listener --critical=10 --exclude=shrike
-  check_postgres_listener --critical=360 --include=shrike</pre>
+  check_postgres_prepared_txns --critical=10 --exclude=shrike
+  check_postgres_prepared_txns --critical=360 --include=shrike</pre>
 <p>For MRTG output, returns the number of seconds the oldest transaction has been open as the first line, 
 and which database is came from as the final line.</p>
 <p>
@@ -1247,6 +1250,7 @@ time, and default to '2 minutes' and '5 minutes' respectively. Valid units
 are 'seconds', 'minutes', 'hours', or 'days'. Each may be written singular or 
 abbreviated to just the first letter. If no units are given, the unit is 
 assumed to be seconds.</p>
+<p>This action requires Postgres 8.3 or better.</p>
 <p>Example 1: Give a warning if any query has been running longer than 3 minutes, and a critical if longer than 5 minutes.</p>
 <pre>
   check_postgres_query_time --port=5432 --warning='3 minutes' --critical='5 minutes'</pre>
@@ -1342,6 +1346,7 @@ examples below.</p>
 The first time this is run a snapshot of all the items in the database is 
 saved to a local file. When you run it again, that snapshot is read in and 
 becomes &quot;database #2&quot; and is compared to the current database.</p>
+<p>To replace the old stored file with the new version, use the --replace argument.</p>
 <p>To enable snapshots at various points in time, you can use the &quot;--suffix&quot; 
 argument to make the filenames unique to each run. See the examples below.</p>
 <p>Example 1: Verify that two databases on hosts star and line are the same:</p>
@@ -1360,9 +1365,9 @@ argument to make the filenames unique to each run. See the examples below.</p>
 <pre>
   check_postgres_same_schema --dbname=cylon --suffix=daily
   check_postgres_same_schema --dbname=cylon --suffix=weekly</pre>
-<p>Example 6: Run a historical comparison</p>
+<p>Example 6: Run a historical comparison, then replace the file</p>
 <pre>
-  check_postgres_same_schema --dbname=cylon --suffix=daily</pre>
+  check_postgres_same_schema --dbname=cylon --suffix=daily --replace</pre>
 <p>
 </p>
 <h2><a name="sequence"><strong>sequence</strong></a></h2>
@@ -1447,8 +1452,7 @@ integers, or integers for units of time, and both must be provided (there are
 no defaults). Valid units are 'seconds', 'minutes', 'hours', or 'days'. Each
 may be written singular or abbreviated to just the first letter. If no units
 are given and the numbers are unsigned, the units are assumed to be seconds.</p>
-<p>This action requires Postgres 8.0 or better. Additionally, if the version is less than 8.3, 
-the 'stats_command_string' parameter must be set to 'on'.</p>
+<p>This action requires Postgres 8.3 or better.</p>
 <p>Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:</p>
 <pre>
   check_postgres_txn_idle --port=5432 --warning='15 seconds'</pre>
@@ -1717,30 +1721,36 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 </p>
 <hr />
 <h1><a name="history">HISTORY</a></h1>
-<p>Items not specifically attributed are by Greg Sabino Mullane.</p>
+<p>Items not specifically attributed are by GSM (Greg Sabino Mullane).</p>
 <dl>
-<dt><strong><a name="version_2_18_0" class="item"><strong>Version 2.18.0</strong></a></strong></dt>
+<dt><strong><a name="version_2_18_0_october_2_2011" class="item"><strong>Version 2.18.0</strong> October 2, 2011</a></strong></dt>
 
 <dd>
 <pre>
   Redo the same_schema action. Use new --filter argument for all filtering.
   Allow comparisons between any number of databases.
-  Remove the db*2 arguments.
+  Remove the dbname2, dbport2, etc. arguments.
   Allow comparison of the same db over time.</pre>
 <pre>
   Swap db1 and db2 if the slave is 1 for the hot standby check (David E. Wheeler)</pre>
+<pre>
+  Allow multiple --schema arguments for the slony_status action (GSM and Jehan-Guillaume de Rorthais)</pre>
 <pre>
   Fix ORDER BY in the last vacuum/analyze action (Nicolas Thauvin)</pre>
 <pre>
   Fix check_hot_standby_delay perfdata output (Nicolas Thauvin)</pre>
 <pre>
-  Look in the correct place for the .ready files with the archive_ready action ((Nicolas Thauvin)</pre>
+  Look in the correct place for the .ready files with the archive_ready action (Nicolas Thauvin)</pre>
 <pre>
   New action: commitratio (Guillaume Lelarge)</pre>
 <pre>
   New action: hitratio (Guillaume Lelarge)</pre>
 <pre>
   Make sure --action overrides the symlink naming trick.</pre>
+<pre>
+  Set defaults for archive_ready and wal_files (Thomas Guettler, GSM)</pre>
+<pre>
+  Better output for wal_files and archive_ready (GSM)</pre>
 <pre>
   Fix warning when client_port set to empty string (bug #79)</pre>
 <pre>
@@ -1769,6 +1779,8 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
   Add the --assume-standby-mode option (Ruslan Kabalin)</pre>
 <pre>
+  Note that txn_idle and query_time require 8.3 (Thomas Guettler)</pre>
+<pre>
   Standardize and clean up all perfdata output (bug #52)</pre>
 <pre>
   Exclude &quot;idle in transaction&quot; from the query_time check (bug #43)</pre>
@@ -1777,7 +1789,11 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
   Clean up the custom_query action a bit.</pre>
 <pre>
+  Fix space in perfdata for hot_standby_delay action (Nicolas Thauvin)</pre>
+<pre>
   Handle undef percents in check_fsm_relations (Andy Lester)</pre>
+<pre>
+  Fix typo in dbstats action (Stas Vitkovsky)</pre>
 <pre>
   Fix MRTG for last vacuum and last_analyze actions.</pre>
 </dd>

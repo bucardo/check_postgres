@@ -9338,7 +9338,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
-=item B<Version 2.18.0>
+=item B<Version 2.18.0> October 2, 2011
 
   Redo the same_schema action. Use new --filter argument for all filtering.
   Allow comparisons between any number of databases.
