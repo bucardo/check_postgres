@@ -1681,7 +1681,7 @@ our %testaction = (
                   sequence          => 'VERSION: 8.1',
                   table_size        => 'VERSION: 8.1',
                   index_size        => 'VERSION: 8.1',
-                  query_time        => 'VERSION: 8.3',
+                  query_time        => 'VERSION: 8.1',
                   txn_idle          => 'VERSION: 8.3',
                   txn_time          => 'VERSION: 8.3',
                   wal_files         => 'VERSION: 8.1',
@@ -7236,13 +7236,23 @@ sub check_txn_idle {
 
     ## We don't GROUP BY because we want details on every connection
     ## Someday we may even break things down by database
-    $SQL = q{SELECT datname, datid, procpid, usename, client_addr, xact_start, current_query, }.
-        q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
-        qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
-        qq{FROM pg_stat_activity WHERE $clause$USERWHERECLAUSE }.
-        qq{ORDER BY xact_start, query_start, procpid DESC};
+    if ($type ne "qtime") {
+        $SQL = q{SELECT datname, datid, procpid, usename, client_addr, xact_start, current_query, }.
+            q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
+            qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
+            qq{FROM pg_stat_activity WHERE $clause$USERWHERECLAUSE }.
+            qq{ORDER BY xact_start, query_start, procpid DESC};
+    }
+    else {
+        $SQL = q{SELECT datname, datid, procpid, usename, client_addr, current_query, }.
+            q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
+            qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
+            qq{FROM pg_stat_activity WHERE $clause$USERWHERECLAUSE }.
+            qq{ORDER BY query_start, procpid DESC};
+    }
 
     my $info = run_command($SQL, { emptyok => 1 } );
+
 
     ## Extract the first entry
     $db = $info->{db}[0];
@@ -7278,7 +7288,7 @@ sub check_txn_idle {
         }
 
         ## Detect other cases where pg_stat_activity is not fully populated
-        if (length $r->{xact_start} and $r->{xact_start} !~ /\d/o) {
+        if ($type ne "qtime" and length $r->{xact_start} and $r->{xact_start} !~ /\d/o) {
             add_unknown msg('psa-noexact');
             return;
         }
@@ -8786,7 +8796,7 @@ are 'seconds', 'minutes', 'hours', or 'days'. Each may be written singular or
 abbreviated to just the first letter. If no units are given, the unit is 
 assumed to be seconds.
 
-This action requires Postgres 8.3 or better.
+This action requires Postgres 8.1 or better.
 
 Example 1: Give a warning if any query has been running longer than 3 minutes, and a critical if longer than 5 minutes.
 
