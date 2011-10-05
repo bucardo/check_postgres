@@ -168,6 +168,7 @@ our %msg = (
     'new-ver-ok'         => q{Version $1 is the latest for $2},
     'new-ver-warn'       => q{Please upgrade to version $1 of $2. You are running $3},
     'new-ver-tt'         => q{Your version of $1 ($2) appears to be ahead of the current release! ($3)},
+    'no-db'              => q{No databases},
     'no-match-db'        => q{No matching databases found due to exclusion/inclusion options},
     'no-match-fs'        => q{No matching file systems found due to exclusion/inclusion options},
     'no-match-rel'       => q{No matching relations found due to exclusion/inclusion options},
@@ -412,6 +413,7 @@ our %msg = (
     'new-ver-ok'          => q{La version $1 est la dernière pour $2},
     'new-ver-warn'        => q{Merci de mettre à jour vers la version $1 de $2. Vous utilisez actuellement la $3},
     'new-ver-tt'         => q{Votre version de $1 ($2) semble ult??rieure ?? la version courante ! ($3)},
+'no-db'              => q{No databases},
     'no-match-db'        => q{Aucune base de données trouvée à cause des options d'exclusion/inclusion},
     'no-match-fs'        => q{Aucun système de fichier trouvé à cause des options d'exclusion/inclusion},
     'no-match-rel'       => q{Aucune relation trouvée à cause des options d'exclusion/inclusion},
@@ -7264,7 +7266,14 @@ sub check_txn_idle {
     my $count = 0;
 
     ## Info about the top offender
-    my $whodunit = "DB: $db->{dbname}";
+    my $whodunit = "";
+    if ($MRTG) {
+        if (defined $db->{dbname}) {
+            $whodunit = "DB: $db->{dbname}";
+        } else {
+            $whodunit = sprintf q{DB: %s}, msg('no-db');
+        }
+    }
 
     ## Process each returned row
     for my $r (@{ $db->{slurp} }) {
