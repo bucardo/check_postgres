@@ -3467,7 +3467,7 @@ FROM (
 
     if (! defined $opt{include} and ! defined $opt{exclude}) {
         $SQL .= " WHERE sml.relpages - otta > $MINPAGES OR ipages - iotta > $MINIPAGES";
-        $SQL .= " ORDER BY wastedbytes DESC LIMIT $LIMIT";
+        $SQL .= " ORDER BY (wastedbytes + wastedibytes) DESC LIMIT $LIMIT";
     }
     else {
         $SQL .= ' ORDER BY wastedbytes DESC';
