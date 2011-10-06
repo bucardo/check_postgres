@@ -30,7 +30,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.18.0';
+our $VERSION = '2.18.1';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -7607,7 +7607,7 @@ sub check_wal_files {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.18.0
+This documents describes check_postgres.pl version 2.18.1
 
 =head1 SYNOPSIS
 
@@ -9359,6 +9359,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
+
+=item B<Version 2.18.1>
+
+  Use the full path when getting sequence information for same_schema.
+    (Greg Sabino Mullane; reported by Cindy Wise)
 
 =item B<Version 2.18.0> October 2, 2011
 
