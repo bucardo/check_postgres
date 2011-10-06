@@ -3426,7 +3426,12 @@ SELECT
   ROUND(CASE WHEN iotta=0 OR ipages=0 OR ipages=iotta THEN 0.0 ELSE ipages/iotta::numeric END,1) AS ibloat,
   CASE WHEN ipages < iotta THEN 0 ELSE ipages::bigint - iotta END AS wastedipages,
   CASE WHEN ipages < iotta THEN 0 ELSE bs*(ipages-iotta) END AS wastedibytes,
-  CASE WHEN ipages < iotta THEN '0 bytes' ELSE (bs*(ipages-iotta))::bigint || ' bytes' END AS wastedisize
+  CASE WHEN ipages < iotta THEN '0 bytes' ELSE (bs*(ipages-iotta))::bigint || ' bytes' END AS wastedisize,
+  CASE WHEN relpages < otta THEN
+    CASE WHEN ipages < iotta THEN 0 ELSE ipages-iotta::bigint END
+    ELSE CASE WHEN ipages < iotta THEN relpages-otta::bigint
+      ELSE relpages-otta::bigint + ipages-iotta::bigint END
+  END AS totalwastedbytes
 FROM (
   SELECT
     schemaname, tablename, cc.reltuples, cc.relpages, bs,
@@ -3469,10 +3474,10 @@ FROM (
 
     if (! defined $opt{include} and ! defined $opt{exclude}) {
         $SQL .= " WHERE sml.relpages - otta > $MINPAGES OR ipages - iotta > $MINIPAGES";
-        $SQL .= " ORDER BY (wastedbytes + wastedibytes) DESC LIMIT $LIMIT";
+        $SQL .= " ORDER BY totalwastedbytes DESC LIMIT $LIMIT";
     }
     else {
-        $SQL .= ' ORDER BY wastedbytes DESC';
+        $SQL .= ' ORDER BY totalwastedbytes DESC';
     }
 
     if ($psql_version <= 7.4) {
