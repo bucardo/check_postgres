@@ -9365,6 +9365,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Use the full path when getting sequence information for same_schema.
     (Greg Sabino Mullane; reported by Cindy Wise)
 
+  Better ordering of output for bloat check - make indexes as important
+    as tables (Greg Sabino Mullane; reported by Jens Wilke)
+
 =item B<Version 2.18.0> October 2, 2011
 
   Redo the same_schema action. Use new --filter argument for all filtering.
