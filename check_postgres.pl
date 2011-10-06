@@ -730,7 +730,8 @@ WHERE t.typtype NOT IN ('b','c')},
     sequence => {
         SQL       => q{
 SELECT c.*, nspname||'.'||relname AS name, quote_ident(usename) AS owner,
-  quote_ident(relname) AS safename, quote_ident(nspname) AS schema
+  (quote_ident(nspname)||'.'||quote_ident(relname)) AS safename,
+quote_ident(nspname) AS schema
 FROM pg_class c
 JOIN pg_user u ON (u.usesysid = c.relowner)
 JOIN pg_namespace n ON (n.oid = c.relnamespace)

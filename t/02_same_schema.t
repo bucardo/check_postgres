@@ -325,20 +325,24 @@ SEQUENCE:
 $t = qq{$S reports on sequence differences};
 like ($cp1->run($connect3), qr{^$label OK}, $t);
 
+$dbh1->do('CREATE SCHEMA wakko');
+$dbh2->do('CREATE SCHEMA wakko');
+$dbh3->do('CREATE SCHEMA wakko');
+
 $t = qq{$S reports sequence on 1 but not 2};
-$dbh1->do(q{CREATE SEQUENCE yakko});
+$dbh1->do(q{CREATE SEQUENCE wakko.yakko});
 like ($cp1->run($connect2),
       qr{^$label CRITICAL.*Items not matched: 1 .*
-Sequence "public.yakko" does not exist on all databases:
+Sequence "wakko.yakko" does not exist on all databases:
 \s*Exists on:  1
 \s*Missing on: 2\s*$}s,
       $t);
 
 $t = qq{$S reports sequence differences};
-$dbh2->do(q{CREATE SEQUENCE yakko MINVALUE 10 MAXVALUE 100 INCREMENT BY 3});
+$dbh2->do(q{CREATE SEQUENCE wakko.yakko MINVALUE 10 MAXVALUE 100 INCREMENT BY 3});
 like ($cp1->run($connect2),
       qr{^$label CRITICAL.*Items not matched: 1 .*
-\s*Sequence "public.yakko":
+\s*Sequence "wakko.yakko":
 \s*"increment_by" is different:
 \s*Database 1: 1
 \s*Database 2: 3
@@ -359,8 +363,8 @@ like ($cp1->run($connect2),
 $t = qq{$S does not report sequence differences if the 'nosequence' filter is given};
 like ($cp1->run("$connect3 --filter=nosequence"), qr{^$label OK}, $t);
 
-$dbh1->do(q{DROP SEQUENCE yakko});
-$dbh2->do(q{DROP SEQUENCE yakko});
+$dbh1->do(q{DROP SEQUENCE wakko.yakko});
+$dbh2->do(q{DROP SEQUENCE wakko.yakko});
 
 $t = qq{$S reports on sequence differences};
 like ($cp1->run($connect3), qr{^$label OK}, $t);
