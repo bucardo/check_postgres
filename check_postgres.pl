@@ -1385,21 +1385,21 @@ sub add_response {
 
         ## Databases
         $number = 1;
-        my %dlist = map { $_->{dbname}, $number++; } @targetdb;
+        my %dlist = map { ($_->{dbname} || ''), $number++; } @targetdb;
         if (keys %dlist > 1 and ! $historical) {
             my $dblist = join ',' => sort { $dlist{$a} <=> $dlist{$b} } keys %dlist;
             $dbname = qq{ (databases:$dblist)};
         }
         ## Hosts
         $number = 1;
-        my %hostlist = map { $_->{host}, $number++; } @targetdb;
+        my %hostlist = map { ($_->{host} || ''), $number++; } @targetdb;
         if (keys %hostlist > 1 and ! $historical) {
             my $dblist = join ',' => sort { $hostlist{$a} <=> $hostlist{$b} } keys %hostlist;
             $dbhost = qq{ (hosts:$dblist)};
         }
         ## Ports
         $number = 1;
-        my %portlist = map { $_->{port}, $number++; } @targetdb;
+        my %portlist = map { i($_->{port} || ''), $number++; } @targetdb;
         if (keys %portlist > 1 and ! $historical) {
             my $dblist = join ',' => sort { $portlist{$a} <=> $portlist{$b} } keys %portlist;
             $dbport = qq{ (ports:$dblist)};
