@@ -66,6 +66,7 @@ my %opts = (
     MAN1PODS       => {},
     NEEDS_LINKING  => 0,
     NORECURS       => 1,
+    PM             => {},
     clean          => { FILES => join ' ' => @cleanfiles },
 );
 
