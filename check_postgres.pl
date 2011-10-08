@@ -1399,7 +1399,7 @@ sub add_response {
         }
         ## Ports
         $number = 1;
-        my %portlist = map { i($_->{port} || ''), $number++; } @targetdb;
+        my %portlist = map { ($_->{port} || ''), $number++; } @targetdb;
         if (keys %portlist > 1 and ! $historical) {
             my $dblist = join ',' => sort { $portlist{$a} <=> $portlist{$b} } keys %portlist;
             $dbport = qq{ (ports:$dblist)};
