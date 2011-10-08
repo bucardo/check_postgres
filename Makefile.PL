@@ -64,6 +64,7 @@ my %opts = (
     VERSION_FROM   => 'check_postgres.pl',
     EXE_FILES      => ['check_postgres.pl'],
     MAN1PODS       => {},
+    MAN3PODS       => { 'check_postgres.pl' => 'blib/man3/check_postgres.3'},
     NEEDS_LINKING  => 0,
     NORECURS       => 1,
     PM             => {},
