@@ -9377,6 +9377,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Show the dbservice if it was used at top of same_schema output
     (Mike Blackwell)
 
+  Better installation paths (Greg Sabino Mullane, per bug 53)
+
 =item B<Version 2.18.0> October 2, 2011
 
   Redo the same_schema action. Use new --filter argument for all filtering.
