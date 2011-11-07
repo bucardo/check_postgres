@@ -1521,59 +1521,37 @@ sub do_mrtg_stats {
     do_mrtg({one => $one, two => $two, msg => $msg});
 }
 
-sub make_sure_standby_mode {
+sub make_sure_mode_is {
 
-    ## Checks if database in standby mode
     ## Requires $ENV{PGDATA} or --datadir
-
-    ## Find the data directory, make sure it exists
-    my $dir = $opt{datadir} || $ENV{PGDATA};
-
-    if (!defined $dir or ! length $dir) {
-        ndie msg('checkpoint-nodir');
-    }
-
-    if (! -d $dir) {
-        ndie msg('checkpoint-baddir', $dir);
-    }
 
     $db->{host} = '<none>';
 
     ## Run pg_controldata, grab the mode
-    my $pgc
-        = $ENV{PGCONTROLDATA} ? $ENV{PGCONTROLDATA}
-        : $ENV{PGBINDIR}      ? "$ENV{PGBINDIR}/pg_controldata"
-        :                       'pg_controldata';
-    $COM = qq{$pgc "$dir"};
-    eval {
-        $res = qx{$COM 2>&1};
-    };
-    if ($@) {
-        ndie msg('checkpoint-nosys', $@);
-    }
-
-    ## If the path is echoed back, we most likely have an invalid data dir
-    if ($res =~ /$dir/) {
-        ndie msg('checkpoint-baddir2', $dir);
-    }
-
-    if ($res =~ /WARNING: Calculated CRC checksum/) {
-        ndie msg('checkpoint-badver', $dir);
-    }
-    if ($res !~ /^pg_control.+\d+/) {
-        ndie msg('checkpoint-badver2');
-    }
+	$res = open_controldata();
 
     my $regex = msg('checkmode-state');
     if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
         ## Just in case, check the English one as well
         $regex = msg_en('checkmode-state');
         if ($res !~ /$regex\s*(.+)/) {
-            ndie msg('checkpoint-noregex', $dir);
+            ndie msg('checkpoint-noregex');
         }
     }
     my $last = $1;
-    $regex = msg('checkmode-recovery');
+
+    return $last;
+
+}
+
+sub make_sure_standby_mode {
+
+    ## Checks if database in standby mode
+    ## Requires $ENV{PGDATA} or --datadir
+
+    my $last = make_sure_mode_is();
+
+    my $regex = msg('checkmode-recovery');
     if ($last =~ /$regex/) {
         $STANDBY = 1;
     }
@@ -3708,50 +3686,17 @@ sub check_checkpoint {
           forcemrtg         => 1,
     });
 
-    ## Find the data directory, make sure it exists
-    my $dir = $opt{datadir} || $ENV{PGDATA};
-
-    if (!defined $dir or ! length $dir) {
-        ndie msg('checkpoint-nodir');
-    }
-
-    if (! -d $dir) {
-        ndie msg('checkpoint-baddir', $dir);
-    }
-
     $db->{host} = '<none>';
 
     ## Run pg_controldata, grab the time
-    my $pgc
-        = $ENV{PGCONTROLDATA} ? $ENV{PGCONTROLDATA}
-        : $ENV{PGBINDIR}      ? "$ENV{PGBINDIR}/pg_controldata"
-        :                       'pg_controldata';
-    $COM = qq{$pgc "$dir"};
-    eval {
-        $res = qx{$COM 2>&1};
-    };
-    if ($@) {
-        ndie msg('checkpoint-nosys', $@);
-    }
-
-    ## If the path is echoed back, we most likely have an invalid data dir
-    if ($res =~ /$dir/) {
-        ndie msg('checkpoint-baddir2', $dir);
-    }
-
-    if ($res =~ /WARNING: Calculated CRC checksum/) {
-        ndie msg('checkpoint-badver', $pgc);
-    }
-    if ($res !~ /^pg_control.+\d+/) {
-        ndie msg('checkpoint-badver2');
-    }
+	$res = open_controldata();
 
     my $regex = msg('checkpoint-po');
     if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
         ## Just in case, check the English one as well
         $regex = msg_en('checkpoint-po');
         if ($res !~ /$regex\s*(.+)/) {
-            ndie msg('checkpoint-noregex', $dir);
+            ndie msg('checkpoint-noregex');
         }
     }
     my $last = $1;
