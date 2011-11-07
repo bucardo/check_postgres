@@ -104,6 +104,7 @@ our %msg = (
     'checkcluster-nomrtg'=> q{Must provide a number via the --mrtg option},
     'checkmode-state'    => q{Database cluster state:},
     'checkmode-recovery' => q{in archive recovery},
+    'checkmode-prod'     => q{in production},
     'checkpoint-baddir'  => q{Invalid data_directory: "$1"},
     'checkpoint-baddir2' => q{pg_controldata could not read the given data directory: "$1"},
     'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version ($1)},
@@ -163,6 +164,7 @@ our %msg = (
     'logfile-stderr'     => q{Logfile output has been redirected to stderr: please provide a filename},
     'logfile-syslog'     => q{Database is using syslog, please specify path with --logfile option (fac=$1)},
     'mode-standby'       => q{Server in standby mode},
+    'mode'               => q{mode},
     'mrtg-fail'          => q{Action $1 failed: $2},
     'new-ver-nocver'     => q{Could not download version information for $1},
     'new-ver-badver'     => q{Could not parse version information for $1},
@@ -934,6 +936,7 @@ GetOptions(
     'debugoutput=s',
     'no-check_postgresrc',
     'assume-standby-mode',
+    'assume-prod',
 
     'action=s',
     'warning=s',
@@ -1206,6 +1209,7 @@ Limit options:
 
 Other options:
   --assume-standby-mode assume that server in continious WAL recovery mode
+  --assume-prod         assume that server in production mode
   --PSQL=FILE           location of the psql executable; avoid using if possible
   -v, --verbose         verbosity level; can be used more than once to increase the level
   -h, --help            display this help information
@@ -1252,7 +1256,9 @@ if ($opt{showtime}) {
 
 ## Check the current database mode
 our $STANDBY = 0;
+our $MASTER = 0;
 make_sure_standby_mode() if $opt{'assume-standby-mode'};
+make_sure_prod() if $opt{'assume-prod'};
 
 ## We don't (usually) want to die, but want a graceful Nagios-like exit instead
 sub ndie {
@@ -1560,6 +1566,21 @@ sub make_sure_standby_mode {
 
 } ## end of make_sure_standby_mode
 
+sub make_sure_prod {
+
+    ## Checks if database in production mode
+    ## Requires $ENV{PGDATA} or --datadir
+
+    my $last = make_sure_mode_is();
+
+    my $regex = msg('checkmode-prod');
+    if ($last =~ /$regex/) {
+        $MASTER = 1;
+    }
+
+    return;
+
+} ## end of make_sure_production_mode
 
 sub finishup {
 
@@ -3661,7 +3682,6 @@ FROM (
 
 } ## end of check_bloat
 
-
 sub check_checkpoint {
 
     ## Checks how long in seconds since the last checkpoint on a WAL slave
@@ -3674,6 +3694,9 @@ sub check_checkpoint {
     ## may make more sense on the master, or we may want to look at
     ## the WAL segments received/processed instead of the checkpoint
     ## timestamp.
+    ## This checks can use the optionnal --asume-standby-mode or
+    ## --assume-prod: if the mode found is not the mode assumed, a
+    ## CRITICAL is emitted.
 
     ## Supports: Nagios, MRTG
     ## Warning and critical are seconds
@@ -3718,11 +3741,35 @@ sub check_checkpoint {
     $db->{perf} = sprintf '%s=%s;%s;%s',
         perfname(msg('age')), $diff, $warning, $critical;
 
+    my $mode = '';
+    if ($STANDBY) {
+        $mode = 'STANDBY';
+    }
+    if ($MASTER) {
+        $mode = 'MASTER';
+    }
+
+    ## If we have an assume flag, then honor it.
+    my $goodmode = 1;
+    if ($opt{'assume-standby-mode'} and not $STANDBY) {
+        $goodmode = 0;
+        $mode = 'NOT STANDBY';
+    }
+    elsif ($opt{'assume-prod'} and not $MASTER) {
+        $goodmode = 0;
+        $mode = 'NOT MASTER';
+    }
+
+    if (length($mode) > 0) {
+        $db->{perf} .= sprintf ' %s=%s',
+            perfname(msg('mode')), $mode;
+    }
+
     if ($MRTG) {
         do_mrtg({one => $diff, msg => $msg});
     }
 
-    if (length $critical and $diff >= $critical) {
+    if ((length $critical and $diff >= $critical) or not $goodmode) {
         add_critical $msg;
         return;
     }
@@ -7862,6 +7909,16 @@ Example:
     postgres@db$./check_postgres.pl --action=version --warning=8.1 --datadir /var/lib/postgresql/8.3/main/ --assume-standby-mode
     POSTGRES_VERSION OK:  Server in standby mode | time=0.00
 
+=item B<--assume-prod>
+
+If specified, check if server in production mode is performed (--datadir is required).
+The option is only relevant for (C<symlink: check_postgres_checkpoint>).
+
+Example:
+
+    postgres@db$./check_postgres.pl --action=checkpoint --datadir /var/lib/postgresql/8.3/main/ --assume-prod
+    POSTGRES_CHECKPOINT OK: Last checkpoint was 72 seconds ago | age=72;;300 mode=MASTER
+
 =item B<-h> or B<--help>
 
 Displays a help screen with a summary of all actions and options.
@@ -8132,6 +8189,8 @@ was run, as determined by parsing the call to C<pg_controldata>. Because of this
 pg_controldata executable must be available in the current path. Alternatively, you can 
 set the environment variable C<PGCONTROLDATA> to the exact location of the pg_controldata 
 executable, or you can specify C<PGBINDIR> as the directory that it lives in.
+It is also possible to use the special options I<--assume-prod> or
+I<--assume-standby-mode>, if the mode found is not the one expected, a CRITICAL is emitted.
 
 At least one warning or critical argument must be set.
 
