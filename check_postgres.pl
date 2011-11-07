@@ -99,6 +99,9 @@ our %msg = (
     'bloat-nomin'        => q{no relations meet the minimum bloat criteria},
     'bloat-table'        => q{(db $1) table $2.$3 rows:$4 pages:$5 shouldbe:$6 ($7X) wasted size:$8 ($9)},
     'bug-report'         => q{Please report these details to check_postgres@bucardo.org:},
+    'checkcluster-id'    => q{Database system identifier:},
+    'checkcluster-msg'   => q{cluster_id: $1},
+    'checkcluster-nomrtg'=> q{Must provide a number via the --mrtg option},
     'checkmode-state'    => q{Database cluster state:},
     'checkmode-recovery' => q{in archive recovery},
     'checkpoint-baddir'  => q{Invalid data_directory: "$1"},
@@ -108,7 +111,7 @@ our %msg = (
     'checkpoint-nodir'   => q{Must supply a --datadir argument or set the PGDATA environment variable},
     'checkpoint-nodp'    => q{Must install the Perl module Date::Parse to use the checkpoint action},
     'checkpoint-noparse' => q{Unable to parse pg_controldata output: "$1"},
-    'checkpoint-noregex' => q{Call to pg_controldata $1 failed},
+    'checkpoint-noregex' => q{Unable to find the regex for this check},
     'checkpoint-nosys'   => q{Could not call pg_controldata: $1},
     'checkpoint-ok'      => q{Last checkpoint was 1 second ago},
     'checkpoint-ok2'     => q{Last checkpoint was $1 seconds ago},
@@ -353,7 +356,7 @@ our %msg = (
     'checkpoint-nodir'   => q{Vous devez fournir un argument --datadir ou configurer la variable d'environnement PGDATA},
     'checkpoint-nodp'    => q{Vous devez installer le module Perl Date::Parse pour utiliser l'action checkpoint},
     'checkpoint-noparse' => q{Incapable d'analyser le résultat de la commande pg_controldata : "$1"},
-    'checkpoint-noregex' => q{Échec de l'appel à pg_controldata $1},
+    'checkpoint-noregex' => q{La regex pour ce test n'a pas été trouvée},
     'checkpoint-nosys'   => q{N'a pas pu appeler pg_controldata : $1},
     'checkpoint-ok'      => q{Le dernier CHECKPOINT est survenu il y a une seconde},
     'checkpoint-ok2'     => q{Le dernier CHECKPOINT est survenu il y a $1 secondes},
@@ -1112,6 +1115,7 @@ our $action_info = {
  backends            => [1, 'Number of connections, compared to max_connections.'],
  bloat               => [0, 'Check for table and index bloat.'],
  checkpoint          => [1, 'Checks how long since the last checkpoint'],
+ cluster_id          => [1, 'Checks the Database System Identifier'],
  commitratio         => [0, 'Report if the commit ratio of a database is too low.'],
  connection          => [0, 'Simple connection check.'],
  custom_query        => [0, 'Run a custom query.'],
@@ -1918,6 +1922,9 @@ check_dbstats() if $action eq 'dbstats';
 
 ## Check how long since the last checkpoint
 check_checkpoint() if $action eq 'checkpoint';
+
+## Check the Datasbae System Identifier
+check_cluster_id() if $action eq 'cluster_id';
 
 ## Check for disabled triggers
 check_disabled_triggers() if $action eq 'disabled_triggers';
@@ -3114,6 +3121,50 @@ sub perfname {
 } ## end of perfname;
 
 
+sub open_controldata {
+    ## Requires $ENV{PGDATA} or --datadir
+
+    ## Find the data directory, make sure it exists
+    my $dir = $opt{datadir} || $ENV{PGDATA};
+
+    if (!defined $dir or ! length $dir) {
+        ndie msg('checkpoint-nodir');
+    }
+
+    if (! -d $dir) {
+        ndie msg('checkpoint-baddir', $dir);
+    }
+
+    ## Run pg_controldata
+    my $pgc
+        = $ENV{PGCONTROLDATA} ? $ENV{PGCONTROLDATA}
+        : $ENV{PGBINDIR}      ? "$ENV{PGBINDIR}/pg_controldata"
+        :                       'pg_controldata';
+    $COM = qq{$pgc "$dir"};
+    eval {
+        $res = qx{$COM 2>&1};
+    };
+    if ($@) {
+        ndie msg('checkpoint-nosys', $@);
+    }
+
+    ## If the path is echoed back, we most likely have an invalid data dir
+    if ($res =~ /$dir/) {
+        ndie msg('checkpoint-baddir2', $dir);
+    }
+
+    if ($res =~ /WARNING: Calculated CRC checksum/) {
+        ndie msg('checkpoint-badver', $dir);
+    }
+    if ($res !~ /^pg_control.+\d+/) {
+        ndie msg('checkpoint-badver2');
+    }
+
+	## return the pg_controldata output
+	return $res;
+}
+
+
 sub check_archive_ready {
 
     ## Check on the number of WAL archive with status "ready"
@@ -3741,6 +3792,58 @@ sub check_checkpoint {
     return;
 
 } ## end of check_checkpoint
+
+
+sub check_cluster_id {
+
+
+    ## Verify the Database System Identifier provided by pg_controldata
+    ## Supports: Nagios, MRTG
+    ## One of warning or critical must be given (but not both)
+    ## It should run one time to find out the expected cluster-id
+    ## You can use --critical="0" to find out the current cluster-id
+    ## You can include or exclude settings as well
+    ## Example:
+    ##  check_postgres_cluster_id --critical="5633695740047915125"
+
+    my ($warning, $critical) = validate_range({type => 'integer', onlyone => 1});
+
+    $db->{host} = '<none>';
+
+    ## Run pg_controldata, grab the cluster-id
+	$res = open_controldata();
+
+    my $regex = msg('checkcluster-id');
+    if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
+        ## Just in case, check the English one as well
+        $regex = msg_en('checkcluster-id');
+        if ($res !~ /$regex\s*(.+)/) {
+            ndie msg('checkpoint-noregex');
+        }
+    }
+    my $ident = $1;
+
+    my $msg = msg('checkcluster-msg', $ident);
+    if ($MRTG) {
+        $opt{mrtg} or ndie msg('checksum-nomrtg');
+        do_mrtg({one => $opt{mrtg} eq $ident ? 1 : 0, msg => $ident});
+    }
+    if ($critical and $critical ne $ident) {
+        add_critical $msg;
+    }
+    elsif ($warning and $warning ne $ident) {
+        add_warning $msg;
+    }
+    elsif (!$critical and !$warning) {
+        add_unknown $msg;
+    }
+    else {
+        add_ok $msg;
+    }
+
+    return;
+
+} ## end of check_cluster_id
 
 
 sub check_commitratio {
@@ -8090,6 +8193,27 @@ At least one warning or critical argument must be set.
 This action requires the Date::Parse module.
 
 For MRTG or simple output, returns the number of seconds.
+
+=head2 B<cluster_id>
+
+(C<symlink: check_postgres_cluster-id>) Checks that the Database System Identifier
+provided by pg_controldata is the same as last time you checked. This must run on the same
+server as the database that is being checked (e.g. the -h flag will not work).
+Either the I<--warning> or the I<--critical> option should be given, but not both. The value
+of each one is the cluster identifier, an integer value. You can run with the special C<--critical=0> option
+to find out an existing cluster identifier.
+
+Example 1: Find the initial identifier
+
+  check_postgres_cluster_id --critical=0 --datadir=/var//lib/postgresql/9.0/main
+
+Example 2: Make sure the cluster is the same and warn if not, using the result from above.
+
+  check_postgres_cluster_id  --critical=5633695740047915135
+
+For MRTG output, returns a 1 or 0 indicating success of failure of the identifier to match. A
+identifier must be provided as the C<--mrtg> argument. The fourth line always gives the
+current identifier.
 
 =head2 B<commitratio>
 
