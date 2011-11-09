@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 8;
+use Test::More tests => 10;
 use lib 't','.';
 use CP_Testing;
 
@@ -51,5 +51,13 @@ like ($cp->run('-c abcdabcdabcdabcdabcdabcdabcdabcd'),
 
 $t = qq{$S accepts matching checksum};
 like ($cp->run("-w $true_checksum"), qr/OK.*\Qchecksum: $true_checksum\E/, $t);
+
+$t=qq{$S returns the expected output for MRTG(failure)};
+like ($cp->run(qq{--mrtg 123 --output=MRTG}),
+      qr{^0\n0\n\n\d+}, $t);
+
+$t=qq{$S returns the expected output for MRTG(success)};
+like ($cp->run(qq{--mrtg $true_checksum --output=MRTG}),
+      qr{^1\n0\n\n\d+}, $t);
 
 exit;
