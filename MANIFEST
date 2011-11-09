@@ -17,6 +17,7 @@ t/02_autovac_freeze.t
 t/02_backends.t
 t/02_bloat.t
 t/02_checkpoint.t
+t/02_cluster_id.t
 t/02_connection.t
 t/02_custom_query.t
 t/02_database_size.t
