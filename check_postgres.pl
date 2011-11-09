@@ -9494,6 +9494,12 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
+=item B<Version 2.19.0>
+
+  Add the --assume-prod option (Cédric Villemain)
+  Add the cluster_id check (Cédric Villemain)
+  Improve settings_checksum and checkpoint tests (Cédric Villemain)
+
 =item B<Version 2.18.1>
 
   Use the full path when getting sequence information for same_schema.
