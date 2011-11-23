@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 13;
+use Test::More tests => 14;
 use lib 't','.';
 use CP_Testing;
 
@@ -64,6 +64,10 @@ like ($cp->run(qq{-w 1 --datadir="$host"}), qr{^$label WARNING:}, $t);
 
 $t=qq{$S returns a critical when checkpoint older than critical option};
 like ($cp->run(qq{-c 1 --datadir="$host"}), qr{^$label CRITICAL:}, $t);
+
+# FIXME: no check for --assume-prod, it needs to have a cluster in this state
+$t=qq{$S returns a critical when --assume-standby-mode on a non-standby};
+like ($cp->run(qq{-c 1000 --datadir="$host" --assume-standby-mode}), qr{^$label CRITICAL:.*mode=NOT STANDBY}, $t);
 
 $t=qq{$S returns the correct number of seconds};
 like ($cp->run(qq{-c 1 --datadir="$host"}), qr{was \d+ seconds ago}, $t);
