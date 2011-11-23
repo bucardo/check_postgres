@@ -9368,6 +9368,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =item B<Version 2.18.1>
 
+  Do no do an inner join to pg_user when checking database size
+    (Greg Sabino Mullane; reported by Emmanuel Lesouef)
+
   Use the full path when getting sequence information for same_schema.
     (Greg Sabino Mullane; reported by Cindy Wise)
 
