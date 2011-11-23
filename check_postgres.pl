@@ -3978,7 +3978,7 @@ SELECT pg_database_size(d.oid) AS dsize,
   datname,
   usename
 FROM pg_database d
-JOIN pg_user u ON (u.usesysid=d.datdba)$USERWHERECLAUSE
+LEFT JOIN pg_user u ON (u.usesysid=d.datdba)$USERWHERECLAUSE
 };
     if ($opt{perflimit}) {
         $SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
