@@ -4701,8 +4701,7 @@ sub check_hot_standby_delay {
         my $location = $db->{slurp}[0]{location};
         next if ! defined $location;
 
-        my ($x, $y) = split(/\//, $location);
-        $moffset = (hex("ffffffff") * hex($x)) + hex($y);
+        $moffset = convert_wal_location_to_offset( $location );
         $saved_db = $db if ! defined $saved_db;
     }
 
@@ -4721,13 +4720,11 @@ sub check_hot_standby_delay {
         my $replay = $db->{slurp}[0]{replay};
 
         if (defined $receive) {
-            my ($a, $b) = split(/\//, $receive);
-            $s_rec_offset = (hex("ffffffff") * hex($a)) + hex($b);
+            $s_rec_offset = convert_wal_location_to_offset( $receive );
         }
 
         if (defined $replay) {
-            my ($a, $b) = split(/\//, $replay);
-            $s_rep_offset = (hex("ffffffff") * hex($a)) + hex($b);
+            $s_rep_offset = convert_wal_location_to_offset( $replay );
         }
 
         $saved_db = $db if ! defined $saved_db;
@@ -7700,7 +7697,22 @@ sub check_wal_files {
 
 } ## end of check_wal_files
 
+sub convert_wal_location_to_offset {
 
+    ## Helper function to convert WAL location in form:
+    ## ABC/12345678
+    ## to decimal offset
+    ## It is important to note that higher part of location should be
+    ## multipled by 0xFEFFFFFF, and not 0xFFFFFFFF - because PostgreSQL does
+    ## not use the 0xFF*part of wal range.
+
+    my $location = shift;
+
+    my ($x, $y) = split(/\//, $location);
+    my $offset = hex( 'feffffff' ) * hex( $x ) + hex ( $y );
+    return $offset;
+
+} ## end of convert_wal_location_to_offset
 
 =pod
 
