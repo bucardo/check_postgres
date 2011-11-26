@@ -7508,14 +7508,14 @@ sub check_txn_idle {
 
 sub check_txn_time {
 
-    ## This is the same as check_txn_idle, but we want where the time is not null
-    ## as well as excluding any idle in transactions
+    ## This is the same as check_txn_idle, but we want where the 
+    ## transaction start time is not null
 
     check_txn_idle('txntime',
                    '',
                    '',
                    'xact_start',
-                   q{xact_start IS NOT NULL AND current_query <> '<IDLE> in transaction'});
+                   q{xact_start IS NOT NULL'});
 
     return;
 
@@ -9510,9 +9510,6 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Better ordering of output for bloat check - make indexes as important
     as tables (Greg Sabino Mullane; reported by Jens Wilke)
-
-  Exclude idle in transaction queries from the txn_time action
-    (Greg Sabino Mullane; reported by Peter Eisentraut in bug 92)
 
   Show the dbservice if it was used at top of same_schema output
     (Mike Blackwell)
