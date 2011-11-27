@@ -4702,7 +4702,7 @@ sub check_hot_standby_delay {
         next if ! defined $location;
 
         my ($x, $y) = split(/\//, $location);
-        $moffset = (hex("ffffffff") * hex($x)) + hex($y);
+        $moffset = (hex('ff000000') * hex($x)) + hex($y);
         $saved_db = $db if ! defined $saved_db;
     }
 
@@ -4722,12 +4722,12 @@ sub check_hot_standby_delay {
 
         if (defined $receive) {
             my ($a, $b) = split(/\//, $receive);
-            $s_rec_offset = (hex("ffffffff") * hex($a)) + hex($b);
+            $s_rec_offset = (hex('ff000000') * hex($a)) + hex($b);
         }
 
         if (defined $replay) {
             my ($a, $b) = split(/\//, $replay);
-            $s_rep_offset = (hex("ffffffff") * hex($a)) + hex($b);
+            $s_rep_offset = (hex('ff000000') * hex($a)) + hex($b);
         }
 
         $saved_db = $db if ! defined $saved_db;
@@ -9507,6 +9507,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Use the full path when getting sequence information for same_schema.
     (Greg Sabino Mullane; reported by Cindy Wise)
+
+  Fix the formula for calculating xlog positions (Euler Taveira de Oliveira)
 
   Better ordering of output for bloat check - make indexes as important
     as tables (Greg Sabino Mullane; reported by Jens Wilke)
