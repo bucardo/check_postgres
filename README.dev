@@ -34,3 +34,8 @@ Login to the bucardo.org box, and then:
 
 * Email to check_postgres-announce with summary of changes
 
+Once the new version is out there:
+
+* Make sure the new version is in the pulldown list of available versions.
+* Go through and make sure all bugs solved in this release are marked as resolved
+
