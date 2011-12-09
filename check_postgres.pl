@@ -7708,7 +7708,7 @@ sub check_wal_files {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.18.1
+This documents describes check_postgres.pl version 2.19.0
 
 =head1 SYNOPSIS
 

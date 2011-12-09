@@ -42,6 +42,7 @@
 		<li><a href="#backends"><strong>backends</strong></a></li>
 		<li><a href="#bloat"><strong>bloat</strong></a></li>
 		<li><a href="#checkpoint"><strong>checkpoint</strong></a></li>
+		<li><a href="#cluster_id"><strong>cluster_id</strong></a></li>
 		<li><a href="#commitratio"><strong>commitratio</strong></a></li>
 		<li><a href="#connection"><strong>connection</strong></a></li>
 		<li><a href="#custom_query"><strong>custom_query</strong></a></li>
@@ -121,7 +122,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.18.0</p>
+<p>This documents describes check_postgres.pl version 2.19.0</p>
 <p>
 </p>
 <hr />
@@ -328,6 +329,16 @@ ignored and &quot;Server in standby mode&quot; with OK status will be returned i
 <pre>
     postgres@db$./check_postgres.pl --action=version --warning=8.1 --datadir /var/lib/postgresql/8.3/main/ --assume-standby-mode
     POSTGRES_VERSION OK:  Server in standby mode | time=0.00</pre>
+</dd>
+<dt><strong><a name="assume_prod" class="item"><strong>--assume-prod</strong></a></strong></dt>
+
+<dd>
+<p>If specified, check if server in production mode is performed (--datadir is required).
+The option is only relevant for (<code>symlink: check_postgres_checkpoint</code>).</p>
+<p>Example:</p>
+<pre>
+    postgres@db$./check_postgres.pl --action=checkpoint --datadir /var/lib/postgresql/8.3/main/ --assume-prod
+    POSTGRES_CHECKPOINT OK: Last checkpoint was 72 seconds ago | age=72;;300 mode=MASTER</pre>
 </dd>
 <dt><strong><a name="h_or_help" class="item"><strong>-h</strong> or <strong>--help</strong></a></strong></dt>
 
@@ -586,10 +597,30 @@ the <code>--datadir</code> argument. It returns the number of seconds since the 
 was run, as determined by parsing the call to <code>pg_controldata</code>. Because of this, the 
 pg_controldata executable must be available in the current path. Alternatively, you can 
 set the environment variable <code>PGCONTROLDATA</code> to the exact location of the pg_controldata 
-executable, or you can specify <code>PGBINDIR</code> as the directory that it lives in.</p>
+executable, or you can specify <code>PGBINDIR</code> as the directory that it lives in.
+It is also possible to use the special options <em>--assume-prod</em> or
+<em>--assume-standby-mode</em>, if the mode found is not the one expected, a CRITICAL is emitted.</p>
 <p>At least one warning or critical argument must be set.</p>
 <p>This action requires the Date::Parse module.</p>
 <p>For MRTG or simple output, returns the number of seconds.</p>
+<p>
+</p>
+<h2><a name="cluster_id"><strong>cluster_id</strong></a></h2>
+<p>(<code>symlink: check_postgres_cluster-id</code>) Checks that the Database System Identifier
+provided by pg_controldata is the same as last time you checked. This must run on the same
+server as the database that is being checked (e.g. the -h flag will not work).
+Either the <em>--warning</em> or the <em>--critical</em> option should be given, but not both. The value
+of each one is the cluster identifier, an integer value. You can run with the special <code>--critical=0</code> option
+to find out an existing cluster identifier.</p>
+<p>Example 1: Find the initial identifier</p>
+<pre>
+  check_postgres_cluster_id --critical=0 --datadir=/var//lib/postgresql/9.0/main</pre>
+<p>Example 2: Make sure the cluster is the same and warn if not, using the result from above.</p>
+<pre>
+  check_postgres_cluster_id  --critical=5633695740047915135</pre>
+<p>For MRTG output, returns a 1 or 0 indicating success of failure of the identifier to match. A
+identifier must be provided as the <code>--mrtg</code> argument. The fourth line always gives the
+current identifier.</p>
 <p>
 </p>
 <h2><a name="commitratio"><strong>commitratio</strong></a></h2>
@@ -1250,7 +1281,7 @@ time, and default to '2 minutes' and '5 minutes' respectively. Valid units
 are 'seconds', 'minutes', 'hours', or 'days'. Each may be written singular or 
 abbreviated to just the first letter. If no units are given, the unit is 
 assumed to be seconds.</p>
-<p>This action requires Postgres 8.3 or better.</p>
+<p>This action requires Postgres 8.1 or better.</p>
 <p>Example 1: Give a warning if any query has been running longer than 3 minutes, and a critical if longer than 5 minutes.</p>
 <pre>
   check_postgres_query_time --port=5432 --warning='3 minutes' --critical='5 minutes'</pre>
@@ -1723,6 +1754,32 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by GSM (Greg Sabino Mullane).</p>
 <dl>
+<dt><strong><a name="version_2_19_0" class="item"><strong>Version 2.19.0</strong></a></strong></dt>
+
+<dd>
+<pre>
+  Add the --assume-prod option (Cédric Villemain)</pre>
+<pre>
+  Add the cluster_id check (Cédric Villemain)</pre>
+<pre>
+  Improve settings_checksum and checkpoint tests (Cédric Villemain)</pre>
+<pre>
+  Do no do an inner join to pg_user when checking database size
+    (Greg Sabino Mullane; reported by Emmanuel Lesouef)</pre>
+<pre>
+  Use the full path when getting sequence information for same_schema.
+    (Greg Sabino Mullane; reported by Cindy Wise)</pre>
+<pre>
+  Fix the formula for calculating xlog positions (Euler Taveira de Oliveira)</pre>
+<pre>
+  Better ordering of output for bloat check - make indexes as important
+    as tables (Greg Sabino Mullane; reported by Jens Wilke)</pre>
+<pre>
+  Show the dbservice if it was used at top of same_schema output
+    (Mike Blackwell)</pre>
+<pre>
+  Better installation paths (Greg Sabino Mullane, per bug 53)</pre>
+</dd>
 <dt><strong><a name="version_2_18_0_october_2_2011" class="item"><strong>Version 2.18.0</strong> October 2, 2011</a></strong></dt>
 
 <dd>

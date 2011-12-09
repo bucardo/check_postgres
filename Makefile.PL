@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use 5.006001;
 
-my $VERSION = '2.18.1';
+my $VERSION = '2.19.0';
 
 if ($VERSION =~ /_/) {
     print "WARNING! This is a test version ($VERSION) and should not be used in production!\n";
