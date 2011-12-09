@@ -30,7 +30,7 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
-our $VERSION = '2.18.1';
+our $VERSION = '2.19.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
 
@@ -9497,10 +9497,10 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 =item B<Version 2.19.0>
 
   Add the --assume-prod option (Cédric Villemain)
-  Add the cluster_id check (Cédric Villemain)
-  Improve settings_checksum and checkpoint tests (Cédric Villemain)
 
-=item B<Version 2.18.1>
+  Add the cluster_id check (Cédric Villemain)
+
+  Improve settings_checksum and checkpoint tests (Cédric Villemain)
 
   Do no do an inner join to pg_user when checking database size
     (Greg Sabino Mullane; reported by Emmanuel Lesouef)
