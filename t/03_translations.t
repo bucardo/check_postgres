@@ -178,7 +178,7 @@ for my $l (sort keys %complete_langs) {
         my $lval = $msg{$l}{$msg}->[1];
         my $indent = $msg{$l}{$msg}->[0];
         next if $language eq 'French' and ($msg eq 'PID' or $msg eq 'port' or $msg eq 'pgbouncer-pool'
-								   or $msg eq 'index' or $msg eq 'table' or $msg eq 'transactions');
+            or $msg eq 'index' or $msg eq 'table' or $msg eq 'transactions');
         if ($val eq $lval and $indent) {
             fail qq{Message '$msg' in language $language appears to not be translated, but it not marked as such};
             $ok = 0;
