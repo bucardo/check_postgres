@@ -332,7 +332,7 @@ sub test_database_handle {
     $dbh->do('CREATE DATABASE ardala');
     $dbh->do('CREATE LANGUAGE plpgsql');
     $dbh->do('CREATE LANGUAGE plperlu');
-	$dbh->do("CREATE SCHEMA $fakeschema");
+    $dbh->do("CREATE SCHEMA $fakeschema");
     $dbh->{AutoCommit} = 0;
     $dbh->{RaiseError} = 1;
 
