@@ -2879,8 +2879,10 @@ sub validate_range {
             ) {
             ndie msg('range-warnbig');
         }
-        $warning = int $warning if length $warning;
-        $critical = int $critical if length $critical;
+        if ($type !~ /string/) {
+            $warning = int $warning if length $warning;
+            $critical = int $critical if length $critical;
+        }
     }
     elsif ('restringex' eq $type) {
         if (! length $critical and ! length $warning) {
@@ -3798,7 +3800,7 @@ sub check_cluster_id {
     ## Example:
     ##  check_postgres_cluster_id --critical="5633695740047915125"
 
-    my ($warning, $critical) = validate_range({type => 'integer', onlyone => 1});
+    my ($warning, $critical) = validate_range({type => 'integer_string', onlyone => 1});
 
     $db->{host} = '<none>';
 
