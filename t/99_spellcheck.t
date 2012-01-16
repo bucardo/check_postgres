@@ -152,6 +152,7 @@ Mullane
 Nagios
 ok
 PGP
+Postgres
 Sabino
 SQL
 http
@@ -160,7 +161,9 @@ login
 perl
 pgbouncer
 pgBouncer
+plpgsql
 postgres
+Pre
 runtime
 Schemas
 selectall
@@ -199,7 +202,6 @@ lang
 li
 listinfo
 moz
-Postgres
 pre
 px
 ul
@@ -212,6 +214,8 @@ xmlns
 Abrigo
 Albe
 alice
+Andras
+Andreas
 ARG
 args
 artemus
@@ -236,6 +240,7 @@ checkpostgresrc
 checksum
 checksums
 checktype
+Christoph
 commitratio
 commitratio
 conf
@@ -252,6 +257,7 @@ Cwd
 cylon
 datadir
 datallowconn
+Davide
 dbhost
 dbname
 dbpass
@@ -269,6 +275,7 @@ df
 dir
 dric
 dylan
+EB
 Eisentraut
 emma
 endcrypt
@@ -295,11 +302,13 @@ garrett
 Getopt
 GetOptions
 Glaesemann
+Glyn
 greg
 grimm
 GSM
 gtld
 Guettler
+Guillaume
 Gurjeet
 hardcode
 HiRes
@@ -326,6 +335,7 @@ includeuser
 Ioannis
 ioguix
 Jehan
+Jens
 Kabalin
 Kirkwood
 klatch
@@ -335,6 +345,7 @@ Krishnamurthy
 lancre
 Laurenz
 Lelarge
+Lesouef
 listinfo
 localhost
 localtime
@@ -345,9 +356,11 @@ maindatabase
 Makefile
 Mallett
 mallory
+Marti
 maxalign
 maxwait
 mcp
+MERCHANTABILITY
 MINIPAGES
 MINPAGES
 minvalue
@@ -380,6 +393,7 @@ notrigger
 ok
 Oliveira
 oper
+Optimizations
 oskar
 pageslots
 param
@@ -391,6 +405,7 @@ perfname
 perfs
 petabytes
 pgb
+PGBINDIR
 pgbouncer's
 PGCONTROLDATA
 PGDATA
@@ -399,12 +414,15 @@ PGHOST
 pgpass
 PGPORT
 PGSERVICE
+pgsql
 PGUSER
 pid
+plasmid
 plugin
 pluto
-Postgres
+POSTGRES
 postgresql
+PostgreSQL
 postgresrc
 prepend
 prereqs
@@ -476,6 +494,7 @@ tnm
 Tolley
 tup
 undef
+unlinked
 upd
 uptime
 USERNAME
@@ -489,9 +508,12 @@ wal
 WAL
 watson
 Westwood
+wget
 wiki
+Wilke
 wilkins
 xact
 xlog
+Yamada
 Zwerschke
 

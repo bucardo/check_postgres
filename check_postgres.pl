@@ -1927,7 +1927,7 @@ check_dbstats() if $action eq 'dbstats';
 ## Check how long since the last checkpoint
 check_checkpoint() if $action eq 'checkpoint';
 
-## Check the Datasbae System Identifier
+## Check the Database System Identifier
 check_cluster_id() if $action eq 'cluster_id';
 
 ## Check for disabled triggers
