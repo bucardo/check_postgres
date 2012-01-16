@@ -1534,7 +1534,7 @@ sub make_sure_mode_is {
     $db->{host} = '<none>';
 
     ## Run pg_controldata, grab the mode
-	$res = open_controldata();
+    $res = open_controldata();
 
     my $regex = msg('checkmode-state');
     if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
@@ -3159,8 +3159,8 @@ sub open_controldata {
         ndie msg('checkpoint-badver2');
     }
 
-	## return the pg_controldata output
-	return $res;
+    ## return the pg_controldata output
+    return $res;
 }
 
 
@@ -3712,7 +3712,7 @@ sub check_checkpoint {
     $db->{host} = '<none>';
 
     ## Run pg_controldata, grab the time
-	$res = open_controldata();
+    $res = open_controldata();
 
     my $regex = msg('checkpoint-po');
     if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
@@ -3803,7 +3803,7 @@ sub check_cluster_id {
     $db->{host} = '<none>';
 
     ## Run pg_controldata, grab the cluster-id
-	$res = open_controldata();
+    $res = open_controldata();
 
     my $regex = msg('checkcluster-id');
     if ($res !~ /$regex\s*(.+)/) { ## no critic (ProhibitUnusedCapture)
