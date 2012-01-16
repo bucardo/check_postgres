@@ -7517,7 +7517,7 @@ sub check_txn_time {
                    '',
                    '',
                    'xact_start',
-                   q{xact_start IS NOT NULL'});
+                   q{xact_start IS NOT NULL});
 
     return;
 
