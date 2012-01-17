@@ -508,6 +508,7 @@ sub create_fake_pg_table {
     my $self = shift;
     my $name = shift || die;
     my $args = shift || '';
+	my $where = shift || '';
     my $dbh = $self->{dbh} || die;
     my $dbuser = $self->{testuser} || die;
     if ($self->schema_exists($dbh,$fakeschema)) {
@@ -523,7 +524,10 @@ sub create_fake_pg_table {
         $funcargs = qq{($funcargs)};
     }
 
-    $dbh->do("CREATE TABLE $fakeschema.$name AS SELECT * FROM $name$funcargs LIMIT 0");
+	my $SQL = "CREATE TABLE $fakeschema.$name AS SELECT * FROM $name$funcargs$where ";
+	$SQL .= $where ? 'LIMIT 1' : 'LIMIT 0';
+
+    $dbh->do($SQL);
 
     if ($args) {
         $self->drop_function_if_exists($fakeschema,$name,$args);
@@ -535,6 +539,28 @@ sub create_fake_pg_table {
     return;
 
 } ## end of create_fake_pg_table
+
+
+sub remove_fake_pg_table {
+
+    my $self = shift;
+    my $name = shift || die;
+    my $dbh = $self->{dbh} || die;
+    my $dbuser = $self->{testuser} || die;
+    if (! $self->schema_exists($dbh,$fakeschema)) {
+		## No schema means no table!
+		return;
+	}
+
+	my $SQL = "DROP TABLE $fakeschema.$name";
+
+    $dbh->do($SQL);
+
+    $dbh->commit();
+
+    return;
+
+} ## end of remove_fake_pg_table
 
 
 sub get_fake_schema {
@@ -625,7 +651,8 @@ sub drop_table_if_exists {
     my $count = $dbh->selectall_arrayref($SQL)->[0][0];
     if ($count) {
         $dbh->{Warn} = 0;
-        $dbh->do("DROP TABLE $name CASCADE");
+		my $fullname = $schema ? "$schema.$name" : $name;
+        $dbh->do("DROP TABLE $fullname CASCADE");
         $dbh->{Warn} = 1;
         $dbh->commit();
     }
