@@ -17,6 +17,9 @@ my $cp = CP_Testing->new( {default_action => 'logfile'} );
 
 $dbh = $cp->test_database_handle();
 
+## Remove any old fake schema
+$cp->drop_schema_if_exists();
+
 $host = $cp->get_host();
 $dbname = $cp->get_dbname();
 
