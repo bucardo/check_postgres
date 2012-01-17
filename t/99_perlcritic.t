@@ -41,9 +41,17 @@ for my $filename (qw{Makefile.PL check_postgres.pl t/CP_Testing.pm}) {
     -e $filename or die qq{Could not find "$filename"!};
     open my $oldstderr, '>&', \*STDERR or die 'Could not dupe STDERR';
     close STDERR or die qq{Could not close STDERR: $!};
-	diag "Running perlcritic on file $filename";
-    my @vio = $critic->critique($filename);
-	diag "Done";
+	my @vio;
+	my $ranok = 0;
+	eval {
+		@vio = $critic->critique($filename);
+		$ranok = 1;
+	};
+	if (! $ranok) {
+		pass "Perl::Critic failed for file $filename. Error was: $@\n";
+		$@ = undef;
+		next;
+	}
     open STDERR, '>&', $oldstderr or die 'Could not recreate STDERR'; ## no critic
     close $oldstderr or die qq{Could not close STDERR copy: $!};
     my $vios = 0;
