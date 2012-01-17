@@ -508,7 +508,7 @@ sub create_fake_pg_table {
     my $self = shift;
     my $name = shift || die;
     my $args = shift || '';
-	my $where = shift || '';
+    my $where = shift || '';
     my $dbh = $self->{dbh} || die;
     my $dbuser = $self->{testuser} || die;
     if ($self->schema_exists($dbh,$fakeschema)) {
@@ -524,8 +524,8 @@ sub create_fake_pg_table {
         $funcargs = qq{($funcargs)};
     }
 
-	my $SQL = "CREATE TABLE $fakeschema.$name AS SELECT * FROM $name$funcargs$where ";
-	$SQL .= $where ? 'LIMIT 1' : 'LIMIT 0';
+    my $SQL = "CREATE TABLE $fakeschema.$name AS SELECT * FROM $name$funcargs$where ";
+    $SQL .= $where ? 'LIMIT 1' : 'LIMIT 0';
 
     $dbh->do($SQL);
 
@@ -548,11 +548,11 @@ sub remove_fake_pg_table {
     my $dbh = $self->{dbh} || die;
     my $dbuser = $self->{testuser} || die;
     if (! $self->schema_exists($dbh,$fakeschema)) {
-		## No schema means no table!
-		return;
-	}
+        ## No schema means no table!
+        return;
+    }
 
-	my $SQL = "DROP TABLE $fakeschema.$name";
+    my $SQL = "DROP TABLE $fakeschema.$name";
 
     $dbh->do($SQL);
 
@@ -651,7 +651,7 @@ sub drop_table_if_exists {
     my $count = $dbh->selectall_arrayref($SQL)->[0][0];
     if ($count) {
         $dbh->{Warn} = 0;
-		my $fullname = $schema ? "$schema.$name" : $name;
+        my $fullname = $schema ? "$schema.$name" : $name;
         $dbh->do("DROP TABLE $fullname CASCADE");
         $dbh->{Warn} = 1;
         $dbh->commit();
