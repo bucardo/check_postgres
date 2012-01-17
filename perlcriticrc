@@ -90,6 +90,7 @@ stop_words = Mullane Nagios Slony Slony's nols salesrep psql dbname postgres USE
 
 [-Variables::ProhibitPackageVars]
 [-Variables::ProhibitPunctuationVars]
+[-Variables::ProhibitUselessInitialization]
 [-Variables::RequireInitializationForLocalVars]
 [-Variables::RequireLexicalLoopIterators]
 [-Variables::RequireLocalizedPunctuationVars]
