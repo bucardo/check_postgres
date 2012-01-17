@@ -1592,7 +1592,23 @@ sub finishup {
     ## Final output
     ## These are meant to be compact and terse: sometimes messages go to pagers
 
-    $MRTG and do_mrtg_stats();
+    if ($MRTG) {
+        ## Try hard to ferret out a message in case we short-circuited here
+        my $msg = [[]];
+        if (keys %critical) {
+            ($msg) = values %critical;
+        }
+        elsif (keys %warning) {
+            ($msg) = values %warning;
+        }
+        elsif (keys %ok) {
+            ($msg) = values %ok;
+        }
+        elsif (keys %unknown) {
+            ($msg) = values %unknown;
+        }
+        do_mrtg_stats($msg->[0][0]);
+    }
 
     $action =~ s/^\s*(\S+)\s*$/$1/;
     my $service = sprintf "%s$action", $FANCYNAME ? 'postgres_' : '';
