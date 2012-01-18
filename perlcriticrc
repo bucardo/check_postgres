@@ -4,15 +4,13 @@ verbose = 8
 profile-strictness = quiet
 
 [Documentation::PodSpelling]
-stop_words = Mullane Nagios Slony Slony's nols salesrep psql dbname postgres USERNAME usernames dbuser pgpass nagios stderr showperf symlinked timesync criticals quirm lancre exabytes sami includeuser excludeuser flagg tardis WAL tablespaces tablespace perflimit burrick mallory grimm oskar ExclusiveLock garrett artemus queryname speedtest checksum checksums morpork klatch pluto faceoff slon greg watson franklin wilkins scott Sabino Seklecki dbpass autovacuum Astill refactoring NAGIOS localhost cronjob symlink symlinks backends snazzo logfile syslog parens plugin Cwd Ioannis Tambouras schemas SQL MRTG mrtg uptime datallowconn dbhost dbport ok contrib pageslots robert dylan emma fsm minvalue nextval dbstats del ret upd Bucardo noidle bucardo petabytes zettabytes tuples noobjectnames noposition nofuncbody slony noperms nolanguage battlestar pgbouncer pgBouncer
-
-
-
+stop_words = Mullane Nagios Slony Slony's nols salesrep psql dbname postgres USERNAME usernames dbuser pgpass nagios stderr showperf symlinked timesync criticals quirm lancre exabytes sami includeuser excludeuser flagg tardis WAL tablespaces tablespace perflimit burrick mallory grimm oskar ExclusiveLock garrett artemus queryname speedtest checksum checksums morpork klatch pluto faceoff slon greg watson franklin wilkins scott Sabino Seklecki dbpass autovacuum Astill refactoring NAGIOS localhost cronjob symlink symlinks backends snazzo logfile syslog parens plugin Cwd Ioannis Tambouras schemas SQL MRTG mrtg uptime datallowconn dbhost dbport ok contrib pageslots robert dylan emma fsm minvalue nextval dbstats del ret upd Bucardo noidle bucardo petabytes zettabytes tuples noobjectnames noposition nofuncbody slony noperms nolanguage battlestar pgbouncer pgBouncer datadir wget PostgreSQL commitratio idxscan idxtupread idxtupfetch idxblksread idxblkshit seqscan seqtupread hitratio xlog boxinfo pgbouncer's login maxwait noname noschema noperm filenames GSM
 
 [-Bangs::ProhibitFlagComments]
 [-Bangs::ProhibitNumberedNames]
 [-Bangs::ProhibitVagueNames]
 
+[-BuiltinFunctions::ProhibitBooleanGrep]
 [-BuiltinFunctions::ProhibitComplexMappings]
 [-BuiltinFunctions::ProhibitReverseSortBlock]
 
@@ -21,6 +19,8 @@ stop_words = Mullane Nagios Slony Slony's nols salesrep psql dbname postgres USE
 [-CodeLayout::RequireASCII]
 [-CodeLayout::RequireTidyCode]
 [-CodeLayout::RequireUseUTF8]
+
+[-Compatibility::PodMinimumVersion]
 
 [-ControlStructures::ProhibitCascadingIfElse]
 [-ControlStructures::ProhibitDeepNests]
@@ -79,6 +79,7 @@ stop_words = Mullane Nagios Slony Slony's nols salesrep psql dbname postgres USE
 [-Tics::ProhibitLongLines]
 
 [-ValuesAndExpressions::ProhibitAccessOfPrivateData]
+[-ValuesAndExpressions::ProhibitCommaSeparatedStatements]
 [-ValuesAndExpressions::ProhibitEmptyQuotes]
 [-ValuesAndExpressions::ProhibitImplicitNewlines]
 [-ValuesAndExpressions::ProhibitMagicNumbers]
@@ -86,11 +87,14 @@ stop_words = Mullane Nagios Slony Slony's nols salesrep psql dbname postgres USE
 [-ValuesAndExpressions::ProhibitNoisyQuotes]
 [-ValuesAndExpressions::ProhibitVersionStrings]
 [-ValuesAndExpressions::RequireNumberSeparators]
+[-ValuesAndExpressions::RequireNumericVersion]
 [-ValuesAndExpressions::RestrictLongStrings]
 
+[-Variables::ProhibitLocalVars]
 [-Variables::ProhibitPackageVars]
 [-Variables::ProhibitPunctuationVars]
 [-Variables::ProhibitUselessInitialization]
 [-Variables::RequireInitializationForLocalVars]
 [-Variables::RequireLexicalLoopIterators]
 [-Variables::RequireLocalizedPunctuationVars]
+

@@ -53,7 +53,7 @@ $t = qq{$S accepts matching checksum};
 like ($cp->run("-w $true_checksum"), qr/OK.*\Qchecksum: $true_checksum\E/, $t);
 
 $t=qq{$S returns the expected output for MRTG(failure)};
-like ($cp->run(qq{--mrtg 123 --output=MRTG}),
+like ($cp->run(q{--mrtg 123 --output=MRTG}),
       qr{^0\n0\n\n\d+}, $t);
 
 $t=qq{$S returns the expected output for MRTG(success)};

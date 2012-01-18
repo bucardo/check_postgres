@@ -224,7 +224,7 @@ Schema "schema_a":
 
 $t = qq{$S reports when schemas have different acls};
 $dbh1->do(q{ALTER SCHEMA schema_a OWNER TO check_postgres_testing});
-$dbh1->do(qq{GRANT USAGE ON SCHEMA schema_a TO check_postgres_testing});
+$dbh1->do(q{GRANT USAGE ON SCHEMA schema_a TO check_postgres_testing});
 like ($cp1->run($connect2),
       qr{^$label CRITICAL.*Items not matched: 1 .*
 Schema "schema_a":
@@ -287,7 +287,7 @@ Table "public.berri":
 $dbh1->do(q{ALTER TABLE berri SET WITHOUT OIDS});
 
 $t = qq{$S reports simple table acl differences};
-$dbh1->do(qq{GRANT SELECT ON TABLE berri TO alternate_owner});
+$dbh1->do(q{GRANT SELECT ON TABLE berri TO alternate_owner});
 ## No anchoring here as check_postgres_testing implicit perms are set too!
 like ($cp1->run($connect2),
       qr{^$label CRITICAL.*Items not matched: 1 .*
@@ -299,7 +299,7 @@ Table "public.berri":
       $t);
 
 $t = qq{$S reports complex table acl differences};
-$dbh2->do(qq{GRANT UPDATE,DELETE ON TABLE berri TO alternate_owner});
+$dbh2->do(q{GRANT UPDATE,DELETE ON TABLE berri TO alternate_owner});
 like ($cp1->run($connect2),
       qr{^$label CRITICAL.*Items not matched: 1 .*
 Table "public.berri":

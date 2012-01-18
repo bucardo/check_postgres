@@ -111,11 +111,9 @@ for my $mfile (@mfiles) {
 	file_is_clean($mfile);
 }
 
-exit;
-
 sub file_is_clean {
 
-	my $file = shift or die;
+	my $file = shift or die; ## no critic (ProhibitReusedNames)
 
 	if (!open $fh, '<', $file) {
 		fail qq{Could not open "$file": $!\n};

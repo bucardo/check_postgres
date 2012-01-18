@@ -229,7 +229,7 @@ sub test_database_handle {
             if ($res !~ /$newuser/) {
                 $COM = qq{psql -d template1 -q -h "$host" -c "CREATE USER $newuser"};
                 system $COM;
-                $SQL = q{UPDATE pg_shadow SET usesuper='t' WHERE usename = '$newuser'};
+                $SQL = qq{UPDATE pg_shadow SET usesuper='t' WHERE usename = '$newuser'};
                 $COM = qq{psql -d postgres -q -h "$host" -c "$SQL"};
                 system $COM;
             }
@@ -240,7 +240,7 @@ sub test_database_handle {
             if ($res !~ /$newuser/) {
                 $COM = qq{psql -d template1 -q -h "$host" -c "CREATE USER $newuser"};
                 system $COM;
-                $SQL = q{UPDATE pg_shadow SET usesuper='t' WHERE usename = '$newuser'};
+                $SQL = qq{UPDATE pg_shadow SET usesuper='t' WHERE usename = '$newuser'};
                 $COM = qq{psql -d postgres -q -h "$host" -c "$SQL"};
                 system $COM;
             }

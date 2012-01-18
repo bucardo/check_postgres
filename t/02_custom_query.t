@@ -40,7 +40,7 @@ like ($cp->run(qq{--query="$good_query" --valtype=string --warning=abc}),
       qr{$label OK}, $t);
 
 $t = qq{$S handles 'string' type for match};
-like ($cp->run(qq{--query="SELECT 'abc' AS result" --valtype=string --warning=abc}),
+like ($cp->run(q{--query="SELECT 'abc' AS result" --valtype=string --warning=abc}),
       qr{$label WARNING}, $t);
 
 $t = qq{$S handles 'time' type};

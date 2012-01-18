@@ -904,7 +904,7 @@ if (defined $rcfile) {
             $name = "dbname$1";
         }
         elsif ($name =~ /^u(\d+)$/o) {
-            $name = 'dbuser$1';
+            $name = "dbuser$1";
         }
 
         ## These options are multiples ('@s')
@@ -1634,7 +1634,7 @@ sub finishup {
                 or ($DEBUGOUTPUT =~ /u/io and $type eq 'u');
         }
         for (sort keys %$info) {
-            printf "%s %s%s ",
+            printf '%s %s%s ',
                 $_,
                 $showdebug ? "[DEBUG: $DEBUG_INFO] " : '',
                 join $SEP => map { $_->[0] } @{$info->{$_}};
@@ -2414,31 +2414,31 @@ sub run_command {
 
             ## Transform psql output into an arrayref of hashes
             my @stuff;
-            my $num = 0;
+            my $lnum = 0;
             my $lastval;
             for my $line (split /\n/ => $db->{slurp}) {
 
                 if (index($line,'-')==0) {
-                    $num++;
+                    $lnum++;
                     next;
                 }
                 if ($line =~ /^([\?\w]+)\s+\| (.*)/) {
-                    $stuff[$num]{$1} = $2;
+                    $stuff[$lnum]{$1} = $2;
                     $lastval = $1;
                 }
                 elsif ($line =~ /^QUERY PLAN\s+\| (.*)/) {
-                    $stuff[$num]{queryplan} = $1;
+                    $stuff[$lnum]{queryplan} = $1;
                     $lastval = 'queryplan';
                 }
                 elsif ($line =~ /^\s+: (.*)/) {
-                    $stuff[$num]{$lastval} .= "\n$1";
+                    $stuff[$lnum]{$lastval} .= "\n$1";
                 }
                 elsif ($line =~ /^\s+\| (.+)/) {
-                    $stuff[$num]{$lastval} .= "\n$1";
+                    $stuff[$lnum]{$lastval} .= "\n$1";
                 }
                 ## No content: can happen in the source of functions, for example
                 elsif ($line =~ /^\s+\|\s+$/) {
-                    $stuff[$num]{$lastval} .= "\n";
+                    $stuff[$lnum]{$lastval} .= "\n";
                 }
                 else {
                     my $msg = msg('no-parse-psql');
@@ -2457,8 +2457,8 @@ sub run_command {
                     if (! $opt{stop_looping}) {
                         ## Just in case...
                         $opt{stop_looping} = 1;
-                        my $info = run_command('SELECT version() AS version');
-                        (my $v = $info->{db}[0]{slurp}[0]{version}) =~ s/(\w+ \S+).+/$1/;
+                        my $linfo = run_command('SELECT version() AS version');
+                        (my $v = $linfo->{db}[0]{slurp}[0]{version}) =~ s/(\w+ \S+).+/$1/;
                         warn "Postgres version: $v\n";
                     }
                     exit 1;
@@ -4710,7 +4710,7 @@ sub check_hot_standby_delay {
     if (1 == $slave) {
         ($slave, $master) = (2, 1);
         for my $k (qw(host port dbname dbuser dbpass)) {
-            ($opt{$k}, $opt{$k . 2}) = ($opt{$k . 2}, $opt{$k});
+            ($opt{$k}, $opt{$k . 2}) = ($opt{$k . 2}, $opt{$k}); ## no critic (ProhibitMismatchedOperators)
         }
     }
 
@@ -4903,7 +4903,7 @@ FROM (SELECT nspname, relname, $criteria AS v
             add_unknown (
                 $found ? $type eq 'vacuum' ? msg('vac-nomatch-v')
                 : msg('vac-nomatch-a')
-                : msg('no-match-table')
+                : msg('no-match-table') ## no critic (RequireTrailingCommaAtNewline)
             );
         }
         elsif ($maxtime < 0) {
@@ -5536,7 +5536,7 @@ sub check_pgbouncer_backends {
     }
 
     ## Grab information from the config
-    $SQL = qq{SHOW CONFIG};
+    $SQL = 'SHOW CONFIG';
 
     my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1 } );
 
@@ -5552,7 +5552,7 @@ sub check_pgbouncer_backends {
     }
 
     ## Grab information from pools
-    $SQL = qq{SHOW POOLS};
+    $SQL = 'SHOW POOLS';
 
     $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1 } );
 
@@ -5897,7 +5897,7 @@ FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace
 
             my $nicename = $kind eq 'r' ? "$schema.$name" : $name;
 
-            $db->{perf} .= sprintf "%s%s=%sB;%s;%s",
+            $db->{perf} .= sprintf '%s%s=%sB;%s;%s',
                 $VERBOSE==1 ? "\n" : ' ',
                 perfname($nicename), $size, $warning, $critical;
             ($max=$size, $pmax=$psize, $kmax=$kind, $nmax=$name, $smax=$schema) if $size > $max;
@@ -6479,13 +6479,13 @@ sub check_same_schema {
                         }
 
                         if (exists $tdiff->{list}{$col}{exists}) {
-                            my $e = $tdiff->{list}{$col}{exists};
-                            for my $name (sort keys %$e) {
+                            my $ex = $tdiff->{list}{$col}{exists};
+                            for my $name (sort keys %$ex) {
                                 push @msg => sprintf qq{  "%s":\n    %s\n},
                                     $col,
                                     msg('ss-notset', $name);
-                                my $isthere = join ', ' => sort { $a<=>$b } keys %{ $e->{$name}{isthere} };
-                                my $nothere = join ', ' => sort { $a<=>$b } keys %{ $e->{$name}{nothere} };
+                                my $isthere = join ', ' => sort { $a<=>$b } keys %{ $ex->{$name}{isthere} };
+                                my $nothere = join ', ' => sort { $a<=>$b } keys %{ $ex->{$name}{nothere} };
                                 push @msg => sprintf "      %-*s %s\n      %-*s %s\n",
                                     $maxsize, $msg_exists,
                                     $isthere,
@@ -6661,7 +6661,7 @@ sub read_audit_file {
     close $fh or warn qq{Could not close "$filename": $!\n};
 
     my $POSTGRES1;
-    eval $data;
+    eval $data; ## no critic (ProhibitStringyEval)
     if ($@) {
         die qq{Failed to parse file "$filename": $@\n};
     }
@@ -7000,6 +7000,7 @@ sub check_sequence {
     (my $c = $critical) =~ s/\D//;
 
     ## Gather up all sequence names
+    ## no critic
     my $SQL = q{
 SELECT DISTINCT ON (nspname, seqname) nspname, seqname,
   quote_ident(nspname) || '.' || quote_ident(seqname) AS safename, typname
@@ -7040,6 +7041,7 @@ FROM (
 ) AS seqs
 ORDER BY nspname, seqname, typname
 };
+    ## use critic
 
     my $info = run_command($SQL, {regex => qr{\w}, emptyok => 1} );
 
@@ -7222,7 +7224,7 @@ sub check_slony_status {
     }
 
     my $SLSQL =
-qq{SELECT
+q{SELECT
  ROUND(EXTRACT(epoch FROM st_lag_time)) AS lagtime,
  st_origin,
  st_received,
@@ -7363,19 +7365,19 @@ sub check_txn_idle {
 
     ## We don't GROUP BY because we want details on every connection
     ## Someday we may even break things down by database
-    if ($type ne "qtime") {
+    if ($type ne 'qtime') {
         $SQL = q{SELECT datname, datid, procpid, usename, client_addr, xact_start, current_query, }.
             q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
             qq{FROM pg_stat_activity WHERE $clause$USERWHERECLAUSE }.
-            qq{ORDER BY xact_start, query_start, procpid DESC};
+            q{ORDER BY xact_start, query_start, procpid DESC};
     }
     else {
         $SQL = q{SELECT datname, datid, procpid, usename, client_addr, current_query, }.
             q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
             qq{FROM pg_stat_activity WHERE $clause$USERWHERECLAUSE }.
-            qq{ORDER BY query_start, procpid DESC};
+            q{ORDER BY query_start, procpid DESC};
     }
 
     my $info = run_command($SQL, { emptyok => 1 } );
@@ -7391,7 +7393,7 @@ sub check_txn_idle {
     my $count = 0;
 
     ## Info about the top offender
-    my $whodunit = "";
+    my $whodunit = '';
     if ($MRTG) {
         if (defined $db->{dbname}) {
             $whodunit = "DB: $db->{dbname}";
@@ -7422,7 +7424,7 @@ sub check_txn_idle {
         }
 
         ## Detect other cases where pg_stat_activity is not fully populated
-        if ($type ne "qtime" and length $r->{xact_start} and $r->{xact_start} !~ /\d/o) {
+        if ($type ne 'qtime' and length $r->{xact_start} and $r->{xact_start} !~ /\d/o) {
             add_unknown msg('psa-noexact');
             return;
         }
