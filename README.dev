@@ -28,15 +28,23 @@ Login to the bucardo.org box, and then:
 * git pull
 * make distclean; perl Makefile.PL; make disttest; make dist
 * prove -v t/00_release.t
-* cd ~/htdocs/check_postgres
+* cd ~/www/downloads
 * cp -i ~/code/check_postgres/check_postgres* .
+* cd ~/www/check_postgres
+* ln -s ../downloads/<latest tarball> .
 * edit latest_version.txt
 * edit index.html
 
+* Edit the bucardo.org page and bump the version: http://bucardo.org/wiki/Check_postgres
+
 * Email to check_postgres-announce with summary of changes
+
+* Email the Postgres Weekly News
+
+* Email pgsql-announce if this is a major version
 
 Once the new version is out there:
 
-* Make sure the new version is in the pulldown list of available versions.
-* Go through and make sure all bugs solved in this release are marked as resolved
+* Make sure the new version is in the pulldown list of available versions on bugzilla.
+* Go through and make sure all bugs solved in this release are marked as resolved.
 
