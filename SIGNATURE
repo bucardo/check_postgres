@@ -1,5 +1,5 @@
 This file contains message digests of all files listed in MANIFEST,
-signed via the Module::Signature module, version 0.66.
+signed via the Module::Signature module, version 0.68.
 
 To verify the content in this distribution, first make sure you have
 Module::Signature installed, then type:
@@ -14,25 +14,26 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: RIPEMD160
 
-SHA1 1a85225b9dc18ad9ae156a87dbecefe906688b7a MANIFEST
+SHA1 9ab773a8191ac2df4439c8bbcc99dba35d025883 MANIFEST
 SHA1 92f9e28d28d95763cce24d588b19262efc7218f7 MANIFEST.SKIP
-SHA1 0fad21fffc4da972a3678b914dd4c17c725d12b9 META.yml
-SHA1 e47bcde5ecf9db177398ba338817d5df6c450e8d Makefile.PL
-SHA1 700897deb28bd8f514817db6c0eb238efb61a7f1 README
+SHA1 4af2c5cd509eb4e60c5aaeea624a1d59f0cba745 META.yml
+SHA1 f96da4b33e66d585d6cffa0d39205c53dc966a70 Makefile.PL
+SHA1 acffbf8ac9243e22197a07cb02fb1dd79c553881 README
 SHA1 3bdea49b9baf59b6c2f1c238f45794ba0f3fdd0f TODO
-SHA1 0c7d027d2d83e346741b6413b2f1be61e1041dc3 check_postgres.pl
-SHA1 a688d42b11c0bef9f46d002bbaebe30ce13919a7 check_postgres.pl.asc
-SHA1 8b68cdd1a336b138050fef8d287cfd684a5f7f2c check_postgres.pl.html
-SHA1 77556e0d493cf22602fff7837cf80832317e498f perlcriticrc
+SHA1 df5500fe85ffaa96428c755ccdccd38ab275ebb8 check_postgres.pl
+SHA1 a46c77b4be9458ced64673686f27d9194ce0e7ed check_postgres.pl.asc
+SHA1 082cf28c0de8db75ce0a5bd3e8dbfebbe7abb8a1 check_postgres.pl.html
+SHA1 2a5730008e80e9c94a3a31991203b19fd6c41cad perlcriticrc
 SHA1 ef43082a685d993fdd151de16590ce0f6832de7a t/00_basic.t
 SHA1 29700e8331d1780e87b858581054cd190e4f4ecb t/00_signature.t
 SHA1 439053254ee01e2ec406f9d1605dc5e28257b8bd t/00_test_tester.t
 SHA1 9e49f1a4de88e64ba73b3cbcf45cba158ca49afc t/02_autovac_freeze.t
-SHA1 a53671892d1ff8ee39134a1bbaa31064ada296e0 t/02_backends.t
+SHA1 fc83c41652b0cef2dc07efdea30400a747a27cf1 t/02_backends.t
 SHA1 923acca525a528ccefd630eef8e015007a1bc5d0 t/02_bloat.t
-SHA1 a0dd2dde7ea934335b61de6c4335768fc372bfbe t/02_checkpoint.t
+SHA1 58f04f98539371d9469ca93890b3f61a990fa343 t/02_checkpoint.t
+SHA1 c3e31bedea2a55b49d61874a7e4b8f6900746b22 t/02_cluster_id.t
 SHA1 4c403c8d733fff18e8ef5b198c0f0837419b4e77 t/02_connection.t
-SHA1 59fb92cebb81fe2e5a46cde2b0e0b9420728ba3a t/02_custom_query.t
+SHA1 3ec5348a4125429a16e486a3850baa43954d278a t/02_custom_query.t
 SHA1 6e255ba83d65c41c9f27ec05b3c66b57f531b42e t/02_database_size.t
 SHA1 4d5d6b521ae8ec45cb14feea155858379ec77028 t/02_dbstats.t
 SHA1 f01542845070822b80cac7aaa3038eae50f8d3ae t/02_disabled_triggers.t
@@ -43,7 +44,7 @@ SHA1 f83838ef9da1d67e026f88b833522a73f3ae6699 t/02_last_analyze.t
 SHA1 d6a7fba8f0e1fd4f3ad1f3c01a05d12f2e35e64c t/02_last_vacuum.t
 SHA1 5fca9f38305fd0c8c5d1726d08f0a95ae8755b8e t/02_listener.t
 SHA1 87d175a8969b06c549ce0757995cf98a42fe3311 t/02_locks.t
-SHA1 951b8b74b818554be71e089a0ddd5f6063a07c33 t/02_logfile.t
+SHA1 a780920848536059af81bc77140ed70051630d00 t/02_logfile.t
 SHA1 2c31b39e6005c7e9ae5060ea42de549de895b39f t/02_new_version_bc.t
 SHA1 f0d114dfc2f1149ca29c249d3c9b72c7c5e3ba92 t/02_new_version_cp.t
 SHA1 1381613f67c93854c9f8b73a3b168348bdd56af3 t/02_new_version_pg.t
@@ -53,9 +54,9 @@ SHA1 2706f51b92149330f123e174ad009ada0124a538 t/02_query_runtime.t
 SHA1 033bb1162ad990161da1c591d5fb9f7c452ee4c9 t/02_query_time.t
 SHA1 bdd9a4a73bbce6a5450cbc04e1fe357f3bc587a7 t/02_relation_size.t
 SHA1 0c6cb335db415dd354ac814a88424f01af57ff31 t/02_replicate_row.t
-SHA1 59fb6249b2dd48235a9d85372d2df764f0efed75 t/02_same_schema.t
+SHA1 e36d0632a32b22ebdded6ab91fd46aca7f8b2b31 t/02_same_schema.t
 SHA1 130fee186667da0991a230dbc999d6fc104d1ebf t/02_sequence.t
-SHA1 f498f14c7b05792e18b99ef7d6c91592682d29b6 t/02_settings_checksum.t
+SHA1 0474d2d059dff8638f62b739aa80713f56308d62 t/02_settings_checksum.t
 SHA1 1f3cfd12a21870c5e4615fb4eff012085e30182f t/02_slony_status.t
 SHA1 64493100381abd82aa1eb06a46d67456f4e8486d t/02_timesync.t
 SHA1 221d3c78eece2a5fc796611e3133e5ccc8f8fad0 t/02_txn_idle.t
@@ -63,13 +64,13 @@ SHA1 7c77be0301c936974778c7c92186088ef9b06526 t/02_txn_time.t
 SHA1 24ff2b5b0690557e1a45227d5c1131226c9ff30a t/02_txn_wraparound.t
 SHA1 2270e466a5761256be6b69cc0c7e8c03f2414e3b t/02_version.t
 SHA1 93c5da727c39f3dbb1953d061fa6f96578ba7952 t/02_wal_files.t
-SHA1 4b0eb2dcbe27f5d377d1701148bc58a25f06a40c t/03_translations.t
+SHA1 60b209d285ddd9a44a55751dffb6e8a927b27337 t/03_translations.t
 SHA1 eb66336f915f77a1cd82c1b19b44acc7dc2d5038 t/04_timeout.t
 SHA1 96e6e5da3e1f6753a469e7afc8cf070024b33b23 t/99_cleanup.t
-SHA1 902dc689577e54b5de30b8f484847827002afd07 t/CP_Testing.pm
+SHA1 d2021f28db03e69e8cfdca8760ad032abf9357ae t/CP_Testing.pm
 -----BEGIN PGP SIGNATURE-----
 
-iEYEAREDAAYFAk6InpMACgkQvJuQZxSWSsjpzACffRDnggz9RE+Ldej4q6cuv2hv
-GzwAoIlMdReFt6I49aWkeUmNd3DSYobp
-=SiEv
+iEYEAREDAAYFAk8WNKQACgkQvJuQZxSWSsj/oACaAkJNba/iUhZkTwAsdbHQkx/c
+Vt0AoNvyFLULIolnmD/cpSCTZ3diyxX7
+=rOic
 -----END PGP SIGNATURE-----
