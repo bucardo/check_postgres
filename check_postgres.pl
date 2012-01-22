@@ -9615,6 +9615,10 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
+=item B<Version 2.20.0>
+
+  Add check for pgagent jobs (David E. Wheeler)
+
 =item B<Version 2.19.0> January 17, 2012
 
   Add the --assume-prod option (Cédric Villemain)
