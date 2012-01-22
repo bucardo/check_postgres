@@ -964,6 +964,7 @@ GetOptions(
     'get_method=s',
     'language=s',
     'mrtg=s',      ## used by MRTG checks only
+    'minoronly=i', ## used by version checks only
     'logfile=s',   ## used by check_logfile only
     'queryname=s', ## used by query_runtime only
     'query=s',     ## used by custom_query only
@@ -5338,14 +5339,20 @@ sub find_new_version {
 
     ## Check for a revision update
     if ($lmajor==$cmajor and $lminor==$cminor and $lrevision<$crevision) {
-        add_critical msg('new-ver-warn', $cversion, $program, $lversion);
+        if ($opt{minoronly}) {
+            add_warning msg('new-ver-warn', $cversion, $program, $lversion);
+        } else {
+            add_critical msg('new-ver-warn', $cversion, $program, $lversion);
+        }
         return;
     }
 
     ## Check for a major update
-    if ($lmajor<$cmajor or ($lmajor==$cmajor and $lminor<$cminor)) {
-        add_warning msg('new-ver-warn', $cversion, $program, $lversion);
-        return;
+    if ( ! $opt{minoronly}) {
+        if ($lmajor<$cmajor or ($lmajor==$cmajor and $lminor<$cminor)) {
+            add_warning msg('new-ver-warn', $cversion, $program, $lversion);
+            return;
+        }
     }
 
     ## Anything else must be time travel, which we cannot handle
