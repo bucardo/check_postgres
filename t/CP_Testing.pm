@@ -249,7 +249,7 @@ sub test_database_handle {
                 $SQL = qq{SELECT * FROM pg_language WHERE lanname = '$lang'};
                 $res = qx{psql -Ax -qt -d postgres -q -h "$host" -c "$SQL"};
                 if ($res !~ /$lang/) {
-                    my $createlang = $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/createlang" : 'pg_ctl';
+                    my $createlang = $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/createlang" : 'createlang';
                     $COM = qq{$createlang -d postgres -h "$host" $lang};
                     system $COM;
                     }
