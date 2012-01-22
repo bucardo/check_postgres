@@ -32,7 +32,7 @@ $Data::Dumper::Useqq = 1;
 
 our $VERSION = '2.19.0';
 
-use vars qw/ %opt $PSQL $res $COM $SQL $db /;
+use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 
 ## Which user to connect as if --dbuser is not given
 $opt{defaultuser} = 'postgres';
@@ -43,11 +43,11 @@ $opt{defaultport} = 5432;
 ## What type of output to use by default
 our $DEFAULT_OUTPUT = 'nagios';
 
-## If psql is not in your path, it is recommended to hardcode it here,
-## as an alternative to the --PSQL option
-$PSQL = '';
+## If psql binaries are not in your path, it is recommended to hardcode it here,
+## as an alternative to the --PGBINDIR option
+$PGBINDIR = '';
 
-## If this is true, $opt{PSQL} is disabled for security reasons
+## If this is true, $opt{PSQL} and $opt{PGBINDIR} are disabled for security reasons
 our $NO_PSQL_OPTION = 1;
 
 ## If true, we show how long each query took by default. Requires Time::HiRes to be installed.
@@ -125,6 +125,7 @@ our %msg = (
     'custom-nostring'    => q{Must provide a query string},
     'database'           => q{database},
     'dbsize-version'     => q{Target database must be version 8.1 or higher to run the database_size action},
+    'depr-pgcontroldata' => q{PGCONTROLDATA is deprecated, use PGBINDIR instead.},
     'die-action-version' => q{Cannot run "$1": server version must be >= $2, but is $3},
     'die-badtime'        => q{Value for '$1' must be a valid time. Examples: -$2 1s  -$2 "10 minutes"},
     'die-badversion'     => q{Invalid version string: $1},
@@ -188,7 +189,7 @@ our %msg = (
     'opt-psql-noexist'   => q{Cannot find given psql executable: $1},
     'opt-psql-nofind'    => q{Could not find a suitable psql executable},
     'opt-psql-nover'     => q{Could not determine psql version},
-    'opt-psql-restrict'  => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
+    'opt-psql-restrict'  => q{Cannot use the --PGBINDIR or --PSQL option when NO_PSQL_OPTION is on},
     'pgagent-jobs-ok'    => q{No failed jobs},
     'pgbouncer-pool'     => q{Pool=$1 $2=$3},
     'pgb-backends-mrtg'  => q{DB=$1 Max connections=$2},
@@ -439,7 +440,7 @@ our %msg = (
     'opt-psql-noexist'   => q{Ne peut pas trouver l'exécutable psql indiqué : $1},
     'opt-psql-nofind'    => q{N'a pas pu trouver un psql exécutable},
     'opt-psql-nover'     => q{N'a pas pu déterminer la version de psql},
-    'opt-psql-restrict'  => q{Ne peut pas utiliser l'option --PSQL si NO_PSQL_OPTION est activé},
+    'opt-psql-restrict'  => q{Ne peut pas utiliser l'option --PGBINDIR ou --PSQL si NO_PSQL_OPTION est activé},
     'pgbouncer-pool'     => q{Pool=$1 $2=$3},
     'pgb-backends-mrtg'  => q{base=$1 connexions max=$2},
     'pgb-backends-msg'   => q{$1 connexions sur $2 ($3%)},
@@ -959,6 +960,7 @@ GetOptions(
     'dbpass|dbpass1=s@',
     'dbservice|dbservice1=s@',
 
+    'PGBINDIR=s',
     'PSQL=s',
 
     'tempdir=s',
@@ -1217,7 +1219,8 @@ Limit options:
 Other options:
   --assume-standby-mode assume that server in continious WAL recovery mode
   --assume-prod         assume that server in production mode
-  --PSQL=FILE           location of the psql executable; avoid using if possible
+  --PGBINDIR=PATH       path of the postgresql binaries; avoid using if possible
+  --PSQL=FILE           (deprecated) location of the psql executable; avoid using if possible
   -v, --verbose         verbosity level; can be used more than once to increase the level
   -h, --help            display this help information
   --man                 display the full manual
@@ -1260,12 +1263,6 @@ if ($opt{showtime}) {
         die msg('no-time-hires');
     }
 }
-
-## Check the current database mode
-our $STANDBY = 0;
-our $MASTER = 0;
-make_sure_standby_mode() if $opt{'assume-standby-mode'};
-make_sure_prod() if $opt{'assume-prod'};
 
 ## We don't (usually) want to die, but want a graceful Nagios-like exit instead
 sub ndie {
@@ -1321,20 +1318,28 @@ sub msg_en {
 
 ## Everything from here on out needs psql, so find and verify a working version:
 if ($NO_PSQL_OPTION) {
-    delete $opt{PSQL} and ndie msg('opt-psql-restrict');
+    (delete $opt{PGBINDIR} or delete $opt{PSQL}) and ndie msg('opt-psql-restrict');
 }
-
-if (! defined $PSQL or ! length $PSQL) {
-    if (exists $opt{PSQL}) {
-        $PSQL = $opt{PSQL};
-        $PSQL =~ m{^/[\w\d\/]*psql$} or ndie msg('opt-psql-badpath');
-        -e $PSQL or ndie msg('opt-psql-noexist', $PSQL);
+if (! defined $PGBINDIR or ! length $PGBINDIR) {
+    if (defined $ENV{PGBINDIR} and length $ENV{PGBINDIR}){
+        $PGBINDIR = $ENV{PGBINDIR};
+    }
+    elsif (defined $opt{PGBINDIR} and length $opt{PGBINDIR}){
+        $PGBINDIR = $opt{PGBINDIR};
     }
     else {
-        my $psql = $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/psql" : 'psql';
-        chomp($PSQL = qx{which $psql});
-        $PSQL or ndie msg('opt-psql-nofind');
+        undef $PGBINDIR;
     }
+}
+if (exists $opt{PSQL}) {
+    $PSQL = $opt{PSQL};
+    $PSQL =~ m{^/[\w\d\/]*psql$} or ndie msg('opt-psql-badpath');
+    -e $PSQL or ndie msg('opt-psql-noexist', $PSQL);
+}
+else {
+    my $psql = (defined $PGBINDIR) ? "$PGBINDIR/psql" : "psql";
+    chomp($PSQL = qx{which "$psql"});
+    $PSQL or ndie msg('opt-psql-nofind');
 }
 -x $PSQL or ndie msg('opt-psql-noexec', $PSQL);
 $res = qx{$PSQL --version};
@@ -1345,6 +1350,12 @@ $VERBOSE >= 2 and warn qq{psql=$PSQL version=$psql_version\n};
 
 $opt{defaultdb} = $psql_version >= 8.0 ? 'postgres' : 'template1';
 $opt{defaultdb} = 'pgbouncer' if $action =~ /^pgb/;
+
+## Check the current database mode
+our $STANDBY = 0;
+our $MASTER = 0;
+make_sure_standby_mode() if $opt{'assume-standby-mode'};
+make_sure_prod() if $opt{'assume-prod'};
 
 ## Create the list of databases we are going to connect to
 my @targetdb = setup_target_databases();
@@ -3162,10 +3173,18 @@ sub open_controldata {
     }
 
     ## Run pg_controldata
-    my $pgc
-        = $ENV{PGCONTROLDATA} ? $ENV{PGCONTROLDATA}
-        : $ENV{PGBINDIR}      ? "$ENV{PGBINDIR}/pg_controldata"
-        :                       'pg_controldata';
+    ## We still catch deprecated option
+    my $pgc;
+    if (defined $ENV{PGCONTROLDATA} and length $ENV{PGCONTROLDATA}) {
+        # ndie msg('depr-pgcontroldata');
+        $pgc = "$ENV{PGCONTROLDATA}";
+    }
+    else {
+        $pgc = (defined $PGBINDIR) ? "$PGBINDIR/pg_controldata" : "pg_controldata";
+        chomp($pgc = qx{which "$pgc"});
+    }
+    -x $pgc or ndie msg('opt-psql-noexec', $pgc);
+
     $COM = qq{$pgc "$dir"};
     eval {
         $res = qx{$COM 2>&1};
@@ -8058,8 +8077,19 @@ Only takes effect if using Nagios output mode.
 
 Enables test mode. See the L</"TEST MODE"> section below.
 
+=item B<--PGBINDIR=PATH>
+
+Tells the script where to find the psql binaries. Useful if you have more than
+one version of the PostgreSQL executables on your system, or if there are not
+in your path. Note that this option is in all uppercase. By default, this option
+is I<not allowed>. To enable it, you must change the C<$NO_PSQL_OPTION> near the
+top of the script to 0. Avoid using this option if you can, and instead use
+environement variable c<PGBINDIR> or hard-coded C<$PGBINDIR> variable, also near
+the top of the script, to set the path to the PostgreSQL to use.
+
 =item B<--PSQL=PATH>
 
+I<(deprecated, this option may be removed in a future release!)>
 Tells the script where to find the psql program. Useful if you have more than 
 one version of the psql executable on your system, or if there is no psql program 
 in your path. Note that this option is in all uppercase. By default, this option 
@@ -8282,9 +8312,8 @@ processing shipped WAL files, and is meant to check that your warm standby is tr
 The data directory must be set, either by the environment variable C<PGDATA>, or passing 
 the C<--datadir> argument. It returns the number of seconds since the last checkpoint 
 was run, as determined by parsing the call to C<pg_controldata>. Because of this, the 
-pg_controldata executable must be available in the current path. Alternatively, you can 
-set the environment variable C<PGCONTROLDATA> to the exact location of the pg_controldata 
-executable, or you can specify C<PGBINDIR> as the directory that it lives in.
+pg_controldata executable must be available in the current path. Alternatively,
+you can specify C<PGBINDIR> as the directory that it lives in.
 It is also possible to use the special options I<--assume-prod> or
 I<--assume-standby-mode>, if the mode found is not the one expected, a CRITICAL is emitted.
 
@@ -9550,6 +9579,7 @@ check_postgresrc files can be ignored by supplying a C<--no-checkpostgresrc> arg
 =head1 ENVIRONMENT VARIABLES
 
 The environment variable I<$ENV{HOME}> is used to look for a F<.check_postgresrc> file.
+The environment variable I<$ENV{PGBINDIR}> is used to look for PostgreSQL binaries.
 
 =head1 TIPS AND TRICKS
 
