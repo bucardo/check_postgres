@@ -189,6 +189,7 @@ our %msg = (
     'opt-psql-nofind'    => q{Could not find a suitable psql executable},
     'opt-psql-nover'     => q{Could not determine psql version},
     'opt-psql-restrict'  => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
+    'pgagent-jobs-ok'    => q{No failed jobs},
     'pgbouncer-pool'     => q{Pool=$1 $2=$3},
     'pgb-backends-mrtg'  => q{DB=$1 Max connections=$2},
     'pgb-backends-msg'   => q{$1 of $2 connections ($3%)},
@@ -1160,6 +1161,7 @@ our $action_info = {
  pgb_pool_maxwait    => [1, 'Check the current maximum wait time for client connections in pgbouncer pools.'],
  pgbouncer_backends  => [0, 'Check how many clients are connected to pgbouncer compared to max_client_conn.'],
  pgbouncer_checksum  => [0, 'Check that no pgbouncer settings have changed since the last check.'],
+ pgagent_jobs        => [0, 'Check for no failed pgAgent jobs within a specified period of time.'],
  prepared_txns       => [1, 'Checks number and age of prepared transactions.'],
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
@@ -1984,6 +1986,8 @@ check_pgb_pool('maxwait') if $action eq 'pgb_pool_maxwait';
 
 ## Check how many clients are connected to pgbouncer compared to max_client_conn.
 check_pgbouncer_backends() if $action eq 'pgbouncer_backends';
+
+check_pgagent_jobs() if $action eq 'pgagent_jobs';
 
 ##
 ## Everything past here does not hit a Postgres database
@@ -2826,7 +2830,7 @@ sub validate_range {
                 ndie msg('range-seconds', 'critical')
             }
             $critical = $1;
-            if (length $warning and $warning > $critical) {
+            if (!$arg->{any_warning} and length $warning and $warning > $critical) {
                 ndie msg('range-warnbigtime', $warning, $critical);
             }
         }
@@ -2837,7 +2841,7 @@ sub validate_range {
         if (! length $critical and ! length $warning) {
             ndie msg('range-notime');
         }
-        if (length $warning and length $critical and $warning > $critical) {
+        if (!$arg->{any_warning} and length $warning and length $critical and $warning > $critical) {
             ndie msg('range-warnbigtime', $warning, $critical);
         }
     }
@@ -2865,7 +2869,7 @@ sub validate_range {
                 ndie msg('range-badsize', 'warning');
             }
             $warning = size_in_bytes($1,$2);
-            if (length $critical and $warning > $critical) {
+            if (!$arg->{any_warning} and length $critical and $warning > $critical) {
                 ndie msg('range-warnbigsize', $warning, $critical);
             }
         }
@@ -5428,6 +5432,73 @@ sub check_new_version_tnm {
 
 } ## end of check_new_version_tnm
 
+
+sub check_pgagent_jobs {
+    ## Check for failed pgAgent jobs.
+    ## Supports: Nagios
+    ## Critical and warning are intervals.
+    ## Example: --critical="1 hour"
+    ## Example: --warning="2 hours"
+
+    my ($warning, $critical) = validate_range({ type => 'time', any_warning => 1 });
+
+    # Determine critcal warning column contents.
+    my $is_crit = $critical && $warning
+        ? "GREATEST($critical - EXTRACT('epoch' FROM NOW() - (jlog.jlgstart + jlog.jlgduration)), 0)"
+        : $critical ? 1 : 0;
+
+    # Determine max time to examine.
+    my $seconds = do {
+        no warnings;
+        $warning > $critical ? $warning : $critical;
+    };
+
+    $SQL = qq{
+        SELECT jlog.jlgid
+             , job.jobname
+             , step.jstname
+             , slog.jslresult
+             , slog.jsloutput
+             , $is_crit AS critical
+          FROM pgagent.pga_job job
+          JOIN pgagent.pga_joblog     jlog ON job.jobid  = jlog.jlgjobid
+          JOIN pgagent.pga_jobstep    step ON job.jobid  = step.jstjobid
+          JOIN pgagent.pga_jobsteplog slog ON jlog.jlgid = slog.jsljlgid AND step.jstid = slog.jsljstid
+         WHERE slog.jslresult <> 0
+           AND EXTRACT('epoch' FROM NOW() - (jlog.jlgstart + jlog.jlgduration)) < $seconds
+    };
+
+    my $info = run_command($SQL);
+
+    for $db (@{$info->{db}}) {
+        my @rows = @{ $db->{slurp} } or do {
+            add_ok msg('pgagent-jobs-ok');
+            next;
+        };
+
+        if ($rows[0]{critical} !~ /^(?:[01]|\d+[.]\d+)$/) {
+            add_unknown msg('invalid-query', $db->{slurp});
+            next;
+        }
+
+        my ($is_crit, @msg);
+        my $log_id = -1;
+        for my $step (@rows) {
+            my $output = $step->{jsloutput} || '(NO OUTPUT)';
+            push @msg => "$step->{jslresult} $step->{jobname}/$step->{jstname}: $output";
+            $is_crit ||= $step->{critical};
+        }
+
+        (my $msg = join '; ' => @msg) =~ s{\r?\n}{ }g;
+        if ($is_crit) {
+            add_critical $msg;
+        } else {
+            add_warning $msg;
+        }
+    }
+
+    return;
+}
 
 sub check_pgbouncer_checksum {
 
@@ -8909,6 +8980,31 @@ Example 2: Make sure no settings have changed and warn if so, using the checksum
 For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
 checksum must be provided as the C<--mrtg> argument. The fourth line always gives the 
 current checksum.
+
+=head2 B<pgagent_jobs>
+
+(C<symlink: check_postgres_pgagent_jobs>) Checks that all the pgAgent jobs
+that have executed in the preceding interval of time have succeeded. This is
+done by checking for any steps that have a non-zero result.
+
+Either C<--warning> or C<--critical>, or both, may be specified as times, and
+jobs will be checked for failures withing the specified periods of time before
+the current time. Valid units are seconds, minutes, hours, and days; all can
+be abbreviated to the first letter. If no units are given, 'seconds' are
+assumed.
+
+Example 1: Give a critical when any jobs executed in the last day have failed.
+
+  check_postgres_pgagent_jobs --critical=1d
+
+Example 2: Give a warning when any jobs executed in the last week have failed.
+
+  check_postgres_pgagent_jobs --warning=7d
+
+Example 3: Give a critical for jobs that have failed in the last 2 hours and a
+warning for jobs that have failed in the last 4 hours:
+
+  check_postgres_pgagent_jobs --critical=2h --warning=4h
 
 =head2 B<prepared_txns>
 
