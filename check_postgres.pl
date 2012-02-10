@@ -30,6 +30,8 @@ $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
 $Data::Dumper::Useqq = 1;
 
+binmode STDOUT, ':utf8';
+
 our $VERSION = '2.19.0';
 
 use vars qw/ %opt $PSQL $res $COM $SQL $db /;
