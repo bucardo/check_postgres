@@ -34,7 +34,7 @@ binmode STDOUT, ':utf8';
 
 our $VERSION = '2.19.0';
 
-use vars qw/ %opt $PSQL $res $COM $SQL $db /;
+use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 
 ## Which user to connect as if --dbuser is not given
 $opt{defaultuser} = 'postgres';
@@ -45,11 +45,11 @@ $opt{defaultport} = 5432;
 ## What type of output to use by default
 our $DEFAULT_OUTPUT = 'nagios';
 
-## If psql is not in your path, it is recommended to hardcode it here,
-## as an alternative to the --PSQL option
-$PSQL = '';
+## If psql binaries are not in your path, it is recommended to hardcode it here,
+## as an alternative to the --PGBINDIR option
+$PGBINDIR = '';
 
-## If this is true, $opt{PSQL} is disabled for security reasons
+## If this is true, $opt{PSQL} and $opt{PGBINDIR} are disabled for security reasons
 our $NO_PSQL_OPTION = 1;
 
 ## If true, we show how long each query took by default. Requires Time::HiRes to be installed.
@@ -127,6 +127,7 @@ our %msg = (
     'custom-nostring'    => q{Must provide a query string},
     'database'           => q{database},
     'dbsize-version'     => q{Target database must be version 8.1 or higher to run the database_size action},
+    'depr-pgcontroldata' => q{PGCONTROLDATA is deprecated, use PGBINDIR instead.},
     'die-action-version' => q{Cannot run "$1": server version must be >= $2, but is $3},
     'die-badtime'        => q{Value for '$1' must be a valid time. Examples: -$2 1s  -$2 "10 minutes"},
     'die-badversion'     => q{Invalid version string: $1},
@@ -190,7 +191,8 @@ our %msg = (
     'opt-psql-noexist'   => q{Cannot find given psql executable: $1},
     'opt-psql-nofind'    => q{Could not find a suitable psql executable},
     'opt-psql-nover'     => q{Could not determine psql version},
-    'opt-psql-restrict'  => q{Cannot use the --PSQL option when NO_PSQL_OPTION is on},
+    'opt-psql-restrict'  => q{Cannot use the --PGBINDIR or --PSQL option when NO_PSQL_OPTION is on},
+    'pgagent-jobs-ok'    => q{No failed jobs},
     'pgbouncer-pool'     => q{Pool=$1 $2=$3},
     'pgb-backends-mrtg'  => q{DB=$1 Max connections=$2},
     'pgb-backends-msg'   => q{$1 of $2 connections ($3%)},
@@ -351,10 +353,10 @@ our %msg = (
     'bloat-nomin'        => q{aucune relation n'atteint le critère minimum de fragmentation},
     'bloat-table'        => q{(db $1) table $2.$3 lignes:$4 pages:$5 devrait être:$6 ($7X) place perdue:$8 ($9)},
     'bug-report'         => q{Merci de rapporter ces d??tails ?? check_postgres@bucardo.org:},
-'checkcluster-id'    => q{Database system identifier:},
-'checkcluster-msg'   => q{cluster_id: $1},
-'checkcluster-nomrtg'=> q{Must provide a number via the --mrtg option},
-'checkmode-prod'     => q{in production},
+    'checkcluster-id'    => q{Identifiant système de la base de données :},
+    'checkcluster-msg'   => q{cluster_id : $1},
+    'checkcluster-nomrtg'=> q{Doit fournir un numéro via l'option --mrtg},
+    'checkmode-prod'     => q{en production},
     'checkmode-recovery' => q{en restauration d'archives},
     'checkmode-state'    => q{État de l'instance :},
     'checkpoint-baddir'  => q{data_directory invalide : "$1"},
@@ -416,14 +418,14 @@ our %msg = (
     'logfile-stderr'     => q{La sortie des traces a été redirigés stderr : merci de fournir un nom de fichier},
     'logfile-syslog'     => q{La base de données utiliser syslog, merci de spécifier le chemin avec l'option --logfile (fac=$1)},
     'mode-standby'       => q{Serveur en mode standby},
-'mode'               => q{mode},
+    'mode'               => q{mode},
     'mrtg-fail'          => q{Échec de l'action $1 : $2},
     'new-ver-nocver'     => q{N'a pas pu t??l??charger les informations de version pour $1},
     'new-ver-badver'     => q{N'a pas pu analyser les informations de version pour $1},
     'new-ver-dev'        => q{Ne peut pas comparer les versions sur des versions de d??veloppement : vous avez $1 version $2},
     'new-ver-nolver'     => q{N'a pas pu d??terminer les informations de version locale pour $1},
-    'new-ver-ok'          => q{La version $1 est la dernière pour $2},
-    'new-ver-warn'        => q{Merci de mettre à jour vers la version $1 de $2. Vous utilisez actuellement la $3},
+    'new-ver-ok'         => q{La version $1 est la dernière pour $2},
+    'new-ver-warn'       => q{Merci de mettre à jour vers la version $1 de $2. Vous utilisez actuellement la $3},
     'new-ver-tt'         => q{Votre version de $1 ($2) semble ult??rieure ?? la version courante ! ($3)},
     'no-db'              => q{Pas de bases de données},
     'no-match-db'        => q{Aucune base de données trouvée à cause des options d'exclusion/inclusion},
@@ -440,7 +442,7 @@ our %msg = (
     'opt-psql-noexist'   => q{Ne peut pas trouver l'exécutable psql indiqué : $1},
     'opt-psql-nofind'    => q{N'a pas pu trouver un psql exécutable},
     'opt-psql-nover'     => q{N'a pas pu déterminer la version de psql},
-    'opt-psql-restrict'  => q{Ne peut pas utiliser l'option --PSQL si NO_PSQL_OPTION est activé},
+    'opt-psql-restrict'  => q{Ne peut pas utiliser l'option --PGBINDIR ou --PSQL si NO_PSQL_OPTION est activé},
     'pgbouncer-pool'     => q{Pool=$1 $2=$3},
     'pgb-backends-mrtg'  => q{base=$1 connexions max=$2},
     'pgb-backends-msg'   => q{$1 connexions sur $2 ($3%)},
@@ -960,6 +962,7 @@ GetOptions(
     'dbpass|dbpass1=s@',
     'dbservice|dbservice1=s@',
 
+    'PGBINDIR=s',
     'PSQL=s',
 
     'tempdir=s',
@@ -1162,6 +1165,7 @@ our $action_info = {
  pgb_pool_maxwait    => [1, 'Check the current maximum wait time for client connections in pgbouncer pools.'],
  pgbouncer_backends  => [0, 'Check how many clients are connected to pgbouncer compared to max_client_conn.'],
  pgbouncer_checksum  => [0, 'Check that no pgbouncer settings have changed since the last check.'],
+ pgagent_jobs        => [0, 'Check for no failed pgAgent jobs within a specified period of time.'],
  prepared_txns       => [1, 'Checks number and age of prepared transactions.'],
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
@@ -1217,7 +1221,8 @@ Limit options:
 Other options:
   --assume-standby-mode assume that server in continious WAL recovery mode
   --assume-prod         assume that server in production mode
-  --PSQL=FILE           location of the psql executable; avoid using if possible
+  --PGBINDIR=PATH       path of the postgresql binaries; avoid using if possible
+  --PSQL=FILE           (deprecated) location of the psql executable; avoid using if possible
   -v, --verbose         verbosity level; can be used more than once to increase the level
   -h, --help            display this help information
   --man                 display the full manual
@@ -1260,12 +1265,6 @@ if ($opt{showtime}) {
         die msg('no-time-hires');
     }
 }
-
-## Check the current database mode
-our $STANDBY = 0;
-our $MASTER = 0;
-make_sure_standby_mode() if $opt{'assume-standby-mode'};
-make_sure_prod() if $opt{'assume-prod'};
 
 ## We don't (usually) want to die, but want a graceful Nagios-like exit instead
 sub ndie {
@@ -1321,20 +1320,28 @@ sub msg_en {
 
 ## Everything from here on out needs psql, so find and verify a working version:
 if ($NO_PSQL_OPTION) {
-    delete $opt{PSQL} and ndie msg('opt-psql-restrict');
+    (delete $opt{PGBINDIR} or delete $opt{PSQL}) and ndie msg('opt-psql-restrict');
 }
-
-if (! defined $PSQL or ! length $PSQL) {
-    if (exists $opt{PSQL}) {
-        $PSQL = $opt{PSQL};
-        $PSQL =~ m{^/[\w\d\/]*psql$} or ndie msg('opt-psql-badpath');
-        -e $PSQL or ndie msg('opt-psql-noexist', $PSQL);
+if (! defined $PGBINDIR or ! length $PGBINDIR) {
+    if (defined $ENV{PGBINDIR} and length $ENV{PGBINDIR}){
+        $PGBINDIR = $ENV{PGBINDIR};
+    }
+    elsif (defined $opt{PGBINDIR} and length $opt{PGBINDIR}){
+        $PGBINDIR = $opt{PGBINDIR};
     }
     else {
-        my $psql = $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/psql" : 'psql';
-        chomp($PSQL = qx{which $psql});
-        $PSQL or ndie msg('opt-psql-nofind');
+        undef $PGBINDIR;
     }
+}
+if (exists $opt{PSQL}) {
+    $PSQL = $opt{PSQL};
+    $PSQL =~ m{^/[\w\d\/]*psql$} or ndie msg('opt-psql-badpath');
+    -e $PSQL or ndie msg('opt-psql-noexist', $PSQL);
+}
+else {
+    my $psql = (defined $PGBINDIR) ? "$PGBINDIR/psql" : "psql";
+    chomp($PSQL = qx{which "$psql"});
+    $PSQL or ndie msg('opt-psql-nofind');
 }
 -x $PSQL or ndie msg('opt-psql-noexec', $PSQL);
 $res = qx{$PSQL --version};
@@ -1345,6 +1352,12 @@ $VERBOSE >= 2 and warn qq{psql=$PSQL version=$psql_version\n};
 
 $opt{defaultdb} = $psql_version >= 8.0 ? 'postgres' : 'template1';
 $opt{defaultdb} = 'pgbouncer' if $action =~ /^pgb/;
+
+## Check the current database mode
+our $STANDBY = 0;
+our $MASTER = 0;
+make_sure_standby_mode() if $opt{'assume-standby-mode'};
+make_sure_prod() if $opt{'assume-prod'};
 
 ## Create the list of databases we are going to connect to
 my @targetdb = setup_target_databases();
@@ -1986,6 +1999,8 @@ check_pgb_pool('maxwait') if $action eq 'pgb_pool_maxwait';
 
 ## Check how many clients are connected to pgbouncer compared to max_client_conn.
 check_pgbouncer_backends() if $action eq 'pgbouncer_backends';
+
+check_pgagent_jobs() if $action eq 'pgagent_jobs';
 
 ##
 ## Everything past here does not hit a Postgres database
@@ -2828,7 +2843,7 @@ sub validate_range {
                 ndie msg('range-seconds', 'critical')
             }
             $critical = $1;
-            if (length $warning and $warning > $critical) {
+            if (!$arg->{any_warning} and length $warning and $warning > $critical) {
                 ndie msg('range-warnbigtime', $warning, $critical);
             }
         }
@@ -2839,7 +2854,7 @@ sub validate_range {
         if (! length $critical and ! length $warning) {
             ndie msg('range-notime');
         }
-        if (length $warning and length $critical and $warning > $critical) {
+        if (!$arg->{any_warning} and length $warning and length $critical and $warning > $critical) {
             ndie msg('range-warnbigtime', $warning, $critical);
         }
     }
@@ -2867,7 +2882,7 @@ sub validate_range {
                 ndie msg('range-badsize', 'warning');
             }
             $warning = size_in_bytes($1,$2);
-            if (length $critical and $warning > $critical) {
+            if (!$arg->{any_warning} and length $critical and $warning > $critical) {
                 ndie msg('range-warnbigsize', $warning, $critical);
             }
         }
@@ -3160,10 +3175,18 @@ sub open_controldata {
     }
 
     ## Run pg_controldata
-    my $pgc
-        = $ENV{PGCONTROLDATA} ? $ENV{PGCONTROLDATA}
-        : $ENV{PGBINDIR}      ? "$ENV{PGBINDIR}/pg_controldata"
-        :                       'pg_controldata';
+    ## We still catch deprecated option
+    my $pgc;
+    if (defined $ENV{PGCONTROLDATA} and length $ENV{PGCONTROLDATA}) {
+        # ndie msg('depr-pgcontroldata');
+        $pgc = "$ENV{PGCONTROLDATA}";
+    }
+    else {
+        $pgc = (defined $PGBINDIR) ? "$PGBINDIR/pg_controldata" : "pg_controldata";
+        chomp($pgc = qx{which "$pgc"});
+    }
+    -x $pgc or ndie msg('opt-psql-noexec', $pgc);
+
     $COM = qq{$pgc "$dir"};
     eval {
         $res = qx{$COM 2>&1};
@@ -5430,6 +5453,73 @@ sub check_new_version_tnm {
 
 } ## end of check_new_version_tnm
 
+
+sub check_pgagent_jobs {
+    ## Check for failed pgAgent jobs.
+    ## Supports: Nagios
+    ## Critical and warning are intervals.
+    ## Example: --critical="1 hour"
+    ## Example: --warning="2 hours"
+
+    my ($warning, $critical) = validate_range({ type => 'time', any_warning => 1 });
+
+    # Determine critcal warning column contents.
+    my $is_crit = $critical && $warning
+        ? "GREATEST($critical - EXTRACT('epoch' FROM NOW() - (jlog.jlgstart + jlog.jlgduration)), 0)"
+        : $critical ? 1 : 0;
+
+    # Determine max time to examine.
+    my $seconds = do {
+        no warnings;
+        $warning > $critical ? $warning : $critical;
+    };
+
+    $SQL = qq{
+        SELECT jlog.jlgid
+             , job.jobname
+             , step.jstname
+             , slog.jslresult
+             , slog.jsloutput
+             , $is_crit AS critical
+          FROM pgagent.pga_job job
+          JOIN pgagent.pga_joblog     jlog ON job.jobid  = jlog.jlgjobid
+          JOIN pgagent.pga_jobstep    step ON job.jobid  = step.jstjobid
+          JOIN pgagent.pga_jobsteplog slog ON jlog.jlgid = slog.jsljlgid AND step.jstid = slog.jsljstid
+         WHERE slog.jslresult <> 0
+           AND EXTRACT('epoch' FROM NOW() - (jlog.jlgstart + jlog.jlgduration)) < $seconds
+    };
+
+    my $info = run_command($SQL);
+
+    for $db (@{$info->{db}}) {
+        my @rows = @{ $db->{slurp} } or do {
+            add_ok msg('pgagent-jobs-ok');
+            next;
+        };
+
+        if ($rows[0]{critical} !~ /^(?:[01]|\d+[.]\d+)$/) {
+            add_unknown msg('invalid-query', $db->{slurp});
+            next;
+        }
+
+        my ($is_crit, @msg);
+        my $log_id = -1;
+        for my $step (@rows) {
+            my $output = $step->{jsloutput} || '(NO OUTPUT)';
+            push @msg => "$step->{jslresult} $step->{jobname}/$step->{jstname}: $output";
+            $is_crit ||= $step->{critical};
+        }
+
+        (my $msg = join '; ' => @msg) =~ s{\r?\n}{ }g;
+        if ($is_crit) {
+            add_critical $msg;
+        } else {
+            add_warning $msg;
+        }
+    }
+
+    return;
+}
 
 sub check_pgbouncer_checksum {
 
@@ -7989,8 +8079,19 @@ Only takes effect if using Nagios output mode.
 
 Enables test mode. See the L</"TEST MODE"> section below.
 
+=item B<--PGBINDIR=PATH>
+
+Tells the script where to find the psql binaries. Useful if you have more than
+one version of the PostgreSQL executables on your system, or if there are not
+in your path. Note that this option is in all uppercase. By default, this option
+is I<not allowed>. To enable it, you must change the C<$NO_PSQL_OPTION> near the
+top of the script to 0. Avoid using this option if you can, and instead use
+environement variable c<PGBINDIR> or hard-coded C<$PGBINDIR> variable, also near
+the top of the script, to set the path to the PostgreSQL to use.
+
 =item B<--PSQL=PATH>
 
+I<(deprecated, this option may be removed in a future release!)>
 Tells the script where to find the psql program. Useful if you have more than 
 one version of the psql executable on your system, or if there is no psql program 
 in your path. Note that this option is in all uppercase. By default, this option 
@@ -8213,9 +8314,8 @@ processing shipped WAL files, and is meant to check that your warm standby is tr
 The data directory must be set, either by the environment variable C<PGDATA>, or passing 
 the C<--datadir> argument. It returns the number of seconds since the last checkpoint 
 was run, as determined by parsing the call to C<pg_controldata>. Because of this, the 
-pg_controldata executable must be available in the current path. Alternatively, you can 
-set the environment variable C<PGCONTROLDATA> to the exact location of the pg_controldata 
-executable, or you can specify C<PGBINDIR> as the directory that it lives in.
+pg_controldata executable must be available in the current path. Alternatively,
+you can specify C<PGBINDIR> as the directory that it lives in.
 It is also possible to use the special options I<--assume-prod> or
 I<--assume-standby-mode>, if the mode found is not the one expected, a CRITICAL is emitted.
 
@@ -8912,6 +9012,31 @@ For MRTG output, returns a 1 or 0 indicating success of failure of the checksum 
 checksum must be provided as the C<--mrtg> argument. The fourth line always gives the 
 current checksum.
 
+=head2 B<pgagent_jobs>
+
+(C<symlink: check_postgres_pgagent_jobs>) Checks that all the pgAgent jobs
+that have executed in the preceding interval of time have succeeded. This is
+done by checking for any steps that have a non-zero result.
+
+Either C<--warning> or C<--critical>, or both, may be specified as times, and
+jobs will be checked for failures withing the specified periods of time before
+the current time. Valid units are seconds, minutes, hours, and days; all can
+be abbreviated to the first letter. If no units are given, 'seconds' are
+assumed.
+
+Example 1: Give a critical when any jobs executed in the last day have failed.
+
+  check_postgres_pgagent_jobs --critical=1d
+
+Example 2: Give a warning when any jobs executed in the last week have failed.
+
+  check_postgres_pgagent_jobs --warning=7d
+
+Example 3: Give a critical for jobs that have failed in the last 2 hours and a
+warning for jobs that have failed in the last 4 hours:
+
+  check_postgres_pgagent_jobs --critical=2h --warning=4h
+
 =head2 B<prepared_txns>
 
 (C<symlink: check_postgres_prepared_txns>) Check on the age of any existing prepared transactions. 
@@ -9456,6 +9581,7 @@ check_postgresrc files can be ignored by supplying a C<--no-checkpostgresrc> arg
 =head1 ENVIRONMENT VARIABLES
 
 The environment variable I<$ENV{HOME}> is used to look for a F<.check_postgresrc> file.
+The environment variable I<$ENV{PGBINDIR}> is used to look for PostgreSQL binaries.
 
 =head1 TIPS AND TRICKS
 
@@ -9520,6 +9646,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
+
+=item B<Version 2.20.0>
+
+  Add check for pgagent jobs (David E. Wheeler)
 
 =item B<Version 2.19.0> January 17, 2012
 
