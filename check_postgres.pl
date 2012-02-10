@@ -9651,6 +9651,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Add check for pgagent jobs (David E. Wheeler)
 
+  Force STDOUT to use utf8 for proper output
+    (Greg Sabino Mullane; reported by Emmanuel Lesouef)
+
 =item B<Version 2.19.0> January 17, 2012
 
   Add the --assume-prod option (Cédric Villemain)
