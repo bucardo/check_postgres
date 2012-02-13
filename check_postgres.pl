@@ -32,7 +32,7 @@ $Data::Dumper::Useqq = 1;
 
 binmode STDOUT, ':utf8';
 
-our $VERSION = '2.19.0';
+our $VERSION = '2.20.0';
 
 use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 
@@ -6903,11 +6903,25 @@ sub schema_item_differences {
 
                     if (length $uno) {
                         die "Invalid list: $uno for db $db1:$name:$col\n" if $uno !~ /^{(.+)}$/;
-                        %list1 = map { /(.*)=(.+)/ or die "Invalid list: $uno"; $1,$2 } split /,/ => $1;
+                        my $t = $1;
+                        my @tlist = ();
+                        push(@tlist, $+) while $t =~ m{"([^\"\\]*(?:\\.[^\"\\]*)*)",?
+                                                 | ([^,]+),?
+                                                 | ,
+                                                }gx;
+                        push(@tlist, undef) if substr($t, -1,1) eq ',';
+                        %list1 = map { /(.*)=(.+)/ or die "Invalid list: $uno"; $1,$2 } @tlist;
                     }
                     if (length $dos) {
                         die "Invalid list: $dos for db $db2:$name:$col\n" if $dos !~ /^{(.+)}$/;
-                        %list2 = map { /(.*)=(.+)/ or die "Invalid list: $uno"; $1,$2 } split /,/ => $1;
+                        my $t = $1;
+                        my @tlist = ();
+                        push(@tlist, $+) while $t =~ m{"([^\"\\]*(?:\\.[^\"\\]*)*)",?
+                                                 | ([^,]+),?
+                                                 | ,
+                                                }gx;
+                        push(@tlist, undef) if substr($t, -1,1) eq ',';
+                        %list2 = map { /(.*)=(.+)/ or die "Invalid list: $uno"; $1,$2 } @tlist;
                     }
 
                     ## Items in 1 but not 2?
@@ -7825,7 +7839,7 @@ sub check_wal_files {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.19.0
+This documents describes check_postgres.pl version 2.20.0
 
 =head1 SYNOPSIS
 
@@ -9653,6 +9667,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Force STDOUT to use utf8 for proper output
     (Greg Sabino Mullane; reported by Emmanuel Lesouef)
+
+  Allow for spaces in item lists when doing same_schema.
 
 =item B<Version 2.19.0> January 17, 2012
 
