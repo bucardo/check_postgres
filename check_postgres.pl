@@ -7474,12 +7474,16 @@ sub check_txn_idle {
 
     ## We don't GROUP BY because we want details on every connection
     ## Someday we may even break things down by database
+    my $SQL2;
     if ($type ne 'qtime') {
         $SQL = q{SELECT datname, datid, procpid, usename, client_addr, xact_start, current_query, }.
             q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
             qq{FROM pg_stat_activity WHERE $clause$USERWHERECLAUSE }.
             q{ORDER BY xact_start, query_start, procpid DESC};
+        ## Craft an alternate version for old servers that do not have the xact_start column:
+        ($SQL2 = $SQL) =~ s/xact_start/query_start AS xact_start/;
+        $SQL2 =~ s/BY xact_start,/BY/;
     }
     else {
         $SQL = q{SELECT datname, datid, procpid, usename, client_addr, current_query, }.
@@ -7489,8 +7493,7 @@ sub check_txn_idle {
             q{ORDER BY query_start, procpid DESC};
     }
 
-    my $info = run_command($SQL, { emptyok => 1 } );
-
+    my $info = run_command($SQL, { emptyok => 1 , version => [ "<8.3 $SQL2" ] } );
 
     ## Extract the first entry
     $db = $info->{db}[0];
@@ -9672,6 +9675,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
     (Greg Sabino Mullane; reported by Emmanuel Lesouef)
 
   Allow for spaces in item lists when doing same_schema.
+
+  Allow txn_idle to work again for < 8.3 servers by switching to query_time.
 
 =item B<Version 2.19.0> January 17, 2012
 
