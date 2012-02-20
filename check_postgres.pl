@@ -1729,7 +1729,6 @@ our %testaction = (
                   table_size        => 'VERSION: 8.1',
                   index_size        => 'VERSION: 8.1',
                   query_time        => 'VERSION: 8.1',
-                  txn_idle          => 'VERSION: 8.3',
                   txn_time          => 'VERSION: 8.3',
                   wal_files         => 'VERSION: 8.1',
                   archive_ready     => 'VERSION: 8.1',
@@ -7521,14 +7520,14 @@ sub check_txn_idle {
         ## We do a lot of filtering based on the current_query
         my $cq = $r->{current_query};
 
-        ## Return unknown if we cannot see because we are a non-superuser?
+        ## Return unknown if we cannot see because we are a non-superuser
         if ($cq =~ /insufficient/o) {
             add_unknown msg('psa-nosuper');
             return;
         }
 
-        ## Return unknown if stats_command_string / track_activities is off?
-        if ($cq =~ /disabled/o) {
+        ## Return unknown if stats_command_string / track_activities is off
+        if ($cq =~ /disabled/o or $cq =~ /<command string not enabled>/) {
             add_unknown msg('psa-disabled');
             return;
         }
