@@ -1271,6 +1271,10 @@ sub ndie {
     eval { File::Temp::cleanup(); };
     my $msg = shift;
     chomp $msg;
+    ## If this message already starts with an ERROR, filter that out for prettiness
+    $msg =~ s/^\s*ERROR:\s*/ /;
+    ## Trim whitespace
+    $msg =~ s/^\s*(.+)\s*$/$1/;
     print "ERROR: $msg\n";
     exit 3;
 }
