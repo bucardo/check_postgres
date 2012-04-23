@@ -3745,9 +3745,9 @@ sub check_checkpoint {
     ## may make more sense on the master, or we may want to look at
     ## the WAL segments received/processed instead of the checkpoint
     ## timestamp.
-    ## This checks can use the optionnal --asume-standby-mode or
-    ## --assume-prod: if the mode found is not the mode assumed, a
-    ## CRITICAL is emitted.
+    ## This checks can use the optionnal --asume-standby-mode or
+    ## --assume-prod: if the mode found is not the mode assumed, a
+    ## CRITICAL is emitted.
 
     ## Supports: Nagios, MRTG
     ## Warning and critical are seconds
@@ -3800,7 +3800,7 @@ sub check_checkpoint {
         $mode = 'MASTER';
     }
 
-    ## If we have an assume flag, then honor it.
+    ## If we have an assume flag, then honor it.
     my $goodmode = 1;
     if ($opt{'assume-standby-mode'} and not $STANDBY) {
         $goodmode = 0;
