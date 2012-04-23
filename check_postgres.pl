@@ -8693,7 +8693,7 @@ the second line.
 
 =head2 B<hitratio>
 
-(C<symlink: check_postgres_database_hitratio>) Checks the hit ratio of all databases and complains when they are too low.
+(C<symlink: check_postgres_hitratio>) Checks the hit ratio of all databases and complains when they are too low.
 There is no need to run this command more than once per database cluster. 
 Databases can be filtered with 
 the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
@@ -8709,7 +8709,7 @@ hitratio, smallest first.
 
 Example: Warn if any database on host flagg is less than 90% in hitratio, and critical if less then 80%.
 
-  check_postgres_database_hitratio --host=flagg --warning='90%' --critical='80%'
+  check_postgres_hitratio --host=flagg --warning='90%' --critical='80%'
 
 For MRTG output, returns the percentage of the database with the smallest hitratio on the first line, 
 and the name of the database on the fourth line.
