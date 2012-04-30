@@ -7981,9 +7981,16 @@ Instead, one should use a .pgpass or pg_service.conf file.
 
 =item B<--dbservice=NAME>
 
-The name of a service inside of the pg_service.conf file. This file is in your home directory by 
-default and contains a simple list of connection options. You can also pass additional information 
+The name of a service inside of the pg_service.conf file. Before version 9.0 of Postgres, this is 
+a global file, usually found in /etc/pg_service.conf. If you are using version 9.0 or higher of 
+Postgres, you can use the file ".pg_service.conf" in the home directory of the user running 
+the script, e.g. nagios.
+
+This file contains a simple list of connection options. You can also pass additional information 
 when using this option such as --dbservice="maindatabase sslmode=require"
+
+The documentation for this file can be found at
+http://www.postgresql.org/docs/current/static/libpq-pgservice.html
 
 =back
 
