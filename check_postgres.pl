@@ -3527,20 +3527,23 @@ SELECT
   ROUND(CASE WHEN iotta=0 OR ipages=0 OR ipages=iotta THEN 0.0 ELSE ipages/iotta::numeric END,1) AS ibloat,
   CASE WHEN ipages < iotta THEN 0 ELSE ipages::bigint - iotta END AS wastedipages,
   CASE WHEN ipages < iotta THEN 0 ELSE bs*(ipages-iotta) END AS wastedibytes,
-  CASE WHEN ipages < iotta THEN '0 bytes' ELSE (bs*(ipages-iotta))::bigint || ' bytes' END AS wastedisize,
-  CASE WHEN relpages < otta THEN
-    CASE WHEN ipages < iotta THEN 0 ELSE ipages-iotta::bigint END
-    ELSE CASE WHEN ipages < iotta THEN relpages-otta::bigint
-      ELSE relpages-otta::bigint + ipages-iotta::bigint END
-  END AS totalwastedbytes
+  CASE WHEN ipages < iotta THEN '0 bytes' ELSE (bs*(ipages-iotta))::bigint || ' bytes' END AS wastedisize
 FROM (
   SELECT
-    schemaname, tablename, cc.reltuples, cc.relpages, bs,
-    CEIL((cc.reltuples*((datahdr+ma-
-      (CASE WHEN datahdr%ma=0 THEN ma ELSE datahdr%ma END))+nullhdr2+4))/(bs-20::float)) AS otta,
+    nn.nspname AS schemaname,
+    cc.relname AS tablename,
+    COALESCE(cc.reltuples,0) AS reltuples,
+    COALESCE(cc.relpages,0) AS relpages,
+    COALESCE(bs,0) AS bs,
+    COALESCE(CEIL((cc.reltuples*((datahdr+ma-
+      (CASE WHEN datahdr%ma=0 THEN ma ELSE datahdr%ma END))+nullhdr2+4))/(bs-20::float)),0) AS otta,
     COALESCE(c2.relname,'?') AS iname, COALESCE(c2.reltuples,0) AS ituples, COALESCE(c2.relpages,0) AS ipages,
     COALESCE(CEIL((c2.reltuples*(datahdr-12))/(bs-20::float)),0) AS iotta -- very rough approximation, assumes all cols
-  FROM (
+  FROM
+     pg_class cc
+  JOIN pg_namespace nn ON cc.relnamespace = nn.oid AND nn.nspname <> 'information_schema'
+  LEFT JOIN
+  (
     SELECT
       ma,bs,schemaname,tablename,
       (datawidth+(hdr+ma-(case when hdr%ma=0 THEN ma ELSE hdr%ma END)))::numeric AS datahdr,
@@ -3566,8 +3569,7 @@ FROM (
       GROUP BY 1,2,3,4,5
     ) AS foo
   ) AS rs
-  JOIN pg_class cc ON cc.relname = rs.tablename
-  JOIN pg_namespace nn ON cc.relnamespace = nn.oid AND nn.nspname = rs.schemaname AND nn.nspname <> 'information_schema'
+  ON cc.relname = rs.tablename AND nn.nspname = rs.schemaname
   LEFT JOIN pg_index i ON indrelid = cc.oid
   LEFT JOIN pg_class c2 ON c2.oid = i.indexrelid
 ) AS sml
