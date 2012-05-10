@@ -7045,14 +7045,15 @@ sub find_catalog_info {
 
         ## For a function, we also want to put the args into the name
         if ($type eq 'function') {
-            ## Grab all type mappings
-            $SQL = 'SELECT oid, typname FROM pg_type';
-            my %oid2type;
-            my $tinfo = run_command($SQL, { dbnumber => $dbnum });
-            for my $row (@{ $tinfo->{db}[0]{slurp} }) {
-                $oid2type{$row->{oid}} = $row->{typname};
+            ## Once per database, grab all mappings
+            if (! exists $opt{oid2type}{$dbnum}) {
+                $SQL = 'SELECT oid, typname FROM pg_type';
+                my $tinfo = run_command($SQL, { dbnumber => $dbnum });
+                for my $row (@{ $tinfo->{db}[0]{slurp} }) {
+                    $opt{oid2type}{$dbnum}{$row->{oid}} = $row->{typname};
+                }
             }
-            (my $args = $row->{proargtypes}) =~ s/(\d+)/$oid2type{$1}||$1/ge;
+            (my $args = $row->{proargtypes}) =~ s/(\d+)/$opt{oid2type}{$dbnum}{$1}||$1/ge;
             $args =~ s/ /,/g;
             $args =~ s/ints/smallint/g;
             $args =~ s/int4/int/g;
