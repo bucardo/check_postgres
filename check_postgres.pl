@@ -7149,6 +7149,7 @@ FROM (
  JOIN pg_namespace nsp ON nsp.oid = relnamespace
  WHERE relkind = 'S'
 ) AS seqs
+WHERE nspname !~ '^pg_temp.*'
 ORDER BY nspname, seqname, typname
 };
     ## use critic
