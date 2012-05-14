@@ -30,6 +30,7 @@ Login to the bucardo.org box, and then:
 * prove -v t/00_release.t
 * cd ~/www/downloads
 * cp -i ~/code/check_postgres/check_postgres* .
+* ln -sf <latest tarball> check_postgres.tar.gz
 * cd ~/www/check_postgres
 * ln -s ../downloads/<latest tarball> .
 * edit latest_version.txt

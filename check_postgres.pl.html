@@ -79,6 +79,7 @@
 		<li><a href="#pgb_pool_maxwait"><strong>pgb_pool_maxwait</strong></a></li>
 		<li><a href="#pgbouncer_backends"><strong>pgbouncer_backends</strong></a></li>
 		<li><a href="#pgbouncer_checksum"><strong>pgbouncer_checksum</strong></a></li>
+		<li><a href="#pgagent_jobs"><strong>pgagent_jobs</strong></a></li>
 		<li><a href="#prepared_txns"><strong>prepared_txns</strong></a></li>
 		<li><a href="#query_runtime"><strong>query_runtime</strong></a></li>
 		<li><a href="#query_time"><strong>query_time</strong></a></li>
@@ -1232,6 +1233,27 @@ to find out an existing checksum.</p>
 <p>For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
 checksum must be provided as the <code>--mrtg</code> argument. The fourth line always gives the 
 current checksum.</p>
+<p>
+</p>
+<h2><a name="pgagent_jobs"><strong>pgagent_jobs</strong></a></h2>
+<p>(<code>symlink: check_postgres_pgagent_jobs</code>) Checks that all the pgAgent jobs
+that have executed in the preceding interval of time have succeeded. This is
+done by checking for any steps that have a non-zero result.</p>
+<p>Either <code>--warning</code> or <code>--critical</code>, or both, may be specified as times, and
+jobs will be checked for failures withing the specified periods of time before
+the current time. Valid units are seconds, minutes, hours, and days; all can
+be abbreviated to the first letter. If no units are given, 'seconds' are
+assumed.</p>
+<p>Example 1: Give a critical when any jobs executed in the last day have failed.</p>
+<pre>
+  check_postgres_pgagent_jobs --critical=1d</pre>
+<p>Example 2: Give a warning when any jobs executed in the last week have failed.</p>
+<pre>
+  check_postgres_pgagent_jobs --warning=7d</pre>
+<p>Example 3: Give a critical for jobs that have failed in the last 2 hours and a
+warning for jobs that have failed in the last 4 hours:</p>
+<pre>
+  check_postgres_pgagent_jobs --critical=2h --warning=4h</pre>
 <p>
 </p>
 <h2><a name="prepared_txns"><strong>prepared_txns</strong></a></h2>
