@@ -7052,14 +7052,15 @@ sub find_catalog_info {
 
         ## For a function, we also want to put the args into the name
         if ($type eq 'function') {
-            ## Grab all type mappings
-            $SQL = 'SELECT oid, typname FROM pg_type';
-            my %oid2type;
-            my $tinfo = run_command($SQL, { dbnumber => $dbnum });
-            for my $row (@{ $tinfo->{db}[0]{slurp} }) {
-                $oid2type{$row->{oid}} = $row->{typname};
+            ## Once per database, grab all mappings
+            if (! exists $opt{oid2type}{$dbnum}) {
+                $SQL = 'SELECT oid, typname FROM pg_type';
+                my $tinfo = run_command($SQL, { dbnumber => $dbnum });
+                for my $row (@{ $tinfo->{db}[0]{slurp} }) {
+                    $opt{oid2type}{$dbnum}{$row->{oid}} = $row->{typname};
+                }
             }
-            (my $args = $row->{proargtypes}) =~ s/(\d+)/$oid2type{$1}||$1/ge;
+            (my $args = $row->{proargtypes}) =~ s/(\d+)/$opt{oid2type}{$dbnum}{$1}||$1/ge;
             $args =~ s/ /,/g;
             $args =~ s/ints/smallint/g;
             $args =~ s/int4/int/g;
@@ -7155,6 +7156,7 @@ FROM (
  JOIN pg_namespace nsp ON nsp.oid = relnamespace
  WHERE relkind = 'S'
 ) AS seqs
+WHERE nspname !~ '^pg_temp.*'
 ORDER BY nspname, seqname, typname
 };
     ## use critic
@@ -7988,9 +7990,16 @@ Instead, one should use a .pgpass or pg_service.conf file.
 
 =item B<--dbservice=NAME>
 
-The name of a service inside of the pg_service.conf file. This file is in your home directory by 
-default and contains a simple list of connection options. You can also pass additional information 
+The name of a service inside of the pg_service.conf file. Before version 9.0 of Postgres, this is 
+a global file, usually found in /etc/pg_service.conf. If you are using version 9.0 or higher of 
+Postgres, you can use the file ".pg_service.conf" in the home directory of the user running 
+the script, e.g. nagios.
+
+This file contains a simple list of connection options. You can also pass additional information 
 when using this option such as --dbservice="maindatabase sslmode=require"
+
+The documentation for this file can be found at
+http://www.postgresql.org/docs/current/static/libpq-pgservice.html
 
 =back
 
