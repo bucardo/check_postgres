@@ -159,8 +159,10 @@ http
 logfile
 login
 perl
+pgagent
 pgbouncer
 pgBouncer
+pgservice
 plpgsql
 postgres
 Pre
@@ -287,6 +289,7 @@ exabytes
 excludeuser
 excludeusers
 ExclusiveLock
+executables
 faceoff
 filename
 filenames
@@ -346,6 +349,7 @@ lancre
 Laurenz
 Lelarge
 Lesouef
+libpq
 listinfo
 localhost
 localtime
@@ -404,6 +408,7 @@ perflimit
 perfname
 perfs
 petabytes
+pgAgent
 pgb
 PGBINDIR
 pgbouncer's
@@ -476,6 +481,7 @@ ssel
 sslmode
 Stas
 stderr
+STDOUT
 sv
 symlink
 symlinked
@@ -501,6 +507,7 @@ USERNAME
 usernames
 USERWHERECLAUSE
 usr
+utf
 valtype
 Villemain
 Vitkovsky
