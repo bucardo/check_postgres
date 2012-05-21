@@ -7033,6 +7033,7 @@ sub find_catalog_info {
     my $colnum = 1;
 
     ## Only need to pull back the first and only db, so we can say [0] here
+  ROW:
     for my $row (@{$info->{db}[0]{slurp}}) {
 
         ## Remove any information that should be deleted
