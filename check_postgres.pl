@@ -1343,7 +1343,7 @@ if (exists $opt{PSQL}) {
     -e $PSQL or ndie msg('opt-psql-noexist', $PSQL);
 }
 else {
-    my $psql = (defined $PGBINDIR) ? "$PGBINDIR/psql" : "psql";
+    my $psql = (defined $PGBINDIR) ? "$PGBINDIR/psql" : 'psql';
     chomp($PSQL = qx{which "$psql"});
     $PSQL or ndie msg('opt-psql-nofind');
 }
@@ -3185,7 +3185,7 @@ sub open_controldata {
         $pgc = "$ENV{PGCONTROLDATA}";
     }
     else {
-        $pgc = (defined $PGBINDIR) ? "$PGBINDIR/pg_controldata" : "pg_controldata";
+        $pgc = (defined $PGBINDIR) ? "$PGBINDIR/pg_controldata" : 'pg_controldata';
         chomp($pgc = qx{which "$pgc"});
     }
     -x $pgc or ndie msg('opt-psql-noexec', $pgc);
@@ -8143,7 +8143,7 @@ one version of the PostgreSQL executables on your system, or if there are not
 in your path. Note that this option is in all uppercase. By default, this option
 is I<not allowed>. To enable it, you must change the C<$NO_PSQL_OPTION> near the
 top of the script to 0. Avoid using this option if you can, and instead use
-environement variable c<PGBINDIR> or hard-coded C<$PGBINDIR> variable, also near
+environment variable c<PGBINDIR> or hard-coded C<$PGBINDIR> variable, also near
 the top of the script, to set the path to the PostgreSQL to use.
 
 =item B<--PSQL=PATH>
@@ -9714,6 +9714,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Allow for spaces in item lists when doing same_schema.
 
   Allow txn_idle to work again for < 8.3 servers by switching to query_time.
+
+  Cache sequence information to speed up same_schema runs.
 
 =item B<Version 2.19.0> January 17, 2012
 
