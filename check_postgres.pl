@@ -3745,7 +3745,7 @@ sub check_checkpoint {
     ## may make more sense on the master, or we may want to look at
     ## the WAL segments received/processed instead of the checkpoint
     ## timestamp.
-    ## This checks can use the optionnal --asume-standby-mode or
+    ## This check can use the optional --assume-standby-mode or
     ## --assume-prod: if the mode found is not the mode assumed, a
     ## CRITICAL is emitted.
 
@@ -7076,11 +7076,39 @@ sub find_catalog_info {
 
         ## We may want to run additional SQL per row returned
         if (exists $ci->{innerSQL}) {
+
+            if ($type eq 'sequence') {
+                ## If this is a sequence, we want to grab them all at once to reduce 
+                ## the amount of round-trips we do with 'SELECT * FROM seqname'
+                if (! exists $opt{seqinfoss}{$dbnum}) {
+                    $SQL = q{SELECT quote_ident(nspname)||'.'||quote_ident(relname) AS sname }
+                         . q{FROM pg_class }
+                         . q{JOIN pg_namespace n ON (n.oid = relnamespace) }
+                         . q{WHERE relkind = 'S'};
+                    my $sinfo = run_command($SQL, { dbnumber => $dbnum } );
+                    $SQL = join "\n  UNION ALL\n" =>
+                        map { "SELECT '$_->{sname}' AS fullname, * FROM $_->{sname}" }
+                            @{ $sinfo->{db}[0]{slurp}};
+                    $sinfo = run_command($SQL, { dbnumber => $dbnum } );
+
+                    ## Store it back into the global hash
+                    for my $row (@{ $sinfo->{db}[0]{slurp} }) {
+                        $opt{seqinfoss}{$dbnum}{$row->{fullname}} = $row;
+                    }
+                }
+
+                ## If it does not exist in the cache, just fall through and do it manually!
+                if (exists $opt{seqinfoss}{$dbnum}{$row->{safename}}) {
+                    $result->{$row->{safename}} = $opt{seqinfoss}{$dbnum}{$row->{safename}};
+                    next ROW;
+                }
+            }
+
             (my $SQL2 = $ci->{innerSQL}) =~ s/ROW(\w+)/$row->{lc $1}/g;
             my $info2 = run_command($SQL2, { dbnumber => $dbnum } );
             for my $row2 (@{ $info2->{db}[0]{slurp} }) {
                 for my $inner (keys %{ $row2 }) {
-                    $result->{$row->{$key}}{$inner} = $row2->{$inner};
+                    $result->{$name}{$inner} = $row2->{$inner};
                 }
             }
         }
