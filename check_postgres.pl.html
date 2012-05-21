@@ -123,7 +123,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.19.0</p>
+<p>This documents describes check_postgres.pl version 2.20.0</p>
 <p>
 </p>
 <hr />
@@ -265,9 +265,14 @@ Instead, one should use a .pgpass or pg_service.conf file.</p>
 <dt><strong><a name="dbservice_name" class="item"><strong>--dbservice=NAME</strong></a></strong></dt>
 
 <dd>
-<p>The name of a service inside of the pg_service.conf file. This file is in your home directory by 
-default and contains a simple list of connection options. You can also pass additional information 
+<p>The name of a service inside of the pg_service.conf file. Before version 9.0 of Postgres, this is 
+a global file, usually found in /etc/pg_service.conf. If you are using version 9.0 or higher of 
+Postgres, you can use the file &quot;.pg_service.conf&quot; in the home directory of the user running 
+the script, e.g. nagios.</p>
+<p>This file contains a simple list of connection options. You can also pass additional information 
 when using this option such as --dbservice=&quot;maindatabase sslmode=require&quot;</p>
+<p>The documentation for this file can be found at
+<a href="http://www.postgresql.org/docs/current/static/libpq-pgservice.html">http://www.postgresql.org/docs/current/static/libpq-pgservice.html</a></p>
 </dd>
 </dl>
 <p>The database connection options can be grouped: <em>--host=a,b --host=c --port=1234 --port=3344</em>
@@ -392,10 +397,22 @@ Only takes effect if using Nagios output mode.</p>
 <dd>
 <p>Enables test mode. See the <a href="#test_mode">TEST MODE</a> section below.</p>
 </dd>
+<dt><strong><a name="pgbindir_path" class="item"><strong>--PGBINDIR=PATH</strong></a></strong></dt>
+
+<dd>
+<p>Tells the script where to find the psql binaries. Useful if you have more than
+one version of the PostgreSQL executables on your system, or if there are not
+in your path. Note that this option is in all uppercase. By default, this option
+is <em>not allowed</em>. To enable it, you must change the <code>$NO_PSQL_OPTION</code> near the
+top of the script to 0. Avoid using this option if you can, and instead use
+environement variable c&lt;PGBINDIR&gt; or hard-coded <code>$PGBINDIR</code> variable, also near
+the top of the script, to set the path to the PostgreSQL to use.</p>
+</dd>
 <dt><strong><a name="psql_path" class="item"><strong>--PSQL=PATH</strong></a></strong></dt>
 
 <dd>
-<p>Tells the script where to find the psql program. Useful if you have more than 
+<p><em>(deprecated, this option may be removed in a future release!)</em>
+Tells the script where to find the psql program. Useful if you have more than 
 one version of the psql executable on your system, or if there is no psql program 
 in your path. Note that this option is in all uppercase. By default, this option 
 is <em>not allowed</em>. To enable it, you must change the <code>$NO_PSQL_OPTION</code> near the 
@@ -596,9 +613,8 @@ processing shipped WAL files, and is meant to check that your warm standby is tr
 The data directory must be set, either by the environment variable <code>PGDATA</code>, or passing 
 the <code>--datadir</code> argument. It returns the number of seconds since the last checkpoint 
 was run, as determined by parsing the call to <code>pg_controldata</code>. Because of this, the 
-pg_controldata executable must be available in the current path. Alternatively, you can 
-set the environment variable <code>PGCONTROLDATA</code> to the exact location of the pg_controldata 
-executable, or you can specify <code>PGBINDIR</code> as the directory that it lives in.
+pg_controldata executable must be available in the current path. Alternatively,
+you can specify <code>PGBINDIR</code> as the directory that it lives in.
 It is also possible to use the special options <em>--assume-prod</em> or
 <em>--assume-standby-mode</em>, if the mode found is not the one expected, a CRITICAL is emitted.</p>
 <p>At least one warning or critical argument must be set.</p>
@@ -920,7 +936,7 @@ the second line.</p>
 <p>
 </p>
 <h2><a name="hitratio"><strong>hitratio</strong></a></h2>
-<p>(<code>symlink: check_postgres_database_hitratio</code>) Checks the hit ratio of all databases and complains when they are too low.
+<p>(<code>symlink: check_postgres_hitratio</code>) Checks the hit ratio of all databases and complains when they are too low.
 There is no need to run this command more than once per database cluster. 
 Databases can be filtered with 
 the <em>--include</em> and <em>--exclude</em> options. See the <a href="#basic_filtering">BASIC FILTERING</a> section 
@@ -934,7 +950,7 @@ cannot be greater than the critical value. The output returns all databases sort
 hitratio, smallest first.</p>
 <p>Example: Warn if any database on host flagg is less than 90% in hitratio, and critical if less then 80%.</p>
 <pre>
-  check_postgres_database_hitratio --host=flagg --warning='90%' --critical='80%'</pre>
+  check_postgres_hitratio --host=flagg --warning='90%' --critical='80%'</pre>
 <p>For MRTG output, returns the percentage of the database with the smallest hitratio on the first line, 
 and the name of the database on the fourth line.</p>
 <p>
@@ -1718,7 +1734,8 @@ check_postgresrc files can be ignored by supplying a <code>--no-checkpostgresrc<
 </p>
 <hr />
 <h1><a name="environment_variables">ENVIRONMENT VARIABLES</a></h1>
-<p>The environment variable <em>$ENV{HOME}</em> is used to look for a <em class="file">.check_postgresrc</em> file.</p>
+<p>The environment variable <em>$ENV{HOME}</em> is used to look for a <em class="file">.check_postgresrc</em> file.
+The environment variable <em>$ENV{PGBINDIR}</em> is used to look for PostgreSQL binaries.</p>
 <p>
 </p>
 <hr />
@@ -1776,6 +1793,21 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by GSM (Greg Sabino Mullane).</p>
 <dl>
+<dt><strong><a name="version_2_20_0" class="item"><strong>Version 2.20.0</strong></a></strong></dt>
+
+<dd>
+<pre>
+  Add check for pgagent jobs (David E. Wheeler)</pre>
+<pre>
+  Force STDOUT to use utf8 for proper output
+    (Greg Sabino Mullane; reported by Emmanuel Lesouef)</pre>
+<pre>
+  Allow for spaces in item lists when doing same_schema.</pre>
+<pre>
+  Allow txn_idle to work again for &lt; 8.3 servers by switching to query_time.</pre>
+<pre>
+  Cache sequence information to speed up same_schema runs.</pre>
+</dd>
 <dt><strong><a name="version_2_19_0_january_17_2012" class="item"><strong>Version 2.19.0</strong> January 17, 2012</a></strong></dt>
 
 <dd>
