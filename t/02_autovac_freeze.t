@@ -27,8 +27,15 @@ SKIP:
 {
     $ver < 80200 and skip 'Cannot test autovac_freeze on old Postgres versions', 8;
 
-$t = qq{$S self-identifies correctly};
 $result = $cp->run(q{-w 0%});
+
+## As this is the first alphabetic test, let's make an emergency bailout if
+## the server is not reachable at all!
+if ($result =~ /ERROR.+cptesting_socket/s) {
+	BAIL_OUT 'Could not connect to the testing database server!';
+}
+
+$t = qq{$S self-identifies correctly};
 like ($result, qr{^$label}, $t);
 
 $t = qq{$S identifies host};
