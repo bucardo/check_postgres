@@ -7890,7 +7890,7 @@ This documents describes check_postgres.pl version 2.20.0
   check_postgres_connection --db=pluto
 
   ## Warn if > 100 locks, critical if > 200, or > 20 exclusive
-  check_postgres_locks --warning=100 --critical="total=200;exclusive=20"
+  check_postgres_locks --warning=100 --critical="total=200:exclusive=20"
 
   ## Show the current number of idle connections on port 6543:
   check_postgres_txn_idle --port=6543 --output=simple
@@ -8884,7 +8884,7 @@ which represent the total number of locks, or they can be broken down by type of
 Valid lock names are C<'total'>, C<'waiting'>, or the name of a lock type used by Postgres. 
 These names are case-insensitive and do not need the "lock" part on the end, 
 so B<exclusive> will match 'ExclusiveLock'. The format is name=number, with different 
-items separated by semicolons.
+items separated by colons or semicolons (or any other symbol).
 
 Example 1: Warn if the number of locks is 100 or more, and critical if 200 or more, on host garrett
 
@@ -8892,7 +8892,7 @@ Example 1: Warn if the number of locks is 100 or more, and critical if 200 or mo
 
 Example 2: On the host artemus, warn if 200 or more locks exist, and give a critical if over 250 total locks exist, or if over 20 exclusive locks exist, or if over 5 connections are waiting for a lock.
 
-  check_postgres_locks --host=artemus --warning=200 --critical="total=250;waiting=5;exclusive=20"
+  check_postgres_locks --host=artemus --warning=200 --critical="total=250:waiting=5:exclusive=20"
 
 For MRTG output, returns the number of locks on the first line, and the name of the database on the fourth line.
 
