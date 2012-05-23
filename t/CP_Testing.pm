@@ -99,6 +99,7 @@ sub test_database_handle {
         my $cfile = "$dbdir/data space/postgresql.conf";
         open my $cfh, '>>', $cfile or die qq{Could not open "$cfile": $!\n};
         print $cfh qq{\n\n## check_postgres.pl testing parameters\n};
+        print $cfh qq{port = 5432\n};
         print $cfh qq{listen_addresses = ''\n};
         print $cfh qq{max_connections = 10\n};
 
@@ -277,7 +278,7 @@ sub test_database_handle {
     }
 
     $self->{dbname} ||= 'postgres';
-    my $dsn = qq{dbi:Pg:host=$dbhost;dbname=$self->{dbname}};
+    my $dsn = qq{dbi:Pg:host=$dbhost;port=5432;dbname=$self->{dbname}};
     my $dbuser = $self->{testuser};
     my @superdsn = ($dsn, $dbuser, '', {AutoCommit=>0,RaiseError=>1,PrintError=>0});
     my $dbh;
