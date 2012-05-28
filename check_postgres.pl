@@ -212,7 +212,7 @@ our %msg = (
     'queries'            => q{queries},
     'query-time'         => q{query_time},
     'range-badcs'        => q{Invalid '$1' option: must be a checksum},
-    'range-badlock'      => q{Invalid '$1' option: must be number of locks, or "type1=#;type2=#"},
+    'range-badlock'      => q{Invalid '$1' option: must be number of locks, or "type1=#:type2=#"},
     'range-badpercent'   => q{Invalid '$1' option: must be a percentage},
     'range-badpercsize'  => q{Invalid '$1' option: must be a size or a percentage},
     'range-badsize'      => q{Invalid size for '$1' option},
@@ -462,7 +462,7 @@ our %msg = (
     'queries'            => q{requêtes},
     'query-time'         => q{durée de la requête},
     'range-badcs'        => q{Option « $1 » invalide : doit être une somme de contrôle},
-    'range-badlock'      => q{Option « $1 » invalide : doit être un nombre de verrou ou « type1=#;type2=# »},
+    'range-badlock'      => q{Option « $1 » invalide : doit être un nombre de verrou ou « type1=#:type2=# »},
     'range-badpercent'   => q{Option « $1 » invalide : doit être un pourcentage},
     'range-badpercsize'  => q{Option « $1 » invalide : doit être une taille ou un pourcentage},
     'range-badsize'      => q{Taille invalide pour l'option « $1 »},
@@ -5018,7 +5018,7 @@ sub check_locks {
     ## Can check specific databases with include
     ## Can ignore databases with exclude
     ## Warning and critical are either simple numbers, or more complex:
-    ## Use locktype=number;locktype2=number
+    ## Use locktype=number:locktype2=number
     ## The locktype can be "total", "waiting", or the name of a lock
     ## Lock names are case-insensitive, and do not need the "lock" at the end.
     ## Example: --warning=100 --critical="total=200;exclusive=20;waiting=5"
@@ -5030,13 +5030,11 @@ sub check_locks {
           default_critical => 150,
           });
 
-    $SQL = q{SELECT granted, mode, datname FROM pg_locks l JOIN pg_database d ON (d.oid=l.database)};
+    $SQL = q{SELECT granted, mode, datname FROM pg_locks l RIGHT JOIN pg_database d ON (d.oid=l.database) WHERE d.datallowconn};
     my $info = run_command($SQL, { regex => qr[\s*\w+\s*\|\s*] });
 
     # Locks are counted globally not by db.
-    # add a limit by db ? (--critical='foodb.total=30 foodb.exclusive=3 postgres.total=3')
-    # end remove the -db option ?
-    # we output for each db, following the specific warning and critical :
+    # We output for each db, following the specific warning and critical :
     # time=00.1 foodb.exclusive=2;;3 foodb.total=10;;30 postgres.exclusive=0;;3 postgres.total=1;;3
     for $db (@{$info->{db}}) {
         my $gotone = 0;
@@ -5044,15 +5042,26 @@ sub check_locks {
         my %totallock = (total => 0);
       ROW: for my $r (@{$db->{slurp}}) {
             my ($granted,$mode,$dbname) = ($r->{granted}, lc $r->{mode}, $r->{datname});
+
+            ## May be forcibly skipping this database via arguments
             next ROW if skip_item($dbname);
-            $gotone = 1;
-            $mode =~ s{lock$}{};
-            $dblock{$dbname}{total}++;
-            $dblock{$dbname}{$mode}++;
-            $dblock{$dbname}{waiting}++ if $granted ne 't';
+
+            ## If we hit the right join, simply make an empty total entry
+            if (! length $granted) {
+                $dblock{$dbname}{total} ||= 0;
+            }
+            else {
+                $dblock{$dbname}{total}++;
+                $gotone = 1;
+                $mode =~ s{lock$}{};
+                $dblock{$dbname}{$mode}++;
+                $dblock{$dbname}{waiting}++ if $granted ne 't';
+            }
         }
+
         # Compute total, add hash key for critical and warning specific check
         for my $k (keys %dblock) {
+
             if ($warning) {
                 for my $l (keys %{$warning}) {
                     $dblock{$k}{$l} = 0 if ! exists $dblock{$k}{$l};
@@ -5060,7 +5069,7 @@ sub check_locks {
             }
             if ($critical) {
                 for my $l (keys %{$critical}) {
-                    $dblock{$k}{$l} = 0 if ! exists $dblock{$k}{$l};
+                    #$dblock{$k}{$l} = 0 if ! exists $dblock{$k}{$l};
                 }
             }
             for my $m (keys %{$dblock{$k}}){
