@@ -2172,7 +2172,7 @@ sub run_command {
     ## "timeout" - change the timeout from the default of $opt{timeout}
     ## "regex" - the query must match this or we throw an error
     ## "emptyok" - it's okay to not match any rows at all
-    ## "version" - alternate versions for different versions
+    ## "version" - alternate SQL for different versions of Postgres
     ## "dbnumber" - connect with this specific entry from @targetdb
     ## "conninfo" - return the connection information string without doing anything
 
@@ -7521,9 +7521,9 @@ sub check_txn_idle {
 
     ## We don't GROUP BY because we want details on every connection
     ## Someday we may even break things down by database
-    my $SQL2;
+    my ($SQL2, $SQL3);
     if ($type ne 'qtime') {
-        $SQL = q{SELECT datname, datid, procpid, usename, client_addr, xact_start, current_query, }.
+        $SQL = q{SELECT datname, datid, procpid AS pid, usename, client_addr, xact_start, current_query AS current_query, }.
             q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
             qq{FROM pg_stat_activity WHERE $clause$USERWHERECLAUSE }.
@@ -7533,14 +7533,18 @@ sub check_txn_idle {
         $SQL2 =~ s/BY xact_start,/BY/;
     }
     else {
-        $SQL = q{SELECT datname, datid, procpid, usename, client_addr, current_query, }.
+        $SQL = q{SELECT datname, datid, procpid AS pid, usename, client_addr, current_query AS current_query, }.
             q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
             qq{FROM pg_stat_activity WHERE $clause$USERWHERECLAUSE }.
             q{ORDER BY query_start, procpid DESC};
     }
 
-    my $info = run_command($SQL, { emptyok => 1 , version => [ "<8.3 $SQL2" ] } );
+    ## Craft an alternate version for new servers which do not have procpid
+    ($SQL3 = $SQL) =~ s/procpid/pid/g;
+    $SQL3 =~ s/current_query/query/g;
+
+    my $info = run_command($SQL, { emptyok => 1 , version => [ "<8.3 $SQL2", ">9.1 $SQL3" ] } );
 
     ## Extract the first entry
     $db = $info->{db}[0];
@@ -7621,7 +7625,7 @@ sub check_txn_idle {
     ## Details on who the top offender was
     if ($max > 0) {
         $whodunit = sprintf q{%s:%s %s:%s %s:%s%s%s},
-            msg('PID'), $maxr->{procpid},
+            msg('PID'), $maxr->{pid},
             msg('database'), $maxr->{datname},
             msg('username'), $maxr->{usename},
             $maxr->{client_addr} eq '' ? '' : (sprintf ' %s:%s', msg('address'), $maxr->{client_addr}),
