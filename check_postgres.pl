@@ -8692,7 +8692,7 @@ L</"BASIC FILTERING"> section for more details.
 
 Example 1: Make sure that no file system is over 90% for the database on port 5432.
 
-  check_postgres_disk_space --port=5432 --warning='90%' --critical="90%'
+  check_postgres_disk_space --port=5432 --warning='90%' --critical='90%'
 
 Example 2: Check that all file systems starting with /dev/sda are smaller than 10 GB and 11 GB (warning and critical)
 
