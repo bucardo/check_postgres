@@ -24,6 +24,7 @@ my $label = 'POSTGRES_BACKENDS';
 
 my $ver = $dbh->{pg_server_version};
 my $goodver = $ver >= 80200 ? 1 : 0;
+my $pg92 = $ver >= 90200 ? 1 : 0;
 
 ## Check current number of connections: should be 1 (for recent versions of PG)
 $SQL = 'SELECT count(*) FROM pg_stat_activity';
@@ -132,7 +133,7 @@ $num = $goodver ? 7 : 8;
 like ($cp->run("-c -$num"), qr{^$label CRITICAL}, $t);
 
 $t=qq{$S works when no items caught by pg_stat_activity};
-$cp->create_fake_pg_table('pg_stat_activity','', ' WHERE procpid = pg_backend_pid()');
+$cp->create_fake_pg_table('pg_stat_activity','', $pg92 ? ' WHERE pid = pg_backend_pid()' : ' WHERE procpid = pg_backend_pid()');
 like ($cp->run(), qr{^$label OK: .+1 of }, $t);
 
 $t=qq{$S fails as expected when max_connections cannot be determined};

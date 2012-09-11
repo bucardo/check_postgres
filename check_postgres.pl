@@ -3359,7 +3359,9 @@ LEFT JOIN pg_stat_activity s ON (s.datid = d.oid) $NOIDLE
 GROUP BY 2,3
 ORDER BY datname
 };
-    my $info = run_command($SQL, {regex => qr{\d+}, fatalregex => 'too many clients' } );
+    my $SQL92;
+    ($SQL92 = $SQL) =~ s/current_query <> '<IDLE>'/state <> 'idle'/g;
+    my $info = run_command($SQL, {regex => qr{\d+}, fatalregex => 'too many clients', version => [">9.1 $SQL92"] } );
 
     $db = $info->{db}[0];
 
@@ -4357,7 +4359,10 @@ FROM pg_tablespace
 WHERE spclocation <> ''
 };
 
-    my $info = run_command($SQL);
+    my $SQL92;
+    ($SQL92 = $SQL) =~ s/spclocation/pg_tablespace_location(oid)/g;
+
+    my $info = run_command($SQL, {version => [">9.1 $SQL92"]});
 
     my %dir; ## 1 = normal 2 = been checked -1 = does not exist
     my %seenfs;
@@ -7523,7 +7528,7 @@ sub check_txn_idle {
     ## Someday we may even break things down by database
     my ($SQL2, $SQL3);
     if ($type ne 'qtime') {
-        $SQL = q{SELECT datname, datid, procpid AS pid, usename, client_addr, xact_start, current_query AS current_query, }.
+        $SQL = q{SELECT datname, datid, procpid AS pid, usename, client_addr, xact_start, current_query AS current_query, '' AS state, }.
             q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
             qq{FROM pg_stat_activity WHERE $clause$USERWHERECLAUSE }.
@@ -7533,16 +7538,19 @@ sub check_txn_idle {
         $SQL2 =~ s/BY xact_start,/BY/;
     }
     else {
-        $SQL = q{SELECT datname, datid, procpid AS pid, usename, client_addr, current_query AS current_query, }.
+        $SQL = q{SELECT datname, datid, procpid AS pid, usename, client_addr, current_query AS current_query, '' AS state, }.
             q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
             qq{FROM pg_stat_activity WHERE $clause$USERWHERECLAUSE }.
             q{ORDER BY query_start, procpid DESC};
     }
 
-    ## Craft an alternate version for new servers which do not have procpid
+    ## Craft an alternate version for new servers which do not have procpid and current_query is split
     ($SQL3 = $SQL) =~ s/procpid/pid/g;
+    $SQL3 =~ s/current_query ~ '\^<'/state = 'idle in transaction' OR state IS NULL/;
+    $SQL3 =~ s/current_query NOT LIKE '<IDLE>%'/state NOT LIKE 'idle%' OR state IS NULL/; # query_time
     $SQL3 =~ s/current_query/query/g;
+    $SQL3 =~ s/'' AS state/state AS state/;
 
     my $info = run_command($SQL, { emptyok => 1 , version => [ "<8.3 $SQL2", ">9.1 $SQL3" ] } );
 
@@ -7571,8 +7579,9 @@ sub check_txn_idle {
         ## Skip if we don't care about this database
         next if skip_item($r->{datname});
 
-        ## We do a lot of filtering based on the current_query
-        my $cq = $r->{current_query};
+        ## We do a lot of filtering based on the current_query or state in 9.2+
+        my $cq = $r->{query} || $r->{current_query};
+        my $st = $r->{state} || '';
 
         ## Return unknown if we cannot see because we are a non-superuser
         if ($cq =~ /insufficient/o) {
@@ -7593,7 +7602,7 @@ sub check_txn_idle {
         }
 
         ## Filter out based on the action
-        next if $action eq 'txn_idle' and $cq ne '<IDLE> in transaction';
+        next if $action eq 'txn_idle' and $cq ne '<IDLE> in transaction' and $st ne 'idle in transaction';
 
         ## Keep track of the longest overall time
         $maxr = $r if $r->{seconds} >= $maxr->{seconds};
