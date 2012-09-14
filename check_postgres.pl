@@ -2251,7 +2251,7 @@ sub run_command {
             $ENV{PGSERVICE} = $db->{dbservice};
         }
         else {
-            $db->{pname} = "port=$db->{port} host=$db->{host} db=$db->{dbname} user=$db->{dbuser}";
+            $db->{pname} = "port=" . ($db->{port} || $opt{defaultport}) . " host=$db->{host} db=$db->{dbname} user=$db->{dbuser}";
         }
 
         ## If all we want is a connection string, give it and leave now
