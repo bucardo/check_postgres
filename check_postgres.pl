@@ -9750,6 +9750,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Adjust docs to show colon as a better separator inside args for locks
     (Charles Sprickman)
 
+  Fix undefined $SQL2 error in check_txn_idle [github issue 16] (Patric Bechtel)
+
 =item B<Version 2.19.0> January 17, 2012
 
   Add the --assume-prod option (Cédric Villemain)
