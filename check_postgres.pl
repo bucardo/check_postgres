@@ -4756,29 +4756,11 @@ sub check_hot_standby_delay {
 
     ## Get xlog positions
     my ($moffset, $s_rec_offset, $s_rep_offset);
-    ## On master
-    $SQL = q{SELECT pg_current_xlog_location() AS location};
-    my $info = run_command($SQL, { dbnumber => $master });
-    my $saved_db;
-    for $db (@{$info->{db}}) {
-        my $location = $db->{slurp}[0]{location};
-        next if ! defined $location;
-
-        my ($x, $y) = split(/\//, $location);
-        $moffset = (hex('ff000000') * hex($x)) + hex($y);
-        $saved_db = $db if ! defined $saved_db;
-    }
-
-    if (! defined $moffset) {
-        add_unknown msg('hs-no-location', 'master');
-        return;
-    }
 
     ## On slave
     $SQL = q{SELECT pg_last_xlog_receive_location() AS receive, pg_last_xlog_replay_location() AS replay};
-
-    $info = run_command($SQL, { dbnumber => $slave, regex => qr/\// });
-
+    my $info = run_command($SQL, { dbnumber => $slave, regex => qr/\// });
+    my $saved_db;
     for $db (@{$info->{db}}) {
         my $receive = $db->{slurp}[0]{receive};
         my $replay = $db->{slurp}[0]{replay};
@@ -4801,10 +4783,31 @@ sub check_hot_standby_delay {
         return;
     }
 
+    ## On master
+    $SQL = q{SELECT pg_current_xlog_location() AS location};
+    $info = run_command($SQL, { dbnumber => $master });
+    for $db (@{$info->{db}}) {
+        my $location = $db->{slurp}[0]{location};
+        next if ! defined $location;
+
+        my ($x, $y) = split(/\//, $location);
+        $moffset = (hex('ff000000') * hex($x)) + hex($y);
+        $saved_db = $db if ! defined $saved_db;
+    }
+
+    if (! defined $moffset) {
+        add_unknown msg('hs-no-location', 'master');
+        return;
+    }
+
     ## Compute deltas
     $db = $saved_db;
     my $rec_delta = $moffset - $s_rec_offset;
     my $rep_delta = $moffset - $s_rep_offset;
+
+    # Make sure it's always positive or zero
+    $rec_delta = 0 if $rec_delta < 0;
+    $rep_delta = 0 if $rep_delta < 0;
 
     $MRTG and do_mrtg({one => $rep_delta, two => $rec_delta});
 
