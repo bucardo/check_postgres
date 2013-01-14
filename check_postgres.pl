@@ -32,7 +32,7 @@ $Data::Dumper::Useqq = 1;
 
 binmode STDOUT, ':utf8';
 
-our $VERSION = '2.20.0';
+our $VERSION = '2.20.1';
 
 use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 
@@ -3552,20 +3552,27 @@ FROM (
   LEFT JOIN
   (
     SELECT
-      ma,bs,schemaname,tablename,
+      ma,bs,foo.nspname,foo.relname,
       (datawidth+(hdr+ma-(case when hdr%ma=0 THEN ma ELSE hdr%ma END)))::numeric AS datahdr,
       (maxfracsum*(nullhdr+ma-(case when nullhdr%ma=0 THEN ma ELSE nullhdr%ma END))) AS nullhdr2
     FROM (
       SELECT
-        schemaname, tablename, hdr, ma, bs,
-        SUM((1-null_frac)*avg_width) AS datawidth,
-        MAX(null_frac) AS maxfracsum,
+        ns.nspname, tbl.relname, hdr, ma, bs,
+        SUM((1-coalesce(null_frac,0))*coalesce(avg_width, 2048)) AS datawidth,
+        MAX(coalesce(null_frac,0)) AS maxfracsum,
         hdr+(
           SELECT 1+count(*)/8
           FROM pg_stats s2
-          WHERE null_frac<>0 AND s2.schemaname = s.schemaname AND s2.tablename = s.tablename
+          WHERE null_frac<>0 AND s2.schemaname = ns.nspname AND s2.tablename = tbl.relname
         ) AS nullhdr
-      FROM pg_stats s, (
+      FROM pg_attribute att 
+      JOIN pg_class tbl ON att.attrelid = tbl.oid
+      JOIN pg_namespace ns ON ns.oid = tbl.relnamespace 
+      LEFT JOIN pg_stats s ON s.schemaname=ns.nspname
+      AND s.tablename = tbl.relname
+      AND s.inherited=false
+      AND s.attname=att.attname,
+      (
         SELECT
           BLOCK_SIZE,
             CASE WHEN SUBSTRING(SPLIT_PART(v, ' ', 2) FROM '#"[0-9]+.[0-9]+#"%' for '#')
@@ -3573,10 +3580,11 @@ FROM (
           CASE WHEN v ~ 'mingw32' OR v ~ '64-bit' THEN 8 ELSE 4 END AS ma
         FROM (SELECT version() AS v) AS foo
       ) AS constants
+      WHERE att.attnum > 0 AND tbl.relkind='r'
       GROUP BY 1,2,3,4,5
     ) AS foo
   ) AS rs
-  ON cc.relname = rs.tablename AND nn.nspname = rs.schemaname
+  ON cc.relname = rs.relname AND nn.nspname = rs.nspname
   LEFT JOIN pg_index i ON indrelid = cc.oid
   LEFT JOIN pg_class c2 ON c2.oid = i.indexrelid
 ) AS sml
@@ -9736,6 +9744,10 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
+
+=item B<Version 2.20.1> January 9, 2013
+  Fix the check_bloat SQL to take inherited tables into account, and assume 2k for non-analyzed columns.
+    (Geert Pante)
 
 =item B<Version 2.20.0>
 
