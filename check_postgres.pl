@@ -7534,7 +7534,7 @@ sub check_txn_idle {
         $SQL = q{SELECT datname, datid, procpid AS pid, usename, client_addr, xact_start, current_query AS current_query, '' AS state, }.
             q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
-            qq{FROM pg_stat_activity WHERE $clause$USERWHERECLAUSE }.
+            qq{FROM pg_stat_activity WHERE ($clause)$USERWHERECLAUSE }.
             q{ORDER BY xact_start, query_start, procpid DESC};
         ## Craft an alternate version for old servers that do not have the xact_start column:
         ($SQL2 = $SQL) =~ s/xact_start/query_start AS xact_start/;
@@ -7544,7 +7544,7 @@ sub check_txn_idle {
         $SQL2 = $SQL = q{SELECT datname, datid, procpid AS pid, usename, client_addr, current_query AS current_query, '' AS state, }.
             q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
-            qq{FROM pg_stat_activity WHERE $clause$USERWHERECLAUSE }.
+            qq{FROM pg_stat_activity WHERE ($clause)$USERWHERECLAUSE }.
             q{ORDER BY query_start, procpid DESC};
     }
 
