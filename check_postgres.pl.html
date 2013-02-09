@@ -139,7 +139,7 @@
   check_postgres_connection --db=pluto</pre>
 <pre>
   ## Warn if &gt; 100 locks, critical if &gt; 200, or &gt; 20 exclusive
-  check_postgres_locks --warning=100 --critical=&quot;total=200;exclusive=20&quot;</pre>
+  check_postgres_locks --warning=100 --critical=&quot;total=200:exclusive=20&quot;</pre>
 <pre>
   ## Show the current number of idle connections on port 6543:
   check_postgres_txn_idle --port=6543 --output=simple</pre>
@@ -405,7 +405,7 @@ one version of the PostgreSQL executables on your system, or if there are not
 in your path. Note that this option is in all uppercase. By default, this option
 is <em>not allowed</em>. To enable it, you must change the <code>$NO_PSQL_OPTION</code> near the
 top of the script to 0. Avoid using this option if you can, and instead use
-environement variable c&lt;PGBINDIR&gt; or hard-coded <code>$PGBINDIR</code> variable, also near
+environment variable c&lt;PGBINDIR&gt; or hard-coded <code>$PGBINDIR</code> variable, also near
 the top of the script, to set the path to the PostgreSQL to use.</p>
 </dd>
 <dt><strong><a name="psql_path" class="item"><strong>--PSQL=PATH</strong></a></strong></dt>
@@ -887,7 +887,7 @@ maps to a file system: these can be included or excluded. See the
 <a href="#basic_filtering">BASIC FILTERING</a> section for more details.</p>
 <p>Example 1: Make sure that no file system is over 90% for the database on port 5432.</p>
 <pre>
-  check_postgres_disk_space --port=5432 --warning='90%' --critical=&quot;90%'</pre>
+  check_postgres_disk_space --port=5432 --warning='90%' --critical='90%'</pre>
 <p>Example 2: Check that all file systems starting with /dev/sda are smaller than 10 GB and 11 GB (warning and critical)</p>
 <pre>
   check_postgres_disk_space --port=5432 --warning='10 GB' --critical='11 GB' --include=&quot;~^/dev/sda&quot;</pre>
@@ -1074,13 +1074,13 @@ which represent the total number of locks, or they can be broken down by type of
 Valid lock names are <code>'total'</code>, <code>'waiting'</code>, or the name of a lock type used by Postgres. 
 These names are case-insensitive and do not need the &quot;lock&quot; part on the end, 
 so <strong>exclusive</strong> will match 'ExclusiveLock'. The format is name=number, with different 
-items separated by semicolons.</p>
+items separated by colons or semicolons (or any other symbol).</p>
 <p>Example 1: Warn if the number of locks is 100 or more, and critical if 200 or more, on host garrett</p>
 <pre>
   check_postgres_locks --host=garrett --warning=100 --critical=200</pre>
 <p>Example 2: On the host artemus, warn if 200 or more locks exist, and give a critical if over 250 total locks exist, or if over 20 exclusive locks exist, or if over 5 connections are waiting for a lock.</p>
 <pre>
-  check_postgres_locks --host=artemus --warning=200 --critical=&quot;total=250;waiting=5;exclusive=20&quot;</pre>
+  check_postgres_locks --host=artemus --warning=200 --critical=&quot;total=250:waiting=5:exclusive=20&quot;</pre>
 <p>For MRTG output, returns the number of locks on the first line, and the name of the database on the fourth line.</p>
 <p>
 </p>
@@ -1807,6 +1807,11 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
   Allow txn_idle to work again for &lt; 8.3 servers by switching to query_time.</pre>
 <pre>
   Cache sequence information to speed up same_schema runs.</pre>
+<pre>
+  Adjust docs to show colon as a better separator inside args for locks
+    (Charles Sprickman)</pre>
+<pre>
+  Fix undefined $SQL2 error in check_txn_idle [github issue 16] (Patric Bechtel)</pre>
 </dd>
 <dt><strong><a name="version_2_19_0_january_17_2012" class="item"><strong>Version 2.19.0</strong> January 17, 2012</a></strong></dt>
 
@@ -2643,7 +2648,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 </p>
 <hr />
 <h1><a name="license_and_copyright">LICENSE AND COPYRIGHT</a></h1>
-<p>Copyright (c) 2007-2012 Greg Sabino Mullane &lt;<a href="mailto:greg@endpoint.com">greg@endpoint.com</a>&gt;.</p>
+<p>Copyright (c) 2007-2013 Greg Sabino Mullane &lt;<a href="mailto:greg@endpoint.com">greg@endpoint.com</a>&gt;.</p>
 <p>Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions are met:</p>
 <pre>
