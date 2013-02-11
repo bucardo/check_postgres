@@ -9750,6 +9750,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Cache sequence information to speed up same_schema runs.
 
+  Fix --excludeuser in check_txn_idle (Mika Eloranta)
+
   Fix userclause handling in check_txn_idle (Michael van Bracht)
 
   Adjust docs to show colon as a better separator inside args for locks
