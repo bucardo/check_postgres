@@ -7550,8 +7550,8 @@ sub check_txn_idle {
 
     ## Craft an alternate version for new servers which do not have procpid and current_query is split
     ($SQL3 = $SQL) =~ s/procpid/pid/g;
-    $SQL3 =~ s/current_query ~ '\^<'/state = 'idle in transaction' OR state IS NULL/;
-    $SQL3 =~ s/current_query NOT LIKE '<IDLE>%'/state NOT LIKE 'idle%' OR state IS NULL/; # query_time
+    $SQL3 =~ s/current_query ~ '\^<'/(state = 'idle in transaction' OR state IS NULL)/;
+    $SQL3 =~ s/current_query NOT LIKE '<IDLE>%'/(state NOT LIKE 'idle%' OR state IS NULL)/; # query_time
     $SQL3 =~ s/current_query/query/g;
     $SQL3 =~ s/'' AS state/state AS state/;
 
