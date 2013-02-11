@@ -9759,6 +9759,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Fix undefined $SQL2 error in check_txn_idle [github issue 16] (Patric Bechtel)
 
+  Prevent "uninitialized value" warnings when showing the port (Henrik Ahlgren)
+
 =item B<Version 2.19.0> January 17, 2012
 
   Add the --assume-prod option (Cédric Villemain)
