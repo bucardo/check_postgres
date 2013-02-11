@@ -429,7 +429,7 @@ sub run {
     my $dbuser = $self->{testuser} || die 'No testuser?';
     my $dbname = $self->{dbname} || die 'No dbname?';
 
-    my $com = qq{perl check_postgres.pl --no-check_postgresrc --action=$action};
+    my $com = qq{perl check_postgres.pl --no-check_postgresrc --dbport=5432 --action=$action};
     if ($extra !~ /dbhost/) {
         $com .= qq{ --dbhost="$dbhost"};
     }
