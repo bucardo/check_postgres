@@ -74,6 +74,7 @@ sub test_database_handle {
 
     ## Create the test database directory if it does not exist
     my $dbdir = $arg->{dbdir} || $self->{dbdir};
+	$DEBUG and warn qq{Datadir: $dbdir\n};
     if (! -d $dbdir) {
 
         -e $dbdir and die qq{Oops: I cannot create "$dbdir", there is already a file there!\n};
@@ -81,14 +82,19 @@ sub test_database_handle {
         Test::More::diag qq{Creating database in directory "$dbdir"\n};
 
         mkdir $dbdir;
+	}
+
+	my $datadir = "$dbdir/data space";
+	if (! -e $datadir) {
 
         my $initdb
             = $ENV{PGINITDB} ? $ENV{PGINITDB}
             : $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/initdb"
             :                  'initdb';
 
-        $com = qq{LC_ALL=en LANG=C $initdb --locale=C -E UTF8 -D "$dbdir/data space" 2>&1};
+        $com = qq{LC_ALL=en LANG=C $initdb --locale=C -E UTF8 -D "$datadir" 2>&1};
         eval {
+			$DEBUG and warn qq{About to run: $com\n};
             $info = qx{$com};
         };
         if ($@) {
@@ -189,6 +195,7 @@ sub test_database_handle {
 
         $com = qq{LC_ALL=en LANG=C $pg_ctl -o '-k $sockdir' -l $logfile -D "$dbdir/data space" start};
         eval {
+			$DEBUG and warn qq{About to run: $com\n};
             $info = qx{$com};
         };
         if ($@) {
