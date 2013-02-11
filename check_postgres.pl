@@ -4754,6 +4754,11 @@ sub check_hot_standby_delay {
         return;
     }
 
+    ## If no slave detected, assume it is 2
+    if (! defined $slave) {
+        $slave = 2;
+    }
+
     ## If the slave is "db1" and master "db2", go ahead and switch them around for clearer output
     if (1 == $slave) {
         ($slave, $master) = (2, 1);
