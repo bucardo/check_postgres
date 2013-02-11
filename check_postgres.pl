@@ -9745,10 +9745,6 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
-=item B<Version 2.20.1> January 9, 2013
-  Fix the check_bloat SQL to take inherited tables into account, and assume 2k for non-analyzed columns.
-    (Geert Pante)
-
 =item B<Version 2.20.0>
 
   Add check for pgagent jobs (David E. Wheeler)
@@ -9759,6 +9755,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Allow for spaces in item lists when doing same_schema.
 
   Allow txn_idle to work again for < 8.3 servers by switching to query_time.
+
+  Fix the check_bloat SQL to take inherited tables into account,
+    and assume 2k for non-analyzed columns. (Geert Pante)
 
   Cache sequence information to speed up same_schema runs.
 
