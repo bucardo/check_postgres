@@ -865,7 +865,7 @@ if (! $opt{'no-check_postgresrc'}) {
     if (-e '.check_postgresrc') {
         $rcfile = '.check_postgresrc';
     }
-    elsif (-e "$ENV{HOME}/.check_postgresrc") {
+    elsif (exists $ENV{HOME} and -e "$ENV{HOME}/.check_postgresrc") {
         $rcfile = "$ENV{HOME}/.check_postgresrc";
     }
     elsif (-e '/etc/check_postgresrc') {
