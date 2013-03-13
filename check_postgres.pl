@@ -32,7 +32,7 @@ $Data::Dumper::Useqq = 1;
 
 binmode STDOUT, ':utf8';
 
-our $VERSION = '2.20.1';
+our $VERSION = '2.20.0';
 
 use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 
@@ -9750,7 +9750,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
-=item B<Version 2.20.0>
+=item B<Version 2.20.0> March 13, 2013
 
   Add check for pgagent jobs (David E. Wheeler)
 
@@ -9776,6 +9776,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Fix undefined $SQL2 error in check_txn_idle [github issue 16] (Patric Bechtel)
 
   Prevent "uninitialized value" warnings when showing the port (Henrik Ahlgren)
+
+  Do not assume everyone has a HOME [github issue 23]
 
 =item B<Version 2.19.0> January 17, 2012
 

@@ -32,7 +32,7 @@ $result = $cp->run(q{-w 0%});
 ## As this is the first alphabetic test, let's make an emergency bailout if
 ## the server is not reachable at all!
 if ($result =~ /ERROR.+cptesting_socket/s) {
-	BAIL_OUT 'Could not connect to the testing database server!';
+    BAIL_OUT 'Could not connect to the testing database server!';
 }
 
 $t = qq{$S self-identifies correctly};

@@ -1793,7 +1793,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by GSM (Greg Sabino Mullane).</p>
 <dl>
-<dt><strong><a name="version_2_20_0" class="item"><strong>Version 2.20.0</strong></a></strong></dt>
+<dt><strong><a name="version_2_20_0_march_13_2013" class="item"><strong>Version 2.20.0</strong> March 13, 2013</a></strong></dt>
 
 <dd>
 <pre>
@@ -1806,12 +1806,23 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
   Allow txn_idle to work again for &lt; 8.3 servers by switching to query_time.</pre>
 <pre>
+  Fix the check_bloat SQL to take inherited tables into account,
+    and assume 2k for non-analyzed columns. (Geert Pante)</pre>
+<pre>
   Cache sequence information to speed up same_schema runs.</pre>
+<pre>
+  Fix --excludeuser in check_txn_idle (Mika Eloranta)</pre>
+<pre>
+  Fix userclause handling in check_txn_idle (Michael van Bracht)</pre>
 <pre>
   Adjust docs to show colon as a better separator inside args for locks
     (Charles Sprickman)</pre>
 <pre>
   Fix undefined $SQL2 error in check_txn_idle [github issue 16] (Patric Bechtel)</pre>
+<pre>
+  Prevent &quot;uninitialized value&quot; warnings when showing the port (Henrik Ahlgren)</pre>
+<pre>
+  Do not assume everyone has a HOME [github issue 23]</pre>
 </dd>
 <dt><strong><a name="version_2_19_0_january_17_2012" class="item"><strong>Version 2.19.0</strong> January 17, 2012</a></strong></dt>
 
