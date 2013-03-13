@@ -8,16 +8,19 @@ MANIFEST
 MANIFEST.SKIP
 perlcriticrc
 META.yml
+MYMETA.yml
 TODO
 
 t/00_basic.t
 t/00_signature.t
 t/00_test_tester.t
+t/01_validate_range.t
 t/02_autovac_freeze.t
 t/02_backends.t
 t/02_bloat.t
 t/02_checkpoint.t
 t/02_cluster_id.t
+t/02_commitratio.t
 t/02_connection.t
 t/02_custom_query.t
 t/02_database_size.t
@@ -26,14 +29,18 @@ t/02_disabled_triggers.t
 t/02_disk_space.t
 t/02_fsm_pages.t
 t/02_fsm_relations.t
+t/02_hitratio.t
 t/02_last_analyze.t
 t/02_last_vacuum.t
 t/02_listener.t
 t/02_locks.t
 t/02_logfile.t
 t/02_new_version_bc.t
+t/02_new_version_box.t
 t/02_new_version_cp.t
 t/02_new_version_pg.t
+t/02_new_version_tnm.t
+t/02_pgagent_jobs.t
 t/02_pgbouncer_checksum.t
 t/02_prepared_txns.t
 t/02_query_runtime.t
@@ -52,5 +59,6 @@ t/02_version.t
 t/02_wal_files.t
 t/03_translations.t
 t/04_timeout.t
+t/05_docs.t
 t/99_cleanup.t
 t/CP_Testing.pm

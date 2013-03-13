@@ -12,6 +12,7 @@ test_database_check_postgres*
 \.tmp$
 set_translations.pl
 t/99_perlcritic.t
+.perlcriticrc
 t/99_pod.t
 t/00_release.t
 t/99_spellcheck.t
