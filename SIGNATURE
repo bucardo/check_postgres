@@ -14,24 +14,27 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: RIPEMD160
 
-SHA1 9ab773a8191ac2df4439c8bbcc99dba35d025883 MANIFEST
-SHA1 92f9e28d28d95763cce24d588b19262efc7218f7 MANIFEST.SKIP
-SHA1 4af2c5cd509eb4e60c5aaeea624a1d59f0cba745 META.yml
-SHA1 f96da4b33e66d585d6cffa0d39205c53dc966a70 Makefile.PL
-SHA1 acffbf8ac9243e22197a07cb02fb1dd79c553881 README
+SHA1 3daf641677071210a1702e075f9837becd504d9d MANIFEST
+SHA1 831b5cd42dfba235cb5941d1d9380c8eba491452 MANIFEST.SKIP
+SHA1 a3aa67c5485514f304f17197249717a197b65e2d META.yml
+SHA1 60638be54739d281eee5399dd9b3a1b701f3d085 MYMETA.yml
+SHA1 356f76cc4a53e91d1bd80d2c10766d02528dc098 Makefile.PL
+SHA1 52f1d71e60a9d139ee3b1bd80de1d82e27e9b1c0 README
 SHA1 3bdea49b9baf59b6c2f1c238f45794ba0f3fdd0f TODO
-SHA1 df5500fe85ffaa96428c755ccdccd38ab275ebb8 check_postgres.pl
+SHA1 e2501fca8e1ad39c263549b1b9eb69381398fffa check_postgres.pl
 SHA1 a46c77b4be9458ced64673686f27d9194ce0e7ed check_postgres.pl.asc
-SHA1 082cf28c0de8db75ce0a5bd3e8dbfebbe7abb8a1 check_postgres.pl.html
+SHA1 1f0fdf1480c77a321416a5120037af84fd19633c check_postgres.pl.html
 SHA1 2a5730008e80e9c94a3a31991203b19fd6c41cad perlcriticrc
 SHA1 ef43082a685d993fdd151de16590ce0f6832de7a t/00_basic.t
 SHA1 29700e8331d1780e87b858581054cd190e4f4ecb t/00_signature.t
 SHA1 439053254ee01e2ec406f9d1605dc5e28257b8bd t/00_test_tester.t
-SHA1 9e49f1a4de88e64ba73b3cbcf45cba158ca49afc t/02_autovac_freeze.t
-SHA1 fc83c41652b0cef2dc07efdea30400a747a27cf1 t/02_backends.t
+SHA1 02f59725d968d85d855b0bcc771c99003c6e0389 t/01_validate_range.t
+SHA1 7b9ef508bc0fc1624dc81129b4014a1b9704db7e t/02_autovac_freeze.t
+SHA1 c50f069d276e44b95408fe16aefa46c24745a038 t/02_backends.t
 SHA1 923acca525a528ccefd630eef8e015007a1bc5d0 t/02_bloat.t
 SHA1 58f04f98539371d9469ca93890b3f61a990fa343 t/02_checkpoint.t
 SHA1 c3e31bedea2a55b49d61874a7e4b8f6900746b22 t/02_cluster_id.t
+SHA1 e4a26b2713f0a52f31a38fb9b522a7f6e8bb9d8e t/02_commitratio.t
 SHA1 4c403c8d733fff18e8ef5b198c0f0837419b4e77 t/02_connection.t
 SHA1 3ec5348a4125429a16e486a3850baa43954d278a t/02_custom_query.t
 SHA1 6e255ba83d65c41c9f27ec05b3c66b57f531b42e t/02_database_size.t
@@ -40,14 +43,18 @@ SHA1 f01542845070822b80cac7aaa3038eae50f8d3ae t/02_disabled_triggers.t
 SHA1 d9c942f7cc2813be5b8435dc79b4b2bb9f8679fa t/02_disk_space.t
 SHA1 316cd71675cb133e0ff97e1ec27e8ab9211330af t/02_fsm_pages.t
 SHA1 770c9c0293746f10e5f48b1251e9ea5e91ee2210 t/02_fsm_relations.t
+SHA1 6294bc1dcd57a8db469deb9a69aebd1eb5998ae9 t/02_hitratio.t
 SHA1 f83838ef9da1d67e026f88b833522a73f3ae6699 t/02_last_analyze.t
 SHA1 d6a7fba8f0e1fd4f3ad1f3c01a05d12f2e35e64c t/02_last_vacuum.t
 SHA1 5fca9f38305fd0c8c5d1726d08f0a95ae8755b8e t/02_listener.t
 SHA1 87d175a8969b06c549ce0757995cf98a42fe3311 t/02_locks.t
 SHA1 a780920848536059af81bc77140ed70051630d00 t/02_logfile.t
 SHA1 2c31b39e6005c7e9ae5060ea42de549de895b39f t/02_new_version_bc.t
+SHA1 911340cb36b2666c2f43db679ec1c6520ae276ee t/02_new_version_box.t
 SHA1 f0d114dfc2f1149ca29c249d3c9b72c7c5e3ba92 t/02_new_version_cp.t
 SHA1 1381613f67c93854c9f8b73a3b168348bdd56af3 t/02_new_version_pg.t
+SHA1 bf21527cda4235f9623924cdfedc26800abfaf51 t/02_new_version_tnm.t
+SHA1 cbb597f495466742eeb5e7c289b37e24f793b620 t/02_pgagent_jobs.t
 SHA1 73ef3b85a5557de783c756f3eebaeac70c1bbed1 t/02_pgbouncer_checksum.t
 SHA1 5eac7fd171c118d2c358ae719f8e6397883c5a12 t/02_prepared_txns.t
 SHA1 2706f51b92149330f123e174ad009ada0124a538 t/02_query_runtime.t
@@ -66,11 +73,12 @@ SHA1 2270e466a5761256be6b69cc0c7e8c03f2414e3b t/02_version.t
 SHA1 93c5da727c39f3dbb1953d061fa6f96578ba7952 t/02_wal_files.t
 SHA1 60b209d285ddd9a44a55751dffb6e8a927b27337 t/03_translations.t
 SHA1 eb66336f915f77a1cd82c1b19b44acc7dc2d5038 t/04_timeout.t
+SHA1 d4f2f53d1f4130ea8a909b14432487e6c983cccf t/05_docs.t
 SHA1 96e6e5da3e1f6753a469e7afc8cf070024b33b23 t/99_cleanup.t
-SHA1 d2021f28db03e69e8cfdca8760ad032abf9357ae t/CP_Testing.pm
+SHA1 095c6b9fdc944faf7890f13d5330b179f41710a1 t/CP_Testing.pm
 -----BEGIN PGP SIGNATURE-----
 
-iEYEAREDAAYFAk8WNKQACgkQvJuQZxSWSsj/oACaAkJNba/iUhZkTwAsdbHQkx/c
-Vt0AoNvyFLULIolnmD/cpSCTZ3diyxX7
-=rOic
+iEYEAREDAAYFAlFAyGQACgkQvJuQZxSWSshbhwCfaE53c/GtHgcJc5iE3BhzzYUU
+Pm4AnRitw/kzXqsVnUpbBS66pWmRCsIl
+=+zTK
 -----END PGP SIGNATURE-----
