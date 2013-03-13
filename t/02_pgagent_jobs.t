@@ -24,7 +24,7 @@ like $cp->run('-c=abc'), qr{must be a valid time}, "$S fails with invalid -c";
 # Set up a dummy pgagent schema.
 $dbh->{AutoCommit} = 1;
 
-$dbh->do('DROP SCHEMA pgagent CASCADE');
+$dbh->do('DROP SCHEMA IF EXISTS pgagent CASCADE');
 
 $dbh->do(q{
     SET client_min_messages TO warning;
@@ -57,11 +57,7 @@ $dbh->do(q{
     );
     RESET client_min_messages;
 });
-END { $dbh->do(q{
-    SET client_min_messages TO warning;
-    DROP SCHEMA pgagent CASCADE;
-    RESET client_min_messages;
-}) if $dbh; }
+END { $dbh->do('DROP SCHEMA IF EXISTS pgagent CASCADE'); }
 
 like $cp->run('-c=1d'), qr{^$label OK: DB "postgres"}, "$S returns ok for no jobs";
 
