@@ -9750,6 +9750,11 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
+=item B<Version 2.20.1> 
+
+  Make connection check failures return CRITICAL not UNKNOWN
+    (Dominic Hargreaves)
+
 =item B<Version 2.20.0> March 13, 2013
 
   Add check for pgagent jobs (David E. Wheeler)
