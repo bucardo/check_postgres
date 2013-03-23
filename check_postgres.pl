@@ -2353,13 +2353,13 @@ sub run_command {
                 $ERROR = $db->{error};
             }
 
-            if ($db->{error} =~ /FATAL/) {
-                ## If we are just trying to connect, this should be a normal error
-                if ($action eq 'connection') {
-                    $info->{fatal} = 1;
-                    return $info;
-                }
+            ## If we are just trying to connect, failed attempts are critical
+            if ($action eq 'connection' and $db->{error} =~ /FATAL|could not connect/) {
+                $info->{fatal} = 1;
+                return $info;
+            }
 
+            if ($db->{error} =~ /FATAL/) {
                 if (exists $arg->{fatalregex} and $db->{error} =~ /$arg->{fatalregex}/) {
                     $info->{fatalregex} = $db->{error};
                     next;
@@ -2369,7 +2369,7 @@ sub run_command {
                 }
             }
 
-            elsif ($db->{error} =~ /statement timeout/) {
+            if ($db->{error} =~ /statement timeout/) {
                 ndie msg('runcommand-timeout', $timeout);
             }
 
@@ -4011,7 +4011,7 @@ sub check_connection {
     for $db (@{$info->{db}}) {
 
         my $err = $db->{error} || '';
-        if ($err =~ /FATAL/) {
+        if ($err =~ /FATAL|could not connect/) {
             $MRTG and do_mrtg({one => 0});
             add_critical $db->{error};
             return;
