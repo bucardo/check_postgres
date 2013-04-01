@@ -4084,7 +4084,7 @@ sub check_custom_query {
                 return;
             }
             if (length $critical) {
-                if (($valtype eq 'string' and $result eq $critical)
+                if (($valtype eq 'string' and $reverse ? $result ne $critical : $result eq $critical)
                     or
                     ($valtype ne 'string' and $reverse ? $result <= $critical : $result >= $critical)) { ## covers integer, time, size
                     add_critical "$result";
@@ -4093,7 +4093,7 @@ sub check_custom_query {
             }
 
             if (length $warning and ! $gotmatch) {
-                if (($valtype eq 'string' and $result eq $warning)
+                if (($valtype eq 'string' and $reverse ? $result ne $warning : $result eq $warning)
                     or
                     ($valtype ne 'string' and length $result and $reverse ? $result <= $warning : $result >= $warning)) {
                     add_warning "$result";
