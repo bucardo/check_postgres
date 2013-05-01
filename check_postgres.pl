@@ -3574,7 +3574,7 @@ FROM (
       AND s.attname=att.attname,
       (
         SELECT
-          BLOCK_SIZE,
+          (SELECT current_setting('block_size')::numeric) AS bs,
             CASE WHEN SUBSTRING(SPLIT_PART(v, ' ', 2) FROM '#"[0-9]+.[0-9]+#"%' for '#')
               IN ('8.0','8.1','8.2') THEN 27 ELSE 23 END AS hdr,
           CASE WHEN v ~ 'mingw32' OR v ~ '64-bit' THEN 8 ELSE 4 END AS ma
@@ -3598,18 +3598,18 @@ FROM (
         $SQL .= ' ORDER BY totalwastedbytes DESC';
     }
 
-    if ($psql_version <= 7.4) {
-        $SQL =~ s/BLOCK_SIZE/(SELECT 8192) AS bs/;
-    }
-    else {
-        $SQL =~ s/BLOCK_SIZE/(SELECT current_setting('block_size')::numeric) AS bs/;
-    }
-
+    ## Alternate versions for old versions
+    my $SQL2 = $SQL;
     if ($psql_version <= 8.4) {
-        $SQL =~ s/AND s.inherited=false//;
+        $SQL2 =~ s/AND s.inherited=false//;
     }
 
-    my $info = run_command($SQL);
+    my $SQL3 = $SQL2;
+    if ($psql_version <= 7.4) {
+        $SQL3 =~ s/SELECT current_setting.+?AS bs/(SELECT 8192) AS bs/;
+    }
+
+    my $info = run_command($SQL, { version => [  "<8.0 $SQL3", "<9.0 $SQL2" ] } );
 
     if (defined $info->{db}[0] and exists $info->{db}[0]{error}) {
         ndie $info->{db}[0]{error};
