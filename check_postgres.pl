@@ -3605,6 +3605,10 @@ FROM (
         $SQL =~ s/BLOCK_SIZE/(SELECT current_setting('block_size')::numeric) AS bs/;
     }
 
+    if ($psql_version <= 8.4) {
+        $SQL =~ s/AND s.inherited=false//;
+    }
+
     my $info = run_command($SQL);
 
     if (defined $info->{db}[0] and exists $info->{db}[0]{error}) {
@@ -9761,6 +9765,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Compute correct 'totalwastedbytes' in the bloat query
     (Michael Renner)
 
+  Do not use pg_stats "inherited" column in bloat query, if the 
+    database is 8.4 or older. (Greg Sabino Mullane, per bug 121)
 
 =item B<Version 2.20.0> March 13, 2013
 
