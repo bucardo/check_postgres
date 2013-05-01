@@ -9775,6 +9775,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Force STDOUT to use utf8 for proper output
     (Greg Sabino Mullane; reported by Emmanuel Lesouef)
 
+  Fixes for Postgres 9.2: new pg_stat_activity view,
+    and use pg_tablespace_location, (Josh Williams)
+
   Allow for spaces in item lists when doing same_schema.
 
   Allow txn_idle to work again for < 8.3 servers by switching to query_time.
