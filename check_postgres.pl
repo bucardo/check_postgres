@@ -9805,7 +9805,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Improve settings_checksum and checkpoint tests (Cédric Villemain)
 
-  Do no do an inner join to pg_user when checking database size
+  Do not do an inner join to pg_user when checking database size
     (Greg Sabino Mullane; reported by Emmanuel Lesouef)
 
   Use the full path when getting sequence information for same_schema.
