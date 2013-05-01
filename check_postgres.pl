@@ -9758,6 +9758,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Fix --reverse option when using string comparisons in custom queries
     (Nathaniel Waisbrot)
 
+  Compute correct 'totalwastedbytes' in the bloat query
+    (Michael Renner)
+
 
 =item B<Version 2.20.0> March 13, 2013
 
