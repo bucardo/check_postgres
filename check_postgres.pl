@@ -9755,6 +9755,10 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Make connection check failures return CRITICAL not UNKNOWN
     (Dominic Hargreaves)
 
+  Fix --reverse option when using string comparisons in custom queries
+    (Nathaniel Waisbrot)
+
+
 =item B<Version 2.20.0> March 13, 2013
 
   Add check for pgagent jobs (David E. Wheeler)
