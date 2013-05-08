@@ -4763,14 +4763,6 @@ sub check_hot_standby_delay {
         $slave = 2;
     }
 
-    ## If the slave is "db1" and master "db2", go ahead and switch them around for clearer output
-    if (1 == $slave) {
-        ($slave, $master) = (2, 1);
-        for my $k (qw(host port dbname dbuser dbpass)) {
-            ($opt{$k}, $opt{$k . 2}) = ($opt{$k . 2}, $opt{$k}); ## no critic (ProhibitMismatchedOperators)
-        }
-    }
-
     ## Get xlog positions
     my ($moffset, $s_rec_offset, $s_rep_offset);
 
