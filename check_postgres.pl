@@ -9760,6 +9760,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Do not use pg_stats "inherited" column in bloat query, if the 
     database is 8.4 or older. (Greg Sabino Mullane, per bug 121)
 
+  Remove host reordering in hot_standby_delay check
+    (Josh Williams, with help from Jacobo Blasco)
+
 =item B<Version 2.20.0> March 13, 2013
 
   Add check for pgagent jobs (David E. Wheeler)
