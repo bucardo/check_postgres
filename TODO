@@ -1,5 +1,23 @@
 Quick list of outstanding items / bugs / feature requests for CP:
 
+* The same_schema action does not check indexes. See bugzilla #54
+
+* Perform automatic creation of views and function to allow all actions to be run
+  as non-superusers.
+
+* Have the configuration file checker only report once on a changed checksum,
+  then store the changed one somewhere for the next run
+
+* Put on CPAN - worth doing as this in now in packages?
+
+* Fix up the constraints checking for same_schema. It sometimes reports odd
+  constraints with the name repeated many times.
+
+* Ensure that all stats output is 100% Nagios certified,
+  e.g. 'dbname'=val1;warn;crit;extra
+
+* Make sure all the regexes (e.g. slurp =~ //) work on WIN32.
+
 * Add a --output=plain, for simple human-readable output.
 
 * Add a --output=csv, for importing into various targets.
@@ -45,10 +63,6 @@ Quick list of outstanding items / bugs / feature requests for CP:
 
 * For the Nagios 'perf' output on last_analyze and last_vacuum (and other things with a time), 
 consider making a single global timing call.
-
-# Perl-specific
-
-* Put on CPAN
 
 * Create a Perl::Critic test suite
 
