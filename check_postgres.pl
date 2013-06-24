@@ -6319,7 +6319,7 @@ sub check_same_schema {
         [schema     => '',                                        ''          ],
         [function   => 'source_checksum,prolang,prorettype',      ''          ],
         [table      => 'reltype,relfrozenxid,relpages,
-                        reltuples,relnatts',                      ''          ],
+                        reltuples,relnatts,relallvisible',        ''          ],
         [view       => 'reltype',                                 ''          ],
         [sequence   => 'reltype,log_cnt,relnatts,is_called',      ''          ],
         [index      => 'relpages,reltuples,indpred,indclass,
