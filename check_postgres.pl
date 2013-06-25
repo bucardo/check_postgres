@@ -9767,11 +9767,18 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Compute correct 'totalwastedbytes' in the bloat query
     (Michael Renner)
 
-  Do not use pg_stats "inherited" column in bloat query, if the 
+  Do not use pg_stats "inherited" column in bloat query, if the
     database is 8.4 or older. (Greg Sabino Mullane, per bug 121)
 
   Remove host reordering in hot_standby_delay check
     (Josh Williams, with help from Jacobo Blasco)
+
+  Better output for the "simple" flag
+    (Greg Sabino Mullane)
+
+  Force same_schema to ignore the 'relallvisible' column
+    (Greg Sabino Mullane)
+
 
 =item B<Version 2.20.0> March 13, 2013
 
