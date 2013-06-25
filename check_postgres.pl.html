@@ -123,7 +123,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.20.0</p>
+<p>This documents describes check_postgres.pl version 2.20.1</p>
 <p>
 </p>
 <hr />
@@ -1793,6 +1793,31 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by GSM (Greg Sabino Mullane).</p>
 <dl>
+<dt><strong><a name="version_2_20_1" class="item"><strong>Version 2.20.1</strong></a></strong></dt>
+
+<dd>
+<pre>
+  Make connection check failures return CRITICAL not UNKNOWN
+    (Dominic Hargreaves)</pre>
+<pre>
+  Fix --reverse option when using string comparisons in custom queries
+    (Nathaniel Waisbrot)</pre>
+<pre>
+  Compute correct 'totalwastedbytes' in the bloat query
+    (Michael Renner)</pre>
+<pre>
+  Do not use pg_stats &quot;inherited&quot; column in bloat query, if the
+    database is 8.4 or older. (Greg Sabino Mullane, per bug 121)</pre>
+<pre>
+  Remove host reordering in hot_standby_delay check
+    (Josh Williams, with help from Jacobo Blasco)</pre>
+<pre>
+  Better output for the &quot;simple&quot; flag
+    (Greg Sabino Mullane)</pre>
+<pre>
+  Force same_schema to ignore the 'relallvisible' column
+    (Greg Sabino Mullane)</pre>
+</dd>
 <dt><strong><a name="version_2_20_0_march_13_2013" class="item"><strong>Version 2.20.0</strong> March 13, 2013</a></strong></dt>
 
 <dd>
@@ -1801,6 +1826,9 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
   Force STDOUT to use utf8 for proper output
     (Greg Sabino Mullane; reported by Emmanuel Lesouef)</pre>
+<pre>
+  Fixes for Postgres 9.2: new pg_stat_activity view,
+    and use pg_tablespace_location, (Josh Williams)</pre>
 <pre>
   Allow for spaces in item lists when doing same_schema.</pre>
 <pre>
@@ -1834,7 +1862,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
   Improve settings_checksum and checkpoint tests (Cédric Villemain)</pre>
 <pre>
-  Do no do an inner join to pg_user when checking database size
+  Do not do an inner join to pg_user when checking database size
     (Greg Sabino Mullane; reported by Emmanuel Lesouef)</pre>
 <pre>
   Use the full path when getting sequence information for same_schema.
