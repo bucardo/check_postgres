@@ -9756,7 +9756,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
-=item B<Version 2.20.1> 
+=item B<Version 2.20.1> June 24, 2013
 
   Make connection check failures return CRITICAL not UNKNOWN
     (Dominic Hargreaves)
