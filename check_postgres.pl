@@ -1495,23 +1495,28 @@ sub do_mrtg {
     my $one = $arg->{one} || 0;
     my $two = $arg->{two} || 0;
     if ($SIMPLE) {
-        $one = $two if (length $two and $two > $one);
-        if ($opt{transform} eq 'KB' and $one =~ /^\d+$/) {
-            $one = int $one/(1024);
+        if (! exists $arg->{one}) {
+            print "$arg->{msg}\n";
         }
-        if ($opt{transform} eq 'MB' and $one =~ /^\d+$/) {
-            $one = int $one/(1024*1024);
+        else {
+            $one = $two if (length $two and $two > $one);
+            if ($opt{transform} eq 'KB' and $one =~ /^\d+$/) {
+                $one = int $one/(1024);
+            }
+            if ($opt{transform} eq 'MB' and $one =~ /^\d+$/) {
+                $one = int $one/(1024*1024);
+            }
+            elsif ($opt{transform} eq 'GB' and $one =~ /^\d+$/) {
+                $one = int $one/(1024*1024*1024);
+            }
+            elsif ($opt{transform} eq 'TB' and $one =~ /^\d+$/) {
+                $one = int $one/(1024*1024*1024*1024);
+            }
+            elsif ($opt{transform} eq 'EB' and $one =~ /^\d+$/) {
+                $one = int $one/(1024*1024*1024*1024*1024);
+            }
+            print "$one\n";
         }
-        elsif ($opt{transform} eq 'GB' and $one =~ /^\d+$/) {
-            $one = int $one/(1024*1024*1024);
-        }
-        elsif ($opt{transform} eq 'TB' and $one =~ /^\d+$/) {
-            $one = int $one/(1024*1024*1024*1024);
-        }
-        elsif ($opt{transform} eq 'EB' and $one =~ /^\d+$/) {
-            $one = int $one/(1024*1024*1024*1024*1024);
-        }
-        print "$one\n";
     }
     else {
         my $uptime = $arg->{uptime} || '';
@@ -1537,7 +1542,12 @@ sub do_mrtg_stats {
     my $msg = shift;
     defined $msg or ndie('unknown-error');
 
-    keys %stats or bad_mrtg($msg);
+    if (! keys %stats) {
+        if ($SIMPLE) {
+            do_mrtg({msg => $msg});
+        }
+        bad_mrtg($msg);
+    }
     my ($one,$two) = ('','');
     for (sort { $stats{$b} <=> $stats{$a} } keys %stats) {
         if ($one eq '') {
