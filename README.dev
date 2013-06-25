@@ -46,7 +46,5 @@ Login to the bucardo.org box, and then:
 
 Once the new version is out there:
 
-* Make sure the new version is in the pulldown list of available versions on bugzilla.
-** http://bucardo.org/bugzilla/editversions.cgi
 * Go through and make sure all bugs solved in this release are marked as resolved.
 
