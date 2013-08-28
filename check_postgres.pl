@@ -5531,7 +5531,7 @@ sub check_pgagent_jobs {
           JOIN pgagent.pga_joblog     jlog ON job.jobid  = jlog.jlgjobid
           JOIN pgagent.pga_jobstep    step ON job.jobid  = step.jstjobid
           JOIN pgagent.pga_jobsteplog slog ON jlog.jlgid = slog.jsljlgid AND step.jstid = slog.jsljstid
-         WHERE slog.jslresult <> 0
+         WHERE ((slog.jslresult = -1 AND step.jstkind='s') OR (slog.jslresult <> 0 AND step.jstkind='b'))
            AND EXTRACT('epoch' FROM NOW() - (jlog.jlgstart + jlog.jlgduration)) < $seconds
     };
 
