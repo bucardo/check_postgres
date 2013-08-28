@@ -9756,6 +9756,11 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
+=item B<Version 2.20.2>
+
+  Fix issue with SQL steps in check_pgagent_jobs for sql steps which perform deletes
+    (Rob Emery via github pull)
+
 =item B<Version 2.20.1> June 24, 2013
 
   Make connection check failures return CRITICAL not UNKNOWN
