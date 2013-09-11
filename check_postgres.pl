@@ -5057,8 +5057,15 @@ sub check_locks {
           default_critical => 150,
           });
 
-    $SQL = q{SELECT granted, mode, datname FROM pg_locks l RIGHT JOIN pg_database d ON (d.oid=l.database) WHERE d.datallowconn};
-    my $info = run_command($SQL, { regex => qr[\s*\w+\s*\|\s*] });
+    $SQL = q{SELECT granted, mode, d.datname}.
+        q{ FROM pg_database d}.
+        q{ LEFT JOIN pg_stat_activity a ON (d.datname=a.datname)}.
+        q{ LEFT JOIN pg_locks l ON (l.pid = a.procpid)}.
+        q{ WHERE d.datallowconn}.
+        q{ AND COALESCE(l.locktype,'') <> 'virtualxid'};
+    my $SQL92;
+    ($SQL92 = $SQL) =~ s/procpid/pid/;
+    my $info = run_command($SQL, { regex => qr[\s*\w+\s*\|\s*], version => [">9.1 $SQL92"] });
 
     # Locks are counted globally not by db.
     # We output for each db, following the specific warning and critical :
