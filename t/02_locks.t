@@ -71,7 +71,7 @@ like ($cp->run('--warning="waiting=1"'), qr{^$label WARNING.*total "waiting" loc
 
 $t=qq{$S returns correct multiple item output};
 like ($cp->run('--warning="waiting=1;exclusive=2"'),
-      qr{^$label WARNING.*total "waiting" locks: 1 \* total "exclusive" locks: 2 }, $t);
+      qr{^$label WARNING.*total "exclusive" locks: 2 \* total "waiting" locks: 1 }, $t);
 
 $cp->drop_schema_if_exists();
 

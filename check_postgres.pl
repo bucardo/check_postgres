@@ -5131,7 +5131,7 @@ sub check_locks {
 
         ## If not specific errors, just use the total
         my $ok = 1;
-        for my $type (keys %totallock) {
+        for my $type (sort keys %totallock) {
             if ($critical and exists $critical->{$type} and $totallock{$type} >= $critical->{$type}) {
                 ($type eq 'total')
                     ? add_critical msg('locks-msg2', $totallock{total})
