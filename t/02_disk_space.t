@@ -6,9 +6,18 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 8;
+use Test::More;
 use lib 't','.';
 use CP_Testing;
+
+# df might fail in chroot environments, e.g. on build daemons where
+# check-postgres packages are built
+system "df > /dev/null 2>&1";
+if ($?) {
+    plan skip_all => 'Skipping disk_space tests because df does not work';
+} else {
+    plan tests => 8;
+}
 
 use vars qw/$dbh $result $t $host $dbname/;
 
