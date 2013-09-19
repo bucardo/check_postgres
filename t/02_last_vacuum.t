@@ -57,21 +57,19 @@ for ('-1 second',
 $t = qq{$S flags no-match-user};
 like ($cp->run(q{-w 0 --includeuser=gandalf}), qr{No matching.*user}, $t);
 
-$dbh->{AutoCommit} = 1;
-$dbh->do('VACUUM');
-$dbh->{AutoCommit} = 0;
+$t = qq{$S exclude rules work};
 $cp->drop_table_if_exists($testtbl);
 $dbh->do(qq{CREATE TABLE $testtbl AS SELECT 123::INTEGER AS a FROM generate_series(1,200000)});
-
-like ($cp->run("-w 0 --exclude=~.* --include=$testtbl"),
+$dbh->commit();
+like ($cp->run("-w 0 --exclude=~.*"),
       qr{No matching tables found due to exclusion}, $t);
 
 $t = qq{$S sees a recent VACUUM};
 $dbh->do("DELETE FROM $testtbl");
+$dbh->commit();
 $dbh->{AutoCommit} = 1;
 $dbh->do('VACUUM');
 sleep 1;
-
 like ($cp->run("-w 0 --exclude=~.* --include=$testtbl"),
       qr{^$label OK: DB "$dbname" \(host:$host\).*?\(\d+ second(?:s)?\)}, $t);
 
