@@ -32,7 +32,7 @@ $t=qq{$S fails when warning is greater than critical time};
 like ($cp->run('-w 55 -c 33'), qr{ERROR:.+'warning' option .+ cannot be larger}, $t);
 
 $t=qq{$S fails when called with an invalid schema argument};
-like ($cp->run('-w 60 --schema foobar'), qr{ERROR: .*schema}, $t);
+like ($cp->run('-w 60 --schema foobar'), qr{ERROR: .*does not exist}, $t);
 
 cleanup_schema();
 
