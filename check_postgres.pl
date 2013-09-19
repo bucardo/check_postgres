@@ -6328,7 +6328,7 @@ sub check_same_schema {
         [type       => '',                                        ''          ],
         [schema     => '',                                        ''          ],
         [function   => 'source_checksum,prolang,prorettype',      ''          ],
-        [table      => 'reltype,relfrozenxid,relpages,
+        [table      => 'reltype,relfrozenxid,relminmxid,relpages,
                         reltuples,relnatts,relallvisible',        ''          ],
         [view       => 'reltype',                                 ''          ],
         [sequence   => 'reltype,log_cnt,relnatts,is_called',      ''          ],
@@ -9766,6 +9766,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Order lock typs in check_locks output to make the ordering predictable;
   setting SKIP_NETWORK_TESTS will skip the new_version tests; other minor test
   suite fixes. (Christoph Berg)
+
+  Fix same_schema check on 9.3 by ignoring relminmxid differences in pg_class
+    (Christoph Berg)
 
 =item B<Version 2.20.1> June 24, 2013
 
