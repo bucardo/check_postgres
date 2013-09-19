@@ -9761,6 +9761,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Fix issue with SQL steps in check_pgagent_jobs for sql steps which perform deletes
     (Rob Emery via github pull)
 
+  Install man page in section 1. (Peter Eisentraut, bug 53, github issue 26)
+
   Order lock typs in check_locks output to make the ordering predictable; other
   minor test suite fixes
     (Christoph Berg)
