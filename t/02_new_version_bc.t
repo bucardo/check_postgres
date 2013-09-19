@@ -6,11 +6,17 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 1;
+use Test::More;
 use lib 't','.';
 use CP_Testing;
 
 use vars qw/$dbh $t/;
+
+if ($ENV{SKIP_NETWORK_TESTS}) {
+    plan (skip_all => 'Skipped because environment variable SKIP_NETWORK_TESTS is set');
+} else {
+    plan tests => 1;
+}
 
 my $cp = CP_Testing->new( {default_action => 'new_version_bc'} );
 
