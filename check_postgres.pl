@@ -32,7 +32,7 @@ $Data::Dumper::Useqq = 1;
 
 binmode STDOUT, ':utf8';
 
-our $VERSION = '2.20.1';
+our $VERSION = '2.20.2';
 
 use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 
@@ -7927,7 +7927,7 @@ sub check_wal_files {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.20.1
+This documents describes check_postgres.pl version 2.20.2
 
 =head1 SYNOPSIS
 
