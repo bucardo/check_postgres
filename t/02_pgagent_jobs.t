@@ -39,6 +39,7 @@ $dbh->do(q{
     CREATE TABLE pgagent.pga_jobstep (
         jstid     serial  NOT NULL PRIMARY KEY,
         jstjobid  int4    NOT NULL REFERENCES pgagent.pga_job(jobid),
+        jstkind   char    NOT NULL DEFAULT 'b',
         jstname   text    NOT NULL
     );
 
