@@ -9766,7 +9766,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Install man page in section 1. (Peter Eisentraut, bug 53, github issue 26)
 
-  Order lock typs in check_locks output to make the ordering predictable;
+  Order lock types in check_locks output to make the ordering predictable;
   setting SKIP_NETWORK_TESTS will skip the new_version tests; other minor test
   suite fixes. (Christoph Berg)
 
