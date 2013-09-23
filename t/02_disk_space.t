@@ -12,7 +12,7 @@ use CP_Testing;
 
 # df might fail in chroot environments, e.g. on build daemons where
 # check-postgres packages are built
-system "df > /dev/null 2>&1";
+system q{df > /dev/null 2>&1};
 if ($?) {
     plan skip_all => 'Skipping disk_space tests because df does not work';
 } else {

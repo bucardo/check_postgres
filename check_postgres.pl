@@ -2263,7 +2263,7 @@ sub run_command {
             $ENV{PGSERVICE} = $db->{dbservice};
         }
         else {
-            $db->{pname} = "port=" . ($db->{port} || $opt{defaultport}) . " host=$db->{host} db=$db->{dbname} user=$db->{dbuser}";
+            $db->{pname} = 'port=' . ($db->{port} || $opt{defaultport}) . " host=$db->{host} db=$db->{dbname} user=$db->{dbuser}";
         }
 
         ## If all we want is a connection string, give it and leave now
@@ -4751,7 +4751,7 @@ sub check_hot_standby_delay {
 
     # Check if master is online (e.g. really a master)
     for my $x (1..2) {
-        my $info = run_command($SQL, { dbnumber => $x, regex => qr(t|f) });
+        my $info = run_command($SQL, { dbnumber => $x, regex => qr([tf]) });
 
         for $db (@{$info->{db}}) {
             my $status = $db->{slurp}[0];
@@ -5550,18 +5550,19 @@ sub check_pgagent_jobs {
             next;
         }
 
-        my ($is_crit, @msg);
+        my ($is_critical, @msg);
         my $log_id = -1;
         for my $step (@rows) {
             my $output = $step->{jsloutput} || '(NO OUTPUT)';
             push @msg => "$step->{jslresult} $step->{jobname}/$step->{jstname}: $output";
-            $is_crit ||= $step->{critical};
+            $is_critical ||= $step->{critical};
         }
 
         (my $msg = join '; ' => @msg) =~ s{\r?\n}{ }g;
-        if ($is_crit) {
+        if ($is_critical) {
             add_critical $msg;
-        } else {
+        }
+        else {
             add_warning $msg;
         }
     }

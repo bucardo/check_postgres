@@ -61,7 +61,7 @@ $t = qq{$S exclude rules work};
 $cp->drop_table_if_exists($testtbl);
 $dbh->do(qq{CREATE TABLE $testtbl AS SELECT 123::INTEGER AS a FROM generate_series(1,200000)});
 $dbh->commit();
-like ($cp->run("-w 0 --exclude=~.*"),
+like ($cp->run(q{-w 0 --exclude=~.*}),
       qr{No matching tables found due to exclusion}, $t);
 
 $t = qq{$S sees a recent VACUUM};
