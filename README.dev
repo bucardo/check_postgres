@@ -2,6 +2,17 @@
 This file is to help developers of the check_postgres program.
 Additions are welcome!
 
+** TESTSUITE **
+
+For testing PostgreSQL 9.2 and later, DBD::Pg 2.19.3 is required.
+
+Running the testsuite:
+
+* LC_ALL=C make test
+* initdb and friends not in $PATH: LC_ALL=C make test PGBINDIR=/usr/lib/postgresql/9.2/bin
+* Run a single test: LC_ALL=C make test TEST_FILES=t/02_database_size.t
+* Skip network tests: LC_ALL=C make test SKIP_NETWORK_TESTS=1
+
 ** RELEASE PROCESS **
 
 Quick notes on the current release process:
