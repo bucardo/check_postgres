@@ -214,6 +214,8 @@ xmlns
 ## check_postgres.pl:
 
 Abrigo
+Ahlgren
+Ahlgren
 Albe
 alice
 Andras
@@ -232,9 +234,13 @@ Basename
 battlestar
 baz
 bigint
+Blasco
+Blasco
 blks
 Boes
 boxinfo
+Bracht
+Bracht
 Bucardo
 burrick
 cd
@@ -279,6 +285,8 @@ dric
 dylan
 EB
 Eisentraut
+Eloranta
+Eloranta
 emma
 endcrypt
 EnterpriseDB
@@ -302,8 +310,12 @@ FreeBSD
 freespacemap
 fsm
 garrett
+Geert
+Geert
 Getopt
 GetOptions
+github
+github
 Glaesemann
 Glyn
 greg
@@ -314,6 +326,8 @@ Guettler
 Guillaume
 Gurjeet
 hardcode
+Henrik
+Henrik
 HiRes
 hitratio
 hitratio
@@ -337,6 +351,8 @@ idxtupread
 includeuser
 Ioannis
 ioguix
+Jacobo
+Jacobo
 Jehan
 Jens
 Kabalin
@@ -365,6 +381,8 @@ maxalign
 maxwait
 mcp
 MERCHANTABILITY
+Mika
+Mika
 MINIPAGES
 MINPAGES
 minvalue
@@ -400,8 +418,12 @@ oper
 Optimizations
 oskar
 pageslots
+Pante
+Pante
 param
 parens
+Patric
+Patric
 perf
 perfdata
 perflimit
@@ -442,8 +464,14 @@ refactor
 refactoring
 regex
 regexes
+relallvisible
+relallvisible
+relminmxid
+relminmxid
 relname
 relpages
+Renner
+Renner
 repinfo
 RequireInterpolationOfMetachars
 ret
@@ -475,6 +503,8 @@ Slony
 Slony's
 snazzo
 speedtest
+Sprickman
+Sprickman
 sql
 SQL
 ssel
@@ -498,6 +528,8 @@ timesync
 tmp
 tnm
 Tolley
+totalwastedbytes
+totalwastedbytes
 tup
 undef
 unlinked
@@ -511,6 +543,8 @@ utf
 valtype
 Villemain
 Vitkovsky
+Waisbrot
+Waisbrot
 wal
 WAL
 watson
@@ -523,4 +557,3 @@ xact
 xlog
 Yamada
 Zwerschke
-
