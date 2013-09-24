@@ -123,7 +123,7 @@
 <hr />
 <h1><a name="name">NAME</a></h1>
 <p><strong>check_postgres.pl</strong> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
-<p>This documents describes check_postgres.pl version 2.20.1</p>
+<p>This documents describes check_postgres.pl version 2.21.0</p>
 <p>
 </p>
 <hr />
@@ -1793,6 +1793,22 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <h1><a name="history">HISTORY</a></h1>
 <p>Items not specifically attributed are by GSM (Greg Sabino Mullane).</p>
 <dl>
+<dt><strong><a name="version_2_21_0_september_24_2013" class="item"><strong>Version 2.21.0</strong> September 24, 2013</a></strong></dt>
+
+<dd>
+<pre>
+  Fix issue with SQL steps in check_pgagent_jobs for sql steps which perform deletes
+    (Rob Emery via github pull)</pre>
+<pre>
+  Install man page in section 1. (Peter Eisentraut, bug 53, github issue 26)</pre>
+<pre>
+  Order lock types in check_locks output to make the ordering predictable;
+  setting SKIP_NETWORK_TESTS will skip the new_version tests; other minor test
+  suite fixes. (Christoph Berg)</pre>
+<pre>
+  Fix same_schema check on 9.3 by ignoring relminmxid differences in pg_class
+    (Christoph Berg)</pre>
+</dd>
 <dt><strong><a name="version_2_20_1_june_24_2013" class="item"><strong>Version 2.20.1</strong> June 24, 2013</a></strong></dt>
 
 <dd>
@@ -1841,7 +1857,7 @@ feature requests, and commit notices, send email to <a href="mailto:check_postgr
 <pre>
   Fix --excludeuser in check_txn_idle (Mika Eloranta)</pre>
 <pre>
-  Fix userclause handling in check_txn_idle (Michael van Bracht)</pre>
+  Fix user clause handling in check_txn_idle (Michael van Bracht)</pre>
 <pre>
   Adjust docs to show colon as a better separator inside args for locks
     (Charles Sprickman)</pre>
