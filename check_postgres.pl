@@ -9245,8 +9245,8 @@ never changed). There is a column named 'salesrep' that we are going to toggle
 from a value of 'slon' to 'nols' to check on the replication. We want to throw 
 a warning if the replication does not happen within 10 seconds.
 
-  check_postgres_replicate_row --host=alpha --dbname=sales --host2=beta 
-  --dbname2=sales --warning=10 --repinfo=orders,id,3,salesrep,slon,nols
+  check_postgres_replicate_row --host=alpha --dbname=sales --host=beta
+  --dbname=sales --warning=10 --repinfo=orders,id,3,salesrep,slon,nols
 
 Example 2: Bucardo is replicating a table named 'receipt' from host 'green' 
 to hosts 'red', 'blue', and 'yellow'. The database for both sides is 'public'. 
@@ -9255,7 +9255,7 @@ the row we want to use has a value of 9, and the column we want to change for th
 test is called 'zone'. We'll toggle between 'north' and 'south' for the value of 
 this column, and throw a critical if the change is not on all three slaves within 5 seconds.
 
- check_postgres_replicate_row --host=green --port2=5455 --host2=red,blue,yellow
+ check_postgres_replicate_row --host=green --port=5455 --host=red,blue,yellow
   --critical=5 --repinfo=receipt,receipt_id,9,zone,north,south
 
 For MRTG output, returns on the first line the time in seconds the replication takes to finish. 
