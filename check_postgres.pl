@@ -72,7 +72,7 @@ our $get_method_timeout = 30;
 our @get_methods = (
     "GET -t $get_method_timeout -H 'Pragma: no-cache'",
     "wget --quiet --timeout=$get_method_timeout --no-cache -O -",
-    "curl --silent --max-time=$get_method_timeout -H 'Pragma: no-cache'",
+    "curl --silent --max-time $get_method_timeout -H 'Pragma: no-cache'",
     "fetch -q -T $get_method_timeout -o -",
     "lynx --connect-timeout=$get_method_timeout --dump",
     'links -dump',
