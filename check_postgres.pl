@@ -9227,8 +9227,9 @@ line gives the name of the database.
 =head2 B<replicate_row>
 
 (C<symlink: check_postgres_replicate_row>) Checks that master-slave replication is working to one or more slaves.
-The slaves are specified the same as the normal databases, except with 
-the number 2 at the end of them, so "--port2" instead of "--port", etc.
+
+The first "--dbname", "--host", and "--port", etc. options are considered the
+master; subsequent uses are the slaves.
 The values or the I<--warning> and I<--critical> options are units of time, and 
 at least one must be provided (no defaults). Valid units are 'seconds', 'minutes', 'hours', 
 or 'days'. Each may be written singular or abbreviated to just the first letter. 
