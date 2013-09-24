@@ -5518,7 +5518,7 @@ sub check_pgagent_jobs {
 
     # Determine max time to examine.
     my $seconds = $critical;
-    $seconds = $warning if length $warning and 
+    $seconds = $warning if length $warning and
         (! length $critical or $warning > $critical);
 
     $SQL = qq{
