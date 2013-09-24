@@ -5517,10 +5517,9 @@ sub check_pgagent_jobs {
         : $critical ? 1 : 0;
 
     # Determine max time to examine.
-    my $seconds = do {
-        no warnings;
-        $warning > $critical ? $warning : $critical;
-    };
+    my $seconds = $critical;
+    $seconds = $warning if length $warning and 
+        (! length $critical or $warning > $critical);
 
     $SQL = qq{
         SELECT jlog.jlgid
