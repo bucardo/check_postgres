@@ -6146,6 +6146,7 @@ sub check_replicate_row {
     for my $d (@{$info2->{db}}) {
         $slave++;
         my $value2 = $d->{slurp}[0]{c};
+        no warnings 'uninitialized';
         if ($value1 ne $value2) {
             ndie msg('rep-notsame');
         }
@@ -6156,16 +6157,19 @@ sub check_replicate_row {
     }
 
     my ($update,$newval);
-    if ($value1 eq $val1) {
-        $update = $update2;
-        $newval = $val2;
-    }
-    elsif ($value1 eq $val2) {
-        $update = $update1;
-        $newval = $val1;
-    }
-    else {
-        ndie msg('rep-wrongvals', $value1, $val1, $val2);
+    UNINITOK: {
+        no warnings 'uninitialized';
+        if ($value1 eq $val1) {
+            $update = $update2;
+            $newval = $val2;
+        }
+        elsif ($value1 eq $val2) {
+            $update = $update1;
+            $newval = $val1;
+        }
+        else {
+            ndie msg('rep-wrongvals', $value1, $val1, $val2);
+        }
     }
 
     $info1 = run_command($update, { dbnumber => 1, failok => 1 } );
