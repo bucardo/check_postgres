@@ -1337,29 +1337,31 @@ line gives the name of the database.</p>
 
 <h2><a name="replicate_row"><strong>replicate_row</strong></a></h2>
 
-<p>(<code>symlink: check_postgres_replicate_row</code>) Checks that master-slave replication is working to one or more slaves.
+<p>(<code>symlink: check_postgres_replicate_row</code>) Checks that
+master-slave replication is working to one or more slaves.
 
-The slaves are specified the same as the normal databases, except with
-the number 2 at the end of them, so &quot;--port2&quot; instead of &quot;--port&quot;, etc.
-The values or the <em>--warning</em> and <em>--critical</em> options are units of time, and
-at least one must be provided (no defaults). Valid units are 'seconds', 'minutes', 'hours',
-or 'days'. Each may be written singular or abbreviated to just the first letter.
+The slaves are specified the same as the normal databases, except with the
+number 2 at the end of them, so &quot;--port2&quot; instead of
+&quot;--port&quot;, etc.  The values or the <em>--warning</em> and
+<em>--critical</em> options are units of time, and at least one must be
+provided (no defaults). Valid units are 'seconds', 'minutes', 'hours', or
+'days'. Each may be written singular or abbreviated to just the first letter.
 If no units are given, the units are assumed to be seconds.</p>
 
 <p>This check updates a single row on the master, and then measures how long it
-takes to be applied to the slaves. To do this, you need to pick a table that
-is being replicated, then find a row that can be changed, and is not going
-to be changed by any other process. A specific column of this row will be changed
-from one value to another. All of this is fed to the <code>repinfo</code> option, and should
-contain the following options, separated by commas: table name, primary key, key id,
-column, first value, second value.</p>
+takes to be applied to the slaves. To do this, you need to pick a table that is
+being replicated, then find a row that can be changed, and is not going to be
+changed by any other process. A specific column of this row will be changed
+from one value to another. All of this is fed to the <code>repinfo</code>
+option, and should contain the following options, separated by commas: table
+name, primary key, key id, column, first value, second value.</p>
 
 <p>Example 1: Slony is replicating a table named 'orders' from host 'alpha' to
-host 'beta', in the database 'sales'. The primary key of the table is named
-id, and we are going to test the row with an id of 3 (which is historical and
-never changed). There is a column named 'salesrep' that we are going to toggle
-from a value of 'slon' to 'nols' to check on the replication. We want to throw
-a warning if the replication does not happen within 10 seconds.</p>
+host 'beta', in the database 'sales'. The primary key of the table is named id,
+and we are going to test the row with an id of 3 (which is historical and never
+changed). There is a column named 'salesrep' that we are going to toggle from a
+value of 'slon' to 'nols' to check on the replication. We want to throw a
+warning if the replication does not happen within 10 seconds.</p>
 
 <pre>
   check_postgres_replicate_row --host=alpha --dbname=sales --host2=beta
@@ -1367,18 +1369,19 @@ a warning if the replication does not happen within 10 seconds.</p>
 
 <p>Example 2: Bucardo is replicating a table named 'receipt' from host 'green'
 to hosts 'red', 'blue', and 'yellow'. The database for both sides is 'public'.
-The slave databases are running on port 5455. The primary key is named 'receipt_id',
-the row we want to use has a value of 9, and the column we want to change for the
-test is called 'zone'. We'll toggle between 'north' and 'south' for the value of
-this column, and throw a critical if the change is not on all three slaves within 5 seconds.</p>
+The slave databases are running on port 5455. The primary key is named
+'receipt_id', the row we want to use has a value of 9, and the column we want
+to change for the test is called 'zone'. We'll toggle between 'north' and
+'south' for the value of this column, and throw a critical if the change is not
+on all three slaves within 5 seconds.</p>
 
 <pre>
  check_postgres_replicate_row --host=green --port2=5455 --host2=red,blue,yellow
   --critical=5 --repinfo=receipt,receipt_id,9,zone,north,south</pre>
 
-<p>For MRTG output, returns on the first line the time in seconds the replication takes to finish.
-The maximum time is set to 4 minutes 30 seconds: if no replication has taken place in that long
-a time, an error is thrown.</p>
+<p>For MRTG output, returns on the first line the time in seconds the
+replication takes to finish.  The maximum time is set to 4 minutes 30 seconds:
+if no replication has taken place in that long a time, an error is thrown.</p>
 
 <p>
 </p>
