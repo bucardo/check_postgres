@@ -6139,14 +6139,13 @@ sub check_replicate_row {
     if (!defined $sourcedb) {
         ndie msg('rep-norow', "$table.$col");
     }
-    my $value1 = $info1->{db}[0]{slurp}[0]{c};
+    my $value1 = $info1->{db}[0]{slurp}[0]{c} || '';
 
     my $info2 = run_command($select, { dbnumber => 2 });
     my $slave = 0;
     for my $d (@{$info2->{db}}) {
         $slave++;
-        my $value2 = $d->{slurp}[0]{c};
-        no warnings 'uninitialized';
+        my $value2 = $d->{slurp}[0]{c} || '';
         if ($value1 ne $value2) {
             ndie msg('rep-notsame');
         }
