@@ -6149,7 +6149,7 @@ sub check_replicate_row {
     my ($table,$pk,$id,$col,$val1,$val2) = (@repinfo);
 
     ## Quote everything, just to be safe (e.g. columns named 'desc')
-    $table = qq{"$table"};
+    $table =~ s/([^\.]+)/\"$1\"/g;
     $pk    = qq{"$pk"};
     $col   = qq{"$col"};
 
