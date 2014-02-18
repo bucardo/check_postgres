@@ -7421,7 +7421,8 @@ q{SELECT
  COALESCE(n2.no_comment, '') AS com2
 FROM SCHEMA.sl_status
 JOIN SCHEMA.sl_node n1 ON (n1.no_id=st_origin)
-JOIN SCHEMA.sl_node n2 ON (n2.no_id=st_received)};
+JOIN SCHEMA.sl_node n2 ON (n2.no_id=st_received)
+ORDER BY 1 DESC};
 
     my $maxlagtime = -1;
 
