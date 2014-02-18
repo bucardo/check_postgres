@@ -9763,6 +9763,12 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
+=item B<Version 2.21.1>
+
+  Add explicit ORDER BY to the slony_status check to get the most lagged server.
+    (Jeff Frost)
+
+
 =item B<Version 2.21.0> September 24, 2013
 
   Fix issue with SQL steps in check_pgagent_jobs for sql steps which perform deletes
