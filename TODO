@@ -2,6 +2,8 @@ Quick list of outstanding items / bugs / feature requests for CP:
 
 NOTE: All bugzilla items are now on github
 
+* Fix up references to dbhost2 and the like, or make them work again for backwards compatibility.
+
 * The same_schema action does not check indexes. See bugzilla #54
 
 * Perform automatic creation of views and function to allow all actions to be run
