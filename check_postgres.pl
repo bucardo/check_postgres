@@ -144,10 +144,13 @@ our %msg = (
     'fsm-page-msg'       => q{fsm page slots used: $1 of $2 ($3%)},
     'fsm-rel-highver'    => q{Cannot check fsm_relations on servers version 8.4 or greater},
     'fsm-rel-msg'        => q{fsm relations used: $1 of $2 ($3%)},
+    'hs-future-replica'  => q{Slave reporting master server clock is ahead, check time sync},
     'hs-no-role'         => q{Not a master/slave couple},
     'hs-no-location'     => q{Could not get current xlog location on $1},
     'hs-receive-delay'   => q{receive-delay},
     'hs-replay-delay'    => q{replay_delay},
+    'hs-time-delay'      => q{time_delay},
+    'hs-time-version'    => q{Database must be version 9.1 or higher to check slave lag by time},
     'index'              => q{Index},
     'invalid-option'     => q{Invalid option},
     'invalid-query'      => q{Invalid query returned: $1},
@@ -3108,6 +3111,9 @@ sub validate_size_or_percent_with_oper {
 
 
 sub validate_integer_for_time {
+    # Used for txn_idle and hot_standby_delay
+    # txn_idle, et. al, use the form "$count for $interval"
+    # hot_standby_delay appears as "$bytes and $interval"
 
     my $arg = shift || {};
     ndie qq{validate_integer_for_time must be called with a hashref\n}
@@ -3123,7 +3129,7 @@ sub validate_integer_for_time {
     for my $spec ([ warning => $warning], [critical => $critical]) {
         my ($level, $val) = @{ $spec };
         if (length $val) {
-            if ($val =~ /^(.+?)\sfor\s(.+)$/i) {
+            if ($val =~ /^(.+?)\s(?:for|and)\s(.+)$/i) {
                 my ($int, $time) = ($1, $2);
 
                 # Integer first, time second.
@@ -3137,7 +3143,7 @@ sub validate_integer_for_time {
             }
             else {
                 # Disambiguate int from time int by sign.
-                if ($val =~ /^[-+]\d+$/) {
+                if (($val =~ /^[-+]\d+$/) || ($val =~ /^\d+$/ && $arg->{default_to_int})) {
                     ndie msg('range-int', $level) if $val !~ /^[-+]?\d+$/;
                     push @ret, int $val, '';
                 }
@@ -4741,9 +4747,17 @@ sub check_hot_standby_delay {
     ## Check on the delay in PITR replication between master and slave
     ## Supports: Nagios, MRTG
     ## Critical and warning are the delay between master and slave xlog locations
-    ## Example: --critical=1024
+    ## and/or transaction timestamps.  If both are specified, both are checked.
+    ## Examples:
+    ## --critical=1024
+    ## --warning=5min
+    ## --warning='1048576 and 2min' --critical='16777216 and 10min'
 
-    my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
+    my ($warning, $wtime, $critical, $ctime) = validate_integer_for_time({default_to_int => 1});
+    if ($psql_version < 9.1 and (length $wtime or length $ctime)) {
+        add_unknown msg('hs-time-version');
+        return;
+    }
 
     # check if master and slave comply with the check using pg_is_in_recovery()
     my ($master, $slave);
@@ -4776,15 +4790,19 @@ sub check_hot_standby_delay {
     }
 
     ## Get xlog positions
-    my ($moffset, $s_rec_offset, $s_rep_offset);
+    my ($moffset, $s_rec_offset, $s_rep_offset, $time_delta);
 
     ## On slave
     $SQL = q{SELECT pg_last_xlog_receive_location() AS receive, pg_last_xlog_replay_location() AS replay};
+    if ($psql_version >= 9.1) {
+        $SQL .= q{, COALESCE(ROUND(EXTRACT(epoch FROM now() - pg_last_xact_replay_timestamp())),0) AS seconds};
+    }
     my $info = run_command($SQL, { dbnumber => $slave, regex => qr/\// });
     my $saved_db;
     for $db (@{$info->{db}}) {
         my $receive = $db->{slurp}[0]{receive};
         my $replay = $db->{slurp}[0]{replay};
+        $time_delta = $db->{slurp}[0]{seconds};
 
         if (defined $receive) {
             my ($a, $b) = split(/\//, $receive);
@@ -4829,20 +4847,33 @@ sub check_hot_standby_delay {
     # Make sure it's always positive or zero
     $rec_delta = 0 if $rec_delta < 0;
     $rep_delta = 0 if $rep_delta < 0;
+    if (defined $time_delta and $time_delta < 0) {
+        add_unknown msg('hs-future-replica');
+        return;
+    }
 
-    $MRTG and do_mrtg({one => $rep_delta, two => $rec_delta});
+    $MRTG and do_mrtg($psql_version >= 9.1 ?
+        {one => $rep_delta, two => $rec_delta, three => $time_delta} :
+        {one => $rep_delta, two => $rec_delta});
 
     $db->{perf} = sprintf ' %s=%s;%s;%s ',
         perfname(msg('hs-replay-delay')), $rep_delta, $warning, $critical;
     $db->{perf} .= sprintf ' %s=%s;%s;%s',
         perfname(msg('hs-receive-delay')), $rec_delta, $warning, $critical;
+    if ($psql_version >= 9.1) {
+        $db->{perf} .= sprintf ' %s=%s;%s;%s',
+            perfname(msg('hs-time-delay')), $time_delta, $wtime, $ctime;
+    }
 
     ## Do the check on replay delay in case SR has disconnected because it way too far behind
     my $msg = qq{$rep_delta};
-    if (length $critical and $rep_delta > $critical) {
+    if ($psql_version >= 9.1) {
+        $msg .= qq{ and $time_delta seconds}
+    }
+    if ((length $critical or length $ctime) and (!length $critical or length $critical and $rep_delta > $critical) and (!length $ctime or length $ctime and $time_delta > $ctime)) {
         add_critical $msg;
     }
-    elsif (length $warning and $rep_delta > $warning) {
+    elsif ((length $warning or length $wtime) and (!length $warning or length $warning and $rep_delta > $warning) and (!length $wtime or length $wtime and $time_delta > $wtime)) {
         add_warning $msg;
     }
     else {
@@ -8812,15 +8843,34 @@ and the name of the database on the fourth line.
 =head2 B<hot_standby_delay>
 
 (C<symlink: check_hot_standby_delay>) Checks the streaming replication lag by computing the delta 
-between the xlog position of a master server and the one of the slaves connected to it. The slave_
-server must be in hot_standby (e.g. read only) mode, therefore the minimum version to use this_
-action is Postgres 9.0. The I<--warning> and I<--critical> options are the delta between xlog 
-location. These values should match the volume of transactions needed to have the streaming 
-replication disconnect from the master because of too much lag.
+between the xlog position of a master server and the one of the slaves connected to it, and/or the
+last transaction timestamp received by the slave. The slave server must be in hot_standby (e.g. read
+only) mode, therefore the minimum version to use this action is Postgres 9.0. To support transaction
+timestamps the minimum version is Postgres 9.1.
 
-You must provide information on how to reach the second database by a connection 
-parameter ending in the number 2, such as "--dbport2=5543". If if it not given, 
-the action fails.
+The I<--warning> and I<--critical> options are either the delta between xlog positions in bytes,
+units of time to compare timestamps, or both.
+
+Byte values should be based on the volume of transactions needed to have the streaming replication
+disconnect from the master because of too much lag, determined by the Postgres configuration variable
+B<wal_keep_segments>.  For units of time, valid units are 'seconds', 'minutes', 'hours', or 'days'.
+Each may be written singular or abbreviated to just the first letter. When specifying both, in the
+form 'I<bytes> and I<time>', both conditions must be true for the threshold to be met.
+
+You must provide information on how to reach the databases by providing a comma separated list to the
+--dbost and --dbport parameters, such as "--dbport=5432,5543". If not given, the action fails.
+
+Example 1: Warn a database with a local replica on port 5433 is behind on any xlog replay at all
+
+  check_hot_standby_delay --dbport=5432,5433 --warning='1'
+
+Example 2: Give a critical if the last transaction replica1 receives is more than 10 minutes ago
+
+  check_hot_standby_delay --dbhost=master,replica1 --critical='10 min'
+
+Example 3: Allow replica1 to be 1 WAL segment behind, if the master is momentarily seeing more activity than the streaming replication connection can handle, or 10 minutes behind, if the master is seeing very little activity and not processing any transactions, but not both, which would indicate a lasting problem with the replication connection.
+
+  check_hot_standby_delay --dbhost=master,replica1 --warning='1048576 and 2 min' --critical='16777216 and 10 min'
 
 =head2 B<index_size>
 
