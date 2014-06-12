@@ -478,6 +478,11 @@ sub get_host {
     return $self->{shorthost} || $self->{dbhost};
 }
 
+sub get_port {
+    my $self = shift;
+	return 5432;
+}
+
 sub get_shorthost {
     my $self = shift;
     return $self->{shorthost};
