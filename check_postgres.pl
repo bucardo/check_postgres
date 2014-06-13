@@ -6172,16 +6172,13 @@ sub check_replicate_row {
     }
     my $value1 = $info1->{db}[0]{slurp}[0]{c} || '';
 
-    my $info2 = run_command($select, { dbnumber => 2 });
-    my $slave = 0;
-    for my $d (@{$info2->{db}}) {
-        $slave++;
+    my $numslaves = @{$info1->{db}} - 1;
+    foreach my $d ( @{$info1->{db}}[1 .. $numslaves] ) {
         my $value2 = $d->{slurp}[0]{c} || '';
         if ($value1 ne $value2) {
             ndie msg('rep-notsame');
-        }
+        }     
     }
-    my $numslaves = $slave;
     if ($numslaves < 1) {
         ndie msg('rep-noslaves');
     }
@@ -6222,12 +6219,12 @@ sub check_replicate_row {
     my %slave;
     my $time = 0;
     LOOP: {
-        $info2 = run_command($select, { dbnumber => 2 } );
+        my $info2 = run_command($select);
         ## Reset for final output
         $db = $sourcedb;
 
-        $slave = 0;
-        for my $d (@{$info2->{db}}) {
+        my $slave = 0;
+        for my $d (@{$info2->{db}}[1 .. $numslaves]) {
             $slave++;
             next if exists $slave{$slave};
             my $value2 = $d->{slurp}[0]{c};
