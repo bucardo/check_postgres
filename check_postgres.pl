@@ -2488,7 +2488,7 @@ sub run_command {
                     warn "Action:           $action\n";
                     warn "Calling line:     $cline\n";
                     warn "Output:           $line\n";
-                    $args =~ s/ -c (.+)/-c "$1"/s;
+                    $args =~ s/ -c (.+)/ -c "$1"/s;
                     warn "Command:          $PSQL $args\n";
                     ## Last thing is to see if we can grab the PG version
                     if (! $opt{stop_looping}) {
