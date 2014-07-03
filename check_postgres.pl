@@ -212,6 +212,7 @@ our %msg = (
     'qtime-for-msg'      => q{$1 queries longer than $2s, longest: $3s$4 $5},
     'qtime-msg'          => q{longest query: $1s$2 $3},
     'qtime-none'         => q{no queries},
+    'query'              => q{query},
     'queries'            => q{queries},
     'query-time'         => q{query_time},
     'range-badcs'        => q{Invalid '$1' option: must be a checksum},
@@ -464,6 +465,7 @@ our %msg = (
     'qtime-for-msg'      => q{$1 requêtes plus longues que $2s, requête la plus longue : $3s$4 $5},
     'qtime-msg'          => q{requête la plus longue : $1s$2 $3},
     'qtime-none'         => q{aucune requête},
+    'query'              => q{requête},
     'queries'            => q{requêtes},
     'query-time'         => q{durée de la requête},
     'range-badcs'        => q{Option « $1 » invalide : doit être une somme de contrôle},
@@ -7692,13 +7694,14 @@ sub check_txn_idle {
 
     ## Details on who the top offender was
     if ($max > 0) {
-        $whodunit = sprintf q{%s:%s %s:%s %s:%s%s%s},
+        $whodunit = sprintf q{%s:%s %s:%s %s:%s%s%s %s:%s},
             msg('PID'), $maxr->{pid},
             msg('database'), $maxr->{datname},
             msg('username'), $maxr->{usename},
             $maxr->{client_addr} eq '' ? '' : (sprintf ' %s:%s', msg('address'), $maxr->{client_addr}),
             ($maxr->{client_port} eq '' or $maxr->{client_port} < 1)
-                ? '' : (sprintf ' %s:%s', msg('port'), $maxr->{client_port});
+                ? '' : (sprintf ' %s:%s', msg('port'), $maxr->{client_port}),
+            msg('query'),  $maxr->{query} || $maxr->{current_query};
     }
 
     ## For MRTG, we can simply exit right now
