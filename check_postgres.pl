@@ -7960,6 +7960,8 @@ sub check_wal_files {
 
 =pod
 
+=encoding utf8
+
 =head1 NAME
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
@@ -9818,6 +9820,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Add explicit ORDER BY to the slony_status check to get the most lagged server.
     (Jeff Frost)
 
+  Declare POD encoding to be utf8. (Christoph Berg)
 
 =item B<Version 2.21.0> September 24, 2013
 
