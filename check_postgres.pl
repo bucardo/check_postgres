@@ -8848,13 +8848,14 @@ and the name of the database on the fourth line.
 =head2 B<hot_standby_delay>
 
 (C<symlink: check_hot_standby_delay>) Checks the streaming replication lag by computing the delta 
-between the xlog position of a master server and the one of the slaves connected to it, and/or the
-last transaction timestamp received by the slave. The slave server must be in hot_standby (e.g. read
-only) mode, therefore the minimum version to use this action is Postgres 9.0. To support transaction
-timestamps the minimum version is Postgres 9.1.
+between the current xlog position of a master server and the replay location of a slave connected
+to it. The slave server must be in hot_standby (e.g. read only) mode, therefore the minimum version to use
+this action is Postgres 9.0. The I<--warning> and I<--critical> options are the delta between the xlog
+locations. Since these values are byte offsets in the WAL they should match the expected transaction volume
+of your application to prevent false postives or negatives.
 
-The I<--warning> and I<--critical> options are either the delta between xlog positions in bytes,
-units of time to compare timestamps, or both.
+The first "--dbname", "--host", and "--port", etc. options are considered the
+master; the second belongs to the slave.
 
 Byte values should be based on the volume of transactions needed to have the streaming replication
 disconnect from the master because of too much lag, determined by the Postgres configuration variable

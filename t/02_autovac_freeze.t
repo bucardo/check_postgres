@@ -15,6 +15,7 @@ use vars qw/$dbh $result $t $host $dbname/;
 my $cp = CP_Testing->new( {default_action => 'autovac_freeze'} );
 
 $dbh = $cp->test_database_handle();
+
 $dbh->{AutoCommit} = 1;
 $dbname = $cp->get_dbname;
 $host = $cp->get_host();
