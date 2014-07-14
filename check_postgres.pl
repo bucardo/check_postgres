@@ -2490,7 +2490,7 @@ sub run_command {
                     warn "Output:           $line\n";
                     $args =~ s/ -c (.+)/ -c "$1"/s;
                     warn "Command:          $PSQL $args\n";
-                    ## Last thing is to see if we can grab the PG version
+                    ## Next to last thing is to see if we can grab the PG version
                     if (! $opt{stop_looping}) {
                         ## Just in case...
                         $opt{stop_looping} = 1;
@@ -2498,6 +2498,8 @@ sub run_command {
                         (my $v = $linfo->{db}[0]{slurp}[0]{version}) =~ s/(\w+ \S+).+/$1/;
                         warn "Postgres version: $v\n";
                     }
+                    ## This is a serious parsing fail, so it can be helpful to have the whole enchilada:
+                    warn "Full output: $db->{slurp}\n\n";
                     exit 1;
                 }
             }
