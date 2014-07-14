@@ -2485,6 +2485,7 @@ sub run_command {
                     my $cline = (caller)[2];
                     my $args = join ' ' => @args;
                     warn "Version:          $VERSION\n";
+                    warn "OS:               $^O\n";
                     warn "Action:           $action\n";
                     warn "Calling line:     $cline\n";
                     warn "Output:           $line\n";
