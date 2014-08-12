@@ -7928,7 +7928,7 @@ sub check_txn_idle {
         }
 
         ## Return unknown if stats_command_string / track_activities is off
-        if ($cq =~ /disabled/o or $cq =~ /<command string not enabled>/) {
+        if ($st =~ /disabled/o or $cq =~ /<command string not enabled>/) {
             add_unknown msg('psa-disabled');
             return;
         }
