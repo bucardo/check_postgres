@@ -3623,14 +3623,10 @@ FROM (
 
     ## Alternate versions for old versions
     my $SQL2 = $SQL;
-    if ($psql_version <= 8.4) {
-        $SQL2 =~ s/AND s.inherited=false//;
-    }
+    $SQL2 =~ s/AND s.inherited=false//; # 8.4 and earlier
 
     my $SQL3 = $SQL2;
-    if ($psql_version <= 7.4) {
-        $SQL3 =~ s/SELECT current_setting.+?AS bs/(SELECT 8192) AS bs/;
-    }
+    $SQL3 =~ s/SELECT current_setting.+?AS bs/(SELECT 8192) AS bs/; # 7.4 and earlier
 
     my $info = run_command($SQL, { version => [  "<8.0 $SQL3", "<9.0 $SQL2" ] } );
 
@@ -4759,7 +4755,7 @@ sub check_hot_standby_delay {
     ## --warning='1048576 and 2min' --critical='16777216 and 10min'
 
     my ($warning, $wtime, $critical, $ctime) = validate_integer_for_time({default_to_int => 1});
-    if ($psql_version < 9.1 and (length $wtime or length $ctime)) {
+    if ($psql_version < 9.1 and (length $wtime or length $ctime)) { # FIXME: check server version instead
         add_unknown msg('hs-time-version');
         return;
     }
@@ -9820,6 +9816,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 =over 4
 
 =item B<Version 2.21.1>
+
+  Fix bloat check to use correct SQL depending on the server version.
+    (Adrian Vondendriesch)
 
   Add explicit ORDER BY to the slony_status check to get the most lagged server.
     (Jeff Frost)
