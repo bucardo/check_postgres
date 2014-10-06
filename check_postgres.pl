@@ -5832,8 +5832,8 @@ sub check_pgb_pool {
     my $gotone = 0;
     for my $i (@$output) {
         next if skip_item($i->{database});
-        my $msg = "$i->{database}=$i->{$stat}";
-        $db->{perf} = " '$i->{database}'=$i->{$stat};$warning;$critical;0";
+        my $msg = "$i->{user}\@$i->{database}=$i->{$stat}";
+        $db->{perf} = " '$i->{user}\@$i->{database}'=$i->{$stat};$warning;$critical;0";
 
         if ($MRTG) {
             $stats{$i->{database}} = $i->{$stat};
