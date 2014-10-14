@@ -7703,13 +7703,13 @@ sub check_txn_idle {
         my $st = $r->{state} || '';
 
         ## Return unknown if we cannot see because we are a non-superuser
-        if ($cq =~ /insufficient/o) {
+        if ($cq =~ /^insufficient/o) {
             add_unknown msg('psa-nosuper');
             return;
         }
 
         ## Return unknown if stats_command_string / track_activities is off
-        if ($cq =~ /disabled/o or $cq =~ /<command string not enabled>/) {
+        if ($cq =~ /^disabled/o or $cq =~ /^<command string not enabled>/) {
             add_unknown msg('psa-disabled');
             return;
         }
