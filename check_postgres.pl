@@ -1647,7 +1647,8 @@ if (defined $rcfile) {
 
         ## These options are multiples ('@s')
         for my $arr (qw/include exclude includeuser excludeuser host port
-                        dbuser dbname dbpass dbservice schema/) {
+                        dbuser dbname dbpass dbservice schema excludeapp
+                        includeapp/) {
             next if $name ne $arr and $name ne "${arr}2";
             push @{$tempopt{$name}} => $value;
             ## Don't set below as a normal value
@@ -1689,6 +1690,8 @@ GetOptions(
     'exclude=s@',
     'includeuser=s@',
     'excludeuser=s@',
+    'excludeapp=s@',
+    'includeapp=s@',
 
     'host|dbhost|H|dbhost1|H1=s@',
     'port|dbport|p|port1|dbport1|p1=s@',
@@ -1962,6 +1965,8 @@ Limit options:
   --exclude=name(s) items to specifically exclude (e.g. tables), depends on the action
   --includeuser=include objects owned by certain users
   --excludeuser=exclude objects owned by certain users
+  --excludeapp=exclude objects by application_name
+  --includeapp=include objects by application_name
 
 Other options:
   --assume-standby-mode assume that server in continious WAL recovery mode
@@ -2609,6 +2614,52 @@ elsif ($opt{excludeuser}) {
         chop $USERWHERECLAUSE;
         $USERWHERECLAUSE .= ')';
     }
+}
+
+our $APPWHERECLAUSE = '';
+if ($opt{includeapp}) {
+  my %applist;
+  for my $app (@{$opt{includeapp}}) {
+    for my $a2 (split /,/ => $app) {
+      $applist{$a2}++;
+    }
+  }
+  my $safeapp;
+  if (1 == keys %applist) {
+    ($safeapp = each %applist) =~ s/'/''/g;
+    $APPWHERECLAUSE = " AND application_name = '$safeapp'";
+  }
+  else {
+    $APPWHERECLAUSE = ' AND application_name IN (';
+    for my $app (sort keys %applist) {
+      ($safeapp = $app) =~ s/'/''/g;
+      $APPWHERECLAUSE .= "'$safeapp',";
+    }
+    chop $APPWHERECLAUSE;
+    $APPWHERECLAUSE .= ')';
+  }
+}
+elsif ($opt{excludeapp}) {
+  my %applist;
+  for my $app (@{$opt{excludeapp}}) {
+    for my $a2 (split /,/ => $app) {
+      $applist{$a2}++;
+    }
+  }
+  my $safeapp;
+  if (1 == keys %applist) {
+    ($safeapp = each %applist) =~ s/'/''/g;
+    $APPWHERECLAUSE = " AND application_name <> '$safeapp'";
+  }
+  else {
+    $APPWHERECLAUSE = ' AND application_name NOT IN (';
+    for my $app (sort keys %applist) {
+      ($safeapp = $app) =~ s/'/''/g;
+      $APPWHERECLAUSE .= "'$safeapp',";
+    }
+    chop $APPWHERECLAUSE;
+    $APPWHERECLAUSE .= ')';
+  }
 }
 
 ## Check number of connections, compare to max_connections
@@ -8675,7 +8726,7 @@ sub check_txn_idle {
         $SQL = q{SELECT datname, datid, procpid AS pid, usename, client_addr, xact_start, current_query AS current_query, '' AS state, }.
             q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
-            qq{FROM pg_stat_activity WHERE ($clause)$USERWHERECLAUSE }.
+            qq{FROM pg_stat_activity WHERE ($clause)$USERWHERECLAUSE $APPWHERECLAUSE }.
             q{ORDER BY xact_start, query_start, procpid DESC};
         # Handle usename /rolname differences
         $SQL =~ s/rolname/usename/;
@@ -8687,7 +8738,7 @@ sub check_txn_idle {
         $SQL2 = $SQL = q{SELECT datname, datid, procpid AS pid, usename, client_addr, current_query AS current_query, '' AS state, }.
             q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
-            qq{FROM pg_stat_activity WHERE ($clause)$USERWHERECLAUSE }.
+            qq{FROM pg_stat_activity WHERE ($clause)$USERWHERECLAUSE $APPWHERECLAUSE }.
             q{ORDER BY query_start, procpid DESC};
             # Handle usename /rolname differences
             $SQL =~ s/rolname/usename/;
