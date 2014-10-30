@@ -2459,7 +2459,7 @@ sub run_command {
                     $lnum++;
                     next;
                 }
-                if ($line =~ /^([\?\w]+)\s+\| (.*)/) {
+                if ($line =~ /^ ?([\?\w]+)\s+\| (.*)/) {
                     $stuff[$lnum]{$1} = $2;
                     $lastval = $1;
                 }
@@ -2488,7 +2488,7 @@ sub run_command {
                     warn "OS:               $^O\n";
                     warn "Action:           $action\n";
                     warn "Calling line:     $cline\n";
-                    warn "Output:           $line\n";
+                    warn "Output:           >>$line<<\n";
                     $args =~ s/ -c (.+)/ -c "$1"/s;
                     warn "Command:          $PSQL $args\n";
                     ## Next to last thing is to see if we can grab the PG version
