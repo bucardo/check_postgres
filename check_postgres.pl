@@ -2459,7 +2459,7 @@ sub run_command {
                     $lnum++;
                     next;
                 }
-                if ($line =~ /^ ?([\?\w]+)\s+\| (.*)/) {
+                if ($line =~ /^ ?([\?\w]+)\s+\| (.*?)\s*$/) {
                     $stuff[$lnum]{$1} = $2;
                     $lastval = $1;
                 }
