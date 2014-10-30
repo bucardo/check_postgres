@@ -1001,22 +1001,22 @@ while (my $arg = pop @ARGV) {
     if ($arg =~ /^\-?\-?(\w+)\s*=\s*(.+)/o) {
         my ($name,$value) = (lc $1, $2);
         if ($name =~ /^(?:db)?port(\d+)$/o or $name =~ /^p(\d+)$/o) {
-            $opt{"port$1"} = $value;
+            push @{ $opt{port} } => $value;
         }
         elsif ($name =~ /^(?:db)?host(\d+)$/o or $name =~ /^H(\d+)$/o) {
-            $opt{"host$1"} = $value;
+            push @{ $opt{host} } => $value;
         }
         elsif ($name =~ /^db(?:name)?(\d+)$/o) {
-            $opt{"dbname$1"} = $value;
+            push @{ $opt{dbname} } => $value;
         }
         elsif ($name =~ /^dbuser(\d+)$/o or $name =~ /^u(\d+)/o) {
-            $opt{"dbuser$1"} = $value;
+            push @{ $opt{dbuser} } => $value;
         }
         elsif ($name =~ /^dbpass(\d+)$/o) {
-            $opt{"dbpass$1"} = $value;
+            push @{ $opt{dbpass} } => $value;
         }
         elsif ($name =~ /^dbservice(\d+)$/o) {
-            $opt{"dbservice$1"} = $value;
+            push @{ $opt{dbservice} } => $value;
         }
         else {
             push @badargs => $arg;
