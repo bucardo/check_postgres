@@ -2463,7 +2463,7 @@ sub run_command {
                     $stuff[$lnum]{$1} = $2;
                     $lastval = $1;
                 }
-                elsif ($line =~ /^QUERY PLAN\s+\| (.*)/) {
+                elsif ($line =~ /^ ?QUERY PLAN\s+\| (.*)/) {
                     $stuff[$lnum]{queryplan} = $1;
                     $lastval = 'queryplan';
                 }
