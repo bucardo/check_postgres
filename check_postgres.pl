@@ -2500,7 +2500,7 @@ sub run_command {
                         warn "Postgres version: $v\n";
                     }
                     ## This is a serious parsing fail, so it can be helpful to have the whole enchilada:
-                    warn "Full output: $db->{slurp}\n\n";
+                    warn 'Full output: ' . (Dumper $db->{slurp}) . "\n\n";
                     exit 1;
                 }
             }
