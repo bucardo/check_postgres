@@ -1753,7 +1753,7 @@ our %testaction = (
                   fsm_pages         => 'VERSION: 8.2 MAX: 8.3',
                   fsm_relations     => 'VERSION: 8.2 MAX: 8.3',
                   hot_standby_delay => 'VERSION: 9.0',
-                  replay_delay     => 'VERSION: 9.0',
+                  replay_delay      => 'VERSION: 9.0',
                   listener          => 'MAX: 8.4',
 );
 if ($opt{test}) {
@@ -4774,14 +4774,19 @@ sub check_replay_delay {
         my $delay = $db->{slurp}[0]->{log_delay};
         my $msg   = qq{delay=${delay}s};
 
+        if (!length $delay) {
+            add_unknown("received empty result");
+            return;
+        }
+
         if (length $critical and $delay > $critical) {
-            add_critical($msg)
+            add_critical $msg;
         }
         elsif (length $warning and $delay > $warning) {
-            add_warning($msg)
+            add_warning $msg;
         }
         else {
-            add_ok($msg)
+            add_ok $msg;
         }
     }
 
