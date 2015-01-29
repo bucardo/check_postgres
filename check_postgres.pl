@@ -1148,6 +1148,7 @@ our $action_info = {
  hitratio            => [0, 'Report if the hit ratio of a database is too low.'],
  hot_standby_delay   => [1, 'Check the replication delay in hot standby setup'],
  index_size          => [0, 'Checks the size of indexes only.'],
+ replay_delay        => [0, 'Check the log replay delay during recovery'],
  table_size          => [0, 'Checks the size of tables only.'],
  relation_size       => [0, 'Checks the size of tables and indexes.'],
  last_analyze        => [0, 'Check the maximum time in seconds since any one table has been analyzed.'],
@@ -1752,6 +1753,7 @@ our %testaction = (
                   fsm_pages         => 'VERSION: 8.2 MAX: 8.3',
                   fsm_relations     => 'VERSION: 8.2 MAX: 8.3',
                   hot_standby_delay => 'VERSION: 9.0',
+                  replay_delay     => 'VERSION: 9.0',
                   listener          => 'MAX: 8.4',
 );
 if ($opt{test}) {
@@ -1944,6 +1946,9 @@ check_archive_ready() if $action eq 'archive_ready';
 
 ## Check the replication delay in hot standby setup
 check_hot_standby_delay() if $action eq 'hot_standby_delay';
+
+## Check the log replay delay during recovery
+check_replay_delay() if $action eq 'replay_delay';
 
 ## Check the maximum transaction age of all connections
 check_txn_time() if $action eq 'txn_time';
@@ -4742,6 +4747,45 @@ $USERWHERECLAUSE
 
 } ## end of check_hitratio
 
+
+sub check_replay_delay {
+    ## Check the log replay delay during recovery
+    ## Supports: Nagios
+    ## Critical and warning are the thresholds of delay in seconds.
+    ## Example: --critical=5
+
+    my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
+
+    # We can't assume delay is none if last replayed equals last received, because in
+    # reality it could mean replication has gone out for lunch.
+    # This can lead to false negatives on an idle master, but is preferable to the
+    # opposite where replication has gone away and we assume everything is hunkey-dorey.
+    # This is also why I renamed this check to replay_delay from hot_standby_delay_slave.
+    #
+    # It only tells you the replication delay IF the master is active (i.e. receiving updates).
+#    $SQL = q{SELECT CASE WHEN pg_last_xlog_receive_location() = pg_last_xlog_replay_location()
+#              THEN 0
+#            ELSE EXTRACT (EPOCH FROM now() - pg_last_xact_replay_timestamp())
+#       END AS log_delay;};
+    $SQL = q{select EXTRACT (EPOCH FROM now() - pg_last_xact_replay_timestamp()) as log_delay;};
+    my $info = run_command($SQL);
+
+    for $db (@{$info->{db}}) {
+        my $delay = $db->{slurp}[0]->{log_delay};
+        my $msg   = qq{delay=${delay}s};
+
+        if (length $critical and $delay > $critical) {
+            add_critical($msg)
+        }
+        elsif (length $warning and $delay > $warning) {
+            add_warning($msg)
+        }
+        else {
+            add_ok($msg)
+        }
+    }
+
+} ## end of check_replay_delay
 
 sub check_hot_standby_delay {
 
@@ -8873,6 +8917,12 @@ Example 2: Give a critical if the last transaction replica1 receives is more tha
 Example 3: Allow replica1 to be 1 WAL segment behind, if the master is momentarily seeing more activity than the streaming replication connection can handle, or 10 minutes behind, if the master is seeing very little activity and not processing any transactions, but not both, which would indicate a lasting problem with the replication connection.
 
   check_hot_standby_delay --dbhost=master,replica1 --warning='1048576 and 2 min' --critical='16777216 and 10 min'
+
+=head2 B<replay_delay>
+
+(C<symlink: check_replay_delay>) Returns seconds passed since last transaction replayed
+during recovery.  This practically tells you the replication delay of a hot standby (locally) IF
+the master is active (i.e. master is receiving updates).
 
 =head2 B<index_size>
 
