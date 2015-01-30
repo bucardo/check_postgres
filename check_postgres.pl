@@ -4756,6 +4756,17 @@ sub check_replay_delay {
 
     my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
 
+    # check if we are in recovery using pg_is_in_recovery()
+    $SQL = q{SELECT pg_is_in_recovery() AS recovery;};
+
+    my $info = run_command($SQL, { regex => qr([tf]) });
+    for $db (@{$info->{db}}) {
+        my $status = $db->{slurp}[0];
+        if ($status->{recovery} eq 'f') {
+            add_critical("not in recovery");
+            return;
+        }
+    }
     # We can't assume delay is none if last replayed equals last received, because in
     # reality it could mean replication has gone out for lunch.
     # This can lead to false negatives on an idle master, but is preferable to the
@@ -4768,16 +4779,11 @@ sub check_replay_delay {
 #            ELSE EXTRACT (EPOCH FROM now() - pg_last_xact_replay_timestamp())
 #       END AS log_delay;};
     $SQL = q{select EXTRACT (EPOCH FROM now() - pg_last_xact_replay_timestamp()) as log_delay;};
-    my $info = run_command($SQL);
+    $info = run_command($SQL);
 
     for $db (@{$info->{db}}) {
         my $delay = $db->{slurp}[0]->{log_delay};
         my $msg   = qq{delay=${delay}s};
-
-        if (!length $delay) {
-            add_unknown("received empty result");
-            return;
-        }
 
         if (length $critical and $delay > $critical) {
             add_critical $msg;
