@@ -962,9 +962,11 @@ server must be in hot_standby (e.g. read only) mode, therefore the minimum versi
 action is Postgres 9.0. The <em>--warning</em> and <em>--critical</em> options are the delta between xlog 
 location. These values should match the volume of transactions needed to have the streaming 
 replication disconnect from the master because of too much lag.</p>
-<p>You must provide information on how to reach the second database by a connection 
-parameter ending in the number 2, such as &quot;--dbport2=5543&quot;. If if it not given, 
-the action fails.</p>
+<p>You must provide information on how to reach the second database. If if it not given, the action fails.</p>
+<p>Example:</p>
+<p><code>check_postgres.pl --action hot_standby_delay -H db1-hostname,db2-hostname -u db1-user,db2-user -db db1-db-name,db2-db-name -w 100 -c 200</code></p>
+<p>Results:</p>
+<p><code>POSTGRES_HOT_STANDBY_DELAY OK: DB "db2-db-name" (host:db2-hostname) 0 | time=0.14s replay_delay=0;100;200  receive-delay=0;100;200</code></p>
 <p>
 </p>
 <h2><a name="index_size"><strong>index_size</strong></a></h2>
