@@ -10,14 +10,17 @@ use Test::More tests => 15;
 use lib 't','.';
 use CP_Testing;
 
-use vars qw/$dbh $result $t $host $dbname/;
+use vars qw/$dbh $result $t $port $host $dbname/;
 
 my $cp = CP_Testing->new( {default_action => 'txn_idle'} );
 
 $dbh = $cp->test_database_handle();
 $dbh->{AutoCommit} = 1;
-$dbname = $cp->get_dbname;
+$port = $cp->get_port();
 $host = $cp->get_host();
+$dbname = $cp->get_dbname;
+
+diag "Connected as $port:$host:$dbname\n";
 
 my $S = q{Action 'txn_idle'};
 my $label = 'POSTGRES_TXN_IDLE';
@@ -65,7 +68,7 @@ sleep(1);
 like ($cp->run(q{-w 0}), qr{longest idle in txn: \d+s}, $t);
 
 $t .= ' (MRTG)';
-like ($cp->run(q{--output=mrtg -w 0}), qr{\d+\n0\n\nPID:\d+ database:$dbname username:check_postgres_testing\n}, $t);
+like ($cp->run(q{--output=mrtg -w 0}), qr{\d+\n0\n\nPID:\d+ database:$dbname username:check_postgres_testing}, $t);
 
 sleep(1);
 

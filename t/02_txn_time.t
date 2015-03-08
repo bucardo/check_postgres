@@ -76,7 +76,7 @@ sleep(1);
 like ($cp->run(q{-w 0}), qr{longest txn: 1s}, $t);
 
 $t .= ' (MRTG)';
-like ($cp->run(q{--output=mrtg -w 0}), qr{\d+\n0\n\nPID:\d+ database:$dbname username:\w+\n}, $t);
+like ($cp->run(q{--output=mrtg -w 0}), qr{\d+\n0\n\nPID:\d+ database:$dbname username:\w+ query:SELECT 1\n}, $t);
 
 $idle_dbh->commit;
 

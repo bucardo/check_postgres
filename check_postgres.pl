@@ -144,10 +144,13 @@ our %msg = (
     'fsm-page-msg'       => q{fsm page slots used: $1 of $2 ($3%)},
     'fsm-rel-highver'    => q{Cannot check fsm_relations on servers version 8.4 or greater},
     'fsm-rel-msg'        => q{fsm relations used: $1 of $2 ($3%)},
+    'hs-future-replica'  => q{Slave reporting master server clock is ahead, check time sync},
     'hs-no-role'         => q{Not a master/slave couple},
     'hs-no-location'     => q{Could not get current xlog location on $1},
     'hs-receive-delay'   => q{receive-delay},
     'hs-replay-delay'    => q{replay_delay},
+    'hs-time-delay'      => q{time_delay},
+    'hs-time-version'    => q{Database must be version 9.1 or higher to check slave lag by time},
     'index'              => q{Index},
     'invalid-option'     => q{Invalid option},
     'invalid-query'      => q{Invalid query returned: $1},
@@ -209,6 +212,7 @@ our %msg = (
     'qtime-for-msg'      => q{$1 queries longer than $2s, longest: $3s$4 $5},
     'qtime-msg'          => q{longest query: $1s$2 $3},
     'qtime-none'         => q{no queries},
+    'query'              => q{query},
     'queries'            => q{queries},
     'query-time'         => q{query_time},
     'range-badcs'        => q{Invalid '$1' option: must be a checksum},
@@ -252,7 +256,7 @@ our %msg = (
     'rep-sourcefail'     => q{Source update failed},
     'rep-timeout'        => q{Row was not replicated. Timeout: $1},
     'rep-unknown'        => q{Replication check failed},
-    'rep-wrongvals'      => q{Cannot test replication: values are not the right ones ($1 not $2 nor $3)},
+    'rep-wrongvals'      => q{Cannot test replication: values are not the right ones ('$1' not '$2' nor '$3')},
     'runcommand-err'     => q{Unknown error inside of the "run_command" function},
     'runcommand-nodb'    => q{No target databases could be found},
     'runcommand-nodupe'  => q{Could not dupe STDERR},
@@ -461,6 +465,7 @@ our %msg = (
     'qtime-for-msg'      => q{$1 requêtes plus longues que $2s, requête la plus longue : $3s$4 $5},
     'qtime-msg'          => q{requête la plus longue : $1s$2 $3},
     'qtime-none'         => q{aucune requête},
+    'query'              => q{requête},
     'queries'            => q{requêtes},
     'query-time'         => q{durée de la requête},
     'range-badcs'        => q{Option « $1 » invalide : doit être une somme de contrôle},
@@ -504,7 +509,7 @@ our %msg = (
     'rep-sourcefail'     => q{Échec de la mise à jour de la source},
     'rep-timeout'        => q{La ligne n'a pas été répliquée. Délai dépassé : $1},
     'rep-unknown'        => q{Échec du test de la réplication},
-    'rep-wrongvals'      => q{Ne peut pas tester la réplication : les valeurs ne sont pas les bonnes (ni $1 ni $2 ni $3)},
+    'rep-wrongvals'      => q{Ne peut pas tester la réplication : les valeurs ne sont pas les bonnes (ni '$1' ni '$2' ni '$3')},
     'runcommand-err'     => q{Erreur inconnue de la fonction « run_command »},
     'runcommand-nodb'    => q{Aucune base de données cible trouvée},
     'runcommand-nodupe'  => q{N'a pas pu dupliqué STDERR},
@@ -996,22 +1001,22 @@ while (my $arg = pop @ARGV) {
     if ($arg =~ /^\-?\-?(\w+)\s*=\s*(.+)/o) {
         my ($name,$value) = (lc $1, $2);
         if ($name =~ /^(?:db)?port(\d+)$/o or $name =~ /^p(\d+)$/o) {
-            $opt{"port$1"} = $value;
+            push @{ $opt{port} } => $value;
         }
         elsif ($name =~ /^(?:db)?host(\d+)$/o or $name =~ /^H(\d+)$/o) {
-            $opt{"host$1"} = $value;
+            push @{ $opt{host} } => $value;
         }
         elsif ($name =~ /^db(?:name)?(\d+)$/o) {
-            $opt{"dbname$1"} = $value;
+            push @{ $opt{dbname} } => $value;
         }
         elsif ($name =~ /^dbuser(\d+)$/o or $name =~ /^u(\d+)/o) {
-            $opt{"dbuser$1"} = $value;
+            push @{ $opt{dbuser} } => $value;
         }
         elsif ($name =~ /^dbpass(\d+)$/o) {
-            $opt{"dbpass$1"} = $value;
+            push @{ $opt{dbpass} } => $value;
         }
         elsif ($name =~ /^dbservice(\d+)$/o) {
-            $opt{"dbservice$1"} = $value;
+            push @{ $opt{dbservice} } => $value;
         }
         else {
             push @badargs => $arg;
@@ -2454,11 +2459,11 @@ sub run_command {
                     $lnum++;
                     next;
                 }
-                if ($line =~ /^([\?\w]+)\s+\| (.*)/) {
+                if ($line =~ /^ ?([\?\w]+)\s+\| (.*?)\s*$/) {
                     $stuff[$lnum]{$1} = $2;
                     $lastval = $1;
                 }
-                elsif ($line =~ /^QUERY PLAN\s+\| (.*)/) {
+                elsif ($line =~ /^ ?QUERY PLAN\s+\| (.*)/) {
                     $stuff[$lnum]{queryplan} = $1;
                     $lastval = 'queryplan';
                 }
@@ -2480,12 +2485,13 @@ sub run_command {
                     my $cline = (caller)[2];
                     my $args = join ' ' => @args;
                     warn "Version:          $VERSION\n";
+                    warn "OS:               $^O\n";
                     warn "Action:           $action\n";
                     warn "Calling line:     $cline\n";
-                    warn "Output:           $line\n";
-                    $args =~ s/ -c (.+)/-c "$1"/s;
+                    warn "Output:           >>$line<<\n";
+                    $args =~ s/ -c (.+)/ -c "$1"/s;
                     warn "Command:          $PSQL $args\n";
-                    ## Last thing is to see if we can grab the PG version
+                    ## Next to last thing is to see if we can grab the PG version
                     if (! $opt{stop_looping}) {
                         ## Just in case...
                         $opt{stop_looping} = 1;
@@ -2493,6 +2499,8 @@ sub run_command {
                         (my $v = $linfo->{db}[0]{slurp}[0]{version}) =~ s/(\w+ \S+).+/$1/;
                         warn "Postgres version: $v\n";
                     }
+                    ## This is a serious parsing fail, so it can be helpful to have the whole enchilada:
+                    warn 'Full output: ' . (Dumper $db->{slurp}) . "\n\n";
                     exit 1;
                 }
             }
@@ -3108,6 +3116,9 @@ sub validate_size_or_percent_with_oper {
 
 
 sub validate_integer_for_time {
+    # Used for txn_idle and hot_standby_delay
+    # txn_idle, et. al, use the form "$count for $interval"
+    # hot_standby_delay appears as "$bytes and $interval"
 
     my $arg = shift || {};
     ndie qq{validate_integer_for_time must be called with a hashref\n}
@@ -3123,7 +3134,7 @@ sub validate_integer_for_time {
     for my $spec ([ warning => $warning], [critical => $critical]) {
         my ($level, $val) = @{ $spec };
         if (length $val) {
-            if ($val =~ /^(.+?)\sfor\s(.+)$/i) {
+            if ($val =~ /^(.+?)\s(?:for|and)\s(.+)$/i) {
                 my ($int, $time) = ($1, $2);
 
                 # Integer first, time second.
@@ -3137,7 +3148,7 @@ sub validate_integer_for_time {
             }
             else {
                 # Disambiguate int from time int by sign.
-                if ($val =~ /^[-+]\d+$/) {
+                if (($val =~ /^[-+]\d+$/) || ($val =~ /^\d+$/ && $arg->{default_to_int})) {
                     ndie msg('range-int', $level) if $val !~ /^[-+]?\d+$/;
                     push @ret, int $val, '';
                 }
@@ -3612,14 +3623,10 @@ FROM (
 
     ## Alternate versions for old versions
     my $SQL2 = $SQL;
-    if ($psql_version <= 8.4) {
-        $SQL2 =~ s/AND s.inherited=false//;
-    }
+    $SQL2 =~ s/AND s.inherited=false//; # 8.4 and earlier
 
     my $SQL3 = $SQL2;
-    if ($psql_version <= 7.4) {
-        $SQL3 =~ s/SELECT current_setting.+?AS bs/(SELECT 8192) AS bs/;
-    }
+    $SQL3 =~ s/SELECT current_setting.+?AS bs/(SELECT 8192) AS bs/; # 7.4 and earlier
 
     my $info = run_command($SQL, { version => [  "<8.0 $SQL3", "<9.0 $SQL2" ] } );
 
@@ -4741,9 +4748,17 @@ sub check_hot_standby_delay {
     ## Check on the delay in PITR replication between master and slave
     ## Supports: Nagios, MRTG
     ## Critical and warning are the delay between master and slave xlog locations
-    ## Example: --critical=1024
+    ## and/or transaction timestamps.  If both are specified, both are checked.
+    ## Examples:
+    ## --critical=1024
+    ## --warning=5min
+    ## --warning='1048576 and 2min' --critical='16777216 and 10min'
 
-    my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
+    my ($warning, $wtime, $critical, $ctime) = validate_integer_for_time({default_to_int => 1});
+    if ($psql_version < 9.1 and (length $wtime or length $ctime)) { # FIXME: check server version instead
+        add_unknown msg('hs-time-version');
+        return;
+    }
 
     # check if master and slave comply with the check using pg_is_in_recovery()
     my ($master, $slave);
@@ -4776,15 +4791,19 @@ sub check_hot_standby_delay {
     }
 
     ## Get xlog positions
-    my ($moffset, $s_rec_offset, $s_rep_offset);
+    my ($moffset, $s_rec_offset, $s_rep_offset, $time_delta);
 
     ## On slave
     $SQL = q{SELECT pg_last_xlog_receive_location() AS receive, pg_last_xlog_replay_location() AS replay};
+    if ($psql_version >= 9.1) {
+        $SQL .= q{, COALESCE(ROUND(EXTRACT(epoch FROM now() - pg_last_xact_replay_timestamp())),0) AS seconds};
+    }
     my $info = run_command($SQL, { dbnumber => $slave, regex => qr/\// });
     my $saved_db;
     for $db (@{$info->{db}}) {
         my $receive = $db->{slurp}[0]{receive};
         my $replay = $db->{slurp}[0]{replay};
+        $time_delta = $db->{slurp}[0]{seconds};
 
         if (defined $receive) {
             my ($a, $b) = split(/\//, $receive);
@@ -4829,20 +4848,33 @@ sub check_hot_standby_delay {
     # Make sure it's always positive or zero
     $rec_delta = 0 if $rec_delta < 0;
     $rep_delta = 0 if $rep_delta < 0;
+    if (defined $time_delta and $time_delta < 0) {
+        add_unknown msg('hs-future-replica');
+        return;
+    }
 
-    $MRTG and do_mrtg({one => $rep_delta, two => $rec_delta});
+    $MRTG and do_mrtg($psql_version >= 9.1 ?
+        {one => $rep_delta, two => $rec_delta, three => $time_delta} :
+        {one => $rep_delta, two => $rec_delta});
 
     $db->{perf} = sprintf ' %s=%s;%s;%s ',
         perfname(msg('hs-replay-delay')), $rep_delta, $warning, $critical;
     $db->{perf} .= sprintf ' %s=%s;%s;%s',
         perfname(msg('hs-receive-delay')), $rec_delta, $warning, $critical;
+    if ($psql_version >= 9.1) {
+        $db->{perf} .= sprintf ' %s=%s;%s;%s',
+            perfname(msg('hs-time-delay')), $time_delta, $wtime, $ctime;
+    }
 
     ## Do the check on replay delay in case SR has disconnected because it way too far behind
     my $msg = qq{$rep_delta};
-    if (length $critical and $rep_delta > $critical) {
+    if ($psql_version >= 9.1) {
+        $msg .= qq{ and $time_delta seconds}
+    }
+    if ((length $critical or length $ctime) and (!length $critical or length $critical and $rep_delta > $critical) and (!length $ctime or length $ctime and $time_delta > $ctime)) {
         add_critical $msg;
     }
-    elsif (length $warning and $rep_delta > $warning) {
+    elsif ((length $warning or length $wtime) and (!length $warning or length $warning and $rep_delta > $warning) and (!length $wtime or length $wtime and $time_delta > $wtime)) {
         add_warning $msg;
     }
     else {
@@ -6141,16 +6173,13 @@ sub check_replicate_row {
     }
     my $value1 = $info1->{db}[0]{slurp}[0]{c} || '';
 
-    my $info2 = run_command($select, { dbnumber => 2 });
-    my $slave = 0;
-    for my $d (@{$info2->{db}}) {
-        $slave++;
+    my $numslaves = @{$info1->{db}} - 1;
+    for my $d ( @{$info1->{db}}[1 .. $numslaves] ) {
         my $value2 = $d->{slurp}[0]{c} || '';
         if ($value1 ne $value2) {
             ndie msg('rep-notsame');
         }
     }
-    my $numslaves = $slave;
     if ($numslaves < 1) {
         ndie msg('rep-noslaves');
     }
@@ -6191,12 +6220,12 @@ sub check_replicate_row {
     my %slave;
     my $time = 0;
     LOOP: {
-        $info2 = run_command($select, { dbnumber => 2 } );
+        my $info2 = run_command($select);
         ## Reset for final output
         $db = $sourcedb;
 
-        $slave = 0;
-        for my $d (@{$info2->{db}}) {
+        my $slave = 0;
+        for my $d (@{$info2->{db}}[1 .. $numslaves]) {
             $slave++;
             next if exists $slave{$slave};
             my $value2 = $d->{slurp}[0]{c};
@@ -7421,7 +7450,8 @@ q{SELECT
  COALESCE(n2.no_comment, '') AS com2
 FROM SCHEMA.sl_status
 JOIN SCHEMA.sl_node n1 ON (n1.no_id=st_origin)
-JOIN SCHEMA.sl_node n2 ON (n2.no_id=st_received)};
+JOIN SCHEMA.sl_node n2 ON (n2.no_id=st_received)
+ORDER BY 1 DESC};
 
     my $maxlagtime = -1;
 
@@ -7660,13 +7690,14 @@ sub check_txn_idle {
 
     ## Details on who the top offender was
     if ($max > 0) {
-        $whodunit = sprintf q{%s:%s %s:%s %s:%s%s%s},
+        $whodunit = sprintf q{%s:%s %s:%s %s:%s%s%s %s:%s},
             msg('PID'), $maxr->{pid},
             msg('database'), $maxr->{datname},
             msg('username'), $maxr->{usename},
             $maxr->{client_addr} eq '' ? '' : (sprintf ' %s:%s', msg('address'), $maxr->{client_addr}),
             ($maxr->{client_port} eq '' or $maxr->{client_port} < 1)
-                ? '' : (sprintf ' %s:%s', msg('port'), $maxr->{client_port});
+                ? '' : (sprintf ' %s:%s', msg('port'), $maxr->{client_port}),
+            msg('query'),  $maxr->{query} || $maxr->{current_query};
     }
 
     ## For MRTG, we can simply exit right now
@@ -7927,6 +7958,8 @@ sub check_wal_files {
 
 
 =pod
+
+=encoding utf8
 
 =head1 NAME
 
@@ -8811,15 +8844,35 @@ and the name of the database on the fourth line.
 =head2 B<hot_standby_delay>
 
 (C<symlink: check_hot_standby_delay>) Checks the streaming replication lag by computing the delta 
-between the xlog position of a master server and the one of the slaves connected to it. The slave_
-server must be in hot_standby (e.g. read only) mode, therefore the minimum version to use this_
-action is Postgres 9.0. The I<--warning> and I<--critical> options are the delta between xlog 
-location. These values should match the volume of transactions needed to have the streaming 
-replication disconnect from the master because of too much lag.
+between the current xlog position of a master server and the replay location of a slave connected
+to it. The slave server must be in hot_standby (e.g. read only) mode, therefore the minimum version to use
+this action is Postgres 9.0. The I<--warning> and I<--critical> options are the delta between the xlog
+locations. Since these values are byte offsets in the WAL they should match the expected transaction volume
+of your application to prevent false postives or negatives.
 
-You must provide information on how to reach the second database by a connection 
-parameter ending in the number 2, such as "--dbport2=5543". If if it not given, 
-the action fails.
+The first "--dbname", "--host", and "--port", etc. options are considered the
+master; the second belongs to the slave.
+
+Byte values should be based on the volume of transactions needed to have the streaming replication
+disconnect from the master because of too much lag, determined by the Postgres configuration variable
+B<wal_keep_segments>.  For units of time, valid units are 'seconds', 'minutes', 'hours', or 'days'.
+Each may be written singular or abbreviated to just the first letter. When specifying both, in the
+form 'I<bytes> and I<time>', both conditions must be true for the threshold to be met.
+
+You must provide information on how to reach the databases by providing a comma separated list to the
+--dbost and --dbport parameters, such as "--dbport=5432,5543". If not given, the action fails.
+
+Example 1: Warn a database with a local replica on port 5433 is behind on any xlog replay at all
+
+  check_hot_standby_delay --dbport=5432,5433 --warning='1'
+
+Example 2: Give a critical if the last transaction replica1 receives is more than 10 minutes ago
+
+  check_hot_standby_delay --dbhost=master,replica1 --critical='10 min'
+
+Example 3: Allow replica1 to be 1 WAL segment behind, if the master is momentarily seeing more activity than the streaming replication connection can handle, or 10 minutes behind, if the master is seeing very little activity and not processing any transactions, but not both, which would indicate a lasting problem with the replication connection.
+
+  check_hot_standby_delay --dbhost=master,replica1 --warning='1048576 and 2 min' --critical='16777216 and 10 min'
 
 =head2 B<index_size>
 
@@ -9761,6 +9814,16 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
+
+=item B<Version 2.21.1>
+
+  Fix bloat check to use correct SQL depending on the server version.
+    (Adrian Vondendriesch)
+
+  Add explicit ORDER BY to the slony_status check to get the most lagged server.
+    (Jeff Frost)
+
+  Declare POD encoding to be utf8. (Christoph Berg)
 
 =item B<Version 2.21.0> September 24, 2013
 
