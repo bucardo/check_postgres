@@ -8019,6 +8019,7 @@ sub check_txn_idle {
     $SQL3 =~ s/current_query NOT LIKE '<IDLE>%'/(state NOT LIKE 'idle%' OR state IS NULL)/; # query_time
     $SQL3 =~ s/current_query/query/g;
     $SQL3 =~ s/'' AS state/state AS state/;
+    $SQL3 =~ s/query_start/state_change/g;
 
     my $info = run_command($SQL, { emptyok => 1 , version => [ "<8.3 $SQL2", ">9.1 $SQL3" ] } );
 
