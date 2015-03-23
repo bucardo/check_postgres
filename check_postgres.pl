@@ -7274,12 +7274,15 @@ ORDER BY nspname, seqname, typname
         my %seqinfo;
         my %seqperf;
         my $multidb = @{$info->{db}} > 1 ? "$db->{dbname}." : '';
-        for my $r (@{$db->{slurp}}) {
+        my @seq_sql;
+        for my $r (@{$db->{slurp}}) { # for each sequence, create SQL command to inspect it
             my ($schema, $seq, $seqname, $typename) = @$r{qw/ nspname seqname safename typname /};
             next if skip_item($seq);
             my $maxValue = $typename eq 'int2' ? $MAXINT2 : $typename eq 'int4' ? $MAXINT4 : $MAXINT8;
-            $SQL = qq{
-SELECT last_value, slots, used, ROUND(used/slots*100) AS percent,
+            my $seqname_l = $seqname;
+            $seqname_l =~ s/'/''/g; # SQL literal quoting (name is already identifier-quoted)
+            push @seq_sql, qq{
+SELECT '$seqname_l' AS seqname, last_value, slots, used, ROUND(used/slots*100) AS percent,
   CASE WHEN slots < used THEN 0 ELSE slots - used END AS numleft
 FROM (
  SELECT last_value,
@@ -7287,10 +7290,10 @@ FROM (
   CEIL((last_value-min_value::numeric+1)/increment_by::NUMERIC) AS used
 FROM $seqname) foo
 };
-
-            my $seqinfo = run_command($SQL, { target => $db });
-            my $r2 = $seqinfo->{db}[0]{slurp}[0];
-            my ($last, $slots, $used, $percent, $left) = @$r2{qw/ last_value slots used percent numleft / };
+        }
+        my $seqinfo = run_command(join("\nUNION ALL\n", @seq_sql), { target => $db }); # execute all SQL commands at once
+        for my $r2 (@{$seqinfo->{db}[0]{slurp}}) { # now look at all results
+            my ($seqname, $last, $slots, $used, $percent, $left) = @$r2{qw/ seqname last_value slots used percent numleft / };
             if (! defined $last) {
                 ndie msg('seq-die', $seqname);
             }
@@ -9824,6 +9827,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
     (Jeff Frost)
 
   Declare POD encoding to be utf8. (Christoph Berg)
+
+  Query all sequences per DB in parallel for action=sequence. (Christoph Berg)
 
 =item B<Version 2.21.0> September 24, 2013
 

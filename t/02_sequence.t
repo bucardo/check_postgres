@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 10;
+use Test::More tests => 12;
 use lib 't','.';
 use CP_Testing;
 
@@ -45,6 +45,7 @@ if ($ver < 80100) {
 my $seqname = 'cp_test_sequence';
 $cp->drop_sequence_if_exists($seqname);
 $cp->drop_sequence_if_exists("${seqname}2");
+$cp->drop_sequence_if_exists("${seqname}'\"evil");
 
 $t=qq{$S works when no sequences exist};
 like ($cp->run(''), qr{OK:.+No sequences found}, $t);
@@ -82,5 +83,17 @@ like ($cp->run('--critical=22%'), qr{CRITICAL:.+public.cp_test_sequence=33% \(ca
 
 $t=qq{$S returns correct information with MRTG output};
 is ($cp->run('--critical=22% --output=mrtg'), "33\n0\n\npublic.cp_test_sequence\n", $t);
+
+# create second sequence
+$dbh->do("CREATE SEQUENCE ${seqname}2");
+$dbh->commit();
+$t=qq{$S returns correct information for two sequences};
+like ($cp->run(''), qr{OK:.+public.cp_test_sequence=33% .* \| .*${seqname}=33%.*${seqname}2=0%}, $t);
+
+# test SQL quoting
+$dbh->do(qq{CREATE SEQUENCE "${seqname}'""evil"});
+$dbh->commit();
+$t=qq{$S handles SQL quoting};
+like ($cp->run(''), qr{OK:.+'public."${seqname}''""evil"'}, $t); # extra " and ' because name is both identifier+literal quoted
 
 exit;

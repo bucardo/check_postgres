@@ -700,7 +700,8 @@ sub drop_sequence_if_exists {
     $SQL = q{SELECT count(*) FROM pg_class WHERE relkind = 'S' AND relname = } . $dbh->quote($name);
     my $count = $dbh->selectall_arrayref($SQL)->[0][0];
     if ($count) {
-        $dbh->do("DROP SEQUENCE $name");
+        $name =~ s/"/""/g;
+        $dbh->do("DROP SEQUENCE \"$name\"");
         $dbh->commit();
     }
     return;
