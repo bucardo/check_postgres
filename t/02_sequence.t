@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 12;
+use Test::More tests => 14;
 use lib 't','.';
 use CP_Testing;
 
@@ -43,9 +43,11 @@ if ($ver < 80100) {
 
 
 my $seqname = 'cp_test_sequence';
+my $testtbl = 'sequence_test';
 $cp->drop_sequence_if_exists($seqname);
 $cp->drop_sequence_if_exists("${seqname}2");
 $cp->drop_sequence_if_exists("${seqname}'\"evil");
+$cp->drop_table_if_exists("$testtbl");
 
 $t=qq{$S works when no sequences exist};
 like ($cp->run(''), qr{OK:.+No sequences found}, $t);
@@ -95,5 +97,29 @@ $dbh->do(qq{CREATE SEQUENCE "${seqname}'""evil"});
 $dbh->commit();
 $t=qq{$S handles SQL quoting};
 like ($cp->run(''), qr{OK:.+'public."${seqname}''""evil"'}, $t); # extra " and ' because name is both identifier+literal quoted
+
+$dbh->do("DROP SEQUENCE ${seqname}");
+$dbh->do("DROP SEQUENCE ${seqname}2");
+$dbh->do(qq{DROP SEQUENCE "${seqname}'""evil"});
+
+# test integer column where the datatype range is smaller than the serial range
+$dbh->do("CREATE TABLE $testtbl (id serial)");
+$dbh->do("SELECT setval('${testtbl}_id_seq',2000000000)");
+$dbh->commit;
+$t=qq{$S handles "serial" column};
+like ($cp->run(''), qr{WARNING:.+public.sequence_test_id_seq=93% \(calls left=147483647\)}, $t);
+
+if ($ver >= 90200) {
+    # test smallint column where the datatype range is even smaller (and while we are at it, test --exclude)
+    $dbh->do("ALTER TABLE $testtbl ADD COLUMN smallid smallserial");
+    $dbh->do("SELECT setval('${testtbl}_smallid_seq',30000)");
+    $dbh->commit;
+    $t=qq{$S handles "smallserial" column};
+    like ($cp->run('--exclude=sequence_test_id_seq'), qr{WARNING:.+public.sequence_test_smallid_seq=92% \(calls left=2767\)}, $t);
+} else {
+    SKIP: {
+        skip '"smallserial" needs PostgreSQL 9.2 or later', 2;
+    }
+}
 
 exit;
