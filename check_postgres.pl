@@ -2254,6 +2254,10 @@ sub run_command {
         if ($arg->{dbnumber} and $arg->{dbnumber} != $num) {
             next;
         }
+	## Likewise if we have specified "target" database info and this is not our choice
+	if ($arg->{target} and $arg->{target} != $db) {
+            next;
+	}
 
         ## Just to keep things clean:
         truncate $tempfh, 0;
@@ -7291,30 +7295,34 @@ FROM (
 FROM $seqname) foo
 };
         }
-        my $seqinfo = run_command(join("\nUNION ALL\n", @seq_sql), { target => $db }); # execute all SQL commands at once
-        for my $r2 (@{$seqinfo->{db}[0]{slurp}}) { # now look at all results
-            my ($seqname, $last, $slots, $used, $percent, $left) = @$r2{qw/ seqname last_value slots used percent numleft / };
-            if (! defined $last) {
-                ndie msg('seq-die', $seqname);
-            }
-            my $msg = msg('seq-msg', $seqname, $percent, $left);
-            my $nicename = perfname("$multidb$seqname");
-            $seqperf{$percent}{$seqname} = [$left, " $nicename=$percent%;$w%;$c%"];
-            if ($percent >= $maxp) {
-                $maxp = $percent;
-                if (! exists $opt{perflimit} or $limit++ < $opt{perflimit}) {
-                    push @{$seqinfo{$percent}} => $MRTG ? [$seqname,$percent,$slots,$used,$left] : $msg;
+	# Use UNION ALL to query multiple sequences at once, however if there are too many sequences this can exceed
+        # maximum argument length; so split into chunks of 200 sequences or less and iterate over them.
+	while (my @seq_sql_chunk = splice @seq_sql, 0, 200) {
+            my $seqinfo = run_command(join("\nUNION ALL\n", @seq_sql_chunk), { target => $db }); # execute all SQL commands at once
+            for my $r2 (@{$seqinfo->{db}[0]{slurp}}) { # now look at all results
+                my ($seqname, $last, $slots, $used, $percent, $left) = @$r2{qw/ seqname last_value slots used percent numleft / };
+                if (! defined $last) {
+                    ndie msg('seq-die', $seqname);
+                }
+                my $msg = msg('seq-msg', $seqname, $percent, $left);
+                my $nicename = perfname("$multidb$seqname");
+                $seqperf{$percent}{$seqname} = [$left, " $nicename=$percent%;$w%;$c%"];
+                if ($percent >= $maxp) {
+                    $maxp = $percent;
+                    if (! exists $opt{perflimit} or $limit++ < $opt{perflimit}) {
+                        push @{$seqinfo{$percent}} => $MRTG ? [$seqname,$percent,$slots,$used,$left] : $msg;
+                    }
+                }
+                next if $MRTG;
+
+                if (length $critical and $percent >= $c) {
+                    push @crit => $msg;
+                }
+                elsif (length $warning and $percent >= $w) {
+                    push @warn => $msg;
                 }
             }
-            next if $MRTG;
-
-            if (length $critical and $percent >= $c) {
-                push @crit => $msg;
-            }
-            elsif (length $warning and $percent >= $w) {
-                push @warn => $msg;
-            }
-        }
+	}
         if ($MRTG) {
             my $msg = join ' | ' => map { $_->[0] } @{$seqinfo{$maxp}};
             do_mrtg({one => $maxp, msg => $msg});
@@ -7957,8 +7965,6 @@ sub check_wal_files {
     return;
 
 } ## end of check_wal_files
-
-
 
 =pod
 
