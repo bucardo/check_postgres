@@ -7260,7 +7260,7 @@ sub schema_item_exists {
             for my $name (sort keys %{ $itemhash->{$db1}{$item_class} }) {
 
                 ## Can exclude by 'filter' based regex
-                next if grep { $name eq $_ } @$exclude_regex;
+                next if grep { $name =~ $_ } @$exclude_regex;
 
                 if (! exists $itemhash->{$db2}{$item_class}{$name}) {
 
@@ -7336,7 +7336,7 @@ sub schema_item_differences {
             for my $name (sort keys %{ $itemhash->{$db1}{$item_class} }) {
 
                 ## Can exclude by 'filter' based regex
-                next if grep { $name eq $_ } @$exclude_regex;
+                next if grep { $name =~ $_ } @$exclude_regex;
 
                 ## This case has already been handled:
                 next if ! exists $itemhash->{$db2}{$item_class}{$name};
