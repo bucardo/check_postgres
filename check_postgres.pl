@@ -1066,25 +1066,34 @@ WHERE c.relkind = 'i'},
     },
     operator => {
         SQL       => q{
-SELECT o.*, o.oid, nspname||'.'||o.oprname AS name, quote_ident(o.oprname) AS safename,
-  usename AS owner, nspname AS schema,
+SELECT o.*, o.oid, n.nspname||'.'||o.oprname AS name, quote_ident(o.oprname) AS safename,
+  usename AS owner, n.nspname AS schema,
   t1.typname AS resultname,
-  t2.typname AS leftname, t3.typname AS rightname
+  t2.typname AS leftname, t3.typname AS rightname,
+  t4.typname AS resultname,
+  nneg.nspname||'.'||neg.oprname AS negname,
+  ncom.nspname||'.'||com.oprname AS comname
 FROM pg_operator o
 JOIN pg_user u ON (u.usesysid = o.oprowner)
 JOIN pg_namespace n ON (n.oid = o.oprnamespace)
 JOIN pg_proc p1 ON (p1.oid = o.oprcode)
 JOIN pg_type t1 ON (t1.oid = o.oprresult)
 LEFT JOIN pg_type t2 ON (t2.oid = o.oprleft)
-LEFT JOIN pg_type t3 ON (t3.oid = o.oprright)},
+LEFT JOIN pg_type t3 ON (t3.oid = o.oprright)
+LEFT JOIN pg_type t4 ON (t4.oid = o.oprresult)
+LEFT JOIN pg_operator neg ON (o.oprnegate = neg.oid)
+LEFT JOIN pg_namespace nneg ON (nneg.oid = neg.oprnamespace)
+LEFT JOIN pg_operator com ON (o.oprcom = com.oid)
+LEFT JOIN pg_namespace ncom ON (ncom.oid = com.oprnamespace)},
         exclude    => 'system',
     },
     trigger => {
         SQL       => q{
-SELECT t.*, n1.nspname||'.'||t.tgname AS name, quote_ident(t.tgname) AS safename, quote_ident(usename) AS owner,
+SELECT t.*, n1.nspname||'.'||c1.relname||'.'||t.tgname AS name, quote_ident(t.tgname) AS safename, quote_ident(usename) AS owner,
   n1.nspname AS tschema, c1.relname AS tname,
   n2.nspname AS cschema, c2.relname AS cname,
-  n3.nspname AS procschema, p.proname AS procname
+  n3.nspname AS procschema, p.proname AS procname,
+  pg_get_triggerdef(t.oid) AS triggerdef
 FROM pg_trigger t
 JOIN pg_class c1 ON (c1.oid = t.tgrelid)
 JOIN pg_user u ON (u.usesysid = c1.relowner)
@@ -1099,7 +1108,8 @@ WHERE t.tgconstrrelid = 0 AND tgname !~ '^pg_'},
         SQL       => q{
 SELECT p.*, p.oid, nspname||'.'||p.proname AS name, quote_ident(p.proname) AS safename,
   md5(prosrc) AS source_checksum,
-  usename AS owner, nspname AS schema
+  usename AS owner, nspname AS schema,
+  pg_get_function_arguments(p.oid) AS function_arguments
 FROM pg_proc p
 JOIN pg_user u ON (u.usesysid = p.proowner)
 JOIN pg_namespace n ON (n.oid = p.pronamespace)},
@@ -1107,9 +1117,11 @@ JOIN pg_namespace n ON (n.oid = p.pronamespace)},
     },
     constraint => {
         SQL       => q{
-SELECT c.*, c.oid, n.nspname||'.'||c.conname AS name, quote_ident(c.conname) AS safename,
- n.nspname AS schema, relname AS tname
+SELECT c.*, c.oid, n.nspname||'.'||c1.relname||'.'||c.conname AS name, quote_ident(c.conname) AS safename,
+ n.nspname AS schema, r.relname AS tname,
+ pg_get_constraintdef(c.oid) AS constraintdef
 FROM pg_constraint c
+JOIN pg_class c1 ON (c1.oid = c.conrelid)
 JOIN pg_namespace n ON (n.oid = c.connamespace)
 JOIN pg_class r ON (r.oid = c.conrelid)
 JOIN pg_namespace n2 ON (n2.oid = r.relnamespace)},
@@ -6728,19 +6740,24 @@ sub check_same_schema {
     my @catalog_items = (
         [user       => 'usesysid',                                'useconfig' ],
         [language   => 'laninline,lanplcallfoid,lanvalidator',    ''          ],
-        [operator   => '',                                        ''          ],
+        [operator   => 'oprleft,oprright,oprresult,oprnegate,
+                        oprcom',                                  ''          ],
         [type       => '',                                        ''          ],
         [schema     => '',                                        ''          ],
-        [function   => 'source_checksum,prolang,prorettype',      ''          ],
+        [function   => 'source_checksum,prolang,prorettype,
+                        proargtypes,proallargtypes,provariadic,
+			proargdefaults',                          ''          ],
         [table      => 'reltype,relfrozenxid,relminmxid,relpages,
                         reltuples,relnatts,relallvisible',        ''          ],
         [view       => 'reltype',                                 ''          ],
-        [sequence   => 'reltype,log_cnt,relnatts,is_called',      ''          ],
+        [sequence   => 'reltype,log_cnt,relnatts,is_called,
+                        last_value',                              ''          ],
         [index      => 'relpages,reltuples,indpred,indclass,
-                        indexprs,indcheckxmin',                   ''          ],
-        [trigger    => '',                                        ''          ],
-        [constraint => 'conbin',                                  ''          ],
-        [column     => 'atttypid,attnum,attbyval',                ''          ],
+                        indexprs,indcheckxmin,reltablespace,
+                        indkey',                                  ''          ],
+        [trigger    => 'tgqual,tgconstraint',                     ''          ],
+        [constraint => 'conbin,conindid,conkey,confkey',          ''          ],
+        [column     => 'atttypid,attnum,attbyval,attndims',       ''          ],
     );
 
     ## Where we store all the information, per-database
