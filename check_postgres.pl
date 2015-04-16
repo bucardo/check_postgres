@@ -6442,11 +6442,11 @@ sub check_replicate_row {
     if (!defined $sourcedb) {
         ndie msg('rep-norow', "$table.$col");
     }
-    my $value1 = $info1->{db}[0]{slurp}[0]{c} || '';
+    my $value1 = (defined($info1->{db}[0]{slurp}[0]{c})?$info1->{db}[0]{slurp}[0]{c}:'');
 
     my $numslaves = @{$info1->{db}} - 1;
     for my $d ( @{$info1->{db}}[1 .. $numslaves] ) {
-        my $value2 = $d->{slurp}[0]{c} || '';
+        my $value2 = (defined($d->{slurp}[0]{c})?$d->{slurp}[0]{c}:'');
         if ($value1 ne $value2) {
             ndie msg('rep-notsame');
         }
