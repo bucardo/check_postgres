@@ -988,6 +988,7 @@ GetOptions(
     'filter=s@',   ## used by same_schema only
     'suffix=s',    ## used by same_schema only
     'replace',     ## used by same_schema only
+    'lsfunc=s',    ## used by wal_files and archive_ready
 );
 
 die $USAGE if ! keys %opt and ! @ARGV;
@@ -7935,8 +7936,11 @@ sub check_wal_files {
 
     my ($warning, $critical) = validate_range($arg);
 
+    my $lsfunc = $opt{lsfunc} || 'pg_ls_dir';
+    my $lsargs = $opt{lsfunc} ? "" : "'pg_xlog$subdir'";
+
     ## Figure out where the pg_xlog directory is
-    $SQL = qq{SELECT count(*) AS count FROM pg_ls_dir('pg_xlog$subdir') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)
+    $SQL = qq{SELECT count(*) AS count FROM $lsfunc($lsargs) WHERE $lsfunc ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)
 
     my $info = run_command($SQL, {regex => qr[\d] });
 
@@ -8327,7 +8331,7 @@ The current supported actions are:
 
 (C<symlink: check_postgres_archive_ready>) Checks how many WAL files with extension F<.ready> 
 exist in the F<pg_xlog/archive_status> directory, which is found 
-off of your B<data_directory>. This action must be run as a superuser, in order to access the 
+off of your B<data_directory>. If the I<--lsfunc> option is not used then this action must be run as a superuser, in order to access the
 contents of the F<pg_xlog/archive_status> directory. The minimum version to use this action is 
 Postgres 8.1. The I<--warning> and I<--critical> options are simply the number of 
 F<.ready> files in the F<pg_xlog/archive_status> directory. 
@@ -8337,9 +8341,26 @@ archive WAL files as fast as possible.
 If the archive command fail, number of WAL in your F<pg_xlog> directory will grow until
 exhausting all the disk space and force PostgreSQL to stop immediately.
 
-Example 1: Check that the number of ready WAL files is 10 or less on host "pluto"
+To avoid connecting as a database superuser, a wrapper function around
+C<pg_ls_dir()> should be defined as a superuser with SECURITY DEFINER,
+and the I<--lsfunc> option used. This example function, if defined by
+a superuser, will allow the script to connect as a normal user
+I<nagios> with I<--lsfunc=ls_archive_status_dir>
 
-  check_postgres_archive_ready --host=pluto --critical=10
+  BEGIN;
+  CREATE FUNCTION ls_archive_status_dir()
+      RETURNS SETOF TEXT
+      AS $$ SELECT pg_ls_dir('pg_xlog/archive_status') $$
+      LANGUAGE SQL
+      SECURITY DEFINER;
+  REVOKE ALL ON FUNCTION ls_archive_status_dir() FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION ls_archive_status_dir() to nagios;
+  COMMIT;
+
+Example 1: Check that the number of ready WAL files is 10 or less on host "pluto",
+using a wrapper function C<ls_archive_status_dir> to avoid the need for superuser permissions
+
+  check_postgres_archive_ready --host=pluto --critical=10 --lsfunc=ls_archive_status_dir
 
 For MRTG output, reports the number of ready WAL files on line 1.
 
@@ -9602,7 +9623,7 @@ fourth line indicates the current version. The version must be provided via the 
 
 (C<symlink: check_postgres_wal_files>) Checks how many WAL files exist in the F<pg_xlog> directory, which is found 
 off of your B<data_directory>, sometimes as a symlink to another physical disk for 
-performance reasons. This action must be run as a superuser, in order to access the 
+performance reasons. If the I<--lsfunc> option is not used then this action must be run as a superuser, in order to access the 
 contents of the F<pg_xlog> directory. The minimum version to use this action is 
 Postgres 8.1. The I<--warning> and I<--critical> options are simply the number of 
 files in the F<pg_xlog> directory. What number to set this to will vary, but a general 
@@ -9614,9 +9635,26 @@ transaction, or a faulty B<archive_command> script, may cause Postgres to
 create too many files. Ultimately, this will cause the disk they are on to run 
 out of space, at which point Postgres will shut down.
 
-Example 1: Check that the number of WAL files is 20 or less on host "pluto"
+To avoid connecting as a database superuser, a wrapper function around
+C<pg_ls_dir()> should be defined as a superuser with SECURITY DEFINER,
+and the I<--lsfunc> option used. This example function, if defined by
+a superuser, will allow the script to connect as a normal user
+I<nagios> with I<--lsfunc=ls_xlog_dir>
 
-  check_postgres_wal_files --host=pluto --critical=20
+  BEGIN;
+  CREATE FUNCTION ls_xlog_dir()
+      RETURNS SETOF TEXT
+      AS $$ SELECT pg_ls_dir('pg_xlog') $$
+      LANGUAGE SQL
+      SECURITY DEFINER;
+  REVOKE ALL ON FUNCTION ls_xlog_dir() FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION ls_xlog_dir() to nagios;
+  COMMIT;
+
+Example 1: Check that the number of ready WAL files is 10 or less on host "pluto",
+using a wrapper function C<ls_xlog_dir> to avoid the need for superuser permissions
+
+  check_postgres_archive_ready --host=pluto --critical=10 --lsfunc=ls_xlog_dir
 
 For MRTG output, reports the number of WAL files on line 1.
 
