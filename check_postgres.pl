@@ -2254,10 +2254,10 @@ sub run_command {
         if ($arg->{dbnumber} and $arg->{dbnumber} != $num) {
             next;
         }
-	## Likewise if we have specified "target" database info and this is not our choice
-	if ($arg->{target} and $arg->{target} != $db) {
+        ## Likewise if we have specified "target" database info and this is not our choice
+        if ($arg->{target} and $arg->{target} != $db) {
             next;
-	}
+        }
 
         ## Just to keep things clean:
         truncate $tempfh, 0;
@@ -7295,9 +7295,9 @@ FROM (
 FROM $seqname) foo
 };
         }
-	# Use UNION ALL to query multiple sequences at once, however if there are too many sequences this can exceed
+        # Use UNION ALL to query multiple sequences at once, however if there are too many sequences this can exceed
         # maximum argument length; so split into chunks of 200 sequences or less and iterate over them.
-	while (my @seq_sql_chunk = splice @seq_sql, 0, 200) {
+        while (my @seq_sql_chunk = splice @seq_sql, 0, 200) {
             my $seqinfo = run_command(join("\nUNION ALL\n", @seq_sql_chunk), { target => $db }); # execute all SQL commands at once
             for my $r2 (@{$seqinfo->{db}[0]{slurp}}) { # now look at all results
                 my ($seqname, $last, $slots, $used, $percent, $left) = @$r2{qw/ seqname last_value slots used percent numleft / };
@@ -7322,7 +7322,7 @@ FROM $seqname) foo
                     push @warn => $msg;
                 }
             }
-	}
+        }
         if ($MRTG) {
             my $msg = join ' | ' => map { $_->[0] } @{$seqinfo{$maxp}};
             do_mrtg({one => $maxp, msg => $msg});
