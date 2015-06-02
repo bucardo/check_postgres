@@ -101,7 +101,7 @@ our %msg = (
     'backends-oknone'    => q{No connections},
     'backends-po'        => q{sorry, too many clients already},
     'backends-users'     => q{$1 for number of users must be a number or percentage},
-    'bloat-index'        => q{(db $1) index $2 rows:$3 pages:$4 shouldbe:$5 ($6X) wasted bytes:$7 ($8)},
+    'bloat-index'        => q{(db $1) index $2.$3 rows:$4 pages:$5 shouldbe:$6 ($7X) wasted bytes:$8 ($9)},
     'bloat-nomin'        => q{no relations meet the minimum bloat criteria},
     'bloat-table'        => q{(db $1) table $2.$3 rows:$4 pages:$5 shouldbe:$6 ($7X) wasted size:$8 ($9)},
     'bug-report'         => q{Please report these details to check_postgres@bucardo.org:},
@@ -4493,14 +4493,14 @@ FROM (
 
         ## Now the index, if it exists
         if ($index ne '?') {
-            my $nicename = perfname($index);
+            my $nicename = perfname("$schema.$index");
             $perf{$iwb}{$nicename}++;
-            my $msg = msg('bloat-index', $dbname, $index, $irows, $ipages, $iotta, $ibloat, $iwb, $iws);
+            my $msg = msg('bloat-index', $dbname, $schema, $index, $irows, $ipages, $iotta, $ibloat, $iwb, $iws);
             my $ok = 1;
             my $iperbloat = $ibloat * 100;
 
             if ($MRTG) {
-                $stats{index}{"DB=$dbname INDEX=$index"} = [$iwb, $ibloat];
+                $stats{index}{"DB=$dbname INDEX=$schema.$index"} = [$iwb, $ibloat];
                 next;
             }
             if ($critical->($iwb, $iperbloat)) {
