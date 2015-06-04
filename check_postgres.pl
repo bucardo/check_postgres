@@ -4861,7 +4861,7 @@ sub check_hot_standby_delay {
         {one => $rep_delta, two => $rec_delta, three => $time_delta} :
         {one => $rep_delta, two => $rec_delta});
 
-    $db->{perf} = sprintf ' %s=%s;%s;%s ',
+    $db->{perf} = sprintf ' %s=%s;%s;%s',
         perfname(msg('hs-replay-delay')), $rep_delta, $warning, $critical;
     $db->{perf} .= sprintf ' %s=%s;%s;%s',
         perfname(msg('hs-receive-delay')), $rec_delta, $warning, $critical;
