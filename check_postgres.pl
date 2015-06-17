@@ -988,17 +988,17 @@ FROM pg_user},
 
     schema => {
         SQL       => q{
-SELECT n.oid, quote_ident(nspname) AS name, quote_ident(usename) AS owner, nspacl
+SELECT n.oid, quote_ident(nspname) AS name, quote_ident(rolname) AS owner, nspacl
 FROM pg_namespace n
-JOIN pg_user u ON (u.usesysid = n.nspowner)},
+JOIN pg_roles r ON (r.oid = n.nspowner)},
         deletecols => [ ],
         exclude    => 'temp_schemas',
     },
     language => {
         SQL       => q{
-SELECT l.*, lanname AS name, quote_ident(usename) AS owner
+SELECT l.*, lanname AS name, quote_ident(rolname) AS owner
 FROM pg_language l
-JOIN pg_user u ON (u.usesysid = l.lanowner)},
+JOIN pg_roles r ON (r.oid = l.lanowner)},
         SQL2       => q{
 SELECT l.*, lanname AS name
 FROM pg_language l
@@ -1006,32 +1006,32 @@ FROM pg_language l
     },
     type => {
         SQL       => q{
-SELECT t.oid AS oid, t.*, quote_ident(usename) AS owner, quote_ident(nspname) AS schema,
+SELECT t.oid AS oid, t.*, quote_ident(rolname) AS owner, quote_ident(nspname) AS schema,
   nspname||'.'||typname AS name
 FROM pg_type t
-JOIN pg_user u ON (u.usesysid = t.typowner)
+JOIN pg_roles r ON (r.oid = t.typowner)
 JOIN pg_namespace n ON (n.oid = t.typnamespace)
 WHERE t.typtype NOT IN ('b','c')},
         exclude    => 'system',
     },
     sequence => {
         SQL       => q{
-SELECT c.*, nspname||'.'||relname AS name, quote_ident(usename) AS owner,
+SELECT c.*, nspname||'.'||relname AS name, quote_ident(rolname) AS owner,
   (quote_ident(nspname)||'.'||quote_ident(relname)) AS safename,
 quote_ident(nspname) AS schema
 FROM pg_class c
-JOIN pg_user u ON (u.usesysid = c.relowner)
+JOIN pg_roles r ON (r.oid = c.relowner)
 JOIN pg_namespace n ON (n.oid = c.relnamespace)
 WHERE c.relkind = 'S'},
         innerSQL   => 'SELECT * FROM ROWSAFENAME',
     },
     view => {
         SQL       => q{
-SELECT c.*, nspname||'.'||relname AS name, quote_ident(usename) AS owner,
+SELECT c.*, nspname||'.'||relname AS name, quote_ident(rolname) AS owner,
   quote_ident(relname) AS safename, quote_ident(nspname) AS schema,
   TRIM(pg_get_viewdef(c.oid, TRUE)) AS viewdef, spcname AS tablespace
 FROM pg_class c
-JOIN pg_user u ON (u.usesysid = c.relowner)
+JOIN pg_roles r ON (r.oid = c.relowner)
 JOIN pg_namespace n ON (n.oid = c.relnamespace)
 LEFT JOIN pg_tablespace s ON (s.oid = c.reltablespace)
 WHERE c.relkind = 'v'},
@@ -1039,11 +1039,11 @@ WHERE c.relkind = 'v'},
     },
     table => {
         SQL       => q{
-SELECT c.*, nspname||'.'||relname AS name, quote_ident(usename) AS owner,
+SELECT c.*, nspname||'.'||relname AS name, quote_ident(rolname) AS owner,
   quote_ident(relname) AS safename, quote_ident(nspname) AS schema,
   spcname AS tablespace
 FROM pg_class c
-JOIN pg_user u ON (u.usesysid = c.relowner)
+JOIN pg_roles r ON (r.oid = c.relowner)
 JOIN pg_namespace n ON (n.oid = c.relnamespace)
 LEFT JOIN pg_tablespace s ON (s.oid = c.reltablespace)
 WHERE c.relkind = 'r'},
@@ -1051,12 +1051,12 @@ WHERE c.relkind = 'r'},
     },
     index => {
         SQL       => q{
-SELECT c.*, i.*, nspname||'.'||relname AS name, quote_ident(usename) AS owner,
+SELECT c.*, i.*, nspname||'.'||relname AS name, quote_ident(rolname) AS owner,
   quote_ident(relname) AS safename, quote_ident(nspname) AS schema,
   spcname AS tablespace, amname,
   pg_get_indexdef(c.oid) AS indexdef
 FROM pg_class c
-JOIN pg_user u ON (u.usesysid = c.relowner)
+JOIN pg_roles r ON (r.oid = c.relowner)
 JOIN pg_namespace n ON (n.oid = c.relnamespace)
 JOIN pg_index i ON (c.oid = i.indexrelid)
 LEFT JOIN pg_tablespace s ON (s.oid = c.reltablespace)
@@ -1067,14 +1067,14 @@ WHERE c.relkind = 'i'},
     operator => {
         SQL       => q{
 SELECT o.*, o.oid, n.nspname||'.'||o.oprname AS name, quote_ident(o.oprname) AS safename,
-  usename AS owner, n.nspname AS schema,
+  rolname AS owner, n.nspname AS schema,
   t1.typname AS resultname,
   t2.typname AS leftname, t3.typname AS rightname,
   t4.typname AS resultname,
   nneg.nspname||'.'||neg.oprname AS negname,
   ncom.nspname||'.'||com.oprname AS comname
 FROM pg_operator o
-JOIN pg_user u ON (u.usesysid = o.oprowner)
+JOIN pg_roles r ON (r.oid = o.oprowner)
 JOIN pg_namespace n ON (n.oid = o.oprnamespace)
 JOIN pg_proc p1 ON (p1.oid = o.oprcode)
 JOIN pg_type t1 ON (t1.oid = o.oprresult)
@@ -1089,14 +1089,14 @@ LEFT JOIN pg_namespace ncom ON (ncom.oid = com.oprnamespace)},
     },
     trigger => {
         SQL       => q{
-SELECT t.*, n1.nspname||'.'||c1.relname||'.'||t.tgname AS name, quote_ident(t.tgname) AS safename, quote_ident(usename) AS owner,
+SELECT t.*, n1.nspname||'.'||c1.relname||'.'||t.tgname AS name, quote_ident(t.tgname) AS safename, quote_ident(rolname) AS owner,
   n1.nspname AS tschema, c1.relname AS tname,
   n2.nspname AS cschema, c2.relname AS cname,
   n3.nspname AS procschema, p.proname AS procname,
   pg_get_triggerdef(t.oid) AS triggerdef
 FROM pg_trigger t
 JOIN pg_class c1 ON (c1.oid = t.tgrelid)
-JOIN pg_user u ON (u.usesysid = c1.relowner)
+JOIN pg_roles r ON (r.oid = c1.relowner)
 JOIN pg_namespace n1 ON (n1.oid = c1.relnamespace)
 JOIN pg_proc p ON (p.oid = t.tgfoid)
 JOIN pg_namespace n3 ON (n3.oid = p.pronamespace)
@@ -1108,10 +1108,10 @@ WHERE t.tgconstrrelid = 0 AND tgname !~ '^pg_'},
         SQL       => q{
 SELECT p.*, p.oid, nspname||'.'||p.proname AS name, quote_ident(p.proname) AS safename,
   md5(prosrc) AS source_checksum,
-  usename AS owner, nspname AS schema,
+  rolname AS owner, nspname AS schema,
   pg_get_function_arguments(p.oid) AS function_arguments
 FROM pg_proc p
-JOIN pg_user u ON (u.usesysid = p.proowner)
+JOIN pg_roles r ON (r.oid = p.proowner)
 JOIN pg_namespace n ON (n.oid = p.pronamespace)},
         exclude    => 'system',
     },
@@ -4240,10 +4240,10 @@ sub check_commitratio {
 SELECT
   round(100.*sd.xact_commit/(sd.xact_commit+sd.xact_rollback), 2) AS dcommitratio,
   d.datname,
-  u.usename
+  r.rolname AS usename
 FROM pg_stat_database sd
 JOIN pg_database d ON (d.oid=sd.datid)
-JOIN pg_user u ON (u.usesysid=d.datdba)
+JOIN pg_roles r ON (r.oid=d.datdba)
 WHERE sd.xact_commit+sd.xact_rollback<>0
 $USERWHERECLAUSE
 };
@@ -4455,9 +4455,9 @@ sub check_database_size {
 SELECT pg_database_size(d.oid) AS dsize,
   pg_size_pretty(pg_database_size(d.oid)) AS pdsize,
   datname,
-  usename
+  r.rolname AS usename
 FROM pg_database d
-LEFT JOIN pg_user u ON (u.usesysid=d.datdba)$USERWHERECLAUSE
+LEFT JOIN pg_roles r ON (r.oid=d.datdba)$USERWHERECLAUSE
 };
     if ($opt{perflimit}) {
         $SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
@@ -4964,10 +4964,10 @@ sub check_hitratio {
 SELECT
   round(100.*sd.blks_hit/(sd.blks_read+sd.blks_hit), 2) AS dhitratio,
   d.datname,
-  u.usename
+  r.rolname AS usename
 FROM pg_stat_database sd
 JOIN pg_database d ON (d.oid=sd.datid)
-JOIN pg_user u ON (u.usesysid=d.datdba)
+JOIN pg_roles r ON (r.oid=d.datdba)
 WHERE sd.blks_read+sd.blks_hit<>0
 $USERWHERECLAUSE
 };
@@ -5327,7 +5327,7 @@ FROM (SELECT nspname, relname, $criteria AS v
     }
 
     if ($USERWHERECLAUSE) {
-        $SQL =~ s/ WHERE/, pg_user u WHERE u.usesysid=c.relowner$USERWHERECLAUSE AND/;
+        $SQL =~ s/ WHERE/, pg_roles r WHERE r.oid=c.relowner$USERWHERECLAUSE AND/;
     }
 
     my $info = run_command($SQL, { regex => qr{\w}, emptyok => 1 } );
@@ -6428,7 +6428,7 @@ WHERE relkind IN (%2$s)
     }
 
     if ($USERWHERECLAUSE) {
-        $SQL =~ s/WHERE/JOIN pg_user u ON (c.relowner = u.usesysid) WHERE/;
+        $SQL =~ s/WHERE/JOIN pg_roles r ON (c.relowner = r.oid) WHERE/;
         $SQL .= $USERWHERECLAUSE;
     }
 
