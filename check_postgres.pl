@@ -7974,7 +7974,7 @@ sub check_wal_files {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.21.0
+This documents describes check_postgres.pl version 2.21.1
 
 =head1 SYNOPSIS
 
@@ -9832,20 +9832,44 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Add explicit ORDER BY to the slony_status check to get the most lagged server.
     (Jeff Frost)
 
-  Declare POD encoding to be utf8. (Christoph Berg)
+  Change the way tables are quoted in replicate_row.
+    (Glyn Astill)
 
-  Query all sequences per DB in parallel for action=sequence. (Christoph Berg)
+  Improved multi-slave support in replicate_row.
+    (Andrew Yochum)
+
+  Add xact timestamp support to hot_standby_delay.
+  Allow the hot_standby_delay check to accept xlog byte position or
+  timestamp lag intervals as thresholds, or even both at the same time.
+    (Josh Williams)
+
+  Fix and extend hot_standby_delay documentation
+    (Michael Renner)
+
+  Don't swallow space before the -c flag when reporting errors
+    (Jeff Janes)
+
+  Show actual long-running query in query_time output
+    (Peter Eisentraut)
+
+  Declare POD encoding to be utf8.
+    (Christoph Berg)
+
+  Query all sequences per DB in parallel for action=sequence.
+    (Christoph Berg)
 
 =item B<Version 2.21.0> September 24, 2013
 
   Fix issue with SQL steps in check_pgagent_jobs for sql steps which perform deletes
     (Rob Emery via github pull)
 
-  Install man page in section 1. (Peter Eisentraut, bug 53, github issue 26)
+  Install man page in section 1.
+    (Peter Eisentraut, bug 53, github issue 26)
 
   Order lock types in check_locks output to make the ordering predictable;
   setting SKIP_NETWORK_TESTS will skip the new_version tests; other minor test
-  suite fixes. (Christoph Berg)
+  suite fixes.
+    (Christoph Berg)
 
   Fix same_schema check on 9.3 by ignoring relminmxid differences in pg_class
     (Christoph Berg)
