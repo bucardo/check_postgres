@@ -32,7 +32,7 @@ $Data::Dumper::Useqq = 1;
 
 binmode STDOUT, ':encoding(UTF-8)';
 
-our $VERSION = '2.21.0';
+our $VERSION = '2.21.1';
 
 use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 
