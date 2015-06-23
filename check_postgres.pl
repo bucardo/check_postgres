@@ -981,7 +981,7 @@ my %catalog_info = (
 
     user => {
         SQL        => q{
-SELECT *, usename AS name, quote_ident(usename) AS safeusename
+SELECT *, usename AS name, quote_ident(usename) AS saferolname
 FROM pg_user},
         deletecols => [ qw{ passwd } ],
     },
@@ -2120,10 +2120,10 @@ if ($opt{includeuser}) {
     my $safename;
     if (1 == keys %userlist) {
         ($safename = each %userlist) =~ s/'/''/g;
-        $USERWHERECLAUSE = " AND usename = '$safename'";
+        $USERWHERECLAUSE = " AND rolname = '$safename'";
     }
     else {
-        $USERWHERECLAUSE = ' AND usename IN (';
+        $USERWHERECLAUSE = ' AND rolname IN (';
         for my $user (sort keys %userlist) {
             ($safename = $user) =~ s/'/''/g;
             $USERWHERECLAUSE .= "'$safename',";
@@ -2142,10 +2142,10 @@ elsif ($opt{excludeuser}) {
     my $safename;
     if (1 == keys %userlist) {
         ($safename = each %userlist) =~ s/'/''/g;
-        $USERWHERECLAUSE = " AND usename <> '$safename'";
+        $USERWHERECLAUSE = " AND rolname <> '$safename'";
     }
     else {
-        $USERWHERECLAUSE = ' AND usename NOT IN (';
+        $USERWHERECLAUSE = ' AND rolname NOT IN (';
         for my $user (sort keys %userlist) {
             ($safename = $user) =~ s/'/''/g;
             $USERWHERECLAUSE .= "'$safename',";
@@ -4240,7 +4240,7 @@ sub check_commitratio {
 SELECT
   round(100.*sd.xact_commit/(sd.xact_commit+sd.xact_rollback), 2) AS dcommitratio,
   d.datname,
-  r.rolname AS usename
+  r.rolname AS rolname
 FROM pg_stat_database sd
 JOIN pg_database d ON (d.oid=sd.datid)
 JOIN pg_roles r ON (r.oid=d.datdba)
@@ -4455,7 +4455,7 @@ sub check_database_size {
 SELECT pg_database_size(d.oid) AS dsize,
   pg_size_pretty(pg_database_size(d.oid)) AS pdsize,
   datname,
-  r.rolname AS usename
+  r.rolname AS rolname
 FROM pg_database d
 LEFT JOIN pg_roles r ON (r.oid=d.datdba)$USERWHERECLAUSE
 };
@@ -4964,7 +4964,7 @@ sub check_hitratio {
 SELECT
   round(100.*sd.blks_hit/(sd.blks_read+sd.blks_hit), 2) AS dhitratio,
   d.datname,
-  r.rolname AS usename
+  r.rolname AS rolname
 FROM pg_stat_database sd
 JOIN pg_database d ON (d.oid=sd.datid)
 JOIN pg_roles r ON (r.oid=d.datdba)
@@ -6825,7 +6825,7 @@ sub check_same_schema {
 
         ## Map the oid back to the user, for ease later on
         for my $row (values %{ $dbinfo->{user} }) {
-            $dbinfo->{useroid}{$row->{usesysid}} = $row->{usename};
+            $dbinfo->{useroid}{$row->{usesysid}} = $row->{rolname};
         }
 
         $thing{$x} = $dbinfo;
@@ -7991,6 +7991,8 @@ sub check_txn_idle {
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
             qq{FROM pg_stat_activity WHERE ($clause)$USERWHERECLAUSE }.
             q{ORDER BY xact_start, query_start, procpid DESC};
+        # Handle usename /rolname differences
+        $SQL =~ s/rolname/usename/;
         ## Craft an alternate version for old servers that do not have the xact_start column:
         ($SQL2 = $SQL) =~ s/xact_start/query_start AS xact_start/;
         $SQL2 =~ s/BY xact_start,/BY/;
@@ -8001,6 +8003,9 @@ sub check_txn_idle {
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
             qq{FROM pg_stat_activity WHERE ($clause)$USERWHERECLAUSE }.
             q{ORDER BY query_start, procpid DESC};
+            # Handle usename /rolname differences
+            $SQL =~ s/rolname/usename/;
+            $SQL2 =~ s/rolname/usename/;
     }
 
     ## Craft an alternate version for new servers which do not have procpid and current_query is split
@@ -8095,7 +8100,7 @@ sub check_txn_idle {
         $whodunit = sprintf q{%s:%s %s:%s %s:%s%s%s %s:%s},
             msg('PID'), $maxr->{pid},
             msg('database'), $maxr->{datname},
-            msg('username'), $maxr->{usename},
+            msg('username'), $maxr->{rolname},
             $maxr->{client_addr} eq '' ? '' : (sprintf ' %s:%s', msg('address'), $maxr->{client_addr}),
             ($maxr->{client_port} eq '' or $maxr->{client_port} < 1)
                 ? '' : (sprintf ' %s:%s', msg('port'), $maxr->{client_port}),
