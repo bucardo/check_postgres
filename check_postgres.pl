@@ -8857,7 +8857,7 @@ between the current xlog position of a master server and the replay location of 
 to it. The slave server must be in hot_standby (e.g. read only) mode, therefore the minimum version to use
 this action is Postgres 9.0. The I<--warning> and I<--critical> options are the delta between the xlog
 locations. Since these values are byte offsets in the WAL they should match the expected transaction volume
-of your application to prevent false postives or negatives.
+of your application to prevent false positives or negatives.
 
 The first "--dbname", "--host", and "--port", etc. options are considered the
 master; the second belongs to the slave.
@@ -8869,7 +8869,7 @@ Each may be written singular or abbreviated to just the first letter. When speci
 form 'I<bytes> and I<time>', both conditions must be true for the threshold to be met.
 
 You must provide information on how to reach the databases by providing a comma separated list to the
---dbost and --dbport parameters, such as "--dbport=5432,5543". If not given, the action fails.
+--dbhost and --dbport parameters, such as "--dbport=5432,5543". If not given, the action fails.
 
 Example 1: Warn a database with a local replica on port 5433 is behind on any xlog replay at all
 
