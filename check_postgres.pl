@@ -9826,36 +9826,36 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =item B<Version 2.21.1>
 
-  Fix bloat check to use correct SQL depending on the server version.
-    (Adrian Vondendriesch)
-
-  Add explicit ORDER BY to the slony_status check to get the most lagged server.
-    (Jeff Frost)
-
-  Change the way tables are quoted in replicate_row.
-    (Glyn Astill)
-
-  Improved multi-slave support in replicate_row.
-    (Andrew Yochum)
-
   Add xact timestamp support to hot_standby_delay.
   Allow the hot_standby_delay check to accept xlog byte position or
   timestamp lag intervals as thresholds, or even both at the same time.
     (Josh Williams)
 
-  Fix and extend hot_standby_delay documentation
-    (Michael Renner)
+  Query all sequences per DB in parallel for action=sequence.
+    (Christoph Berg)
 
-  Don't swallow space before the -c flag when reporting errors
-    (Jeff Janes)
+  Fix bloat check to use correct SQL depending on the server version.
+    (Adrian Vondendriesch)
 
   Show actual long-running query in query_time output
     (Peter Eisentraut)
 
-  Declare POD encoding to be utf8.
-    (Christoph Berg)
+  Add explicit ORDER BY to the slony_status check to get the most lagged server.
+    (Jeff Frost)
 
-  Query all sequences per DB in parallel for action=sequence.
+  Improved multi-slave support in replicate_row.
+    (Andrew Yochum)
+
+  Change the way tables are quoted in replicate_row.
+    (Glyn Astill)
+
+  Don't swallow space before the -c flag when reporting errors
+    (Jeff Janes)
+
+  Fix and extend hot_standby_delay documentation
+    (Michael Renner)
+
+  Declare POD encoding to be utf8.
     (Christoph Berg)
 
 =item B<Version 2.21.0> September 24, 2013
