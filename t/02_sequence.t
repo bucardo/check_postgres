@@ -118,7 +118,7 @@ if ($ver >= 90200) {
     like ($cp->run('--exclude=sequence_test_id_seq'), qr{WARNING:.+public.sequence_test_smallid_seq=92% \(calls left=2767\)}, $t);
 } else {
     SKIP: {
-        skip '"smallserial" needs PostgreSQL 9.2 or later', 2;
+        skip '"smallserial" needs PostgreSQL 9.2 or later', 1;
     }
 }
 
