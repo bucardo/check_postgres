@@ -480,7 +480,7 @@ sub get_host {
 
 sub get_port {
     my $self = shift;
-	return 5432;
+    return 5432;
 }
 
 sub get_shorthost {
