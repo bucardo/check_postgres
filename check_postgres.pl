@@ -9827,7 +9827,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
-=item B<Version 2.22.0>
+=item B<Version 2.22.0> June 30, 2015
 
   Add xact timestamp support to hot_standby_delay.
   Allow the hot_standby_delay check to accept xlog byte position or
