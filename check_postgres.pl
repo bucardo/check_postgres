@@ -32,7 +32,7 @@ $Data::Dumper::Useqq = 1;
 
 binmode STDOUT, ':encoding(UTF-8)';
 
-our $VERSION = '2.21.1';
+our $VERSION = '2.22.0';
 
 use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 
@@ -7977,7 +7977,7 @@ sub check_wal_files {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.21.1
+This documents describes check_postgres.pl version 2.22.0
 
 =head1 SYNOPSIS
 
@@ -9827,7 +9827,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
-=item B<Version 2.21.1>
+=item B<Version 2.22.0>
 
   Add xact timestamp support to hot_standby_delay.
   Allow the hot_standby_delay check to accept xlog byte position or
