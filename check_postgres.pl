@@ -4812,12 +4812,12 @@ sub check_hot_standby_delay {
         my $replay = $db->{slurp}[0]{replay};
         $time_delta = $db->{slurp}[0]{seconds};
 
-        if (defined $receive) {
+        if (defined $receive and length $receive) {
             my ($a, $b) = split(/\//, $receive);
             $s_rec_offset = (hex('ff000000') * hex($a)) + hex($b);
         }
 
-        if (defined $replay) {
+        if (defined $replay and length $replay) {
             my ($a, $b) = split(/\//, $replay);
             $s_rep_offset = (hex('ff000000') * hex($a)) + hex($b);
         }
@@ -4849,12 +4849,13 @@ sub check_hot_standby_delay {
 
     ## Compute deltas
     $db = $saved_db;
-    my $rec_delta = $moffset - $s_rec_offset;
-    my $rep_delta = $moffset - $s_rep_offset;
+    my ($rec_delta, $rep_delta);
+    $rec_delta = $moffset - $s_rec_offset if defined $s_rec_offset;
+    $rep_delta = $moffset - $s_rep_offset if defined $s_rep_offset;
 
     # Make sure it's always positive or zero
-    $rec_delta = 0 if $rec_delta < 0;
-    $rep_delta = 0 if $rep_delta < 0;
+    $rec_delta = 0 if defined $rec_delta and $rec_delta < 0;
+    $rep_delta = 0 if defined $rep_delta and $rep_delta < 0;
     if (defined $time_delta and $time_delta < 0) {
         add_unknown msg('hs-future-replica');
         return;
@@ -4864,10 +4865,14 @@ sub check_hot_standby_delay {
         {one => $rep_delta, two => $rec_delta, three => $time_delta} :
         {one => $rep_delta, two => $rec_delta});
 
-    $db->{perf} = sprintf ' %s=%s;%s;%s ',
-        perfname(msg('hs-replay-delay')), $rep_delta, $warning, $critical;
-    $db->{perf} .= sprintf ' %s=%s;%s;%s',
-        perfname(msg('hs-receive-delay')), $rec_delta, $warning, $critical;
+    if (defined $rep_delta) {
+        $db->{perf} = sprintf ' %s=%s;%s;%s ',
+            perfname(msg('hs-replay-delay')), $rep_delta, $warning, $critical;
+    }
+    if (defined $rec_delta) {
+        $db->{perf} .= sprintf ' %s=%s;%s;%s',
+            perfname(msg('hs-receive-delay')), $rec_delta, $warning, $critical;
+    }
     if ($psql_version >= 9.1) {
         $db->{perf} .= sprintf ' %s=%s;%s;%s',
             perfname(msg('hs-time-delay')), $time_delta, $wtime, $ctime;
