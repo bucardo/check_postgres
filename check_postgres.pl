@@ -864,10 +864,6 @@ our %msg = (
     'backends-po'   => q{tut mir leid, schon zu viele Verbindungen},
     'checkpoint-po' => q{Zeit des letzten Checkpoints:},
 },
-'es' => {
-    'backends-po'   => q{lo siento, ya tenemos demasiados clientes},
-    'checkpoint-po' => q{Instante de �ltimo checkpoint:},
-},
 'fa' => {
     'checkpoint-po' => q{زمان آخرین وارسی:},
 },
@@ -10082,6 +10078,11 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
+
+=item B<Version 2.22.1> ????, 2015
+
+  Add Spanish message translations
+    (Luis Vazquez)
 
 =item B<Version 2.22.0> June 30, 2015
 
