@@ -69,7 +69,7 @@ for my $line (@lines) {
 	}
 
 	## A message
-	if ($line =~ /^(\s*)'([\w\-]+)'\s+=> (qq?)\{(.+?)}[,.](.*)/) {
+	if ($line =~ /^(\s*)'([\w\-]+)'\s*=> (qq?)\{(.+?)}[,.](.*)/) {
 		my ($space,$msg,$quote,$value,$comment) = (length $1 ? 1 : 0, $2, $3, $4, $5);
 		$msg{$lang}{$msg} = [$space,$value,$quote,$comment];
 		if ($lang eq 'en' and $msg =~ /\-po\d*$/) {
@@ -90,7 +90,8 @@ for my $ll (sort keys %po) {
 		for my $tr (sort keys %trans) {
 			my $val = $trans{$tr};
 			if ($mm =~ /^$val/) {
-				$nn =~ s/(.+?)\s*\%.*/$1/;
+				$nn =~ s/(.+?)\s*\%.*/$1/; # remove everything from % on
+				print "$tr/$ll: $val -> $nn\n";
 				length $nn and $msg{$ll}{$tr} = [1,$nn,'q',''];
 			}
 		}
@@ -106,24 +107,27 @@ for my $line (@lines) {
 	last if $line =~ /^our \%msg/;
 }
 
+my %all_langs = map { $_ => 1} (keys %msg, keys %po);
+
 ## Add in the translated sections, with new info as needed
 for my $m (sort {
 	## English goes first, as the base class
 	return -1 if $a eq 'en'; return 1 if $b eq 'en';
-	## French goes next, as the next-most-completed language
+	## Then the fully translated languages
+	return -1 if $a eq 'es'; return 1 if $b eq 'es';
 	return -1 if $a eq 'fr'; return 1 if $b eq 'fr';
 	## Everything else is alphabetical
 	return $a cmp $b
-} keys %po) {
+} keys %all_langs) {
 	print {$fh} qq!'$m' => {\n!;
-	my $size = 1;
+	my $size = 14; # length of "checkpoint-po" + 1
 	for my $msg (keys %{$msg{$m}}) {
 		$size = length($msg) if length($msg) > $size;
 	}
 
 	for my $mm (sort keys %{$msg{$m}}) {
-		printf {$fh} "%s%-*s => %s{%s},%s\n",
-			$msg{$m}{$mm}->[0] ? "\t" : '',
+		printf {$fh} "%s%-*s=> %s{%s},%s\n",
+			$msg{$m}{$mm}->[0] ? "    " : '',
 			2+$size,
 			qq{'$mm'},
 			$msg{$m}{$mm}->[2],
@@ -183,7 +187,7 @@ sub process_po_files {
 				$isid = 0;
 			}
 			elsif (/^"(.*)"/) {
-				$isid ? ($id .= $1) : ($po{$lang}{$id} .= $1);
+				$isid ? ($id .= $1) : ($panda->{$lang}{$id} .= $1);
 			}
 		}
 		close $fh or warn qq{Could not close "$pofile" $!\n};
