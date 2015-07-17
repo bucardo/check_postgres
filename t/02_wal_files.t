@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 11;
+use Test::More tests => 12;
 use lib 't','.';
 use CP_Testing;
 
@@ -63,6 +63,18 @@ is ($cp->run('--critical=1 --output=mrtg'), "99\n0\n\n\n", $t);
 
 $t=qq{$S returns correct MRTG information};
 is ($cp->run('--critical=101 --output=mrtg'), "99\n0\n\n\n", $t);
+
+# test --lsfunc
+$dbh->do(q{CREATE FUNCTION ls_xlog_dir()
+      RETURNS SETOF TEXT
+      AS $$ SELECT pg_ls_dir('pg_xlog') $$
+      LANGUAGE SQL
+      SECURITY DEFINER});
+$cp->create_fake_pg_table('ls_xlog_dir', ' ');
+$dbh->do(q{INSERT INTO cptest.ls_xlog_dir SELECT 'ABCDEF123456ABCDEF123456' FROM generate_series(1,55)});
+$dbh->commit();
+$t=qq{$S returns correct number of files};
+like ($cp->run('--critical=1 --lsfunc=ls_xlog_dir'), qr{^$label CRITICAL.+ 55 \|}, $t);
 
 $cp->drop_schema_if_exists();
 
