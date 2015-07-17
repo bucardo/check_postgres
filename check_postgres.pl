@@ -10178,6 +10178,10 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Add Spanish message translations
     (Luis Vazquez)
 
+  Allow a wrapper function to run wal_files and archive_ready actions as
+  non-superuser
+    (Joshua Elsasser)
+
 =item B<Version 2.22.0> June 30, 2015
 
   Add xact timestamp support to hot_standby_delay.
