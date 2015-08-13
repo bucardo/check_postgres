@@ -1119,7 +1119,7 @@ JOIN pg_namespace n ON (n.oid = p.pronamespace)},
         SQL       => q{
 SELECT c.*, c.oid, n.nspname||'.'||c1.relname||'.'||c.conname AS name, quote_ident(c.conname) AS safename,
  n.nspname AS schema, r.relname AS tname,
- pg_get_constraintdef(c.oid) AS constraintdef
+ pg_get_constraintdef(c.oid) AS constraintdef, translate(c.confmatchtype,'u','s') AS confmatchtype_compat
 FROM pg_constraint c
 JOIN pg_class c1 ON (c1.oid = c.conrelid)
 JOIN pg_namespace n ON (n.oid = c.connamespace)
@@ -6756,7 +6756,8 @@ sub check_same_schema {
                         indexprs,indcheckxmin,reltablespace,
                         indkey',                                  ''          ],
         [trigger    => 'tgqual,tgconstraint',                     ''          ],
-        [constraint => 'conbin,conindid,conkey,confkey',          ''          ],
+        [constraint => 'conbin,conindid,conkey,confkey
+                        confmatchtype',                           ''          ],
         [column     => 'atttypid,attnum,attbyval,attndims',       ''          ],
     );
 
