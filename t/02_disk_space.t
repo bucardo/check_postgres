@@ -39,7 +39,7 @@ $t = qq{$S identifies host};
 like ($result, qr{host:$host}, $t);
 
 $t = qq{$S reports file system};
-like ($result, qr{FS /.*? mounted on /.*? is using }, $t);
+like ($result, qr{FS [/-].*? mounted on /.*? is using }, $t); # in some build environments, the filesystem is reported as "-"
 
 $t = qq{$S reports usage};
 like ($result, qr{ is using \d*\.\d+ [A-Z]B of \d*\.\d+ [A-Z]B}, $t);
@@ -54,6 +54,6 @@ $t = qq{$S flags insufficient space};
 like ($cp->run('-w "999z or 1%"'), qr{$label WARNING:}, $t);
 
 $t = qq{$S reports MRTG output};
-like ($cp->run('--output=mrtg'), qr{\A\d+\n0\n\n/.*\n}, $t);
+like ($cp->run('--output=mrtg'), qr{\A\d+\n0\n\n[/-].*\n}, $t);
 
 exit;
