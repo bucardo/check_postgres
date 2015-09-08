@@ -6756,7 +6756,7 @@ sub check_same_schema {
                         indexprs,indcheckxmin,reltablespace,
                         indkey',                                  ''          ],
         [trigger    => 'tgqual,tgconstraint',                     ''          ],
-        [constraint => 'conbin,conindid,conkey,confkey
+        [constraint => 'conbin,conindid,conkey,confkey,
                         confmatchtype',                           ''          ],
         [column     => 'atttypid,attnum,attbyval,attndims',       ''          ],
     );
