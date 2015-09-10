@@ -1102,7 +1102,7 @@ JOIN pg_proc p ON (p.oid = t.tgfoid)
 JOIN pg_namespace n3 ON (n3.oid = p.pronamespace)
 LEFT JOIN pg_class c2 ON (c2.oid = t.tgconstrrelid)
 LEFT JOIN pg_namespace n2 ON (n2.oid = c2.relnamespace)
-WHERE t.tgconstrrelid = 0 AND tgname !~ '^pg_'},
+WHERE t.tgconstrrelid = 0 AND t.tgconstrindid = 0 AND tgname !~ '^pg_'},
     },
     function => {
         SQL       => q{
