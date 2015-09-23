@@ -1066,7 +1066,7 @@ WHERE c.relkind = 'i'},
     },
     operator => {
         SQL       => q{
-SELECT o.*, o.oid, n.nspname||'.'||o.oprname AS name, quote_ident(o.oprname) AS safename,
+SELECT o.*, o.oid, n.nspname||'.'||o.oprname||' ('||COALESCE(t2.typname,'NONE')||','||COALESCE(t3.typname,'NONE')||')' AS name, quote_ident(o.oprname) AS safename,
   rolname AS owner, n.nspname AS schema,
   t1.typname AS resultname,
   t2.typname AS leftname, t3.typname AS rightname,
