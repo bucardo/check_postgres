@@ -97,7 +97,7 @@ our %msg = (
     'backends-oknone'    => q{No connections},
     'backends-po'        => q{sorry, too many clients already},
     'backends-users'     => q{$1 for number of users must be a number or percentage},
-    'bloat-index'        => q{(db $1) index $2 rows:$3 pages:$4 shouldbe:$5 ($6X) wasted bytes:$7 ($8)},
+    'bloat-index'        => q{(db $1) index $2.$3 rows:$4 pages:$5 shouldbe:$6 ($7X) wasted bytes:$8 ($9)},
     'bloat-nomin'        => q{no relations meet the minimum bloat criteria},
     'bloat-table'        => q{(db $1) table $2.$3 rows:$4 pages:$5 shouldbe:$6 ($7X) wasted size:$8 ($9)},
     'bug-report'         => q{Please report these details to check_postgres@bucardo.org:},
@@ -1175,7 +1175,8 @@ if (defined $rcfile) {
 
         ## These options are multiples ('@s')
         for my $arr (qw/include exclude includeuser excludeuser host port
-                        dbuser dbname dbpass dbservice schema/) {
+                        dbuser dbname dbpass dbservice schema excludeapp
+                        includeapp/) {
             next if $name ne $arr and $name ne "${arr}2";
             push @{$tempopt{$name}} => $value;
             ## Don't set below as a normal value
@@ -1216,6 +1217,8 @@ GetOptions(
     'exclude=s@',
     'includeuser=s@',
     'excludeuser=s@',
+    'excludeapp=s@',
+    'includeapp=s@',
 
     'host|dbhost|H|dbhost1|H1=s@',
     'port|dbport|p|port1|dbport1|p1=s@',
@@ -1480,6 +1483,8 @@ Limit options:
   --exclude=name(s) items to specifically exclude (e.g. tables), depends on the action
   --includeuser=include objects owned by certain users
   --excludeuser=exclude objects owned by certain users
+  --excludeapp=exclude objects by application_name
+  --includeapp=include objects by application_name
 
 Other options:
   --assume-standby-mode assume that server in continious WAL recovery mode
@@ -2125,6 +2130,52 @@ elsif ($opt{excludeuser}) {
         chop $USERWHERECLAUSE;
         $USERWHERECLAUSE .= ')';
     }
+}
+
+our $APPWHERECLAUSE = '';
+if ($opt{includeapp}) {
+  my %applist;
+  for my $app (@{$opt{includeapp}}) {
+    for my $a2 (split /,/ => $app) {
+      $applist{$a2}++;
+    }
+  }
+  my $safeapp;
+  if (1 == keys %applist) {
+    ($safeapp = each %applist) =~ s/'/''/g;
+    $APPWHERECLAUSE = " AND application_name = '$safeapp'";
+  }
+  else {
+    $APPWHERECLAUSE = ' AND application_name IN (';
+    for my $app (sort keys %applist) {
+      ($safeapp = $app) =~ s/'/''/g;
+      $APPWHERECLAUSE .= "'$safeapp',";
+    }
+    chop $APPWHERECLAUSE;
+    $APPWHERECLAUSE .= ')';
+  }
+}
+elsif ($opt{excludeapp}) {
+  my %applist;
+  for my $app (@{$opt{excludeapp}}) {
+    for my $a2 (split /,/ => $app) {
+      $applist{$a2}++;
+    }
+  }
+  my $safeapp;
+  if (1 == keys %applist) {
+    ($safeapp = each %applist) =~ s/'/''/g;
+    $APPWHERECLAUSE = " AND application_name <> '$safeapp'";
+  }
+  else {
+    $APPWHERECLAUSE = ' AND application_name NOT IN (';
+    for my $app (sort keys %applist) {
+      ($safeapp = $app) =~ s/'/''/g;
+      $APPWHERECLAUSE .= "'$safeapp',";
+    }
+    chop $APPWHERECLAUSE;
+    $APPWHERECLAUSE .= ')';
+  }
 }
 
 ## Check number of connections, compare to max_connections
@@ -3960,14 +4011,14 @@ FROM (
 
         ## Now the index, if it exists
         if ($index ne '?') {
-            my $nicename = perfname($index);
+            my $nicename = perfname("$schema.$index");
             $perf{$iwb}{$nicename}++;
-            my $msg = msg('bloat-index', $dbname, $index, $irows, $ipages, $iotta, $ibloat, $iwb, $iws);
+            my $msg = msg('bloat-index', $dbname, $schema, $index, $irows, $ipages, $iotta, $ibloat, $iwb, $iws);
             my $ok = 1;
             my $iperbloat = $ibloat * 100;
 
             if ($MRTG) {
-                $stats{index}{"DB=$dbname INDEX=$index"} = [$iwb, $ibloat];
+                $stats{index}{"DB=$dbname INDEX=$schema.$index"} = [$iwb, $ibloat];
                 next;
             }
             if ($critical->($iwb, $iperbloat)) {
@@ -4686,7 +4737,7 @@ WHERE spclocation <> ''
 
         ## Check log_directory: relative or absolute
         if (length $logdir) {
-            if ($logdir =~ /^\w/) { ## relative, check only if symlinked
+            if ($logdir =~ /^\w/ || $logdir =~ /^\.\//) { ## relative, check only if symlinked
                 $logdir = "$datadir/$logdir";
                 if (-l $logdir) {
                     my $linkdir = readlink($logdir);
@@ -7860,7 +7911,7 @@ sub check_txn_idle {
         $SQL = q{SELECT datname, datid, procpid AS pid, usename, client_addr, xact_start, current_query AS current_query, '' AS state, }.
             q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
-            qq{FROM pg_stat_activity WHERE ($clause)$USERWHERECLAUSE }.
+            qq{FROM pg_stat_activity WHERE ($clause)$USERWHERECLAUSE $APPWHERECLAUSE }.
             q{ORDER BY xact_start, query_start, procpid DESC};
         ## Craft an alternate version for old servers that do not have the xact_start column:
         ($SQL2 = $SQL) =~ s/xact_start/query_start AS xact_start/;
@@ -7870,7 +7921,7 @@ sub check_txn_idle {
         $SQL2 = $SQL = q{SELECT datname, datid, procpid AS pid, usename, client_addr, current_query AS current_query, '' AS state, }.
             q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
-            qq{FROM pg_stat_activity WHERE ($clause)$USERWHERECLAUSE }.
+            qq{FROM pg_stat_activity WHERE ($clause)$USERWHERECLAUSE $APPWHERECLAUSE }.
             q{ORDER BY query_start, procpid DESC};
     }
 
@@ -7913,13 +7964,13 @@ sub check_txn_idle {
         my $st = $r->{state} || '';
 
         ## Return unknown if we cannot see because we are a non-superuser
-        if ($cq =~ /insufficient/o) {
+        if ($cq =~ /^insufficient/o) {
             add_unknown msg('psa-nosuper');
             return;
         }
 
         ## Return unknown if stats_command_string / track_activities is off
-        if ($cq =~ /disabled/o or $cq =~ /<command string not enabled>/) {
+        if ($cq =~ /^disabled/o or $cq =~ /^<command string not enabled>/) {
             add_unknown msg('psa-disabled');
             return;
         }
