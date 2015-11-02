@@ -32,7 +32,7 @@ $Data::Dumper::Useqq = 1;
 
 binmode STDOUT, ':encoding(UTF-8)';
 
-our $VERSION = '2.22.0';
+our $VERSION = '2.22.1';
 
 use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 
@@ -3807,12 +3807,12 @@ SELECT
   ROUND(CASE WHEN otta=0 OR sml.relpages=0 OR sml.relpages=otta THEN 0.0 ELSE sml.relpages/otta::numeric END,1) AS tbloat,
   CASE WHEN relpages < otta THEN 0 ELSE relpages::bigint - otta END AS wastedpages,
   CASE WHEN relpages < otta THEN 0 ELSE bs*(sml.relpages-otta)::bigint END AS wastedbytes,
-  CASE WHEN relpages < otta THEN '0 bytes'::text ELSE (bs*(relpages-otta))::bigint || ' bytes' END AS wastedsize,
+  CASE WHEN relpages < otta THEN '0 bytes'::text ELSE (bs*(relpages-otta))::bigint::text || ' bytes' END AS wastedsize,
   iname, ituples::bigint AS itups, ipages::bigint AS ipages, iotta,
   ROUND(CASE WHEN iotta=0 OR ipages=0 OR ipages=iotta THEN 0.0 ELSE ipages/iotta::numeric END,1) AS ibloat,
   CASE WHEN ipages < iotta THEN 0 ELSE ipages::bigint - iotta END AS wastedipages,
   CASE WHEN ipages < iotta THEN 0 ELSE bs*(ipages-iotta) END AS wastedibytes,
-  CASE WHEN ipages < iotta THEN '0 bytes' ELSE (bs*(ipages-iotta))::bigint || ' bytes' END AS wastedisize,
+  CASE WHEN ipages < iotta THEN '0 bytes' ELSE (bs*(ipages-iotta))::bigint::text || ' bytes' END AS wastedisize,
   CASE WHEN relpages < otta THEN
     CASE WHEN ipages < iotta THEN 0 ELSE bs*(ipages-iotta::bigint) END
     ELSE CASE WHEN ipages < iotta THEN bs*(relpages-otta::bigint)
@@ -8238,7 +8238,7 @@ sub check_wal_files {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.22.0
+This documents describes check_postgres.pl version 2.22.1
 
 =head1 SYNOPSIS
 
@@ -10122,7 +10122,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
-=item B<Version 2.22.1> ????, 2015
+=item B<Version 2.22.1> Released ????
 
   Add Spanish message translations
     (Luis Vazquez)
@@ -10130,6 +10130,10 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Allow a wrapper function to run wal_files and archive_ready actions as
   non-superuser
     (Joshua Elsasser)
+
+  Add some defensive casting to the bloat query
+    (Greg Sabino Mullane)
+
 
 =item B<Version 2.22.0> June 30, 2015
 
