@@ -187,6 +187,8 @@ our %msg = (
     'no-match-set'       => q{No matching settings found due to exclusion/inclusion options},
     'no-match-table'     => q{No matching tables found due to exclusion/inclusion options},
     'no-match-user'      => q{No matching entries found due to user exclusion/inclusion options},
+    'no-match-slot'      => q{No matching replication slots found due to exclusion/inclusion options},
+    'no-match-slotok'    => q{No replication slots found},
     'no-parse-psql'      => q{Could not parse psql output!},
     'no-time-hires'      => q{Cannot find Time::HiRes, needed if 'showtime' is true},
     'opt-output-invalid' => q{Invalid output: must be 'nagios' or 'mrtg' or 'simple' or 'cacti'},
@@ -259,6 +261,7 @@ our %msg = (
     'rep-timeout'        => q{Row was not replicated. Timeout: $1},
     'rep-unknown'        => q{Replication check failed},
     'rep-wrongvals'      => q{Cannot test replication: values are not the right ones ('$1' not '$2' nor '$3')},
+    'repslot-version'    => q{Database must be version 9.4 or higher to check replication slots},
     'runcommand-err'     => q{Unknown error inside of the "run_command" function},
     'runcommand-nodb'    => q{No target databases could be found},
     'runcommand-nodupe'  => q{Could not dupe STDERR},
@@ -444,6 +447,8 @@ our %msg = (
     'no-match-set'       => q{No se encuentran opciones de configuración coincidentes debido a las opciones de exclusión/inclusión},
     'no-match-table'     => q{No se encuentran tablas coincidentes debido a las opciones de exclusión/inclusión},
     'no-match-user'      => q{No se encuentran entradas coincidentes debido a las opciones de exclusión/inclusión},
+    'no-match-slot'      => q{No se encuentran ranuras de replicación coincidentes debido a las opciones de exclusión/inclusión},	
+    'no-match-slotok'    => q{No se encuentran ranuras de replicación},
     'no-parse-psql'      => q{No se pudo interpretar la salida de psql!},
     'no-time-hires'      => q{No se encontró Time::HiRes, necesario si 'showtime' es verdadero},
     'opt-output-invalid' => q{Formato de salida inválido: debe ser 'nagios' o 'mrtg' o 'simple' o 'cacti'},
@@ -515,6 +520,7 @@ our %msg = (
     'rep-timeout'        => q{La fila no fue replicada. Timeout: $1},
     'rep-unknown'        => q{Chequeo de replicación fallido},
     'rep-wrongvals'      => q{No puedo verificar la replicación: los valores no son correctos ('$1' no '$2' ni '$3')},
+    'repslot-version'    => q{La base de datos debe ser version 9.4 o superior para ver las ranuras de replicación},
     'runcommand-err'     => q{Error desconocido en la función "run_command"},
     'runcommand-nodb'    => q{No se encontró ninguna base de datos buscada},
     'runcommand-nodupe'  => q{No fue posible duplicar STDERR},
@@ -700,6 +706,8 @@ our %msg = (
     'no-match-set'       => q{Aucun paramètre trouvé à cause des options d'exclusion/inclusion},
     'no-match-table'     => q{Aucune table trouvée à cause des options d'exclusion/inclusion},
     'no-match-user'      => q{Aucune entrée trouvée à cause options d'exclusion/inclusion},
+    'no-match-slot'      => q{Aucune fentes de réplication trouvée à cause options d'exclusion/inclusion},
+    'no-match-slotok'    => q{Pas de fentes de réplication trouvé},
     'no-parse-psql'      => q{N'a pas pu analyser la sortie de psql !},
     'no-time-hires'      => q{N'a pas trouvé le module Time::HiRes, nécessaire quand « showtime » est activé},
     'opt-output-invalid' => q{Sortie invalide : doit être 'nagios' ou 'mrtg' ou 'simple' ou 'cacti'},
@@ -771,6 +779,7 @@ our %msg = (
     'rep-timeout'        => q{La ligne n'a pas été répliquée. Délai dépassé : $1},
     'rep-unknown'        => q{Échec du test de la réplication},
     'rep-wrongvals'      => q{Ne peut pas tester la réplication : les valeurs ne sont pas les bonnes (ni '$1' ni '$2' ni '$3')},
+    'repslot-version'    => q{Base de données doit être la version 9.4 ou ultérieure pour vérifier fentes de réplication},
     'runcommand-err'     => q{Erreur inconnue de la fonction « run_command »},
     'runcommand-nodb'    => q{Aucune base de données cible trouvée},
     'runcommand-nodupe'  => q{N'a pas pu dupliqué STDERR},
@@ -1438,6 +1447,7 @@ our $action_info = {
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
  replicate_row       => [0, 'Verify a simple update gets replicated to another server.'],
+ replication_slots   => [1, 'Check the replication delay for replication slots'],
  same_schema         => [0, 'Verify that two databases have the exact same tables, columns, etc.'],
  sequence            => [0, 'Checks remaining calls left in sequences.'],
  settings_checksum   => [0, 'Check that no settings have changed since the last check.'],
@@ -2013,6 +2023,7 @@ our %testaction = (
                   fsm_pages         => 'VERSION: 8.2 MAX: 8.3',
                   fsm_relations     => 'VERSION: 8.2 MAX: 8.3',
                   hot_standby_delay => 'VERSION: 9.0',
+                  replication_slots => 'VERSION: 9.4',
                   listener          => 'MAX: 8.4',
 );
 if ($opt{test}) {
@@ -2207,6 +2218,9 @@ check_archive_ready() if $action eq 'archive_ready';
 
 ## Check the replication delay in hot standby setup
 check_hot_standby_delay() if $action eq 'hot_standby_delay';
+
+## Check the delay on replication slots. warning and critical are sizes
+check_replication_slots() if $action eq 'replication_slots';
 
 ## Check the maximum transaction age of all connections
 check_txn_time() if $action eq 'txn_time';
@@ -5156,6 +5170,92 @@ sub check_hot_standby_delay {
     return;
 
 } ## end of check_hot_standby_delay
+
+sub check_replication_slots {    
+
+    ## Check the delay on one or more replication slots
+    ## Supports: Nagios, MRTG
+    ## mrtg reports the largest two delays
+    ## By default, checks all replication slots
+    ## Can check specific one(s) with include
+    ## Can ignore some with exclude
+    ## Warning and critical are bytes
+    ## Valid units: b, k, m, g, t, e
+    ## All above may be written as plural or with a trailing 'b'
+    
+    my ($warning, $critical) = validate_range({type => 'size'});    
+    
+    $SQL = qq{
+        WITH slots AS (SELECT slot_name, 
+            slot_type, 
+            restart_lsn AS slot_lsn, 
+            pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn) AS delta,
+	    active
+        FROM pg_replication_slots)
+        SELECT *, pg_size_pretty(delta) AS delta_pretty FROM slots;  
+    };    
+	
+    if ($opt{perflimit}) {
+        $SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
+    }
+    
+    my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1, } );
+    my $found = 0;
+ 
+    for $db (@{$info->{db}}) {
+        my $max = -1;
+        $found = 1;
+        my %s;
+
+        for my $r (@{$db->{slurp}}) {
+            if (skip_item($r->{slot_name})) {
+                $max = -2 if ($max == -1 );
+		next;
+            }
+
+            if ($r->{delta} >= $max) {
+                $max = $r->{delta};
+            }
+            $s{$r->{slot_name}} = [$r->{delta},$r->{delta_pretty},$r->{slot_type},$r->{slot_lsn},$r->{active}];
+        }    
+        if ($MRTG) {
+            do_mrtg({one => $max, msg => "SLOT: $db->{slot_name}"});
+        }    
+        if ($max < 0) {
+            $stats{$db->{dbname}} = 0;
+            add_ok msg('no-match-slotok') if ($max == -1);
+            add_unknown msg('no-match-slot') if ($max == -2);
+            next;
+        }    
+    
+        my $msg = '';
+        for (sort {$s{$b}[0] <=> $s{$a}[0] or $a cmp $b } keys %s) {
+            $msg .= "$_: $s{$_}[1] ($s{$_}[2] $s{$_}[3] " . ($s{$_}[4] eq 't'?'active':'inactive') .") ";
+            $db->{perf} .= sprintf ' %s=%s;%s;%s',
+                perfname($_), $s{$_}[0], $warning, $critical;
+        }
+        if (length $critical and $max >= $critical) {
+            add_critical $msg;
+        }
+        elsif (length $warning and $max >= $warning) {
+            add_warning $msg;
+        }
+        else {
+            add_ok $msg;
+        }   
+    }
+	
+    ## If no results, probably a version problem
+    if (!$found and keys %unknown) {
+        (my $first) = values %unknown;
+        if ($first->[0][0] =~ /pg_replication_slots/) {
+            ndie msg('repslot-version');
+        }
+    }
+
+    return;
+
+} ## end of check_replication_slot_delay
 
 
 sub check_last_analyze {
