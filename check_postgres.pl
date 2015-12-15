@@ -22,6 +22,7 @@ use utf8;
 use Getopt::Long qw/GetOptions/;
 Getopt::Long::Configure(qw/ no_ignore_case pass_through  /);
 use File::Basename qw/basename/;
+use File::Spec;
 use File::Temp qw/tempfile tempdir/;
 File::Temp->safe_level( File::Temp::MEDIUM );
 use Cwd;
@@ -1228,6 +1229,7 @@ GetOptions(
     'PSQL=s',
 
     'tempdir=s',
+    'audit-file-dir=s',
     'get_method=s',
     'language=s',
     'mrtg=s',      ## used by MRTG checks only
@@ -6998,6 +7000,13 @@ sub audit_filename {
         $filename .= ".$opt{suffix}";
     }
 
+    ## Need to store in a separate directory?
+    my $adir = $opt{'audit-file-dir'};
+    if (defined $adir) {
+        -d $adir or die qq{Cannot write to directory "$adir": $!\n};
+        $filename = File::Spec->catfile($adir, $filename);
+    }
+
     return $filename;
 
 } ## end of audit_filename
@@ -9665,6 +9674,9 @@ saved to a local file. When you run it again, that snapshot is read in and
 becomes "database #2" and is compared to the current database.
 
 To replace the old stored file with the new version, use the --replace argument.
+
+If you need to write the stored file to a specific direectory, use 
+the --audit-file-dir argument.
 
 To enable snapshots at various points in time, you can use the "--suffix" 
 argument to make the filenames unique to each run. See the examples below.
