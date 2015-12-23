@@ -1231,6 +1231,7 @@ GetOptions(
     'no-check_postgresrc',
     'assume-standby-mode',
     'assume-prod',
+    'assume-async',
 
     'action=s',
     'warning=s',
@@ -1511,6 +1512,7 @@ Limit options:
 Other options:
   --assume-standby-mode assume that server in continious WAL recovery mode
   --assume-prod         assume that server in production mode
+  --assume-async        assume that any replication is asynchronous 
   --PGBINDIR=PATH       path of the postgresql binaries; avoid using if possible
   --PSQL=FILE           (deprecated) location of the psql executable; avoid using if possible
   -v, --verbose         verbosity level; can be used more than once to increase the level
@@ -6750,8 +6752,7 @@ sub check_same_schema {
         [table      => 'reltype,relfrozenxid,relminmxid,relpages,
                         reltuples,relnatts,relallvisible',        ''          ],
         [view       => 'reltype',                                 ''          ],
-        [sequence   => 'reltype,log_cnt,relnatts,is_called,
-                        last_value',                              ''          ],
+        [sequence   => 'reltype,log_cnt,relnatts,is_called',      ''          ],
         [index      => 'relpages,reltuples,indpred,indclass,
                         indexprs,indcheckxmin,reltablespace,
                         indkey',                                  ''          ],
@@ -7000,8 +7001,8 @@ sub check_same_schema {
                             next if $one eq '' and $two eq '-';
                         }
 
-                        ## If we are doing a historical comparison, skip some items
-                        if ($samedb) {
+                        ## If we are doing a historical comparison or checking asynchronous replicas, skip some items
+                        if ($samedb or $opt{'assume-async'}) {
                             if ($item eq 'sequence'
                                 and $col eq 'last_value') {
                                 next;
@@ -8592,6 +8593,14 @@ Example:
     postgres@db$./check_postgres.pl --action=checkpoint --datadir /var/lib/postgresql/8.3/main/ --assume-prod
     POSTGRES_CHECKPOINT OK: Last checkpoint was 72 seconds ago | age=72;;300 mode=MASTER
 
+=item B<--assume-async>
+
+If specified, indicates that any replication between servers is asynchronous.
+The option is only relevant for (C<symlink: check_postgres_same_schema>). 
+
+Example:
+    postgres@db$./check_postgres.pl --action=same_schema --assume-async --dbhost=star,line
+
 =item B<-h> or B<--help>
 
 Displays a help screen with a summary of all actions and options.
@@ -9836,6 +9845,9 @@ To replace the old stored file with the new version, use the --replace argument.
 If you need to write the stored file to a specific direectory, use 
 the --audit-file-dir argument.
 
+To avoid false positives on value based checks caused by replication lag on
+asynchronous replicas, use the I<--assume-async> option.
+
 To enable snapshots at various points in time, you can use the "--suffix" 
 argument to make the filenames unique to each run. See the examples below.
 
@@ -9863,6 +9875,10 @@ Example 5: Create a daily and weekly snapshot file
 Example 6: Run a historical comparison, then replace the file
 
   check_postgres_same_schema --dbname=cylon --suffix=daily --replace
+
+Example 7: Verify that two databases on hosts star and line are the same, excluding value data (i.e. sequence last_val):
+
+  check_postgres_same_schema --dbhost=star,line --assume-async 
 
 =head2 B<sequence>
 
