@@ -2524,7 +2524,7 @@ sub run_command {
         ## Store this target in the global target list
         push @{$info->{db}}, $db;
 
-        my @args = ('-q', '-t');
+        my @args = ('-X', '-q', '-t');
         if (defined $db->{dbservice} and length $db->{dbservice}) { ## XX Check for simple names
             $db->{pname} = "service=$db->{dbservice}";
             $ENV{PGSERVICE} = $db->{dbservice};
