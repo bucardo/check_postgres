@@ -2594,7 +2594,7 @@ sub run_command {
         local $SIG{ALRM} = sub { die 'Timed out' };
         alarm 0;
 
-        push @args, '-c', $string;
+        push @args, '-X', '-c', $string;
 
         $VERBOSE >= 3 and warn Dumper \@args;
 
