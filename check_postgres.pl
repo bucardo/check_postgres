@@ -10155,6 +10155,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   check_txn_idle: Don't fail when query contains 'disabled' word
     (Marco Nenciarini)
 
+  check_hot_standby_delay: Correct extra space in perfdata
+    (Adrien Nayrat)
+
 =item B<Version 2.22.0> June 30, 2015
 
   Add xact timestamp support to hot_standby_delay.
