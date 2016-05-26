@@ -7,7 +7,7 @@
 
 </head>
 
-<body style="background-color: white">
+<body>
 
 
 
@@ -111,7 +111,7 @@
 
 <p><b>check_postgres.pl</b> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
 
-<p>This documents describes check_postgres.pl version 2.22.0</p>
+<p>This documents describes check_postgres.pl version 2.22.1</p>
 
 <h1 id="SYNOPSIS">SYNOPSIS</h1>
 
@@ -428,13 +428,25 @@
 
 <h2 id="archive_ready"><b>archive_ready</b></h2>
 
-<p>(<code>symlink: check_postgres_archive_ready</code>) Checks how many WAL files with extension <i>.ready</i> exist in the <i>pg_xlog/archive_status</i> directory, which is found off of your <b>data_directory</b>. This action must be run as a superuser, in order to access the contents of the <i>pg_xlog/archive_status</i> directory. The minimum version to use this action is Postgres 8.1. The <i>--warning</i> and <i>--critical</i> options are simply the number of <i>.ready</i> files in the <i>pg_xlog/archive_status</i> directory. Usually, these values should be low, turning on the archive mechanism, we usually want it to archive WAL files as fast as possible.</p>
+<p>(<code>symlink: check_postgres_archive_ready</code>) Checks how many WAL files with extension <i>.ready</i> exist in the <i>pg_xlog/archive_status</i> directory, which is found off of your <b>data_directory</b>. If the <i>--lsfunc</i> option is not used then this action must be run as a superuser, in order to access the contents of the <i>pg_xlog/archive_status</i> directory. The minimum version to use this action is Postgres 8.1. The <i>--warning</i> and <i>--critical</i> options are simply the number of <i>.ready</i> files in the <i>pg_xlog/archive_status</i> directory. Usually, these values should be low, turning on the archive mechanism, we usually want it to archive WAL files as fast as possible.</p>
 
 <p>If the archive command fail, number of WAL in your <i>pg_xlog</i> directory will grow until exhausting all the disk space and force PostgreSQL to stop immediately.</p>
 
-<p>Example 1: Check that the number of ready WAL files is 10 or less on host &quot;pluto&quot;</p>
+<p>To avoid connecting as a database superuser, a wrapper function around <code>pg_ls_dir()</code> should be defined as a superuser with SECURITY DEFINER, and the <i>--lsfunc</i> option used. This example function, if defined by a superuser, will allow the script to connect as a normal user <i>nagios</i> with <i>--lsfunc=ls_archive_status_dir</i></p>
 
-<pre><code>  check_postgres_archive_ready --host=pluto --critical=10</code></pre>
+<pre><code>  BEGIN;
+  CREATE FUNCTION ls_archive_status_dir()
+      RETURNS SETOF TEXT
+      AS $$ SELECT pg_ls_dir(&#39;pg_xlog/archive_status&#39;) $$
+      LANGUAGE SQL
+      SECURITY DEFINER;
+  REVOKE ALL ON FUNCTION ls_archive_status_dir() FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION ls_archive_status_dir() to nagios;
+  COMMIT;</code></pre>
+
+<p>Example 1: Check that the number of ready WAL files is 10 or less on host &quot;pluto&quot;, using a wrapper function <code>ls_archive_status_dir</code> to avoid the need for superuser permissions</p>
+
+<pre><code>  check_postgres_archive_ready --host=pluto --critical=10 --lsfunc=ls_archive_status_dir</code></pre>
 
 <p>For MRTG output, reports the number of ready WAL files on line 1.</p>
 
@@ -1158,6 +1170,8 @@
 
 <p>To replace the old stored file with the new version, use the --replace argument.</p>
 
+<p>If you need to write the stored file to a specific direectory, use the --audit-file-dir argument.</p>
+
 <p>To enable snapshots at various points in time, you can use the &quot;--suffix&quot; argument to make the filenames unique to each run. See the examples below.</p>
 
 <p>Example 1: Verify that two databases on hosts star and line are the same:</p>
@@ -1315,13 +1329,25 @@
 
 <h2 id="wal_files"><b>wal_files</b></h2>
 
-<p>(<code>symlink: check_postgres_wal_files</code>) Checks how many WAL files exist in the <i>pg_xlog</i> directory, which is found off of your <b>data_directory</b>, sometimes as a symlink to another physical disk for performance reasons. This action must be run as a superuser, in order to access the contents of the <i>pg_xlog</i> directory. The minimum version to use this action is Postgres 8.1. The <i>--warning</i> and <i>--critical</i> options are simply the number of files in the <i>pg_xlog</i> directory. What number to set this to will vary, but a general guideline is to put a number slightly higher than what is normally there, to catch problems early.</p>
+<p>(<code>symlink: check_postgres_wal_files</code>) Checks how many WAL files exist in the <i>pg_xlog</i> directory, which is found off of your <b>data_directory</b>, sometimes as a symlink to another physical disk for performance reasons. If the <i>--lsfunc</i> option is not used then this action must be run as a superuser, in order to access the contents of the <i>pg_xlog</i> directory. The minimum version to use this action is Postgres 8.1. The <i>--warning</i> and <i>--critical</i> options are simply the number of files in the <i>pg_xlog</i> directory. What number to set this to will vary, but a general guideline is to put a number slightly higher than what is normally there, to catch problems early.</p>
 
 <p>Normally, WAL files are closed and then re-used, but a long-running open transaction, or a faulty <b>archive_command</b> script, may cause Postgres to create too many files. Ultimately, this will cause the disk they are on to run out of space, at which point Postgres will shut down.</p>
 
-<p>Example 1: Check that the number of WAL files is 20 or less on host &quot;pluto&quot;</p>
+<p>To avoid connecting as a database superuser, a wrapper function around <code>pg_ls_dir()</code> should be defined as a superuser with SECURITY DEFINER, and the <i>--lsfunc</i> option used. This example function, if defined by a superuser, will allow the script to connect as a normal user <i>nagios</i> with <i>--lsfunc=ls_xlog_dir</i></p>
 
-<pre><code>  check_postgres_wal_files --host=pluto --critical=20</code></pre>
+<pre><code>  BEGIN;
+  CREATE FUNCTION ls_xlog_dir()
+      RETURNS SETOF TEXT
+      AS $$ SELECT pg_ls_dir(&#39;pg_xlog&#39;) $$
+      LANGUAGE SQL
+      SECURITY DEFINER;
+  REVOKE ALL ON FUNCTION ls_xlog_dir() FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION ls_xlog_dir() to nagios;
+  COMMIT;</code></pre>
+
+<p>Example 1: Check that the number of ready WAL files is 10 or less on host &quot;pluto&quot;, using a wrapper function <code>ls_xlog_dir</code> to avoid the need for superuser permissions</p>
+
+<pre><code>  check_postgres_archive_ready --host=pluto --critical=10 --lsfunc=ls_xlog_dir</code></pre>
 
 <p>For MRTG output, reports the number of WAL files on line 1.</p>
 
@@ -1511,7 +1537,21 @@
 
 <dl>
 
-<dt id="Version-2.22.0"><b>Version 2.22.0</b></dt>
+<dt id="Version-2.22.1-Released"><b>Version 2.22.1</b> Released ????</dt>
+<dd>
+
+<pre><code>  Add Spanish message translations
+    (Luis Vazquez)
+
+  Allow a wrapper function to run wal_files and archive_ready actions as
+  non-superuser
+    (Joshua Elsasser)
+
+  Add some defensive casting to the bloat query
+    (Greg Sabino Mullane)</code></pre>
+
+</dd>
+<dt id="Version-2.22.0-June-30-2015"><b>Version 2.22.0</b> June 30, 2015</dt>
 <dd>
 
 <pre><code>  Add xact timestamp support to hot_standby_delay.
