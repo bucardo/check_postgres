@@ -10152,6 +10152,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Update postgresql.org URLs to use https.
     (Magnus Hagander)
 
+  check_txn_idle: Don't fail when query contains 'disabled' word
+    (Marco Nenciarini)
+
 =item B<Version 2.22.0> June 30, 2015
 
   Add xact timestamp support to hot_standby_delay.
