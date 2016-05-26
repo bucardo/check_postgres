@@ -5767,7 +5767,7 @@ sub check_new_version_pg {
 
     ## Check if a new version of Postgres is available
 
-    my $url = 'http://www.postgresql.org/versions.rss';
+    my $url = 'https://www.postgresql.org/versions.rss';
 
     ## Grab the local version
     my $info = run_command('SELECT version() AS version');
@@ -8064,7 +8064,7 @@ sub check_txn_wraparound {
     ## Supports: Nagios, MRTG
     ## Warning and critical are the number of transactions performed
     ## Thus, anything *over* that number will trip the alert
-    ## See: http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND
+    ## See: https://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND
     ## It makes no sense to run this more than once on the same cluster
 
     my ($warning, $critical) = validate_range
@@ -8392,7 +8392,7 @@ This file contains a simple list of connection options. You can also pass additi
 when using this option such as --dbservice="maindatabase sslmode=require"
 
 The documentation for this file can be found at
-http://www.postgresql.org/docs/current/static/libpq-pgservice.html
+https://www.postgresql.org/docs/current/static/libpq-pgservice.html
 
 =back
 
@@ -9858,7 +9858,7 @@ The I<--warning> and I<--critical> options indicate the number of transactions d
 If either option is not given, the default values of 1.3 and 1.4 billion are used. There is no need to run this command 
 more than once per database cluster. For a more detailed discussion of what this number represents and what to do about 
 it, please visit the page 
-L<http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND>
+L<https://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND>
 
 The warning and critical values can have underscores in the number for legibility, as Perl does.
 
