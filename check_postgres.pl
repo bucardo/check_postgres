@@ -10146,6 +10146,11 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Add some defensive casting to the bloat query
     (Greg Sabino Mullane)
 
+  Invoke psql with option -X
+    (Peter Eisentraut)
+
+  Update postgresql.org URLs to use https.
+    (Magnus Hagander)
 
 =item B<Version 2.22.0> June 30, 2015
 
