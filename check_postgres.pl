@@ -6298,8 +6298,8 @@ sub check_relation_size {
     my ($warning, $critical) = validate_range({type => 'size'});
 
     $SQL = sprintf q{
-SELECT pg_relation_size(c.oid) AS rsize,
-  pg_size_pretty(pg_relation_size(c.oid)) AS psize,
+SELECT pg_table_size(c.oid) AS rsize,
+  pg_size_pretty(pg_table_size(c.oid)) AS psize,
   relkind, relname, nspname
 FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace
 },
