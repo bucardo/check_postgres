@@ -6321,7 +6321,10 @@ WHERE relkind IN (%2$s)
         $SQL .= $USERWHERECLAUSE;
     }
 
-    my $info = run_command($SQL, {emptyok => 1});
+    my $SQL8 = $SQL;
+    $SQL8 =~ s/pg_table_size/pg_relation_size/g; # 8.4 and earlier
+
+    my $info = run_command($SQL, {emptyok => 1, version => [ "<9.0 $SQL8" ] });
 
     my $found = 0;
     for $db (@{$info->{db}}) {
@@ -10157,8 +10160,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =item B<Version 2.22.1> Released ????
 
-  Change table_size to use pg_table_size(), i.e. to include the TOAST table
-  size in the numbers reported. Add new actions indexes_size and
+  Change table_size to use pg_table_size() on 9.0+, i.e. include the TOAST
+  table size in the numbers reported. Add new actions indexes_size and
   total_relation_size, using the respective pg_indexes_size() and
   pg_total_relation_size() functions. All size checks will now also check
   materialized views where applicable.

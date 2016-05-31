@@ -38,6 +38,7 @@ for my $action (@actions) {
   next if $action =~ /last_auto/;
 
   my $match = $action;
+  $match = 'relation_size' if $match =~ /^(index|table|indexes|total_relation)_size/;
   $match = 'pgb_pool' if $match =~ /pgb_pool/;
 
   if ($slurp !~ /\n\s*sub check_$match/) {
