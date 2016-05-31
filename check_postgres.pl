@@ -1313,7 +1313,7 @@ our $OUTPUT = lc($opt{output} || '');
 if ($opt{get_method}) {
     my $found = 0;
     for my $meth (@get_methods) {
-        if ($meth =~ /^$opt{get_method}/io) {
+        if ($meth =~ /^$opt{get_method}/i) {
             @get_methods = ($meth);
             $found = 1;
             last;
@@ -1344,7 +1344,7 @@ our $DEBUG_INFO = '?';
 
 if (!$OUTPUT) {
     my $dir = getcwd;
-    if ($dir =~ /(nagios|mrtg|simple|cacti)/io) {
+    if ($dir =~ /(nagios|mrtg|simple|cacti)/i) {
         $OUTPUT = lc $1;
     }
     elsif ($opt{simple}) {
@@ -1361,7 +1361,7 @@ $opt{transform} = '';
 if ($OUTPUT =~ /\b(kb|mb|gb|tb|eb)\b/) {
     $opt{transform} = uc $1;
 }
-if ($OUTPUT =~ /(nagios|mrtg|simple|cacti)/io) {
+if ($OUTPUT =~ /(nagios|mrtg|simple|cacti)/i) {
     $OUTPUT = lc $1;
 }
 ## Check for a valid output setting
@@ -1924,7 +1924,7 @@ sub finishup {
         ## Are we showing DEBUG_INFO?
         my $showdebug = 0;
         if ($DEBUGOUTPUT) {
-            $showdebug = 1 if $DEBUGOUTPUT =~ /a/io
+            $showdebug = 1 if $DEBUGOUTPUT =~ /a/i
                 or ($DEBUGOUTPUT =~ /c/i and $type eq 'c')
                 or ($DEBUGOUTPUT =~ /w/i and $type eq 'w')
                 or ($DEBUGOUTPUT =~ /o/i and $type eq 'o')
