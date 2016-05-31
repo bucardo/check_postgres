@@ -1146,7 +1146,7 @@ if (defined $rcfile) {
     RCLINE:
     while (<$rc>) {
         next if /^\s*#/;
-        next unless /^\s*(\w+)\s*=\s*(.+?)\s*$/o;
+        next unless /^\s*(\w+)\s*=\s*(.+?)\s*$/;
         my ($name,$value) = ($1,$2); ## no critic (ProhibitCaptureWithoutTest)
         ## Map alternate option spellings to preferred names
         if ($name eq 'dbport' or $name eq 'p' or $name eq 'dbport1' or $name eq 'p1' or $name eq 'port1') {
@@ -1162,16 +1162,16 @@ if (defined $rcfile) {
             $name = 'dbuser';
         }
         ## Now for all the additional non-1 databases
-        elsif ($name =~ /^dbport(\d+)$/o or $name eq /^p(\d+)$/o) {
+        elsif ($name =~ /^dbport(\d+)$/ or $name eq /^p(\d+)$/) {
             $name = "port$1";
         }
-        elsif ($name =~ /^dbhost(\d+)$/o or $name eq /^H(\d+)$/o) {
+        elsif ($name =~ /^dbhost(\d+)$/ or $name eq /^H(\d+)$/) {
             $name = "host$1";
         }
-        elsif ($name =~ /^db(\d)$/o) {
+        elsif ($name =~ /^db(\d)$/) {
             $name = "dbname$1";
         }
-        elsif ($name =~ /^u(\d+)$/o) {
+        elsif ($name =~ /^u(\d+)$/) {
             $name = "dbuser$1";
         }
 
@@ -1257,24 +1257,24 @@ my @badargs;
 while (my $arg = pop @ARGV) {
 
     ## These must be of the form x=y
-    if ($arg =~ /^\-?\-?(\w+)\s*=\s*(.+)/o) {
+    if ($arg =~ /^\-?\-?(\w+)\s*=\s*(.+)/) {
         my ($name,$value) = (lc $1, $2);
-        if ($name =~ /^(?:db)?port(\d+)$/o or $name =~ /^p(\d+)$/o) {
+        if ($name =~ /^(?:db)?port(\d+)$/ or $name =~ /^p(\d+)$/) {
             push @{ $opt{port} } => $value;
         }
-        elsif ($name =~ /^(?:db)?host(\d+)$/o or $name =~ /^H(\d+)$/o) {
+        elsif ($name =~ /^(?:db)?host(\d+)$/ or $name =~ /^H(\d+)$/) {
             push @{ $opt{host} } => $value;
         }
-        elsif ($name =~ /^db(?:name)?(\d+)$/o) {
+        elsif ($name =~ /^db(?:name)?(\d+)$/) {
             push @{ $opt{dbname} } => $value;
         }
-        elsif ($name =~ /^dbuser(\d+)$/o or $name =~ /^u(\d+)/o) {
+        elsif ($name =~ /^dbuser(\d+)$/ or $name =~ /^u(\d+)/) {
             push @{ $opt{dbuser} } => $value;
         }
-        elsif ($name =~ /^dbpass(\d+)$/o) {
+        elsif ($name =~ /^dbpass(\d+)$/) {
             push @{ $opt{dbpass} } => $value;
         }
-        elsif ($name =~ /^dbservice(\d+)$/o) {
+        elsif ($name =~ /^dbservice(\d+)$/) {
             push @{ $opt{dbservice} } => $value;
         }
         else {
@@ -1925,10 +1925,10 @@ sub finishup {
         my $showdebug = 0;
         if ($DEBUGOUTPUT) {
             $showdebug = 1 if $DEBUGOUTPUT =~ /a/io
-                or ($DEBUGOUTPUT =~ /c/io and $type eq 'c')
-                or ($DEBUGOUTPUT =~ /w/io and $type eq 'w')
-                or ($DEBUGOUTPUT =~ /o/io and $type eq 'o')
-                or ($DEBUGOUTPUT =~ /u/io and $type eq 'u');
+                or ($DEBUGOUTPUT =~ /c/i and $type eq 'c')
+                or ($DEBUGOUTPUT =~ /w/i and $type eq 'w')
+                or ($DEBUGOUTPUT =~ /o/i and $type eq 'o')
+                or ($DEBUGOUTPUT =~ /u/i and $type eq 'u');
         }
         for (sort keys %$info) {
             printf '%s %s%s ',
@@ -2683,7 +2683,7 @@ sub run_command {
             $db->{slurp} = '' if ! defined $db->{slurp} or index($db->{slurp},'(')==0;
 
             ## Allow an empty query (no matching rows) if requested
-            if ($arg->{emptyok} and $db->{slurp} =~ /^\s*$/o) {
+            if ($arg->{emptyok} and $db->{slurp} =~ /^\s*$/) {
                 $arg->{emptyok2} = 1;
             }
             ## If we just want a version, grab it and redo
@@ -3048,7 +3048,7 @@ sub skip_item {
     if (defined $opt{exclude}) {
         $stat = 1;
         for (@{$opt{exclude}}) {
-            for my $ex (split /\s*,\s*/o => $_) {
+            for my $ex (split /\s*,\s*/ => $_) {
                 if ($ex =~ s/\.$//) {
                     if ($ex =~ s/^~//) {
                         ($stat += 2 and last) if $schema =~ /$ex/;
@@ -3069,7 +3069,7 @@ sub skip_item {
     if (defined $opt{include}) {
         $stat += 4;
         for (@{$opt{include}}) {
-            for my $in (split /\s*,\s*/o => $_) {
+            for my $in (split /\s*,\s*/ => $_) {
                 if ($in =~ s/\.$//) {
                     if ($in =~ s/^~//) {
                         ($stat += 8 and last) if $schema =~ /$in/;
@@ -3908,7 +3908,7 @@ FROM (
 
     $db = $info->{db}[0];
 
-    if ($db->{slurp} !~ /\w+/o) {
+    if ($db->{slurp} !~ /\w+/) {
         add_ok msg('bloat-nomin') unless $MRTG;
         return;
     }
@@ -4307,7 +4307,7 @@ sub check_connection {
             return;
         }
 
-        my $ver = ($db->{slurp}[0]{v} =~ /(\d+\.\d+\S+)/o) ? $1 : '';
+        my $ver = ($db->{slurp}[0]{v} =~ /(\d+\.\d+\S+)/) ? $1 : '';
 
         $MRTG and do_mrtg({one => $ver ? 1 : 0});
 
@@ -6550,12 +6550,12 @@ sub check_same_schema {
             for my $phrase (split /[\s,]+/ => $item) {
 
                 ## Can be plain (e.g. nouser) or regex based exclusion, e.g. nouser=bob
-                next if $phrase !~ /(\w+)=?\s*(.*)/o;
+                next if $phrase !~ /(\w+)=?\s*(.*)/;
                 my ($name,$regex) = (lc $1,$2||'');
 
                 ## Names are standardized with regards to plurals and casing
-                $name =~ s/([aeiou])s$/$1/o;
-                $name =~ s/s$//o;
+                $name =~ s/([aeiou])s$/$1/;
+                $name =~ s/s$//;
 
                 if (! length $regex) {
                     $filter{"$name"} = 1;
@@ -7923,19 +7923,19 @@ sub check_txn_idle {
         my $st = $r->{state} || '';
 
         ## Return unknown if we cannot see because we are a non-superuser
-        if ($cq =~ /insufficient/o) {
+        if ($cq =~ /insufficient/) {
             add_unknown msg('psa-nosuper');
             return;
         }
 
         ## Return unknown if stats_command_string / track_activities is off
-        if ($st =~ /disabled/o or $cq =~ /<command string not enabled>/) {
+        if ($st =~ /disabled/ or $cq =~ /<command string not enabled>/) {
             add_unknown msg('psa-disabled');
             return;
         }
 
         ## Detect other cases where pg_stat_activity is not fully populated
-        if ($type ne 'qtime' and length $r->{xact_start} and $r->{xact_start} !~ /\d/o) {
+        if ($type ne 'qtime' and length $r->{xact_start} and $r->{xact_start} !~ /\d/) {
             add_unknown msg('psa-noexact');
             return;
         }
@@ -8147,7 +8147,7 @@ sub check_version {
 
     for $db (@{$info->{db}}) {
         my $row = $db->{slurp}[0];
-        if ($row->{version} !~ /((\d+\.\d+)(\w+|\.\d+))/o) {
+        if ($row->{version} !~ /((\d+\.\d+)(\w+|\.\d+))/) {
             add_unknown msg('invalid-query', $row->{version});
             next;
         }
