@@ -246,6 +246,7 @@ our %msg = (
     'relsize-msg-reli'   => q{largest relation is index "$1": $2},
     'relsize-msg-relt'   => q{largest relation is table "$1": $2},
     'relsize-msg-tab'    => q{largest table is "$1": $2},
+    'relsize-msg-indexes' => q{table with largest indexes is "$1": $2},
     'rep-badarg'         => q{Invalid repinfo argument: expected 6 comma-separated values},
     'rep-duh'            => q{Makes no sense to test replication with same values},
     'rep-fail'           => q{Row not replicated to slave $1},
@@ -1405,9 +1406,11 @@ our $action_info = {
  fsm_relations       => [1, 'Checks percentage of relations used in free space map.'],
  hitratio            => [0, 'Report if the hit ratio of a database is too low.'],
  hot_standby_delay   => [1, 'Check the replication delay in hot standby setup'],
- index_size          => [0, 'Checks the size of indexes only.'],
- table_size          => [0, 'Checks the size of tables only.'],
  relation_size       => [0, 'Checks the size of tables and indexes.'],
+ index_size          => [0, 'Checks the size of indexes.'],
+ table_size          => [0, 'Checks the size of tables (including TOAST).'],
+ indexes_size        => [0, 'Checks the size of indexes on tables.'],
+ total_relation_size => [0, 'Checks the size of tables (including indexes and TOAST).'],
  last_analyze        => [0, 'Check the maximum time in seconds since any one table has been analyzed.'],
  last_vacuum         => [0, 'Check the maximum time in seconds since any one table has been vacuumed.'],
  last_autoanalyze    => [0, 'Check the maximum time in seconds since any one table has been autoanalyzed.'],
@@ -2150,10 +2153,12 @@ check_database_size() if $action eq 'database_size';
 ## Check local disk_space - local means it must be run from the same box!
 check_disk_space() if $action eq 'disk_space';
 
-## Check the size of relations, or more specifically, tables and indexes
-check_index_size() if $action eq 'index_size';
-check_table_size() if $action eq 'table_size';
-check_relation_size() if $action eq 'relation_size';
+## Check the size of relations (tables, toast tables, indexes)
+check_relation_size('relation', 'rtim')     if $action eq 'relation_size';
+check_relation_size('relation', 'i')        if $action eq 'index_size';
+check_relation_size('table', 'rm')          if $action eq 'table_size';
+check_relation_size('indexes', 'rtm')       if $action eq 'indexes_size';
+check_relation_size('total_relation', 'rm') if $action eq 'total_relation_size';
 
 ## Check how long since the last full analyze
 check_last_analyze() if $action eq 'last_analyze';
@@ -6282,7 +6287,7 @@ sub check_query_time {
 
 sub check_relation_size {
 
-    my $relkind = shift || 'relation';
+    my ($sizefct, $relkinds) = @_;
 
     ## Check the size of one or more relations
     ## Supports: Nagios, MRTG
@@ -6298,21 +6303,22 @@ sub check_relation_size {
     my ($warning, $critical) = validate_range({type => 'size'});
 
     $SQL = sprintf q{
-SELECT pg_relation_size(c.oid) AS rsize,
-  pg_size_pretty(pg_relation_size(c.oid)) AS psize,
+SELECT pg_%1$s_size(c.oid) AS rsize,
+  pg_size_pretty(pg_%1$s_size(c.oid)) AS psize,
   relkind, relname, nspname
-FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace
+FROM pg_class c JOIN pg_namespace n ON (c.relnamespace = n.oid)
+WHERE relkind IN (%2$s)
 },
-    $relkind eq 'table' ? q{'r'}
-    : $relkind eq 'index' ? q{'i'}
-    : q{'r' OR relkind = 'i'};
+    $sizefct,
+    join (',', map { "'$_'" } split (//, $relkinds));
 
     if ($opt{perflimit}) {
         $SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
     }
 
     if ($USERWHERECLAUSE) {
-        $SQL =~ s/ WHERE/, pg_user u WHERE u.usesysid=c.relowner$USERWHERECLAUSE AND/;
+        $SQL =~ s/WHERE/JOIN pg_user u ON (c.relowner = u.usesysid) WHERE/;
+        $SQL .= $USERWHERECLAUSE;
     }
 
     my $info = run_command($SQL, {emptyok => 1});
@@ -6356,19 +6362,22 @@ FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace
         }
 
         my $msg;
-        if ($relkind eq 'relation') {
-            if ($kmax eq 'r') {
+        if ($action eq 'relation_size') {
+            if ($kmax =~ /[rt]/) {
                 $msg = msg('relsize-msg-relt', "$smax.$nmax", $pmax);
             }
             else {
-                $msg = msg('relsize-msg-reli', $nmax, $pmax);
+                $msg = msg('relsize-msg-reli', "$smax.$nmax", $pmax);
             }
         }
-        elsif ($relkind eq 'table') {
+        elsif ($action =~ /table|total_relation/) {
             $msg = msg('relsize-msg-tab', "$smax.$nmax", $pmax);
         }
+        elsif ($action eq 'indexes_size') {
+            $msg = msg('relsize-msg-indexes', "$smax.$nmax", $pmax);
+        }
         else {
-            $msg = msg('relsize-msg-ind', $nmax, $pmax);
+            $msg = msg('relsize-msg-ind', "$smax.$nmax", $pmax);
         }
         if (length $critical and $max >= $critical) {
             add_critical $msg;
@@ -6384,14 +6393,6 @@ FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace
     return;
 
 } ## end of check_relation_size
-
-
-sub check_table_size {
-    return check_relation_size('table');
-}
-sub check_index_size {
-    return check_relation_size('index');
-}
 
 
 sub check_replicate_row {
@@ -9173,16 +9174,35 @@ Example 3: Allow replica1 to be 1 WAL segment behind, if the master is momentari
 
   check_hot_standby_delay --dbhost=master,replica1 --warning='1048576 and 2 min' --critical='16777216 and 10 min'
 
+=head2 B<relation_size>
+
 =head2 B<index_size>
 
 =head2 B<table_size>
 
-=head2 B<relation_size>
+=head2 B<indexes_size>
 
-(symlinks: C<check_postgres_index_size>, C<check_postgres_table_size>, and C<check_postgres_relation_size>)
-The actions B<table_size> and B<index_size> are simply variations of the 
-B<relation_size> action, which checks for a relation that has grown too big. 
-Relations (in other words, tables and indexes) can be filtered with the 
+=head2 B<total_relation_size>
+
+(symlinks: C<check_postgres_relation_size>, C<check_postgres_index_size>,
+C<check_postgres_table_size>, C<check_postgres_indexes_size>, and
+C<check_postgres_total_relation_size>)
+
+The actions B<relation_size> and B<index_size> check for a relation (table,
+index, materialized view), respectively an index that has grown too big, using
+the B<pg_relation_size()> function.
+
+The action B<table_size> checks tables and materialized views using
+B<pg_table_size()>, i.e. including relation forks and TOAST table.
+
+The action B<indexes_size> checks tables and materialized views for
+the size of the attached indexes using B<pg_indexes_size()>.
+
+The action B<total_relation_size> checks relations using
+B<pg_total_relation_size()>, i.e. including relation forks, indexes and TOAST
+table.
+
+Relations can be filtered with the
 I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details. Relations can also be filtered by the user that owns them, 
 by using the I<--includeuser> and I<--excludeuser> options. 
@@ -10135,6 +10155,13 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 =over 4
 
 =item B<Version 2.22.1> Released ????
+
+  Change table_size to use pg_table_size(), i.e. to include the TOAST table
+  size in the numbers reported. Add new actions indexes_size and
+  total_relation_size, using the respective pg_indexes_size() and
+  pg_total_relation_size() functions. All size checks will now also check
+  materialized views where applicable.
+    (Christoph Berg)
 
   Add Spanish message translations
     (Luis Vazquez)

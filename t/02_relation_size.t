@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 23;
+use Test::More tests => 15 + 4 * 4;
 use lib 't','.';
 use CP_Testing;
 
@@ -97,11 +97,11 @@ $t = qq{$S includes indexes};
 $dbh->do(qq{CREATE INDEX "${testtbl}_index" ON "$testtbl" (a)});
 $dbh->commit;
 like ($cp->run(qq{-w 1 --includeuser=$user --include=${testtbl}_index}),
-      qr{$label WARNING.*largest relation is index "${testtbl}_index": \d+ kB}, $t);
+      qr{$label WARNING.*largest relation is index "\w+.${testtbl}_index": \d+ kB}, $t);
 
-#### Switch gears, and test the related functions "check_table_size" and "check_index_size".
+#### Switch gears, and test the other size actions
 
-for $S (qw(table_size index_size)) {
+for $S (qw(index_size table_size indexes_size total_relation_size)) {
     $result = $cp->run($S, q{-w 1});
     $label = "POSTGRES_\U$S";
 
@@ -123,9 +123,9 @@ for $S (qw(table_size index_size)) {
         ($S ne 'table_size'
          ? '_table'
          : '_index');
-    my $message = 'largest ' . ($S eq 'table_size'
-                                ? 'table'
-                                : 'index');
+    my $message = 'largest ' . ($S =~ /index/
+                                ? 'index'
+                                : 'table');
     like ($cp->run($S, qq{-w 1 --includeuser=$user $include $exclude}),
                    qr|$label.*$message|, $t)
 }
