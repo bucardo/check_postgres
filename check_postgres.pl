@@ -7961,6 +7961,7 @@ sub check_txn_idle {
 
     ## Extract the seconds to avoid typing out the hash each time
     my $max = $maxr->{seconds};
+    $max = 0 if $max eq '-0';
 
     ## See if we have a minimum number of matches
     my $base_count = $wcount || $ccount;
