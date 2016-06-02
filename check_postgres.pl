@@ -9742,6 +9742,18 @@ For MRTG output, returns on the first line the time in seconds the replication t
 The maximum time is set to 4 minutes 30 seconds: if no replication has taken place in that long 
 a time, an error is thrown.
 
+=head2 B<replication_slots>
+
+(C<symlink: check_postgres_replication_slots>)  Check the quantity of WAL retained for any replication
+slots in the target database cluster.  This is handy for monitoring environments where all WAL archiving
+and replication is taking place over replication slots.
+
+Warning and critical are total bytes retained for the slot. E.g:
+
+  check_postgres_replication_slots --port=5432 --host=yellow -warning=32M -critical=64M
+
+Specific named slots can be monitored using --include/--exclude
+
 =head2 B<same_schema>
 
 (C<symlink: check_postgres_same_schema>) Verifies that two or more databases are identical as far as their 
