@@ -5171,7 +5171,7 @@ sub check_hot_standby_delay {
 
 } ## end of check_hot_standby_delay
 
-sub check_replication_slots {    
+sub check_replication_slots {
 
     ## Check the delay on one or more replication slots
     ## Supports: Nagios, MRTG
@@ -5182,23 +5182,23 @@ sub check_replication_slots {
     ## Warning and critical are bytes
     ## Valid units: b, k, m, g, t, e
     ## All above may be written as plural or with a trailing 'b'
-    
-    my ($warning, $critical) = validate_range({type => 'size'});    
-    
+
+    my ($warning, $critical) = validate_range({type => 'size'});
+
     $SQL = qq{
-        WITH slots AS (SELECT slot_name, 
-            slot_type, 
-            restart_lsn AS slot_lsn, 
-            pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn) AS delta,
+        WITH slots AS (SELECT slot_name,
+            slot_type,
+            coalesce(restart_lsn, '0/0'::pg_lsn) AS slot_lsn,
+            coalesce(pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn),0) AS delta,
 	    active
         FROM pg_replication_slots)
-        SELECT *, pg_size_pretty(delta) AS delta_pretty FROM slots;  
-    };    
-	
+        SELECT *, pg_size_pretty(delta) AS delta_pretty FROM slots;
+    };
+
     if ($opt{perflimit}) {
         $SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
     }
-    
+
     my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1, } );
     my $found = 0;
  
@@ -5212,22 +5212,21 @@ sub check_replication_slots {
                 $max = -2 if ($max == -1 );
 		next;
             }
-
             if ($r->{delta} >= $max) {
                 $max = $r->{delta};
             }
             $s{$r->{slot_name}} = [$r->{delta},$r->{delta_pretty},$r->{slot_type},$r->{slot_lsn},$r->{active}];
-        }    
+        }
         if ($MRTG) {
             do_mrtg({one => $max, msg => "SLOT: $db->{slot_name}"});
-        }    
+        }
         if ($max < 0) {
             $stats{$db->{dbname}} = 0;
             add_ok msg('no-match-slotok') if ($max == -1);
             add_unknown msg('no-match-slot') if ($max == -2);
             next;
-        }    
-    
+        }
+
         my $msg = '';
         for (sort {$s{$b}[0] <=> $s{$a}[0] or $a cmp $b } keys %s) {
             $msg .= "$_: $s{$_}[1] ($s{$_}[2] $s{$_}[3] " . ($s{$_}[4] eq 't'?'active':'inactive') .") ";
@@ -5242,9 +5241,9 @@ sub check_replication_slots {
         }
         else {
             add_ok $msg;
-        }   
+        }
     }
-	
+
     ## If no results, probably a version problem
     if (!$found and keys %unknown) {
         (my $first) = values %unknown;
