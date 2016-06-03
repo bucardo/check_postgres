@@ -143,6 +143,13 @@ sub test_database_handle {
             print $cfh qq{max_fsm_pages = 99999\n};
         }
 
+        ## >= 9.4
+        if ($imaj > 9 or ($imaj==9 and $imin >= 4)) {
+            print $cfh qq{max_replication_slots = 2\n};
+            print $cfh qq{wal_level = logical\n};
+            print $cfh qq{max_wal_senders = 2\n};
+        }
+
         print $cfh "\n";
         close $cfh or die qq{Could not close "$cfile": $!\n};
 
