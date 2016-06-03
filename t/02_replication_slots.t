@@ -25,6 +25,14 @@ diag "Connected as $port:$host:$dbname\n";
 my $S = q{Action 'replication_slots'};
 my $label = 'POSTGRES_REPLICATION_SLOTS';
 
+my $ver = $dbh->{pg_server_version};
+if ($ver < 90400) {
+    SKIP: {
+        skip 'replication slots not present before 9.4', 20;
+    }
+    exit 0;
+}
+
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(q{-w 0});
 like ($result, qr{^$label}, $t);
