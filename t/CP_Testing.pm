@@ -92,6 +92,17 @@ sub test_database_handle {
             : $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/initdb"
             :                  'initdb';
 
+        ## Grab the version for finicky items
+        if (qx{$initdb --version} !~ /(\d+)\.(\d+)/) {
+            die qq{Could not determine the version of initdb in use!\n};
+        }
+        my ($imaj,$imin) = ($1,$2);
+
+        # Speed up testing on 9.3+
+        if ($imaj > 9 or ($imaj==9 and $imin >= 3)) {
+            $initdb = "$initdb --nosync";
+        }
+
         $com = qq{LC_ALL=en LANG=C $initdb --locale=C -E UTF8 -D "$datadir" 2>&1};
         eval {
             $DEBUG and warn qq{About to run: $com\n};
@@ -108,12 +119,7 @@ sub test_database_handle {
         print $cfh qq{port = 5432\n};
         print $cfh qq{listen_addresses = ''\n};
         print $cfh qq{max_connections = 10\n};
-
-        ## Grab the version for finicky items
-        if (qx{$initdb --version} !~ /(\d+)\.(\d+)/) {
-            die qq{Could not determine the version of initdb in use!\n};
-        }
-        my ($imaj,$imin) = ($1,$2);
+        print $cfh qq{fsync = off\n};
 
         ## <= 8.0
         if ($imaj < 8 or ($imaj==8 and $imin <= 1)) {
