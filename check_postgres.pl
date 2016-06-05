@@ -10278,6 +10278,10 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   materialized views where applicable.
     (Christoph Berg)
 
+  New action replication_slots checking if logical or physical replication
+  slots have accumulated too much data
+    (Glyn Astill)
+
   Add Spanish message translations
     (Luis Vazquez)
 
