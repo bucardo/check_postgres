@@ -349,11 +349,14 @@ sub test_database_handle {
             $dbh->do("CREATE USER $user2");
         }
     }
-    $dbh->do('CREATE DATABASE beedeebeedee');
-    $dbh->do('CREATE DATABASE ardala');
-    $dbh->do('CREATE LANGUAGE plpgsql');
-    $dbh->do('CREATE LANGUAGE plperlu');
-    $dbh->do("CREATE SCHEMA $fakeschema");
+
+    my $databases = $dbh->selectall_hashref('SELECT datname FROM pg_database', 'datname');
+    $dbh->do('CREATE DATABASE beedeebeedee') unless ($databases->{beedeebeedee});
+    $dbh->do('CREATE DATABASE ardala') unless ($databases->{ardala});
+    my $languages = $dbh->selectall_hashref('SELECT lanname FROM pg_language', 'lanname');
+    $dbh->do('CREATE LANGUAGE plpgsql') unless ($languages->{plpgsql});
+    my $schemas = $dbh->selectall_hashref('SELECT nspname FROM pg_namespace', 'nspname');
+    $dbh->do("CREATE SCHEMA $fakeschema") unless ($schemas->{$fakeschema});
     $dbh->{AutoCommit} = 0;
     $dbh->{RaiseError} = 1;
 
@@ -388,7 +391,7 @@ sub test_database_handle {
 
 sub recreate_database {
 
-    ## Given a database handle, comepletely recreate the current database
+    ## Given a database handle, completely recreate the current database
 
     my ($self,$dbh) = @_;
 
@@ -835,6 +838,12 @@ sub database_sleep {
     my $ver = $dbh->{pg_server_version};
 
     if ($ver < 80200) {
+        $dbh->{AutoCommit} = 1;
+        $dbh->{RaiseError} = 0;
+        $dbh->do('CREATE LANGUAGE plperlu');
+        $dbh->{AutoCommit} = 0;
+        $dbh->{RaiseError} = 1;
+
         $SQL = q{CREATE OR REPLACE FUNCTION pg_sleep(float) RETURNS VOID LANGUAGE plperlu AS 'select(undef,undef,undef,shift)'};
         $dbh->do($SQL);
         $dbh->commit();
