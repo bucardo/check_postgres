@@ -102,6 +102,8 @@ like ($cp->run(qq{-w 1 --includeuser=$user --include=${testtbl}_index}),
 #### Switch gears, and test the other size actions
 
 for $S (qw(index_size table_size indexes_size total_relation_size)) {
+SKIP: {
+    skip "$S not supported before 9.0", 4 if ($S eq 'indexes_size' and $ver < 90000);
     $result = $cp->run($S, q{-w 1});
     $label = "POSTGRES_\U$S";
 
@@ -128,6 +130,7 @@ for $S (qw(index_size table_size indexes_size total_relation_size)) {
                                 : 'table');
     like ($cp->run($S, qq{-w 1 --includeuser=$user $include $exclude}),
                    qr|$label.*$message|, $t)
+}
 }
 
 exit;
