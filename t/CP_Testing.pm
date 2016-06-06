@@ -821,9 +821,9 @@ sub drop_all_tables {
     my $self = shift;
     my $dbh = $self->{dbh} || die;
     $dbh->{Warn} = 0;
-    my @info = $dbh->tables('','public','','TABLE');
-    for my $tab (@info) {
-        $dbh->do("DROP TABLE $tab CASCADE");
+    my $tables = $dbh->selectall_arrayref("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
+    for my $tab (@$tables) {
+        $dbh->do("DROP TABLE $tab->[0] CASCADE");
     }
     $dbh->{Warn} = 1;
     $dbh->commit();
