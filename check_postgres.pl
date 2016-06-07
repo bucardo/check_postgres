@@ -7471,6 +7471,9 @@ sub find_catalog_info {
             $SQL = $ci->{SQL2};
         }
     }
+    if ($type eq 'trigger' and $dbver->{major} <= 8.4) {
+        $SQL =~ s/t.tgconstrindid = 0 AND //;
+    }
 
     if (exists $ci->{exclude}) {
         if ('temp_schemas' eq $ci->{exclude}) {
