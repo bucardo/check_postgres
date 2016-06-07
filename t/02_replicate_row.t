@@ -141,8 +141,8 @@ else {
 $t=qq{$S works when rows match, with MRTG output};
 $dbh->commit();
 if (fork) {
-    is ($cp->run('DB2replicate-row', '-c 20 --output=MRTG -repinfo=reptest,id,1,foo,yin,yang'),
-        qq{1\n0\n\n\n}, $t);
+    like ($cp->run('DB2replicate-row', '-c 20 --output=MRTG -repinfo=reptest,id,1,foo,yin,yang'),
+        qr{^[12]\n0\n\n\n}, $t);
 }
 else {
     usleep 500_000; # 0.5s
