@@ -10346,6 +10346,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   check_txn_idle: Don't fail when query contains 'disabled' word
     (Marco Nenciarini)
 
+  check_txn_idle: Use state_change instead of query_start.
+    (Sebastian Webber)
+
   check_hot_standby_delay: Correct extra space in perfdata
     (Adrien Nayrat)
 
