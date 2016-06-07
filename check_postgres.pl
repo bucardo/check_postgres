@@ -382,7 +382,7 @@ our %msg = (
     'checkpoint-po'      => q{Instante del último checkpoint:},
     'checksum-msg'       => q{checksum: $1},
     'checksum-nomd'      => q{Debe instalar el módulo Perl Digest::MD5 para usar la acción checksum},
-    'checksum-nomrtg'    => q{Debe proporcionar un checksum con la opción --mrtg}, 
+    'checksum-nomrtg'    => q{Debe proporcionar un checksum con la opción --mrtg},
     'custom-invalid'     => q{Formato devuelto por la consulta personalizada es inválido},
     'custom-norows'      => q{No se obtuvieron filas},
     'custom-nostring'    => q{Debe proporcionar el texto con la consulta},
@@ -447,7 +447,7 @@ our %msg = (
     'no-match-set'       => q{No se encuentran opciones de configuración coincidentes debido a las opciones de exclusión/inclusión},
     'no-match-table'     => q{No se encuentran tablas coincidentes debido a las opciones de exclusión/inclusión},
     'no-match-user'      => q{No se encuentran entradas coincidentes debido a las opciones de exclusión/inclusión},
-    'no-match-slot'      => q{No se encuentran ranuras de replicación coincidentes debido a las opciones de exclusión/inclusión},	
+    'no-match-slot'      => q{No se encuentran ranuras de replicación coincidentes debido a las opciones de exclusión/inclusión},
     'no-match-slotok'    => q{No se encuentran ranuras de replicación},
     'no-parse-psql'      => q{No se pudo interpretar la salida de psql!},
     'no-time-hires'      => q{No se encontró Time::HiRes, necesario si 'showtime' es verdadero},
@@ -503,7 +503,7 @@ our %msg = (
     'range-warnbigsize'  => q{El valor de la opción 'warning' ($1 bytes) no puede ser mayor que el de 'critical ($2 bytes)'},
     'range-warnbigtime'  => q{El valor de la opción 'warning' ($1 s) no puede ser mayor que el de 'critical ($2 s)'},
     'range-warnsmall'    => q{El valor de la opción 'warning' no puede ser menor que el de 'critical'},
-    'range-nointfortime' => q{Valor inválido para las opciones '$1': debe ser un entero o un valor de tiempo}, 
+    'range-nointfortime' => q{Valor inválido para las opciones '$1': debe ser un entero o un valor de tiempo},
     'relsize-msg-ind'    => q{el índice más grande es "$1": $2},
     'relsize-msg-reli'   => q{la relación más grande es el índice "$1": $2},
     'relsize-msg-relt'   => q{la relación más grande es la tabla "$1": $2},
@@ -1512,7 +1512,7 @@ Limit options:
 Other options:
   --assume-standby-mode assume that server in continious WAL recovery mode
   --assume-prod         assume that server in production mode
-  --assume-async        assume that any replication is asynchronous 
+  --assume-async        assume that any replication is asynchronous
   --PGBINDIR=PATH       path of the postgresql binaries; avoid using if possible
   --PSQL=FILE           (deprecated) location of the psql executable; avoid using if possible
   -v, --verbose         verbosity level; can be used more than once to increase the level
@@ -3883,9 +3883,9 @@ FROM (
           FROM pg_stats s2
           WHERE null_frac<>0 AND s2.schemaname = ns.nspname AND s2.tablename = tbl.relname
         ) AS nullhdr
-      FROM pg_attribute att 
+      FROM pg_attribute att
       JOIN pg_class tbl ON att.attrelid = tbl.oid
-      JOIN pg_namespace ns ON ns.oid = tbl.relnamespace 
+      JOIN pg_namespace ns ON ns.oid = tbl.relnamespace
       LEFT JOIN pg_stats s ON s.schemaname=ns.nspname
       AND s.tablename = tbl.relname
       AND s.inherited=false
@@ -4846,9 +4846,9 @@ sub check_fsm_pages {
     (my $c = $critical) =~ s/\D//;
     my $SQL = q{
 SELECT pages, maxx, ROUND(100*(pages/maxx)) AS percent
-FROM 
+FROM
   (SELECT (sumrequests+numrels)*chunkpages AS pages
-   FROM (SELECT SUM(CASE WHEN avgrequest IS NULL 
+   FROM (SELECT SUM(CASE WHEN avgrequest IS NULL
      THEN interestingpages/32 ELSE interestingpages/16 END) AS sumrequests,
      COUNT(relfilenode) AS numrels, 16 AS chunkpages FROM pg_freespacemap_relations) AS foo) AS foo2,
   (SELECT setting::NUMERIC AS maxx FROM pg_settings WHERE name = 'max_fsm_pages') AS foo3
@@ -4908,7 +4908,7 @@ sub check_fsm_relations {
 
     my $SQL = q{
 SELECT maxx, cur, ROUND(100*(cur/maxx)) AS percent
-FROM (SELECT 
+FROM (SELECT
     (SELECT COUNT(*) FROM pg_freespacemap_relations) AS cur,
     (SELECT setting::NUMERIC FROM pg_settings WHERE name='max_fsm_relations') AS maxx) x
 };
@@ -5204,7 +5204,7 @@ sub check_replication_slots {
             slot_type,
             coalesce(restart_lsn, '0/0'::pg_lsn) AS slot_lsn,
             coalesce(pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn),0) AS delta,
-	    active
+            active
         FROM pg_replication_slots)
         SELECT *, pg_size_pretty(delta) AS delta_pretty FROM slots;
     };
@@ -5215,7 +5215,7 @@ sub check_replication_slots {
 
     my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1, } );
     my $found = 0;
- 
+
     for $db (@{$info->{db}}) {
         my $max = -1;
         $found = 1;
@@ -5224,7 +5224,7 @@ sub check_replication_slots {
         for my $r (@{$db->{slurp}}) {
             if (skip_item($r->{slot_name})) {
                 $max = -2 if ($max == -1 );
-		next;
+                next;
             }
             if ($r->{delta} >= $max) {
                 $max = $r->{delta};
@@ -6329,7 +6329,7 @@ sub check_query_runtime {
     ## Valid units: s[econd], m[inute], h[our], d[ay]
     ## Does a "EXPLAIN ANALYZE SELECT COUNT(1) FROM xyz"
     ## where xyz is given by the option --queryname
-    ## This could also be a table or a function, or course, but must be a 
+    ## This could also be a table or a function, or course, but must be a
     ## single word. If a function, it must be empty (with "()")
     ## Examples:
     ## --warning="100s" --critical="120s" --queryname="speedtest1"
@@ -6748,7 +6748,7 @@ sub check_same_schema {
         [schema     => '',                                        ''          ],
         [function   => 'source_checksum,prolang,prorettype,
                         proargtypes,proallargtypes,provariadic,
-			proargdefaults',                          ''          ],
+                        proargdefaults',                          ''          ],
         [table      => 'reltype,relfrozenxid,relminmxid,relpages,
                         reltuples,relnatts,relallvisible',        ''          ],
         [view       => 'reltype',                                 ''          ],
@@ -7552,7 +7552,7 @@ sub find_catalog_info {
         if (exists $ci->{innerSQL}) {
 
             if ($type eq 'sequence') {
-                ## If this is a sequence, we want to grab them all at once to reduce 
+                ## If this is a sequence, we want to grab them all at once to reduce
                 ## the amount of round-trips we do with 'SELECT * FROM seqname'
                 if (! exists $opt{seqinfoss}{$dbnum}) {
                     $SQL = q{SELECT quote_ident(nspname)||'.'||quote_ident(relname) AS sname }
@@ -8172,7 +8172,7 @@ sub check_txn_idle {
 
 sub check_txn_time {
 
-    ## This is the same as check_txn_idle, but we want where the 
+    ## This is the same as check_txn_idle, but we want where the
     ## transaction start time is not null
 
     check_txn_idle('txntime',
@@ -10319,6 +10319,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   New action replication_slots checking if logical or physical replication
   slots have accumulated too much data
+
+  Multiple same_schema improvements
     (Glyn Astill)
 
   Add Spanish message translations
