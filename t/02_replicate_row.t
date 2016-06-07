@@ -7,7 +7,6 @@ use strict;
 use warnings;
 use Data::Dumper;
 use Test::More tests => 19;
-use Time::HiRes qw(usleep);
 use lib 't','.';
 use CP_Testing;
 
@@ -120,6 +119,7 @@ else {
     $dbh2->commit();
     exit;
 }
+wait;
 
 $t=qq{$S works when rows match, reports proper delay};
 $dbh->commit();
@@ -137,20 +137,22 @@ else {
     $dbh2->commit();
     exit;
 }
+wait;
 
 $t=qq{$S works when rows match, with MRTG output};
 $dbh->commit();
 if (fork) {
     like ($cp->run('DB2replicate-row', '-c 20 --output=MRTG -repinfo=reptest,id,1,foo,yin,yang'),
-        qr{^[12]\n0\n\n\n}, $t);
+        qr{^[1-5]\n0\n\n\n}, $t);
 }
 else {
-    usleep 500_000; # 0.5s
+    sleep 1;
     $SQL = q{UPDATE reptest SET foo = 'yin' WHERE id = 1};
     $dbh2->do($SQL);
     $dbh2->commit();
     exit;
 }
+wait;
 
 $t=qq{$S works when rows match, with simple output};
 $dbh->commit();
@@ -167,6 +169,7 @@ else {
     $dbh2->commit();
     exit;
 }
+wait;
 
 $dbh2->disconnect();
 
