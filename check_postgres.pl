@@ -9714,7 +9714,7 @@ query with the I<--includeuser> and I<--excludeuser> options.
 See the L</"USER NAME FILTERING"> section for more details.
 
 The values for the I<--warning> and I<--critical> options are amounts of 
-time, and default to '2 minutes' and '5 minutes' respectively. Valid units 
+time, and at least one must be provided (no defaults). Valid units 
 are 'seconds', 'minutes', 'hours', or 'days'. Each may be written singular or 
 abbreviated to just the first letter. If no units are given, the unit is 
 assumed to be seconds.
@@ -9980,7 +9980,7 @@ using the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING">
 section below for more details.
 
 The I<--warning> and I<--critical> options are given as units of time, signed
-integers, or integers for units of time, and both must be provided (there are
+integers, or integers for units of time, and at least one must be provided (there are
 no defaults). Valid units are 'seconds', 'minutes', 'hours', or 'days'. Each
 may be written singular or abbreviated to just the first letter. If no units
 are given and the numbers are unsigned, the units are assumed to be seconds.
@@ -10014,7 +10014,7 @@ the I<--includeuser> and I<--excludeuser> options.
 See the L</"USER NAME FILTERING"> section for more details.
 
 The values or the I<--warning> and I<--critical> options are units of time, and 
-must be provided (no default). Valid units are 'seconds', 'minutes', 'hours', 
+at least one must be provided (no default). Valid units are 'seconds', 'minutes', 'hours', 
 or 'days'. Each may be written singular or abbreviated to just the first letter. 
 If no units are given, the units are assumed to be seconds.
 
