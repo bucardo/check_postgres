@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 15;
+use Test::More tests => 16;
 use lib 't','.';
 use CP_Testing;
 
@@ -84,9 +84,15 @@ like ($cp->run(q{-w '1 for 2s'}), qr{1 idle transactions longer than 2s, longest
 $t = qq{$S returns an unknown if running as a non-superuser};
 my $olduser = $cp->{testuser};
 $cp->{testuser} = 'powerless_pete';
-like ($cp->run('-w 0'), qr{^$label UNKNOWN: .+superuser}, $t);
+like ($cp->run('-w 1'), qr{^$label UNKNOWN: .+superuser}, $t);
 
 $idle_dbh->commit;
+
+my $idle_dbh2 = $cp->test_database_handle({ testuser => 'powerless_pete' });
+$idle_dbh2->do('SELECT 1');
+sleep(1);
+$t = qq{$S identifies own queries even when running as a non-superuser};
+like ($cp->run('-w 1 --includeuser powerless_pete'), qr{longest idle in txn: \d+s}, $t);
 
 exit;
 

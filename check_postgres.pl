@@ -9995,6 +9995,10 @@ are given and the numbers are unsigned, the units are assumed to be seconds.
 
 This action requires Postgres 8.3 or better.
 
+Superuser privileges are required to see the queries of all users in the system;
+UNKNOWN is returned if queries cannot be checked. To only include queries by
+the connecting user, use I<--includeuser>.
+
 Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:
 
   check_postgres_txn_idle --port=5432 --warning='15 seconds'
