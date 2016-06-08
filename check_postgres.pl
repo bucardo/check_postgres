@@ -3020,7 +3020,7 @@ sub verify_version {
     }
 
     $db->{slurp} = $oldslurp;
-    return;
+    return $sver;
 
 } ## end of verify_version
 
@@ -5049,8 +5049,10 @@ sub check_hot_standby_delay {
     ## --warning=5min
     ## --warning='1048576 and 2min' --critical='16777216 and 10min'
 
+    my $version = verify_version();
+
     my ($warning, $wtime, $critical, $ctime) = validate_integer_for_time({default_to_int => 1});
-    if ($psql_version < 9.1 and (length $wtime or length $ctime)) { # FIXME: check server version instead
+    if ($version < 9.1 and (length $wtime or length $ctime)) {
         add_unknown msg('hs-time-version');
         return;
     }
@@ -5090,7 +5092,7 @@ sub check_hot_standby_delay {
 
     ## On slave
     $SQL = q{SELECT pg_last_xlog_receive_location() AS receive, pg_last_xlog_replay_location() AS replay};
-    if ($psql_version >= 9.1) {
+    if ($version >= 9.1) {
         $SQL .= q{, COALESCE(ROUND(EXTRACT(epoch FROM now() - pg_last_xact_replay_timestamp())),0) AS seconds};
     }
     my $info = run_command($SQL, { dbnumber => $slave, regex => qr/\// });
@@ -5149,7 +5151,7 @@ sub check_hot_standby_delay {
         return;
     }
 
-    $MRTG and do_mrtg($psql_version >= 9.1 ?
+    $MRTG and do_mrtg($version >= 9.1 ?
         {one => $rep_delta, two => $rec_delta, three => $time_delta} :
         {one => $rep_delta, two => $rec_delta});
 
@@ -5161,14 +5163,14 @@ sub check_hot_standby_delay {
         $db->{perf} .= sprintf ' %s=%s;%s;%s',
             perfname(msg('hs-receive-delay')), $rec_delta, $warning, $critical;
     }
-    if ($psql_version >= 9.1) {
+    if ($version >= 9.1) {
         $db->{perf} .= sprintf ' %s=%s;%s;%s',
             perfname(msg('hs-time-delay')), $time_delta, $wtime, $ctime;
     }
 
     ## Do the check on replay delay in case SR has disconnected because it way too far behind
     my $msg = qq{$rep_delta};
-    if ($psql_version >= 9.1) {
+    if ($version >= 9.1) {
         $msg .= qq{ and $time_delta seconds}
     }
     if ((length $critical or length $ctime) and (!length $critical or length $critical and $rep_delta > $critical) and (!length $ctime or length $ctime and $time_delta > $ctime)) {
