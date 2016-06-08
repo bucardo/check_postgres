@@ -2624,7 +2624,7 @@ sub run_command {
             }
         }
 
-        local $SIG{ALRM} = sub { die 'Timed out' };
+        local $SIG{ALRM} = sub { die "Timed out\n" };
         alarm 0;
 
         push @args, '-c', $string;
@@ -2642,6 +2642,10 @@ sub run_command {
         alarm 0;
         open STDERR, '>&', $oldstderr or ndie msg('runcommand-noerr');
         close $oldstderr or ndie msg('file-noclose', 'STDERR copy', $!);
+        if ($err and $action eq 'connection') {
+            $info->{fatal} = $err;
+            return $info;
+        }
         if ($err) {
             if ($err =~ /Timed out/) {
                 ndie msg('runcommand-timeout', $timeout);
@@ -2666,8 +2670,8 @@ sub run_command {
             }
 
             ## If we are just trying to connect, failed attempts are critical
-            if ($action eq 'connection' and $db->{error} =~ /FATAL|could not connect/) {
-                $info->{fatal} = 1;
+            if ($action eq 'connection' and $db->{error}) {
+                $info->{fatal} = $db->{error};
                 return $info;
             }
 
@@ -4325,11 +4329,15 @@ sub check_connection {
     }
 
     my $info = run_command('SELECT version() AS v');
+    if ($info->{fatal}) {
+        add_critical $info->{fatal};
+        return;
+    }
 
     for $db (@{$info->{db}}) {
 
         my $err = $db->{error} || '';
-        if ($err =~ /FATAL|could not connect/) {
+        if ($err) {
             $MRTG and do_mrtg({one => 0});
             add_critical $db->{error};
             return;
@@ -10321,6 +10329,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   total_relation_size, using the respective pg_indexes_size() and
   pg_total_relation_size() functions. All size checks will now also check
   materialized views where applicable.
+
+  Connection errors are now always critical, not unknown.
     (Christoph Berg)
 
   New action replication_slots checking if logical or physical replication

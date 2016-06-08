@@ -767,6 +767,31 @@ SELECT 'PostgreSQL $version on fakefunction for check_postgres.pl testing'::text
 } ## end of fake version
 
 
+sub fake_version_timeout {
+
+    my $self = shift;
+    my $dbh = $self->{dbh} || die;
+    my $dbuser = $self->{testuser} || die;
+
+    if (! $self->schema_exists($dbh, $fakeschema)) {
+        $dbh->do("CREATE SCHEMA $fakeschema");
+    }
+
+    $dbh->do(qq{
+CREATE OR REPLACE FUNCTION $fakeschema.version()
+RETURNS TEXT
+LANGUAGE SQL
+AS \$\$
+SELECT pg_sleep(10)::text;
+\$\$
+});
+    $dbh->do("ALTER USER $dbuser SET search_path = $fakeschema, public, pg_catalog");
+    $dbh->commit();
+    return;
+
+} ## end of fake version timeout
+
+
 sub fake_self_version {
 
     ## Look out...

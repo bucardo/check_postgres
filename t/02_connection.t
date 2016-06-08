@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 12;
+use Test::More tests => 14;
 use lib 't','.';
 use CP_Testing;
 
@@ -52,7 +52,14 @@ is ($cp->run('--output=MRTG'), qq{1\n0\n\n\n}, $t);
 
 $cp->fake_version('ABC');
 $t=qq{$S fails if there's a fake version function};
-like ($cp->run(), qr{^$label UNKNOWN:}, $t);
+like ($cp->run(), qr{^$label UNKNOWN:.*Invalid query}, $t);
+
+$cp->fake_version_timeout();
+$t=qq{$S fails on timeout};
+like ($cp->run('--timeout 1'), qr{^$label CRITICAL:.*Timed out}, $t);
 $cp->reset_path();
+
+$t=qq{$S fails on nonexisting socket};
+like ($cp->run('--port=1023'), qr{^$label CRITICAL:  could not connect to server}, $t);
 
 exit;
