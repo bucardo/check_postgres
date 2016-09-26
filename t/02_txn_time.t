@@ -73,7 +73,7 @@ $t = qq{$S identifies a one-second running txn};
 my $idle_dbh = $cp->test_database_handle();
 $idle_dbh->do('SELECT 1');
 sleep(1);
-like ($cp->run(q{-w 0}), qr{longest txn: 1s}, $t);
+like ($cp->run(q{-w 0}), qr{longest txn: [12]s}, $t);
 
 $t .= ' (MRTG)';
 my $query_patten = ($ver >= 90200) ? "SELECT 1" : "<IDLE> in transaction";
