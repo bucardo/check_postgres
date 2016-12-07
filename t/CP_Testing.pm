@@ -23,6 +23,7 @@ sub new {
     my $self = {
         started  => time(),
         dbdir    => $arg->{dbdir}    || 'test_database_check_postgres',
+        tsdir    => $arg->{tsdir}    || 'test_tablespace_check_postgres',
         testuser => $arg->{testuser} || 'check_postgres_testing',
         testuser2 => $arg->{testuser2} || 'powerless_pete',
     };
@@ -31,6 +32,9 @@ sub new {
     }
     if (exists $arg->{dbnum} and $arg->{dbnum}) {
         $self->{dbdir} .= $arg->{dbnum};
+    }
+    if (exists $arg->{dbnum} and $arg->{dbnum}) {
+        $self->{tsdir} .= $arg->{dbnum};
     }
     return bless $self => $class;
 }
@@ -82,6 +86,18 @@ sub test_database_handle {
         Test::More::diag qq{Creating database in directory "$dbdir"\n};
 
         mkdir $dbdir;
+    }
+
+    ## Create the test tablespace directory if it does not exist
+    my $tsdir = $arg->{tsdir} || $self->{tsdir};
+    $DEBUG and warn qq{Tablespacedir: $tsdir\n};
+    if (! -d $tsdir) {
+
+        -e $tsdir and die qq{Oops: I cannot create "$tsdir", there is already a file there!\n};
+
+        Test::More::diag qq{Creating tablespace in directory "$tsdir"\n};
+
+        mkdir $tsdir;
     }
 
     my $datadir = "$dbdir/data space";
@@ -349,6 +365,11 @@ sub test_database_handle {
             $dbh->do("CREATE USER $user2");
         }
     }
+
+    $dbh->{RaiseError} = 1;
+    my $tablespaces = $dbh->selectall_hashref('SELECT spcname FROM pg_tablespace', 'spcname');
+    $dbh->do("CREATE TABLESPACE check_postgres LOCATION '$here/$tsdir'") unless ($tablespaces->{check_postgres});
+    $dbh->{RaiseError} = 0;
 
     my $databases = $dbh->selectall_hashref('SELECT datname FROM pg_database', 'datname');
     $dbh->do('CREATE DATABASE beedeebeedee') unless ($databases->{beedeebeedee});

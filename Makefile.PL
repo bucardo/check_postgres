@@ -47,6 +47,11 @@ my @cleanfiles = (
     '/tmp/cptesting_socket3',
     '/tmp/cptesting_socket4',
     '/tmp/cptesting_socket5',
+	'test_tablespace_check_postgres/',
+	'test_tablespace_check_postgres2/',
+	'test_tablespace_check_postgres3/',
+	'test_tablespace_check_postgres4/',
+	'test_tablespace_check_postgres5/',
 );
 
 print "Configuring check_postgres $VERSION\n";
