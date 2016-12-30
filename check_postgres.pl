@@ -8721,7 +8721,7 @@ will override any such detection.
 
 =head1 ACTIONS
 
-The script runs one or more actions. This can either be done with the --action 
+The action to be run is selected using the --action 
 flag, or by using a symlink to the main file that contains the name of the action 
 inside of it. For example, to run the action "timesync", you may either issue:
 
@@ -8732,12 +8732,12 @@ or use a program named:
   check_postgres_timesync
 
 All the symlinks are created for you in the current directory 
-if use the option --symlinks
+if use the option --symlinks:
 
   perl check_postgres.pl --symlinks
 
 If the file name already exists, it will not be overwritten. If the file exists 
-and is a symlink, you can force it to overwrite by using "--action=build_symlinks_force"
+and is a symlink, you can force it to overwrite by using "--action=build_symlinks_force".
 
 Most actions take a I<--warning> and a I<--critical> option, indicating at what 
 point we change from OK to WARNING, and what point we go to CRITICAL. Note that 
