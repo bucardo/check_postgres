@@ -2711,6 +2711,9 @@ sub run_command {
             }
             $db->{ok} = 1;
 
+            ## Remove carriage returns (i.e. on Win32)
+            $db->{slurp} =~ s/\r//g;
+
             ## Unfortunately, psql outputs "(No rows)" even with -t and -x
             $db->{slurp} = '' if ! defined $db->{slurp} or index($db->{slurp},'(')==0;
 
@@ -10367,6 +10370,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   check_hot_standby_delay: Correct extra space in perfdata
     (Adrien Nayrat)
+
+  Remove \r from psql output as it can confuse some regexes
+    (Greg Sabino Mullane)
 
 =item B<Version 2.22.0> June 30, 2015
 
