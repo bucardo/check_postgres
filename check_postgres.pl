@@ -6263,10 +6263,35 @@ sub check_pgpool_processes {
     # Count active pgpool processes using SHOW POOL_PROCESSES ouptut
     # caveat: needs at least one free pool connection
 
-    $SQL = 'PGPOOL SHOW num_init_children;';
-    my $info = run_command($SQL);
+    my $num_init_children;
+    my $info;
+    my $pool_version;
+
+    $SQL = 'SHOW pool_version;';
+    $info = run_command($SQL);
     $db = $info->{db}[0];
-    my $num_init_children = $db->{slurp}[0]{num_init_children};
+    $pool_version = $db->{slurp}[0]{pool_version};
+
+    if (substr($pool_version,0,3) < 3.6) {
+
+        $SQL = 'SHOW POOL_STATUS;';
+        $info = run_command($SQL, { regex => qr[num_init_children] });
+        $db = $info->{db}[0];
+        my $cfg = $db->{slurp};
+
+        for my $i (@$cfg) {
+            if ($i->{item} eq 'num_init_children') {
+                $num_init_children = $i->{value};
+                last;
+            }
+        }
+    }
+    else {
+        $SQL = 'PGPOOL SHOW num_init_children;';
+        $info = run_command($SQL);
+        $db = $info->{db}[0];
+        $num_init_children = $db->{slurp}[0]{num_init_children};
+    }
 
     my $active = 0;
     my ($w, $c);
