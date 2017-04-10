@@ -80,7 +80,7 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 COPYRIGHT
 ---------
 
-  Copyright (c) 2007-2015 Greg Sabino Mullane
+  Copyright (c) 2007-2017 Greg Sabino Mullane
 
 
 LICENSE INFORMATION
