@@ -238,37 +238,37 @@ sub test_database_handle {
             my $COM;
 
             $SQL = q{SELECT * FROM pg_database WHERE datname = 'postgres'};
-            my $res = qx{psql -Ax -qt -d template1 -q -h "$host" -c "$SQL"};
+            my $res = qx{psql -Ax -qt -d template1 -q -h "$host" -X -c "$SQL"};
             if ($res !~ /postgres/) {
-                $COM = qq{psql -d template1 -q -h "$host" -c "CREATE DATABASE postgres"};
+                $COM = qq{psql -d template1 -q -h "$host" -X -c "CREATE DATABASE postgres"};
                 system $COM;
             }
 
             my $newuser = $self->{testuser};
             $SQL = qq{SELECT * FROM pg_user WHERE usename = '$newuser'};
-            $res = qx{psql -Ax -qt -d template1 -q -h "$host" -c "$SQL"};
+            $res = qx{psql -Ax -qt -d template1 -q -h "$host" -X -c "$SQL"};
             if ($res !~ /$newuser/) {
-                $COM = qq{psql -d template1 -q -h "$host" -c "CREATE USER $newuser"};
+                $COM = qq{psql -d template1 -q -h "$host" -X -c "CREATE USER $newuser"};
                 system $COM;
                 $SQL = qq{UPDATE pg_shadow SET usesuper='t' WHERE usename = '$newuser'};
-                $COM = qq{psql -d postgres -q -h "$host" -c "$SQL"};
+                $COM = qq{psql -d postgres -q -h "$host" -X -c "$SQL"};
                 system $COM;
             }
 
             $newuser = $self->{testuser2};
             $SQL = qq{SELECT * FROM pg_user WHERE usename = '$newuser'};
-            $res = qx{psql -Ax -qt -d template1 -q -h "$host" -c "$SQL"};
+            $res = qx{psql -Ax -qt -d template1 -q -h "$host" -X -c "$SQL"};
             if ($res !~ /$newuser/) {
-                $COM = qq{psql -d template1 -q -h "$host" -c "CREATE USER $newuser"};
+                $COM = qq{psql -d template1 -q -h "$host" -X -c "CREATE USER $newuser"};
                 system $COM;
                 $SQL = qq{UPDATE pg_shadow SET usesuper='t' WHERE usename = '$newuser'};
-                $COM = qq{psql -d postgres -q -h "$host" -c "$SQL"};
+                $COM = qq{psql -d postgres -q -h "$host" -X -c "$SQL"};
                 system $COM;
             }
 
             for my $lang (qw/plpgsql plperlu/) {
                 $SQL = qq{SELECT * FROM pg_language WHERE lanname = '$lang'};
-                $res = qx{psql -Ax -qt -d postgres -q -h "$host" -c "$SQL"};
+                $res = qx{psql -Ax -qt -d postgres -q -h "$host" -X -c "$SQL"};
                 if ($res !~ /$lang/) {
                     my $createlang = $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/createlang" : 'createlang';
                     $COM = qq{$createlang -d postgres -h "$host" $lang};
