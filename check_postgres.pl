@@ -8088,6 +8088,7 @@ sub check_txn_idle {
 
         ## Keep track of the longest overall time
         $maxr = $r if $r->{seconds} >= $maxr->{seconds};
+        $maxr = 0 if $r->{seconds} >= $maxr->{seconds} and $r->{seconds} eq '-0'; ## if epoch rounds to -0, just use 0
 
         $count++;
     }
