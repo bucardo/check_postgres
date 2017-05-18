@@ -2711,11 +2711,11 @@ sub run_command {
             }
             $db->{ok} = 1;
 
-            ## Remove carriage returns (i.e. on Win32)
-            $db->{slurp} =~ s/\r//g;
-
             ## Unfortunately, psql outputs "(No rows)" even with -t and -x
             $db->{slurp} = '' if ! defined $db->{slurp} or index($db->{slurp},'(')==0;
+
+            ## Remove carriage returns (i.e. on Win32)
+            $db->{slurp} =~ s/\r//g;
 
             ## Allow an empty query (no matching rows) if requested
             if ($arg->{emptyok} and $db->{slurp} =~ /^\s*$/) {
