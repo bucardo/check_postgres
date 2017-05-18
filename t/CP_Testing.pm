@@ -93,7 +93,7 @@ sub test_database_handle {
             :                  'initdb';
 
         ## Grab the version for finicky items
-        if (qx{$initdb --version} !~ /(\d+)\.(\d+)/) {
+        if (qx{$initdb --version} !~ /(\d+)(?:\.(\d+))?/) {
             die qq{Could not determine the version of initdb in use!\n};
         }
         my ($imaj,$imin) = ($1,$2);
@@ -188,7 +188,7 @@ sub test_database_handle {
         : $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/pg_ctl"
         :                  'pg_ctl';
 
-    if (qx{$pg_ctl --version} !~ /(\d+)\.(\d+)/) {
+    if (qx{$pg_ctl --version} !~ /(\d+)(?:\.(\d+))?/) {
         die qq{Could not determine the version of pg_ctl in use!\n};
     }
     my ($maj,$min) = ($1,$2);
