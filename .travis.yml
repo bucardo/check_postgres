@@ -17,9 +17,9 @@ env:
 before_install:
   # apt.postgresql.org is already configured, we just need to add 9.6
   - |
-    if [ "$PGVERSION" = "9.6" ]; then
+    if [ "$PGVERSION" = "10" ]; then
       # update pgdg-source.list
-      sudo sed -i -e 's/main/main 9.6/' /etc/apt/sources.list.d/pgdg*.list
+      sudo sed -i -e 's/main/main 10/' /etc/apt/sources.list.d/pgdg*.list
     fi
   - sudo apt-get -qq update
 
