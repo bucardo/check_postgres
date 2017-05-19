@@ -10,6 +10,7 @@ env:
   - PGVERSION=9.4
   - PGVERSION=9.5
   - PGVERSION=9.6
+  - PGVERSION=10
 
 # we don't set "language: perl" here because that doesn't use the system perl
 
