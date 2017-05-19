@@ -2991,16 +2991,31 @@ sub verify_version {
         ndie $info->{db}[0]{error};
     }
 
-    if (!defined $info->{db}[0] or $info->{db}[0]{slurp}[0]{setting} !~ /((\d+)\.(\d+))/) {
+    if (!defined $info->{db}[0]) {
         ndie msg('die-badversion', $SQL);
     }
-    my ($sver,$smaj,$smin) = ($1,$2,$3);
+
+    my ($sver,$smaj,$smin);
+
+    if ($info->{db}[0]{slurp}[0]{setting} !~ /((\d+)\.(\d+))/) {
+        # check for Pg10+
+        if ($info->{db}[0]{slurp}[0]{setting} !~ /(1\d+)/) {
+            ndie msg('die-badversion', $SQL);
+        }
+        else {
+            $sver = $smaj = $1;
+            $smin = 0;
+        }
+    }
+    else {
+        ($sver,$smaj,$smin) = ($1,$2,$3);
+    }
 
     if ($versiononly) {
         return $sver;
     }
 
-    if ($limit =~ /VERSION: ((\d+)\.(\d+))/) {
+    if ($limit =~ /VERSION: ((\d+)(?:\.(\d+))?)/) {
         my ($rver,$rmaj,$rmin) = ($1,$2,$3);
         if ($smaj < $rmaj or ($smaj==$rmaj and $smin < $rmin)) {
             ndie msg('die-action-version', $action, $rver, $sver);
