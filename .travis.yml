@@ -12,6 +12,9 @@ env:
   - PGVERSION=9.6
   - PGVERSION=10
 
+dist: trusty
+sudo: required
+
 # we don't set "language: perl" here because that doesn't use the system perl
 
 before_install:
