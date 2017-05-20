@@ -67,6 +67,10 @@ my %opts = (
     NEEDS_LINKING  => 0,
     NORECURS       => 1,
     PM             => {},
+    TEST_REQUIRES  => {
+        'DBD::Pg'             => '2.0',
+        'DBI'                 => '1.51',
+    },
     clean          => { FILES => join ' ' => @cleanfiles },
 );
 
