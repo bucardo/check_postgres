@@ -14,6 +14,10 @@ env:
 
 dist: trusty
 sudo: required
+language: perl
+perl:
+  - 5.10
+  - 5.24
 
 # we don't set "language: perl" here because that doesn't use the system perl
 
