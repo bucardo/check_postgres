@@ -59,6 +59,8 @@ my %opts = (
         'ExtUtils::MakeMaker' => '6.11',
         'Test::More'          => '0.61',
         'version'             => '0',
+        'DBD::Pg'             => '2.0',
+        'DBI'                 => '1.51',
     },
     NO_META        => 1,
     VERSION_FROM   => 'check_postgres.pl',
@@ -67,10 +69,6 @@ my %opts = (
     NEEDS_LINKING  => 0,
     NORECURS       => 1,
     PM             => {},
-    TEST_REQUIRES  => {
-        'DBD::Pg'             => '2.0',
-        'DBI'                 => '1.51',
-    },
     clean          => { FILES => join ' ' => @cleanfiles },
 );
 
