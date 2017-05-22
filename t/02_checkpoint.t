@@ -53,7 +53,7 @@ SKIP:
 {
 
 if ($result =~ /Date::Parse/) {
-    skip 'Cannot test checkpoint action unless Date::Parse module is installed', 6;
+    skip 'Cannot test checkpoint action unless Date::Parse module is installed', 7;
 }
 
 like ($cp->run(qq{-w 30 --datadir="$host"}), qr{^$label OK}, $t);
