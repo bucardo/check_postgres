@@ -48,7 +48,7 @@ script:
   - rm -rf test_database_check_postgres*
   - perl Makefile.PL
   - cpanm --quiet --installdeps --notest .
-  - PGBINDIR=/usr/lib/postgresql/$PGVERSION/bin make test
+  - PGBINDIR=/usr/lib/postgresql/$PGVERSION/bin make test TEST_VERBOSE=1
 
 after_script:
   - tail -n 200 test_database_check_postgres*/pg.log
