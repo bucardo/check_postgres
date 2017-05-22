@@ -2,15 +2,15 @@
 ---
 # versions to run on
 env:
-  - PGVERSION=8.4
-  - PGVERSION=9.0
-  - PGVERSION=9.1
-  - PGVERSION=9.2
-  - PGVERSION=9.3
-  - PGVERSION=9.4
-  - PGVERSION=9.5
-  - PGVERSION=9.6
   - PGVERSION=10
+  - PGVERSION=9.6
+  - PGVERSION=9.5
+  - PGVERSION=9.4
+  - PGVERSION=9.3
+  - PGVERSION=9.2
+  - PGVERSION=9.1
+  - PGVERSION=9.0
+  - PGVERSION=8.4
 
 dist: trusty
 sudo: required
