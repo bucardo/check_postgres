@@ -22,7 +22,7 @@ perl:
 # we don't set "language: perl" here because that doesn't use the system perl
 
 before_install:
-  # apt.postgresql.org is already configured, we just need to add 9.6
+  # apt.postgresql.org is already configured, we just need to add 10
   - |
     if [ "$PGVERSION" = "10" ]; then
       # update pgdg-source.list

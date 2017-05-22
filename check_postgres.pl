@@ -4691,6 +4691,9 @@ sub check_disk_space {
     ## NOTE: Needs to run on the same system (for now)
     ## XXX Allow custom ssh commands for remote df and the like
 
+    my $PG10 = verify_version() >= 10;
+    my $pg_xlog = $PG10 ? 'pg_wal' : 'pg_xlog';
+
     my ($warning, $critical) = validate_size_or_percent_with_oper
         ({
           default_warning  => '90%',
@@ -4738,7 +4741,7 @@ WHERE spclocation <> ''
             $dir{$datadir} = 1;
 
             ## Check if the WAL files are on a separate disk
-            my $xlog = "$datadir/pg_xlog";
+            my $xlog = "$datadir/$pg_xlog";
             if (-l $xlog) {
                 my $linkdir = readlink($xlog);
                 $dir{$linkdir} = 1 if ! exists $dir{$linkdir};
@@ -5076,6 +5079,7 @@ sub check_hot_standby_delay {
     ## --warning='1048576 and 2min' --critical='16777216 and 10min'
 
     my $version = verify_version();
+    my $PG10 = $version >= 10;
 
     my ($warning, $wtime, $critical, $ctime) = validate_integer_for_time({default_to_int => 1});
     if ($version < 9.1 and (length $wtime or length $ctime)) {
@@ -5121,6 +5125,7 @@ sub check_hot_standby_delay {
     if ($version >= 9.1) {
         $SQL .= q{, COALESCE(ROUND(EXTRACT(epoch FROM now() - pg_last_xact_replay_timestamp())),0) AS seconds};
     }
+    $SQL =~ s/xlog_location/wal_lsn/g if $PG10;
     my $info = run_command($SQL, { dbnumber => $slave, regex => qr/\// });
     my $saved_db;
     for $db (@{$info->{db}}) {
@@ -5148,6 +5153,7 @@ sub check_hot_standby_delay {
 
     ## On master
     $SQL = q{SELECT pg_current_xlog_location() AS location};
+    $SQL =~ s/xlog_location/wal_lsn/g if $PG10;
     $info = run_command($SQL, { dbnumber => $master });
     for $db (@{$info->{db}}) {
         my $location = $db->{slurp}[0]{location};
@@ -5225,6 +5231,9 @@ sub check_replication_slots {
     ## Valid units: b, k, m, g, t, e
     ## All above may be written as plural or with a trailing 'b'
 
+    my $version = verify_version();
+    my $PG10 = $version >= 10;
+
     my ($warning, $critical) = validate_range({type => 'size'});
 
     $SQL = qq{
@@ -5236,6 +5245,7 @@ sub check_replication_slots {
         FROM pg_replication_slots)
         SELECT *, pg_size_pretty(delta) AS delta_pretty FROM slots;
     };
+    $SQL =~ s/xlog_location/wal_lsn/g if $PG10;
 
     if ($opt{perflimit}) {
         $SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
@@ -8349,6 +8359,8 @@ sub check_wal_files {
     ## Critical and warning are the number of files
     ## Example: --critical=40
 
+    my $pg_xlog = verify_version() >= 10 ? 'pg_wal' : 'pg_xlog';
+    
     my $subdir = shift || '';
     my $extrabit = shift || '';
 
@@ -8366,7 +8378,7 @@ sub check_wal_files {
     my ($warning, $critical) = validate_range($arg);
 
     my $lsfunc = $opt{lsfunc} || 'pg_ls_dir';
-    my $lsargs = $opt{lsfunc} ? "" : "'pg_xlog$subdir'";
+    my $lsargs = $opt{lsfunc} ? "" : "'$pg_xlog$subdir'";
 
     ## Figure out where the pg_xlog directory is
     $SQL = qq{SELECT count(*) AS count FROM $lsfunc($lsargs) WHERE $lsfunc ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)

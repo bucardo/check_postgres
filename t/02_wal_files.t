@@ -38,6 +38,7 @@ if ($ver < 80100) {
 
     exit;
 }
+my $PG10 = $dbh->{pg_server_version} >= 100000;
 
 $t=qq{$S works as expected for warnings};
 like ($cp->run('--warning=30'), qr{^$label OK}, $t);
@@ -67,9 +68,9 @@ is ($cp->run('--critical=101 --output=mrtg'), "99\n0\n\n\n", $t);
 # test --lsfunc
 $dbh->do(q{CREATE FUNCTION ls_xlog_dir()
       RETURNS SETOF TEXT
-      AS $$ SELECT pg_ls_dir('pg_xlog') $$
+      AS $$ SELECT pg_ls_dir(?) $$
       LANGUAGE SQL
-      SECURITY DEFINER});
+      SECURITY DEFINER}, undef, $PG10 ? 'pg_wal' : 'pg_xlog' );
 $cp->create_fake_pg_table('ls_xlog_dir', ' ');
 $dbh->do(q{INSERT INTO cptest.ls_xlog_dir SELECT 'ABCDEF123456ABCDEF123456' FROM generate_series(1,55)});
 $dbh->commit();
