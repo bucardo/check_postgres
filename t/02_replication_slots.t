@@ -35,9 +35,6 @@ if ($ver < 90400) {
 
 $t = qq{$S self-identifies correctly};
 $result = $cp->run(q{-w 0});
-
-diag($result);
-
 like ($result, qr{^$label}, $t);
 
 $t = qq{$S identifies host};
