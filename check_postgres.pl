@@ -2059,11 +2059,11 @@ if ($opt{test}) {
         my $limit = $testaction{lc $ac};
         next if ! defined $limit;
 
-        if ($limit =~ /VERSION: ((\d+)\.(\d+))/) {
+        if ($limit =~ /VERSION: ((\d+)\.?(\d+))/) {
             my ($rver,$rmaj,$rmin) = ($1,$2,$3);
             for my $db (@{$info->{db}}) {
                 next unless exists $db->{ok};
-                if ($set{server_version} !~ /((\d+)\.(\d+))/) {
+                if ($set{server_version} !~ /((\d+)\.?(\d+))/) {
                     print msgn('testmode-nover', $db->{pname});
                     next;
                 }
@@ -2079,7 +2079,7 @@ if ($opt{test}) {
             my ($rver,$rmaj,$rmin) = ($1,$2,$3);
             for my $db (@{$info->{db}}) {
                 next unless exists $db->{ok};
-                if ($set{server_version} !~ /((\d+)\.(\d+))/) {
+                if ($set{server_version} !~ /((\d+)\.?(\d+))/) {
                     print msgn('testmode-nover', $db->{pname});
                     next;
                 }
@@ -2603,7 +2603,7 @@ sub run_command {
             else {
                 $string = $arg->{oldstring} || $arg->{string};
                 for my $row (@{$arg->{version}}) {
-                    if ($row !~ s/^([<>]?)(\d+\.\d+)\s+//) {
+                    if ($row !~ s/^([<>]?)(\d+\.?\d+)\s+//) {
                         ndie msg('die-badversion', $row);
                     }
                     my ($mod,$ver) = ($1||'',$2);
@@ -2726,7 +2726,7 @@ sub run_command {
                 if ($db->{error}) {
                     ndie $db->{error};
                 }
-                if ($db->{slurp} !~ /(\d+\.\d+)/) {
+                if ($db->{slurp} !~ /(\d+\.?\d+)/) {
                     ndie msg('die-badversion', $db->{slurp});
                 }
                 $db->{version} = $1;
@@ -2997,18 +2997,11 @@ sub verify_version {
 
     my ($sver,$smaj,$smin);
 
-    if ($info->{db}[0]{slurp}[0]{setting} !~ /((\d+)\.(\d+))/) {
-        # check for Pg10+
-        if ($info->{db}[0]{slurp}[0]{setting} !~ /(1\d+)/) {
-            ndie msg('die-badversion', $SQL);
-        }
-        else {
-            $sver = $smaj = $1;
-            $smin = 0;
-        }
+    if ($info->{db}[0]{slurp}[0]{setting} !~ /^((\d+)(\.(:?\d+))?)/) {
+        ndie msg('die-badversion', $SQL);
     }
     else {
-        ($sver,$smaj,$smin) = ($1,$2,$3);
+        ($sver,$smaj,$smin) = ($1,$2,$3||0);
     }
 
     if ($versiononly) {
@@ -3200,10 +3193,10 @@ sub validate_range {
     }
     elsif ('version' eq $type) {
         my $msg = msg('range-version');
-        if (length $warning and $warning !~ /^\d+\.\d+\.?[\d\w]*$/) {
+        if (length $warning and $warning !~ /^\d+\.?\d+\.?[\d\w]*$/) {
             ndie msg('range-badversion', 'warning', $msg);
         }
-        if (length $critical and $critical !~ /^\d+\.\d+\.?[\d\w]*$/) {
+        if (length $critical and $critical !~ /^\d+\.?\d+\.?[\d\w]*$/) {
             ndie msg('range-badversion', 'critical', $msg);
         }
         if (! length $critical and ! length $warning) {
@@ -8286,10 +8279,10 @@ sub check_version {
     ## or the major, minor, and revision (e.g. 8.2.4 or even 8.3beta4)
 
     if ($MRTG) {
-        if (!exists $opt{mrtg} or $opt{mrtg} !~ /^\d+\.\d+/) {
+        if (!exists $opt{mrtg} or $opt{mrtg} !~ /^\d+\.?\d+/) {
             ndie msg('version-badmrtg');
         }
-        if ($opt{mrtg} =~ /^\d+\.\d+$/) {
+        if ($opt{mrtg} =~ /^\d+\.?\d+$/) {
             $opt{critical} = $opt{mrtg};
         }
         else {
@@ -8299,13 +8292,13 @@ sub check_version {
 
     my ($warning, $critical) = validate_range({type => 'version', forcemrtg => 1});
 
-    my ($warnfull, $critfull) = (($warning =~ /^\d+\.\d+$/ ? 0 : 1),($critical =~ /^\d+\.\d+$/ ? 0 : 1));
+    my ($warnfull, $critfull) = (($warning =~ /^\d+\.?\d+$/ ? 0 : 1),($critical =~ /^\d+\.?\d+$/ ? 0 : 1));
 
     my $info = run_command('SELECT version() AS version');
 
     for $db (@{$info->{db}}) {
         my $row = $db->{slurp}[0];
-        if ($row->{version} !~ /((\d+\.\d+)(\w+|\.\d+))/) {
+        if ($row->{version} !~ /((\d+\.?\d+)(\w+|\.\d+))/) {
             add_unknown msg('invalid-query', $row->{version});
             next;
         }
