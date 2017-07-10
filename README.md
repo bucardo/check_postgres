@@ -34,7 +34,7 @@ The better way to install this script is via the standard Perl process:
 
     perl Makefile.PL
     make
-    make test
+    env -i make test
     make install
 
 The last step usually needs to be done as the root user. You may want to 
@@ -44,7 +44,8 @@ for that purpose. See the "Quick" instructions above.
 For `make test`, please report any failing tests to check_postgres@bucardo.org. 
 The tests need to have some standard Postgres binaries available, such as 
 `initdb`, `psql`, and `pg_ctl`. If these are not in your path, or you want to 
-use specific ones, please set the environment variable `PGBINDIR` first.
+use specific ones, please set the environment variable `PGBINDIR` first. More 
+details on running the testsuite are available in `README.dev`.
 
 Once `make install` has been done, you should have access to the complete 
 documentation by typing:
