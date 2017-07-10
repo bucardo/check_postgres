@@ -16,10 +16,8 @@ dist: trusty
 sudo: required
 language: perl
 perl:
-  - 5.10
-  - 5.24
-
-# we don't set "language: perl" here because that doesn't use the system perl
+  - '5.10'
+  - '5.24'
 
 before_install:
   # apt.postgresql.org is already configured, we just need to add 10
