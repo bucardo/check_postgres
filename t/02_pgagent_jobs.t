@@ -124,14 +124,14 @@ like $cp->run('-c=2h'), qr{^$label OK: DB "postgres"},
     "$S -c=2h returns ok with failed job before our time";
 
 like $cp->run('-c=6h'),
-    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!},
+    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF! },
     "$S -c=6h returns critical with failed job within our time";
 
 like $cp->run('-w=2h'), qr{^$label OK: DB "postgres"},
     "$S -w=2h returns ok with failed job before our time";
 
 like $cp->run('-w=6h'),
-    qr{^$label WARNING: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!},
+    qr{^$label WARNING: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF! },
     "$S -w=6h returns warninf with failed job within our time";
 
 like $cp->run('-w=2h'), qr{^$label OK: DB "postgres"},
@@ -141,15 +141,15 @@ like $cp->run('-w=4h -c=2h'), qr{^$label OK: DB "postgres"},
     "$S -w=4h =c=2h returns ok with failed job before our time";
 
 like $cp->run('-w=5h -c=2h'),
-    qr{^$label WARNING: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!},
+    qr{^$label WARNING: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF! },
     "$S -w=5h =c=2h returns warning with failed job within our time";
 
 like $cp->run('-w=2h -c=5h'),
-    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!},
+    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF! },
     "$S -w=2h =c=5h returns critical with failed job within our time";
 
 like $cp->run('-w=5h -c=5h'),
-    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!},
+    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF! },
     "$S -w=5h =c=5h returns critical with failed job within our time";
 
 # Make a second job fail, back 30 hours.
@@ -165,14 +165,14 @@ like $cp->run('-c=2h'), qr{^$label OK: DB "postgres"},
     "$S -c=2h returns ok with failed job before our time";
 
 like $cp->run('-c=6h'),
-    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!},
+    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF! },
     "$S -c=6h returns critical with failed job within our time";
 
 like $cp->run('-w=2h'), qr{^$label OK: DB "postgres"},
     "$S -w=2h returns ok with failed job before our time";
 
 like $cp->run('-w=6h'),
-    qr{^$label WARNING: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!},
+    qr{^$label WARNING: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF! },
     "$S -w=6h returns warninf with failed job within our time";
 
 like $cp->run('-w=2h'), qr{^$label OK: DB "postgres"},
@@ -182,42 +182,42 @@ like $cp->run('-w=4h -c=2h'), qr{^$label OK: DB "postgres"},
     "$S -w=4h =c=2h returns ok with failed job before our time";
 
 like $cp->run('-w=5h -c=2h'),
-    qr{^$label WARNING: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!},
+    qr{^$label WARNING: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF! },
     "$S -w=5h =c=2h returns warning with failed job within our time";
 
 like $cp->run('-w=2h -c=5h'),
-    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!},
+    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF! },
     "$S -w=2h =c=5h returns critical with failed job within our time";
 
 like $cp->run('-w=5h -c=5h'),
-    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!},
+    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF! },
     "$S -w=5h -c=5h returns critical with failed job within our time";
 
 # Go back further in time!
 like $cp->run('-w=30h -c=2h'),
-    qr{^$label WARNING: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!},
-    "$S -w=30h -c=5h returns warning for older failed job";
+    qr{^$label WARNING: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!; 64 Restore/analyze: OMGWTFLOL! },
+    "$S -w=30h -c=2h returns warning for older failed job";
 
 like $cp->run('-w=30h -c=6h'),
-    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!; 64 Restore/analyze: OMGWTFLOL!},
+    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!; 64 Restore/analyze: OMGWTFLOL! },
     "$S -w=30h -c=6h returns critical with both jobs, more recent critical";
 
 like $cp->run('-c=30h'),
-    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!; 64 Restore/analyze: OMGWTFLOL!},
+    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!; 64 Restore/analyze: OMGWTFLOL! },
     "$S -c=30h returns critical with both failed jobs";
 
 like $cp->run('-w=30h'),
-    qr{^$label WARNING: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!; 64 Restore/analyze: OMGWTFLOL!},
+    qr{^$label WARNING: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!; 64 Restore/analyze: OMGWTFLOL! },
     "$S -w=30h returns critical with both failed jobs";
 
 # Try with critical recent and warning longer ago.
 like $cp->run('-w=30h -c=6h'),
-    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!; 64 Restore/analyze: OMGWTFLOL!},
+    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!; 64 Restore/analyze: OMGWTFLOL! },
     "$S -w=30h -c=6h returns critical with both failed jobs";
 
 # Try with warning recent and critical longer ago.
 like $cp->run('-c=30h -w=6h'),
-    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!; 64 Restore/analyze: OMGWTFLOL!},
+    qr{^$label CRITICAL: DB "postgres" [()][^)]+[)] 255 Restore/analyze: WTF!; 64 Restore/analyze: OMGWTFLOL! },
     "$S -c=30h -w=6h returns critical with both failed jobs";
 
 # Undo the more recent failure.

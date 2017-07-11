@@ -5972,6 +5972,7 @@ sub check_pgagent_jobs {
           JOIN pgagent.pga_jobsteplog slog ON jlog.jlgid = slog.jsljlgid AND step.jstid = slog.jsljstid
          WHERE ((slog.jslresult = -1 AND step.jstkind='s') OR (slog.jslresult <> 0 AND step.jstkind='b'))
            AND EXTRACT('epoch' FROM NOW() - (jlog.jlgstart + jlog.jlgduration)) < $seconds
+      ORDER BY jlog.jlgstart DESC
     };
 
     my $info = run_command($SQL);
@@ -10344,12 +10345,14 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   total_relation_size, using the respective pg_indexes_size() and
   pg_total_relation_size() functions. All size checks will now also check
   materialized views where applicable.
+    (Christoph Berg)
 
   Connection errors are now always critical, not unknown.
     (Christoph Berg)
 
   New action replication_slots checking if logical or physical replication
   slots have accumulated too much data
+    (Glyn Astill)
 
   Multiple same_schema improvements
     (Glyn Astill)
@@ -10381,6 +10384,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Remove \r from psql output as it can confuse some regexes
     (Greg Sabino Mullane)
+
+  Sort failed jobs in check_pgagent_jobs for stable output.
+    (Christoph Berg)
 
 =item B<Version 2.22.0> June 30, 2015
 
