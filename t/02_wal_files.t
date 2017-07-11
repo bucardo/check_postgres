@@ -49,6 +49,7 @@ like ($cp->run('--critical=1'), qr{^$label CRITICAL}, $t);
 
 $cp->drop_schema_if_exists();
 $cp->create_fake_pg_table('pg_ls_dir', 'text');
+$dbh->commit();
 
 like ($cp->run('--critical=1'), qr{^$label OK}, $t);
 
@@ -65,9 +66,10 @@ $t=qq{$S returns correct MRTG information};
 is ($cp->run('--critical=101 --output=mrtg'), "99\n0\n\n\n", $t);
 
 # test --lsfunc
-$dbh->do(q{CREATE FUNCTION ls_xlog_dir()
+my $xlogdir = $ver >= 100000 ? 'pg_wal' : 'pg_xlog';
+$dbh->do(qq{CREATE FUNCTION ls_xlog_dir()
       RETURNS SETOF TEXT
-      AS $$ SELECT pg_ls_dir('pg_xlog') $$
+      AS \$\$ SELECT pg_ls_dir('$xlogdir') \$\$
       LANGUAGE SQL
       SECURITY DEFINER});
 $cp->create_fake_pg_table('ls_xlog_dir', ' ');

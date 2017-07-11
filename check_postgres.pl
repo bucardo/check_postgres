@@ -8383,8 +8383,10 @@ sub check_wal_files {
 
     ## Figure out where the pg_xlog directory is
     $SQL = qq{SELECT count(*) AS count FROM $lsfunc($lsargs) WHERE $lsfunc ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)
+    my $SQL10 = $SQL;
+    $SQL10 =~ s/pg_xlog/pg_wal/g unless ($opt{lsfunc});
 
-    my $info = run_command($SQL, {regex => qr[\d] });
+    my $info = run_command($SQL, {regex => qr[\d], version => [">9.6 $SQL10"] });
 
     my $found = 0;
     for $db (@{$info->{db}}) {
@@ -8780,7 +8782,7 @@ The current supported actions are:
 =head2 B<archive_ready>
 
 (C<symlink: check_postgres_archive_ready>) Checks how many WAL files with extension F<.ready> 
-exist in the F<pg_xlog/archive_status> directory, which is found 
+exist in the F<pg_xlog/archive_status> directory (PostgreSQL 10 and later: F<pg_wal/archive_status>), which is found 
 off of your B<data_directory>. If the I<--lsfunc> option is not used then this action must be run as a superuser, in order to access the
 contents of the F<pg_xlog/archive_status> directory. The minimum version to use this action is 
 Postgres 8.1. The I<--warning> and I<--critical> options are simply the number of 
@@ -9230,7 +9232,7 @@ B<data_directory> - The disk that the main data directory is on.
 
 B<log directory> - The disk that the log files are on.
 
-B<WAL file directory> - The disk that the write-ahead logs are on (e.g. symlinked pg_xlog)
+B<WAL file directory> - The disk that the write-ahead logs are on (e.g. symlinked pg_xlog or pg_wal)
 
 B<tablespaces> - Each tablespace that is on a separate disk.
 
@@ -10116,7 +10118,7 @@ fourth line indicates the current version. The version must be provided via the 
 
 =head2 B<wal_files>
 
-(C<symlink: check_postgres_wal_files>) Checks how many WAL files exist in the F<pg_xlog> directory, which is found 
+(C<symlink: check_postgres_wal_files>) Checks how many WAL files exist in the F<pg_xlog> directory (PostgreSQL 10 and later" F<pg_wal>), which is found 
 off of your B<data_directory>, sometimes as a symlink to another physical disk for 
 performance reasons. If the I<--lsfunc> option is not used then this action must be run as a superuser, in order to access the 
 contents of the F<pg_xlog> directory. The minimum version to use this action is 
