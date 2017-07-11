@@ -5233,8 +5233,10 @@ sub check_replication_slots {
     if ($opt{perflimit}) {
         $SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
     }
+    my $SQL10;
+    ($SQL10 = $SQL) =~ s/xlog_location/wal_lsn/g;
 
-    my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1, } );
+    my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1, version => [">9.6 $SQL10"] } );
     my $found = 0;
 
     for $db (@{$info->{db}}) {
@@ -10339,6 +10341,9 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 =over 4
 
 =item B<Version 2.22.1> Released ????
+
+  Support PostgreSQL 10.
+    (David Christensen, Christoph Berg)
 
   Change table_size to use pg_table_size() on 9.0+, i.e. include the TOAST
   table size in the numbers reported. Add new actions indexes_size and
