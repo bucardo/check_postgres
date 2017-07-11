@@ -340,6 +340,8 @@ Sequence "wakko.yakko" does not exist on all databases:
 
 $t = qq{$S reports sequence differences};
 $dbh2->do(q{CREATE SEQUENCE wakko.yakko MINVALUE 10 MAXVALUE 100 INCREMENT BY 3});
+$dbh1->do(q{SELECT nextval('wakko.yakko')});
+$dbh2->do(q{SELECT nextval('wakko.yakko')});
 
 like ($cp1->run($connect2),
       qr{^$label CRITICAL.*Items not matched: 1 .*

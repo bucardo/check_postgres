@@ -1024,6 +1024,7 @@ JOIN pg_roles r ON (r.oid = c.relowner)
 JOIN pg_namespace n ON (n.oid = c.relnamespace)
 WHERE c.relkind = 'S'},
         innerSQL   => 'SELECT * FROM ROWSAFENAME',
+        SQL10     => q{SELECT schemaname||'.'||sequencename AS name, * FROM pg_sequences},
     },
     view => {
         SQL       => q{
@@ -6743,7 +6744,7 @@ sub check_same_schema {
 
         my $foo = $info->{db}[0];
         my $version = $foo->{slurp}[0]{version};
-        $version =~ /\D+(\d+\.\d+)(\S+)/i or die qq{Invalid version: $version\n};
+        $version =~ /\D+(\d+\.?\d+)(\S+)/i or die qq{Invalid version: $version\n};
         my ($full,$major,$revision) = ("$1$2",$1,$2);
         $revision =~ s/^\.//;
         $dbver{$num} = {
@@ -7497,6 +7498,10 @@ sub find_catalog_info {
     }
     if ($type eq 'trigger' and $dbver->{major} <= 8.4) {
         $SQL =~ s/t.tgconstrindid = 0 AND //;
+    }
+    if ($type eq 'sequence' and $dbver->{major} >= 10) {
+        $SQL = $ci->{SQL10};
+        delete $ci->{innerSQL};
     }
 
     if (exists $ci->{exclude}) {
