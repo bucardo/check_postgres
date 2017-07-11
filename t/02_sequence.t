@@ -81,6 +81,8 @@ like ($cp->run('--critical=10%'), qr{CRITICAL:.+public.cp_test_sequence=11% \(ca
 
 $t=qq{$S returns correct information for a sequence with custom increment};
 $dbh->do("ALTER SEQUENCE $seqname INCREMENT 10 MAXVALUE 90 RESTART WITH 25");
+$dbh->do("SELECT nextval('$seqname')"); # otherwise 25 isn't visible on PG10+
+$dbh->commit();
 like ($cp->run('--critical=22%'), qr{CRITICAL:.+public.cp_test_sequence=33% \(calls left=6\)}, $t);
 
 $t=qq{$S returns correct information with MRTG output};

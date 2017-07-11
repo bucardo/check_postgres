@@ -7686,9 +7686,17 @@ FROM (
 WHERE nspname !~ '^pg_temp.*'
 ORDER BY nspname, seqname, typname
 };
+    my $SQL10 = q{
+SELECT seqname, last_value, slots, used, ROUND(used/slots*100) AS percent,
+  CASE WHEN slots < used THEN 0 ELSE slots - used END AS numleft
+FROM (
+ SELECT quote_ident(schemaname)||'.'||quote_ident(sequencename) AS seqname, COALESCE(last_value,min_value) AS last_value,
+  CEIL((max_value-min_value::numeric+1)/increment_by::NUMERIC) AS slots,
+  CEIL((COALESCE(last_value,min_value)-min_value::numeric+1)/increment_by::NUMERIC) AS used
+FROM pg_sequences) foo};
     ## use critic
 
-    my $info = run_command($SQL, {regex => qr{\w}, emptyok => 1} );
+    my $info = run_command($SQL, {regex => qr{\w}, emptyok => 1, version => [">9.6 SELECT 1"]} ); # actual SQL10 is executed below
 
     my $MAXINT2 = 32767;
     my $MAXINT4 = 2147483647;
@@ -7704,6 +7712,7 @@ ORDER BY nspname, seqname, typname
         my $multidb = @{$info->{db}} > 1 ? "$db->{dbname}." : '';
         my @seq_sql;
         for my $r (@{$db->{slurp}}) { # for each sequence, create SQL command to inspect it
+            next if ($db->{version} >= 10); # TODO: skip loop entirely
             my ($schema, $seq, $seqname, $typename) = @$r{qw/ nspname seqname safename typname /};
             next if skip_item($seq);
             my $maxValue = $typename eq 'int2' ? $MAXINT2 : $typename eq 'int4' ? $MAXINT4 : $MAXINT8;
@@ -7718,6 +7727,9 @@ FROM (
   CEIL((last_value-min_value::numeric+1)/increment_by::NUMERIC) AS used
 FROM $seqname) foo
 };
+        }
+        if ($db->{version} >= 10) {
+            @seq_sql = ($SQL10); # inject PG10 query here (TODO: pull this out of loops)
         }
         # Use UNION ALL to query multiple sequences at once, however if there are too many sequences this can exceed
         # maximum argument length; so split into chunks of 200 sequences or less and iterate over them.
