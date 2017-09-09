@@ -9889,7 +9889,7 @@ becomes "database #2" and is compared to the current database.
 
 To replace the old stored file with the new version, use the --replace argument.
 
-If you need to write the stored file to a specific direectory, use 
+If you need to write the stored file to a specific directory, use 
 the --audit-file-dir argument.
 
 To avoid false positives on value based checks caused by replication lag on
