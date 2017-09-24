@@ -6907,7 +6907,7 @@ sub check_same_schema {
     ## Set the total time
     $db->{totaltime} = sprintf '%.2f', tv_interval($start);
 
-    ## Before we outpu any results, rewrite the audit file if needed
+    ## Before we output any results, rewrite the audit file if needed
     ## We do this if we are reading from a saved file,
     ## and the "replace" argument is set
     if ($samedb and $opt{replace}) {
