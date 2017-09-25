@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 20;
+use Test::More;
 use lib 't','.';
 use CP_Testing;
 
@@ -77,7 +77,7 @@ $dbh->do ("SELECT pg_drop_replication_slot('cp_testing_slot')");
 
 SKIP: {
 
-    skip qq{Waiting for test_decoding plugin};
+    skip qq{Waiting for test_decoding plugin}, 10;
 
 # To do more tests on physical slots we'd actually have to kick off some activity by performing a connection to them (.. use pg_receivexlog or similar??)
 
@@ -128,5 +128,7 @@ like ($result, qr{^$label UNKNOWN:.*No matching replication slots}, $t);
 $dbh->do ("SELECT pg_drop_replication_slot('cp_testing_slot')");
 
 }
+
+done_testing();
 
 exit;
