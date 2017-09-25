@@ -4404,6 +4404,7 @@ sub check_custom_query {
         ##   use the second column value as the perfdata name,
         ##   use the result value as the perfdata value.
         my $perfname;
+        my $perfdata;
         my $grandtotal = @{$db->{slurp}};
         for my $r (@{$db->{slurp}}) {
             my $result = $r->{result};
@@ -4418,8 +4419,11 @@ sub check_custom_query {
             $goodrow++;
             if ($perfname) {
                 if ($grandtotal > 1) {
-                    $db->{perf} = sprintf ' %s=%s;%s;%s',
+                    $perfdata = sprintf ' %s=%s;%s;%s',
                         perfname($r->{$perfname}), $result, $warning, $critical;
+                    if ($perfdata ne $db->{perf}){
+                        $db->{perf} .= $perfdata;
+                    }
                 } else {
                     $db->{perf} .= sprintf ' %s=%s;%s;%s',
                         perfname($perfname), $r->{$perfname}, $warning, $critical;
