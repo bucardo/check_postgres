@@ -4404,7 +4404,10 @@ sub check_custom_query {
         ##   use the second column value as the perfdata name,
         ##   use the result value as the perfdata value.
         my $perfname;
-        my $perfdata;
+        my $perfdata = '';
+        if (! defined $db->{perf}){
+            $db->{perf} = '';
+        }
         my $grandtotal = @{$db->{slurp}};
         for my $r (@{$db->{slurp}}) {
             my $result = $r->{result};
