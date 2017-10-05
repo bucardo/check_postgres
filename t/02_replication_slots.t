@@ -28,8 +28,9 @@ my $label = 'POSTGRES_REPLICATION_SLOTS';
 my $ver = $dbh->{pg_server_version};
 if ($ver < 90400) {
     SKIP: {
-        skip 'replication slots not present before 9.4', 20;
+        skip 'replication slots not present before 9.4', 1;
     }
+    done_testing();
     exit 0;
 }
 
