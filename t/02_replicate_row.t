@@ -146,7 +146,7 @@ if (fork) {
         qr{^[1-5]\n0\n\n\n}, $t);
 }
 else {
-    sleep 1;
+    sleep 2;
     $SQL = q{UPDATE reptest SET foo = 'yin' WHERE id = 1};
     $dbh2->do($SQL);
     $dbh2->commit();
