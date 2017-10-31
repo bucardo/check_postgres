@@ -47,9 +47,11 @@
       <li><a href="#fsm_relations">fsm_relations</a></li>
       <li><a href="#hitratio">hitratio</a></li>
       <li><a href="#hot_standby_delay">hot_standby_delay</a></li>
+      <li><a href="#relation_size">relation_size</a></li>
       <li><a href="#index_size">index_size</a></li>
       <li><a href="#table_size">table_size</a></li>
-      <li><a href="#relation_size">relation_size</a></li>
+      <li><a href="#indexes_size">indexes_size</a></li>
+      <li><a href="#total_relation_size">total_relation_size</a></li>
       <li><a href="#last_analyze">last_analyze</a></li>
       <li><a href="#last_vacuum">last_vacuum</a></li>
       <li><a href="#last_autoanalyze">last_autoanalyze</a></li>
@@ -77,6 +79,7 @@
       <li><a href="#query_runtime">query_runtime</a></li>
       <li><a href="#query_time">query_time</a></li>
       <li><a href="#replicate_row">replicate_row</a></li>
+      <li><a href="#replication_slots">replication_slots</a></li>
       <li><a href="#same_schema">same_schema</a></li>
       <li><a href="#sequence1">sequence</a></li>
       <li><a href="#settings_checksum">settings_checksum</a></li>
@@ -133,7 +136,7 @@
   ## There are many other actions and options, please keep reading.
 
   The latest news and documentation can always be found at:
-  http://bucardo.org/check_postgres/</code></pre>
+  https://bucardo.org/Check_postgres/</code></pre>
 
 <h1 id="DESCRIPTION">DESCRIPTION</h1>
 
@@ -306,6 +309,14 @@
     POSTGRES_CHECKPOINT OK: Last checkpoint was 72 seconds ago | age=72;;300 mode=MASTER</code></pre>
 
 </dd>
+<dt id="assume-async"><b>--assume-async</b></dt>
+<dd>
+
+<p>If specified, indicates that any replication between servers is asynchronous. The option is only relevant for (<code>symlink: check_postgres_same_schema</code>).</p>
+
+<p>Example: postgres@db$./check_postgres.pl --action=same_schema --assume-async --dbhost=star,line</p>
+
+</dd>
 <dt id="h-or---help"><b>-h</b> or <b>--help</b></dt>
 <dd>
 
@@ -408,7 +419,7 @@
 
 <h1 id="ACTIONS">ACTIONS</h1>
 
-<p>The script runs one or more actions. This can either be done with the --action flag, or by using a symlink to the main file that contains the name of the action inside of it. For example, to run the action &quot;timesync&quot;, you may either issue:</p>
+<p>The action to be run is selected using the --action flag, or by using a symlink to the main file that contains the name of the action inside of it. For example, to run the action &quot;timesync&quot;, you may either issue:</p>
 
 <pre><code>  check_postgres.pl --action=timesync</code></pre>
 
@@ -416,11 +427,11 @@
 
 <pre><code>  check_postgres_timesync</code></pre>
 
-<p>All the symlinks are created for you in the current directory if use the option --symlinks</p>
+<p>All the symlinks are created for you in the current directory if use the option --symlinks:</p>
 
 <pre><code>  perl check_postgres.pl --symlinks</code></pre>
 
-<p>If the file name already exists, it will not be overwritten. If the file exists and is a symlink, you can force it to overwrite by using &quot;--action=build_symlinks_force&quot;</p>
+<p>If the file name already exists, it will not be overwritten. If the file exists and is a symlink, you can force it to overwrite by using &quot;--action=build_symlinks_force&quot;.</p>
 
 <p>Most actions take a <i>--warning</i> and a <i>--critical</i> option, indicating at what point we change from OK to WARNING, and what point we go to CRITICAL. Note that because criticals are always checked first, setting the warning equal to the critical is an effective way to turn warnings off and always give a critical.</p>
 
@@ -428,7 +439,7 @@
 
 <h2 id="archive_ready"><b>archive_ready</b></h2>
 
-<p>(<code>symlink: check_postgres_archive_ready</code>) Checks how many WAL files with extension <i>.ready</i> exist in the <i>pg_xlog/archive_status</i> directory, which is found off of your <b>data_directory</b>. If the <i>--lsfunc</i> option is not used then this action must be run as a superuser, in order to access the contents of the <i>pg_xlog/archive_status</i> directory. The minimum version to use this action is Postgres 8.1. The <i>--warning</i> and <i>--critical</i> options are simply the number of <i>.ready</i> files in the <i>pg_xlog/archive_status</i> directory. Usually, these values should be low, turning on the archive mechanism, we usually want it to archive WAL files as fast as possible.</p>
+<p>(<code>symlink: check_postgres_archive_ready</code>) Checks how many WAL files with extension <i>.ready</i> exist in the <i>pg_xlog/archive_status</i> directory (PostgreSQL 10 and later: <i>pg_wal/archive_status</i>), which is found off of your <b>data_directory</b>. If the <i>--lsfunc</i> option is not used then this action must be run as a superuser, in order to access the contents of the <i>pg_xlog/archive_status</i> directory. The minimum version to use this action is Postgres 8.1. The <i>--warning</i> and <i>--critical</i> options are simply the number of <i>.ready</i> files in the <i>pg_xlog/archive_status</i> directory. Usually, these values should be low, turning on the archive mechanism, we usually want it to archive WAL files as fast as possible.</p>
 
 <p>If the archive command fail, number of WAL in your <i>pg_xlog</i> directory will grow until exhausting all the disk space and force PostgreSQL to stop immediately.</p>
 
@@ -771,7 +782,7 @@
 
 <p><b>log directory</b> - The disk that the log files are on.</p>
 
-<p><b>WAL file directory</b> - The disk that the write-ahead logs are on (e.g. symlinked pg_xlog)</p>
+<p><b>WAL file directory</b> - The disk that the write-ahead logs are on (e.g. symlinked pg_xlog or pg_wal)</p>
 
 <p><b>tablespaces</b> - Each tablespace that is on a separate disk.</p>
 
@@ -853,13 +864,27 @@
 
 <pre><code>  check_hot_standby_delay --dbhost=master,replica1 --warning=&#39;1048576 and 2 min&#39; --critical=&#39;16777216 and 10 min&#39;</code></pre>
 
+<h2 id="relation_size"><b>relation_size</b></h2>
+
 <h2 id="index_size"><b>index_size</b></h2>
 
 <h2 id="table_size"><b>table_size</b></h2>
 
-<h2 id="relation_size"><b>relation_size</b></h2>
+<h2 id="indexes_size"><b>indexes_size</b></h2>
 
-<p>(symlinks: <code>check_postgres_index_size</code>, <code>check_postgres_table_size</code>, and <code>check_postgres_relation_size</code>) The actions <b>table_size</b> and <b>index_size</b> are simply variations of the <b>relation_size</b> action, which checks for a relation that has grown too big. Relations (in other words, tables and indexes) can be filtered with the <i>--include</i> and <i>--exclude</i> options. See the <a href="#BASIC-FILTERING">&quot;BASIC FILTERING&quot;</a> section for more details. Relations can also be filtered by the user that owns them, by using the <i>--includeuser</i> and <i>--excludeuser</i> options. See the <a href="#USER-NAME-FILTERING">&quot;USER NAME FILTERING&quot;</a> section for more details.</p>
+<h2 id="total_relation_size"><b>total_relation_size</b></h2>
+
+<p>(symlinks: <code>check_postgres_relation_size</code>, <code>check_postgres_index_size</code>, <code>check_postgres_table_size</code>, <code>check_postgres_indexes_size</code>, and <code>check_postgres_total_relation_size</code>)</p>
+
+<p>The actions <b>relation_size</b> and <b>index_size</b> check for a relation (table, index, materialized view), respectively an index that has grown too big, using the <b>pg_relation_size()</b> function.</p>
+
+<p>The action <b>table_size</b> checks tables and materialized views using <b>pg_table_size()</b>, i.e. including relation forks and TOAST table.</p>
+
+<p>The action <b>indexes_size</b> checks tables and materialized views for the size of the attached indexes using <b>pg_indexes_size()</b>.</p>
+
+<p>The action <b>total_relation_size</b> checks relations using <b>pg_total_relation_size()</b>, i.e. including relation forks, indexes and TOAST table.</p>
+
+<p>Relations can be filtered with the <i>--include</i> and <i>--exclude</i> options. See the <a href="#BASIC-FILTERING">&quot;BASIC FILTERING&quot;</a> section for more details. Relations can also be filtered by the user that owns them, by using the <i>--includeuser</i> and <i>--excludeuser</i> options. See the <a href="#USER-NAME-FILTERING">&quot;USER NAME FILTERING&quot;</a> section for more details.</p>
 
 <p>The values for the <i>--warning</i> and <i>--critical</i> options are file sizes, and may have units of bytes, kilobytes, megabytes, gigabytes, terabytes, or exabytes. Each can be abbreviated to the first letter. If no units are given, bytes are assumed. There are no default values: both the warning and the critical option must be given. The return text shows the size of the largest relation found.</p>
 
@@ -951,11 +976,11 @@
 
 <h2 id="new_version_bc"><b>new_version_bc</b></h2>
 
-<p>(<code>symlink: check_postgres_new_version_bc</code>) Checks if a newer version of the Bucardo program is available. The current version is obtained by running <code>bucardo_ctl --version</code>. If a major upgrade is available, a warning is returned. If a revision upgrade is available, a critical is returned. (Bucardo is a master to slave, and master to master replication system for Postgres: see http://bucardo.org for more information). See also the information on the <code>--get_method</code> option.</p>
+<p>(<code>symlink: check_postgres_new_version_bc</code>) Checks if a newer version of the Bucardo program is available. The current version is obtained by running <code>bucardo_ctl --version</code>. If a major upgrade is available, a warning is returned. If a revision upgrade is available, a critical is returned. (Bucardo is a master to slave, and master to master replication system for Postgres: see https://bucardo.org/ for more information). See also the information on the <code>--get_method</code> option.</p>
 
 <h2 id="new_version_box"><b>new_version_box</b></h2>
 
-<p>(<code>symlink: check_postgres_new_version_box</code>) Checks if a newer version of the boxinfo program is available. The current version is obtained by running <code>boxinfo.pl --version</code>. If a major upgrade is available, a warning is returned. If a revision upgrade is available, a critical is returned. (boxinfo is a program for grabbing important information from a server and putting it into a HTML format: see http://bucardo.org/wiki/boxinfo for more information). See also the information on the <code>--get_method</code> option.</p>
+<p>(<code>symlink: check_postgres_new_version_box</code>) Checks if a newer version of the boxinfo program is available. The current version is obtained by running <code>boxinfo.pl --version</code>. If a major upgrade is available, a warning is returned. If a revision upgrade is available, a critical is returned. (boxinfo is a program for grabbing important information from a server and putting it into a HTML format: see https://bucardo.org/Boxinfo/ for more information). See also the information on the <code>--get_method</code> option.</p>
 
 <h2 id="new_version_cp"><b>new_version_cp</b></h2>
 
@@ -967,7 +992,7 @@
 
 <h2 id="new_version_tnm"><b>new_version_tnm</b></h2>
 
-<p>(<code>symlink: check_postgres_new_version_tnm</code>) Checks if a newer version of the tail_n_mail program is available. The current version is obtained by running <code>tail_n_mail --version</code>. If a major upgrade is available, a warning is returned. If a revision upgrade is available, a critical is returned. (tail_n_mail is a log monitoring tool that can send mail when interesting events appear in your Postgres logs. See: http://bucardo.org/wiki/Tail_n_mail for more information). See also the information on the <code>--get_method</code> option.</p>
+<p>(<code>symlink: check_postgres_new_version_tnm</code>) Checks if a newer version of the tail_n_mail program is available. The current version is obtained by running <code>tail_n_mail --version</code>. If a major upgrade is available, a warning is returned. If a revision upgrade is available, a critical is returned. (tail_n_mail is a log monitoring tool that can send mail when interesting events appear in your Postgres logs. See: https://bucardo.org/tail_n_mail/ for more information). See also the information on the <code>--get_method</code> option.</p>
 
 <h2 id="pgb_pool_cl_active"><b>pgb_pool_cl_active</b></h2>
 
@@ -1072,7 +1097,7 @@
 
 <p>(<code>symlink: check_postgres_query_time</code>) Checks the length of running queries on one or more databases. There is no need to run this more than once on the same database cluster. Note that this already excludes queries that are &quot;idle in transaction&quot;. Databases can be filtered by using the <i>--include</i> and <i>--exclude</i> options. See the <a href="#BASIC-FILTERING">&quot;BASIC FILTERING&quot;</a> section for more details. You can also filter on the user running the query with the <i>--includeuser</i> and <i>--excludeuser</i> options. See the <a href="#USER-NAME-FILTERING">&quot;USER NAME FILTERING&quot;</a> section for more details.</p>
 
-<p>The values for the <i>--warning</i> and <i>--critical</i> options are amounts of time, and default to &#39;2 minutes&#39; and &#39;5 minutes&#39; respectively. Valid units are &#39;seconds&#39;, &#39;minutes&#39;, &#39;hours&#39;, or &#39;days&#39;. Each may be written singular or abbreviated to just the first letter. If no units are given, the unit is assumed to be seconds.</p>
+<p>The values for the <i>--warning</i> and <i>--critical</i> options are amounts of time, and at least one must be provided (no defaults). Valid units are &#39;seconds&#39;, &#39;minutes&#39;, &#39;hours&#39;, or &#39;days&#39;. Each may be written singular or abbreviated to just the first letter. If no units are given, the unit is assumed to be seconds.</p>
 
 <p>This action requires Postgres 8.1 or better.</p>
 
@@ -1109,6 +1134,16 @@
   --critical=5 --repinfo=receipt,receipt_id,9,zone,north,south</code></pre>
 
 <p>For MRTG output, returns on the first line the time in seconds the replication takes to finish. The maximum time is set to 4 minutes 30 seconds: if no replication has taken place in that long a time, an error is thrown.</p>
+
+<h2 id="replication_slots"><b>replication_slots</b></h2>
+
+<p>(<code>symlink: check_postgres_replication_slots</code>) Check the quantity of WAL retained for any replication slots in the target database cluster. This is handy for monitoring environments where all WAL archiving and replication is taking place over replication slots.</p>
+
+<p>Warning and critical are total bytes retained for the slot. E.g:</p>
+
+<pre><code>  check_postgres_replication_slots --port=5432 --host=yellow -warning=32M -critical=64M</code></pre>
+
+<p>Specific named slots can be monitored using --include/--exclude</p>
 
 <h2 id="same_schema"><b>same_schema</b></h2>
 
@@ -1170,7 +1205,9 @@
 
 <p>To replace the old stored file with the new version, use the --replace argument.</p>
 
-<p>If you need to write the stored file to a specific direectory, use the --audit-file-dir argument.</p>
+<p>If you need to write the stored file to a specific directory, use the --audit-file-dir argument.</p>
+
+<p>To avoid false positives on value based checks caused by replication lag on asynchronous replicas, use the <i>--assume-async</i> option.</p>
 
 <p>To enable snapshots at various points in time, you can use the &quot;--suffix&quot; argument to make the filenames unique to each run. See the examples below.</p>
 
@@ -1198,6 +1235,10 @@
 <p>Example 6: Run a historical comparison, then replace the file</p>
 
 <pre><code>  check_postgres_same_schema --dbname=cylon --suffix=daily --replace</code></pre>
+
+<p>Example 7: Verify that two databases on hosts star and line are the same, excluding value data (i.e. sequence last_val):</p>
+
+<pre><code>  check_postgres_same_schema --dbhost=star,line --assume-async </code></pre>
 
 <h2 id="sequence1"><b>sequence</b></h2>
 
@@ -1261,9 +1302,11 @@
 
 <p>(<code>symlink: check_postgres_txn_idle</code>) Checks the number and duration of &quot;idle in transaction&quot; queries on one or more databases. There is no need to run this more than once on the same database cluster. Databases can be filtered by using the <i>--include</i> and <i>--exclude</i> options. See the <a href="#BASIC-FILTERING">&quot;BASIC FILTERING&quot;</a> section below for more details.</p>
 
-<p>The <i>--warning</i> and <i>--critical</i> options are given as units of time, signed integers, or integers for units of time, and both must be provided (there are no defaults). Valid units are &#39;seconds&#39;, &#39;minutes&#39;, &#39;hours&#39;, or &#39;days&#39;. Each may be written singular or abbreviated to just the first letter. If no units are given and the numbers are unsigned, the units are assumed to be seconds.</p>
+<p>The <i>--warning</i> and <i>--critical</i> options are given as units of time, signed integers, or integers for units of time, and at least one must be provided (there are no defaults). Valid units are &#39;seconds&#39;, &#39;minutes&#39;, &#39;hours&#39;, or &#39;days&#39;. Each may be written singular or abbreviated to just the first letter. If no units are given and the numbers are unsigned, the units are assumed to be seconds.</p>
 
 <p>This action requires Postgres 8.3 or better.</p>
+
+<p>As of PostgreSQL 10, you can just GRANT <i>pg_read_all_stats</i> to an unprivileged user account. In all earlier versions, superuser privileges are required to see the queries of all users in the system; UNKNOWN is returned if queries cannot be checked. To only include queries by the connecting user, use <i>--includeuser</i>.</p>
 
 <p>Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:</p>
 
@@ -1283,7 +1326,7 @@
 
 <p>(<code>symlink: check_postgres_txn_time</code>) Checks the length of open transactions on one or more databases. There is no need to run this command more than once per database cluster. Databases can be filtered by use of the <i>--include</i> and <i>--exclude</i> options. See the <a href="#BASIC-FILTERING">&quot;BASIC FILTERING&quot;</a> section for more details. The owner of the transaction can also be filtered, by use of the <i>--includeuser</i> and <i>--excludeuser</i> options. See the <a href="#USER-NAME-FILTERING">&quot;USER NAME FILTERING&quot;</a> section for more details.</p>
 
-<p>The values or the <i>--warning</i> and <i>--critical</i> options are units of time, and must be provided (no default). Valid units are &#39;seconds&#39;, &#39;minutes&#39;, &#39;hours&#39;, or &#39;days&#39;. Each may be written singular or abbreviated to just the first letter. If no units are given, the units are assumed to be seconds.</p>
+<p>The values or the <i>--warning</i> and <i>--critical</i> options are units of time, and at least one must be provided (no default). Valid units are &#39;seconds&#39;, &#39;minutes&#39;, &#39;hours&#39;, or &#39;days&#39;. Each may be written singular or abbreviated to just the first letter. If no units are given, the units are assumed to be seconds.</p>
 
 <p>This action requires Postgres 8.3 or better.</p>
 
@@ -1329,7 +1372,7 @@
 
 <h2 id="wal_files"><b>wal_files</b></h2>
 
-<p>(<code>symlink: check_postgres_wal_files</code>) Checks how many WAL files exist in the <i>pg_xlog</i> directory, which is found off of your <b>data_directory</b>, sometimes as a symlink to another physical disk for performance reasons. If the <i>--lsfunc</i> option is not used then this action must be run as a superuser, in order to access the contents of the <i>pg_xlog</i> directory. The minimum version to use this action is Postgres 8.1. The <i>--warning</i> and <i>--critical</i> options are simply the number of files in the <i>pg_xlog</i> directory. What number to set this to will vary, but a general guideline is to put a number slightly higher than what is normally there, to catch problems early.</p>
+<p>(<code>symlink: check_postgres_wal_files</code>) Checks how many WAL files exist in the <i>pg_xlog</i> directory (PostgreSQL 10 and later&quot; <i>pg_wal</i>), which is found off of your <b>data_directory</b>, sometimes as a symlink to another physical disk for performance reasons. If the <i>--lsfunc</i> option is not used then this action must be run as a superuser, in order to access the contents of the <i>pg_xlog</i> directory. The minimum version to use this action is Postgres 8.1. The <i>--warning</i> and <i>--critical</i> options are simply the number of files in the <i>pg_xlog</i> directory. What number to set this to will vary, but a general guideline is to put a number slightly higher than what is normally there, to catch problems early.</p>
 
 <p>Normally, WAL files are closed and then re-used, but a long-running open transaction, or a faulty <b>archive_command</b> script, may cause Postgres to create too many files. Ultimately, this will cause the disk they are on to run out of space, at which point Postgres will shut down.</p>
 
@@ -1515,7 +1558,8 @@
 
 <p>Development happens using the git system. You can clone the latest version by doing:</p>
 
-<pre><code> git clone git://bucardo.org/check_postgres.git</pre>
+<pre><code> https://github.com/bucardo/check_postgres
+ git clone git://bucardo.org/check_postgres.git</pre>
 
 <h1 id="MAILING-LIST">MAILING LIST</h1>
 
@@ -1537,10 +1581,30 @@
 
 <dl>
 
-<dt id="Version-2.23.0-Released"><b>Version 2.23.0</b> Released ????</dt>
+<dt id="Version-2.23.0-Released-October-31-2017"><b>Version 2.23.0</b> Released October 31, 2017</dt>
 <dd>
 
-<pre><code>  Add Spanish message translations
+<pre><code>  Support PostgreSQL 10.
+    (David Christensen, Christoph Berg)
+
+  Change table_size to use pg_table_size() on 9.0+, i.e. include the TOAST
+  table size in the numbers reported. Add new actions indexes_size and
+  total_relation_size, using the respective pg_indexes_size() and
+  pg_total_relation_size() functions. All size checks will now also check
+  materialized views where applicable.
+    (Christoph Berg)
+
+  Connection errors are now always critical, not unknown.
+    (Christoph Berg)
+
+  New action replication_slots checking if logical or physical replication
+  slots have accumulated too much data
+    (Glyn Astill)
+
+  Multiple same_schema improvements
+    (Glyn Astill)
+
+  Add Spanish message translations
     (Luis Vazquez)
 
   Allow a wrapper function to run wal_files and archive_ready actions as
@@ -1548,7 +1612,28 @@
     (Joshua Elsasser)
 
   Add some defensive casting to the bloat query
-    (Greg Sabino Mullane)</code></pre>
+    (Greg Sabino Mullane)
+
+  Invoke psql with option -X
+    (Peter Eisentraut)
+
+  Update postgresql.org URLs to use https.
+    (Magnus Hagander)
+
+  check_txn_idle: Don&#39;t fail when query contains &#39;disabled&#39; word
+    (Marco Nenciarini)
+
+  check_txn_idle: Use state_change instead of query_start.
+    (Sebastian Webber)
+
+  check_hot_standby_delay: Correct extra space in perfdata
+    (Adrien Nayrat)
+
+  Remove \r from psql output as it can confuse some regexes
+    (Greg Sabino Mullane)
+
+  Sort failed jobs in check_pgagent_jobs for stable output.
+    (Christoph Berg)</code></pre>
 
 </dd>
 <dt id="Version-2.22.0-June-30-2015"><b>Version 2.22.0</b> June 30, 2015</dt>
