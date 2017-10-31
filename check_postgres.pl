@@ -9,7 +9,7 @@
 ## End Point Corporation http://www.endpoint.com/
 ## BSD licensed, see complete license at bottom of this script
 ## The latest version can be found at:
-## http://www.bucardo.org/check_postgres/
+## https://bucardo.org/Check_postgres/
 ##
 ## See the HISTORY section for other contributors
 
@@ -1530,7 +1530,7 @@ For a complete list of options and full documentation, view the manual.
 
     $ME --man
 
-Or visit: http://bucardo.org/check_postgres/
+Or visit: https://bucardo.org/Check_postgres/
 
 
 };
@@ -5883,7 +5883,7 @@ sub check_new_version_bc {
 
     ## Check if a newer version of Bucardo is available
 
-    my $url = 'http://bucardo.org/bucardo/latest_version.txt';
+    my $url = 'https://bucardo.org/bucardo/latest_version.txt';
     find_new_version('Bucardo', 'bucardo_ctl', $url);
 
     return;
@@ -5895,7 +5895,7 @@ sub check_new_version_box {
 
     ## Check if a newer version of boxinfo is available
 
-    my $url = 'http://bucardo.org/boxinfo/latest_version.txt';
+    my $url = 'https://bucardo.org/boxinfo/latest_version.txt';
     find_new_version('boxinfo', 'boxinfo.pl', $url);
 
     return;
@@ -5907,7 +5907,7 @@ sub check_new_version_cp {
 
     ## Check if a new version of check_postgres.pl is available
 
-    my $url = 'http://bucardo.org/check_postgres/latest_version.txt';
+    my $url = 'https://bucardo.org/check_postgres/latest_version.txt';
     find_new_version('check_postgres', $VERSION, $url);
 
     return;
@@ -5945,7 +5945,7 @@ sub check_new_version_tnm {
 
     ## Check if a new version of tail_n_mail is available
 
-    my $url = 'http://bucardo.org/tail_n_mail/latest_version.txt';
+    my $url = 'https://bucardo.org/tail_n_mail/latest_version.txt';
     find_new_version('tail_n_mail', 'tail_n_mail', $url);
 
     return;
@@ -8454,7 +8454,7 @@ This documents describes check_postgres.pl version 2.23.0
   ## There are many other actions and options, please keep reading.
 
   The latest news and documentation can always be found at:
-  http://bucardo.org/check_postgres/
+  https://bucardo.org/Check_postgres/
 
 =head1 DESCRIPTION
 
@@ -9549,7 +9549,7 @@ failure, the fourth line will provide more detail on the failure encountered.
 program is available. The current version is obtained by running C<bucardo_ctl --version>.
 If a major upgrade is available, a warning is returned. If a revision upgrade is 
 available, a critical is returned. (Bucardo is a master to slave, and master to master 
-replication system for Postgres: see http://bucardo.org for more information).
+replication system for Postgres: see https://bucardo.org/ for more information).
 See also the information on the C<--get_method> option.
 
 =head2 B<new_version_box>
@@ -9559,7 +9559,7 @@ program is available. The current version is obtained by running C<boxinfo.pl --
 If a major upgrade is available, a warning is returned. If a revision upgrade is 
 available, a critical is returned. (boxinfo is a program for grabbing important 
 information from a server and putting it into a HTML format: see 
-http://bucardo.org/wiki/boxinfo for more information). See also the information on 
+https://bucardo.org/Boxinfo/ for more information). See also the information on 
 the C<--get_method> option.
 
 =head2 B<new_version_cp>
@@ -9588,7 +9588,7 @@ tail_n_mail program is available. The current version is obtained by running
 C<tail_n_mail --version>. If a major upgrade is available, a warning is returned. If a 
 revision upgrade is available, a critical is returned. (tail_n_mail is a log monitoring 
 tool that can send mail when interesting events appear in your Postgres logs.
-See: http://bucardo.org/wiki/Tail_n_mail for more information).
+See: https://bucardo.org/tail_n_mail/ for more information).
 See also the information on the C<--get_method> option.
 
 =head2 B<pgb_pool_cl_active>
@@ -10345,7 +10345,8 @@ is needed by the L</disk_space> action.
 
 Development happens using the git system. You can clone the latest version by doing:
 
- git clone git://bucardo.org/check_postgres.git
+ https://github.com/bucardo/check_postgres
+ git clone https://github.com/bucardo/check_postgres.git
 
 =head1 MAILING LIST
 
@@ -10370,7 +10371,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
-=item B<Version 2.23.0> Released ????
+=item B<Version 2.23.0> Released October 31, 2017
 
   Support PostgreSQL 10.
     (David Christensen, Christoph Berg)

@@ -7,7 +7,7 @@ This is check_postgres, a monitoring tool for Postgres.
 
 The most complete and up to date information about this script can be found at:
 
-https://bucardo.org/wiki/Check_postgres
+https://bucardo.org/Check_postgres/
 
 You should go check there right now to make sure you are installing 
 the latest version!
@@ -27,7 +27,6 @@ file by:
     perl ../check_postgres.pl --symlinks
 
 Then join the announce mailing list (see below)
-
 
 Complete method
 ---------------
@@ -74,7 +73,8 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres
 
 Development happens via git. You can check out the repository by doing:
 
-    git clone git://bucardo.org/check_postgres.git
+    https://github.com/bucardo/check_postgres
+    git clone https://github.com/bucardo/check_postgres.git
 
 All changes are sent to the commit list:
 
@@ -84,7 +84,6 @@ COPYRIGHT
 ---------
 
   Copyright (c) 2007-2017 Greg Sabino Mullane
-
 
 LICENSE INFORMATION
 -------------------
