@@ -16,6 +16,7 @@ t/99_perlcritic.t
 t/99_pod.t
 t/00_release.t
 t/99_spellcheck.t
+.travis.yml
 README.dev
 .check_postgresrc
 ^blame

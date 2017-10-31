@@ -1,6 +1,7 @@
 check_postgres.pl
 check_postgres.pl.asc
 check_postgres.pl.html
+LICENSE
 README.md
 SIGNATURE
 Makefile.PL
@@ -8,6 +9,7 @@ MANIFEST
 MANIFEST.SKIP
 perlcriticrc
 META.yml
+MYMETA.json
 MYMETA.yml
 TODO
 
