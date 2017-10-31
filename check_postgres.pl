@@ -767,6 +767,7 @@ our %msg = (
     'relsize-msg-reli'   => q{la plus grosse relation est l'index « $1 » : $2},
     'relsize-msg-relt'   => q{la plus grosse relation est la table « $1 » : $2},
     'relsize-msg-tab'    => q{la plus grosse table est « $1 » : $2},
+    'relsize-msg-indexes' => q{la table avec les plus grosses indices est « $1 » : $2},
     'rep-badarg'         => q{Argument repinfo invalide : 6 valeurs séparées par des virgules attendues},
     'rep-duh'            => q{Aucun sens à tester la réplication avec les mêmes valeurs},
     'rep-fail'           => q{Ligne non répliquée sur l'esclave $1},
