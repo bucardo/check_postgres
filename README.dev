@@ -24,7 +24,7 @@ Quick notes on the current release process:
 
 * Make sure all changes are recorded in the relevant POD section.
 * Add a release date next to the new version number
-* Change the version number everywhere (use prove -v t/00_release.t to verify)
+* Change the version number everywhere (use `RELEASE_TESTING=1 prove -v t/00_release.t` to verify)
 * git commit as needed
 * Run: perl Makefile.PL; make html
 * Run: make signature_asc
