@@ -52,7 +52,7 @@ Login to the bucardo.org box, and then:
 * edit latest_version.txt
 * edit index.html
 
-* Edit the bucardo.org page and bump the version: http://bucardo.org/wiki/Check_postgres
+* Edit the bucardo.org page and bump the version: http://bucardo.org/check_postgres
 
 * Email to check_postgres-announce with summary of changes
 

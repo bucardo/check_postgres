@@ -79,7 +79,6 @@ sub drop_language {
 
 } ## end of drop_language
 
-
 #goto TRIGGER; ## ZZZ
 
 #/////////// Languages

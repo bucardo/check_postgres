@@ -9,7 +9,7 @@
 ## End Point Corporation http://www.endpoint.com/
 ## BSD licensed, see complete license at bottom of this script
 ## The latest version can be found at:
-## https://bucardo.org/Check_postgres/
+## https://bucardo.org/check_postgres/
 ##
 ## See the HISTORY section for other contributors
 
@@ -1531,7 +1531,7 @@ For a complete list of options and full documentation, view the manual.
 
     $ME --man
 
-Or visit: https://bucardo.org/Check_postgres/
+Or visit: https://bucardo.org/check_postgres/
 
 
 };
@@ -8455,7 +8455,7 @@ This documents describes check_postgres.pl version 2.23.0
   ## There are many other actions and options, please keep reading.
 
   The latest news and documentation can always be found at:
-  https://bucardo.org/Check_postgres/
+  https://bucardo.org/check_postgres/
 
 =head1 DESCRIPTION
 
