@@ -128,10 +128,10 @@ if (fork) {
     like ($result, qr{^$label OK:.+Row was replicated}, $t);
     $result =~ /time=(\d+)/ or die 'No time?';
     my $time = $1;
-    cmp_ok ($time, '>=', 3, $t);
+    cmp_ok ($time, '>=', 1, $t);
 }
 else {
-    sleep 3;
+    sleep 2;
     $SQL = q{UPDATE reptest SET foo = 'yang' WHERE id = 1};
     $dbh2->do($SQL);
     $dbh2->commit();
@@ -160,10 +160,10 @@ if (fork) {
     $result = $cp->run('DB2replicate-row', '-c 20 --output=simple -repinfo=reptest,id,1,foo,yin,yang');
     $result =~ /^(\d+)/ or die 'No time?';
     my $time = $1;
-    cmp_ok ($time, '>=', 3, $t);
+    cmp_ok ($time, '>=', 1, $t);
 }
 else {
-    sleep 3;
+    sleep 2;
     $SQL = q{UPDATE reptest SET foo = 'yang' WHERE id = 1};
     $dbh2->do($SQL);
     $dbh2->commit();
