@@ -8101,8 +8101,8 @@ sub check_txn_idle {
         next if skip_item($r->{datname});
 
         ## We do a lot of filtering based on the current_query or state in 9.2+
-        my $cq = $r->{query} // $r->{current_query};
-        my $st = $r->{state} // '';
+        my $cq = defined($r->{query}) ? $r->{query} : $r->{current_query};
+        my $st = defined($r->{state}) ? $r->{state} : '';
 
         ## Return unknown if we cannot see because we are a non-superuser
         if ($cq =~ /insufficient/) {
