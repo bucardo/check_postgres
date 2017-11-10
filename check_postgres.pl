@@ -2039,6 +2039,7 @@ our %testaction = (
                   fsm_pages         => 'VERSION: 8.2 MAX: 8.3',
                   fsm_relations     => 'VERSION: 8.2 MAX: 8.3',
                   hot_standby_delay => 'VERSION: 9.0',
+                  new_version_pg    => 'VERSION: 9.0',
                   replication_slots => 'VERSION: 9.4',
                   listener          => 'MAX: 8.4',
 );
@@ -5775,9 +5776,19 @@ sub find_new_version {
     my $exec = shift or die;
     my $url = shift or die;
 
+
+    my $version = verify_version();
+
     ## The format is X.Y.Z [optional message]
     my $versionre = qr{((\d+)\.(\d+)\.(\d+))\s*(.*)};
     my ($cversion,$cmajor,$cminor,$crevision,$cmessage) = ('','','','','');
+
+    ## If we're running on PG10, then format is X.Y [optional message]
+    if ($version >= 10) {
+        $versionre = qr{((\d+)\.(\d+))\s*(.*)};
+        ($cversion,$cmajor,$cminor,$cmessage) = ('','','','');
+    }
+
     my $found = 0;
 
     ## Try to fetch the current version from the web
@@ -5789,9 +5800,17 @@ sub find_new_version {
             ## Postgres is slightly different
             if ($program eq 'Postgres') {
                 $cmajor = {};
-                while ($info =~ /<title>(\d+)\.(\d+)\.(\d+)/g) {
-                    $found = 1;
-                    $cmajor->{"$1.$2"} = $3;
+                if ($version >= 10) {
+                    while ($info =~ /<title>(\d+)\.(\d+)/g) {
+                        $found = 1;
+                        $cmajor->{"$1.$2"} = $3;
+                    }
+                }
+                else {
+                    while ($info =~ /<title>(\d+)\.(\d+)\.(\d+)/g) {
+                        $found = 1;
+                        $cmajor->{"$1.$2"} = $3;
+                    }
                 }
             }
             elsif ($info =~ $versionre) {
@@ -5835,7 +5854,13 @@ sub find_new_version {
         add_unknown msg('new-ver-nolver', $program);
         return;
     }
-    my ($lversion,$lmajor,$lminor,$lrevision) = ($1, int $2, int $3, int $4);
+    my ($lversion,$lmajor,$lminor,$lrevision) = ('',0,0,0);
+    if ($version >= 10) {
+        ($lversion, $lmajor, $lminor) = ($1, int $2, int $3);
+    } else {
+        ($lversion,$lmajor,$lminor,$lrevision) = ($1, int $2, int $3, int $4);
+    }
+
     if ($VERBOSE >= 1) {
         $output =~ s/\s+$//s;
         warn "Local version string: $output\n";
@@ -5852,7 +5877,11 @@ sub find_new_version {
         $crevision = $cmajor->{$lver};
         $cmajor = $lmajor;
         $cminor = $lminor;
-        $cversion = "$cmajor.$cminor.$crevision";
+        if ($version >= 10) {
+            $cversion = "$cmajor.$cminor";
+        } else {
+            $cversion = "$cmajor.$cminor.$crevision";
+        }
     }
 
     ## Most common case: everything matches
