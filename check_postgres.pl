@@ -2605,7 +2605,7 @@ sub run_command {
             else {
                 $string = $arg->{oldstring} || $arg->{string};
                 for my $row (@{$arg->{version}}) {
-                    if ($row !~ s/^([<>]?)(\d+\.?\d+)\s+//) {
+                    if ($row !~ s/^([<>]?)(\d+\.?\d+|1\d+)\s+//) {
                         ndie msg('die-badversion', $row);
                     }
                     my ($mod,$ver) = ($1||'',$2);
@@ -2728,7 +2728,7 @@ sub run_command {
                 if ($db->{error}) {
                     ndie $db->{error};
                 }
-                if ($db->{slurp} !~ /(\d+\.?\d+)/) {
+                if ($db->{slurp} !~ /(\d+(?:\.?\d+))?/) {
                     ndie msg('die-badversion', $db->{slurp});
                 }
                 $db->{version} = $1;
@@ -2979,8 +2979,7 @@ sub verify_version {
     my $limit = $testaction{lc $action} || '';
 
     my $versiononly = shift || 0;
-
-    return if ! $limit and ! $versiononly;
+    return if ! $limit and ! $versiononly and !defined wantarray;
 
     ## We almost always need the version, so just grab it for any limitation
     $SQL = q{SELECT setting FROM pg_settings WHERE name = 'server_version'};
@@ -2998,8 +2997,11 @@ sub verify_version {
     }
 
     my ($sver,$smaj,$smin);
+    if (
+        $info->{db}[0]{slurp}[0]{setting} !~ /^(([2-9])\.(\d+))/ &&
+        $info->{db}[0]{slurp}[0]{setting} !~ /^((1\d+)())/
+       ){
 
-    if ($info->{db}[0]{slurp}[0]{setting} !~ /^((\d+)(\.(:?\d+))?)/) {
         ndie msg('die-badversion', $SQL);
     }
     else {
@@ -5779,14 +5781,9 @@ sub find_new_version {
     my $version = verify_version();
 
     ## The format is X.Y.Z [optional message]
-    my $versionre = qr{((\d+)\.(\d+)\.(\d+))\s*(.*)};
-    my ($cversion,$cmajor,$cminor,$crevision,$cmessage) = ('','','','','');
+    my $versionre = qr{((\d+)\.(\d+)(?:\.(\d+))?)(?:\s+(.*))?};
 
-    ## If we're running on PG10, then format is X.Y [optional message]
-    if ($version >= 10) {
-        $versionre = qr{((\d+)\.(\d+))\s*(.*)};
-        ($cversion,$cmajor,$cminor,$cmessage) = ('','','','');
-    }
+    my ($cversion,$cmajor,$cminor,$crevision,$cmessage) = ('','','','','');
 
     my $found = 0;
 
@@ -5799,24 +5796,21 @@ sub find_new_version {
             ## Postgres is slightly different
             if ($program eq 'Postgres') {
                 $cmajor = {};
-                if ($version >= 10) {
-                    while ($info =~ /<title>(\d+)\.(\d+)/g) {
-                        $found = 1;
-                        $cmajor->{"$1"} = $2;
-                    }
-                }
-                else {
-                    while ($info =~ /<title>(\d+)\.(\d+)\.(\d+)/g) {
-                        $found = 1;
+                while ($info =~ /<title>(\d+)\.(\d+)(?:\.(\d+))?/g) {
+                    $found = 1;
+                    if (defined $3) {
                         $cmajor->{"$1.$2"} = $3;
+                    }
+                    else {
+                        $cmajor->{$1} = $2;
                     }
                 }
             }
             elsif ($info =~ $versionre) {
                 $found = 1;
                 ($cversion,$cmajor,$cminor,$crevision,$cmessage) = ($1, int $2, int $3, int $4, $5);
+                $info =~ s/\s+$//s;
                 if ($VERBOSE >= 1) {
-                    $info =~ s/\s+$//s;
                     warn "Remote version string: $info\n";
                     warn "Remote version: $cversion\n";
                 }
@@ -5854,21 +5848,21 @@ sub find_new_version {
         return;
     }
     my ($lversion,$lmajor,$lminor,$lrevision) = ('',0,0,0);
-    if ($version >= 10) {
-        ($lversion, $lmajor, $lminor) = ($1, int $2, int $3);
+    if ($2 >= 10 && $program eq 'Postgres') {
+        ($lversion,$lmajor,$lrevision) = ($1, int $2, int $3);
     } else {
         ($lversion,$lmajor,$lminor,$lrevision) = ($1, int $2, int $3, int $4);
     }
 
+    $output =~ s/\s+$//s;
     if ($VERBOSE >= 1) {
-        $output =~ s/\s+$//s;
         warn "Local version string: $output\n";
         warn "Local version: $lversion\n";
     }
 
     ## Postgres is a special case
     if ($program eq 'Postgres') {
-        my $lver = "$lmajor.$lminor";
+        my $lver =  $lmajor >= 10 ? $lmajor : "$lmajor.$lminor";
         if (! exists $cmajor->{$lver}) {
             add_unknown msg('new-ver-nocver', $program);
             return;
@@ -5876,8 +5870,8 @@ sub find_new_version {
         $crevision = $cmajor->{$lver};
         $cmajor = $lmajor;
         $cminor = $lminor;
-        if ($version >= 10) {
-            $cversion = "$cmajor.$cminor";
+        if ($lmajor >= 10) {
+            $cversion = "$cmajor.$crevision";
         } else {
             $cversion = "$cmajor.$cminor.$crevision";
         }
@@ -5954,7 +5948,7 @@ sub check_new_version_pg {
     my $info = run_command('SELECT version() AS version');
     my $lversion = $info->{db}[0]{slurp}[0]{version};
     ## Make sure it is parseable and check for development versions
-    if ($lversion !~ /\d+\.\d+\.\d+/) {
+    if ($lversion !~ /1\d+\.\d+|\d+\.\d+\.\d+/) {
         if ($lversion =~ /(\d+\.\d+\S+)/) {
             add_ok msg('new-ver-dev', 'Postgres', $1);
             return;
@@ -8351,7 +8345,7 @@ sub check_version {
 
     my ($warning, $critical) = validate_range({type => 'version', forcemrtg => 1});
 
-    my ($warnfull, $critfull) = (($warning =~ /^\d+\.?\d+$/ ? 0 : 1),($critical =~ /^\d+\.?\d+$/ ? 0 : 1));
+    my ($warnfull, $critfull) = (($warning =~ /^(?:1\d+|[8-9]\.\d+)$/ ? 0 : 1),($critical =~ /^(?:1\d+|[8-9]\.\d+)$/ ? 0 : 1));
 
     my $info = run_command('SELECT version() AS version');
 
