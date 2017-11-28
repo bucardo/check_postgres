@@ -926,7 +926,7 @@
 
 <p>Example 2: Same as above, but skip tables belonging to the users &#39;eve&#39; or &#39;mallory&#39;</p>
 
-<pre><code>  check_postgres_last_vacuum --host=wormwood --warning=&#39;3d&#39; --critical=&#39;7d&#39; --excludeusers=eve,mallory</code></pre>
+<pre><code>  check_postgres_last_vacuum --host=wormwood --warning=&#39;3d&#39; --critical=&#39;7d&#39; --excludeuser=eve,mallory</code></pre>
 
 <p>For MRTG output, returns (on the first line) the LEAST amount of time in seconds since a table was last vacuumed or analyzed. The fourth line returns the name of the database and name of the table.</p>
 

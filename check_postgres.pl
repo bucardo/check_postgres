@@ -9491,7 +9491,7 @@ critical at a week, for host wormwood
 
 Example 2: Same as above, but skip tables belonging to the users 'eve' or 'mallory'
 
-  check_postgres_last_vacuum --host=wormwood --warning='3d' --critical='7d' --excludeusers=eve,mallory
+  check_postgres_last_vacuum --host=wormwood --warning='3d' --critical='7d' --excludeuser=eve,mallory
 
 For MRTG output, returns (on the first line) the LEAST amount of time in seconds since a table was 
 last vacuumed or analyzed. The fourth line returns the name of the database and name of the table.
