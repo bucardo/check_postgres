@@ -2728,7 +2728,7 @@ sub run_command {
                 if ($db->{error}) {
                     ndie $db->{error};
                 }
-                if ($db->{slurp} !~ /(\d+(?:\.?\d+))?/) {
+                if ($db->{slurp} !~ /([8-9]\.\d+|1\d+)/) {
                     ndie msg('die-badversion', $db->{slurp});
                 }
                 $db->{version} = $1;
