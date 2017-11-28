@@ -2728,7 +2728,7 @@ sub run_command {
                 if ($db->{error}) {
                     ndie $db->{error};
                 }
-                if ($db->{slurp} !~ /([8-9]\.\d+|1\d+)/) {
+                if ($db->{slurp} !~ /([789]\.\d+|1\d+)/) {
                     ndie msg('die-badversion', $db->{slurp});
                 }
                 $db->{version} = $1;
@@ -8345,7 +8345,7 @@ sub check_version {
 
     my ($warning, $critical) = validate_range({type => 'version', forcemrtg => 1});
 
-    my ($warnfull, $critfull) = (($warning =~ /^(?:1\d+|[8-9]\.\d+)$/ ? 0 : 1),($critical =~ /^(?:1\d+|[8-9]\.\d+)$/ ? 0 : 1));
+    my ($warnfull, $critfull) = (($warning =~ /^(?:1\d+|[789]\.\d+)$/ ? 0 : 1),($critical =~ /^(?:1\d+|[789]\.\d+)$/ ? 0 : 1));
 
     my $info = run_command('SELECT version() AS version');
 
