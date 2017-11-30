@@ -1,5 +1,5 @@
 This file contains message digests of all files listed in MANIFEST,
-signed via the Module::Signature module, version 0.68.
+signed via the Module::Signature module, version 0.81.
 
 To verify the content in this distribution, first make sure you have
 Module::Signature installed, then type:
@@ -12,35 +12,38 @@ the distribution may already have been compromised, and you should
 not run its Makefile.PL or Build.PL.
 
 -----BEGIN PGP SIGNED MESSAGE-----
-Hash: RIPEMD160
+Hash: SHA256
 
-SHA1 3daf641677071210a1702e075f9837becd504d9d MANIFEST
-SHA1 98fcae49e2adf1d73e0687998ca33992451984d6 MANIFEST.SKIP
-SHA1 221581ac5b59c2cf634f6a521f02f5e4659e048d META.yml
-SHA1 2c4d6ce8e44d088b6068dc07bfe902b7f3f350b3 MYMETA.yml
-SHA1 6d4a6c15891a90886fdb9a4f37e80c3a1ccbc492 Makefile.PL
-SHA1 0382a8d7bd1e6c8e2e85be867173ab231f78a66b README
-SHA1 e4e41aec52387ddfb9ebe9257a5eee40700adb00 TODO
-SHA1 49424a5f4aae35cda48709bc42b47a3bea94c345 check_postgres.pl
-SHA1 f34b99a45f1670576d28eacb42b0e8c56c3245a0 check_postgres.pl.asc
-SHA1 0bda94edc7eeab34fc73bfe105f566a6f6def2f5 check_postgres.pl.html
+SHA1 658d3ab5d6f3b25b04fe7311f534848b7c2d5f49 LICENSE
+SHA1 e69c20554afc59331fc0998f6199ca1ab59ef5d5 MANIFEST
+SHA1 e0dc308b681eeb3dce7bec67b687445d7a4a75c6 MANIFEST.SKIP
+SHA1 7aa7dd824b67c8a24e95eee58d668c92c3f40bc9 META.yml
+SHA1 45b3b145e1676737f03bc8ab8f9e4f778d13d1c8 MYMETA.json
+SHA1 78c4329a5fe02e90eaa759429d32976885ff8f9e MYMETA.yml
+SHA1 2685461d6cc2eef45108faf28ffe9cab4332e767 Makefile.PL
+SHA1 af14cbdf153555f63739fb03bd1c5bfcfe68986f README.md
+SHA1 fa45661b9219b774a4d4d460949e463464333150 TODO
+SHA1 90bfca6f81b3f92f8527380fb79573fb93a58b52 check_postgres.pl
+SHA1 c4db9dea7c0603b8c2147235ce8aa3d73dd52e1c check_postgres.pl.asc
+SHA1 c9399e266bf7db513b909ca5990af7527aa6c9b2 check_postgres.pl.html
 SHA1 3dc431ab18171fa977f919cddcee504b4b74392f perlcriticrc
 SHA1 ef43082a685d993fdd151de16590ce0f6832de7a t/00_basic.t
+SHA1 735f70511d0ce2939ccf9671d5c7f1007302d70d t/00_release.t
 SHA1 29700e8331d1780e87b858581054cd190e4f4ecb t/00_signature.t
-SHA1 439053254ee01e2ec406f9d1605dc5e28257b8bd t/00_test_tester.t
+SHA1 84c21f280dbdf4f74b942dbf65ae97bb0db359a6 t/00_test_tester.t
 SHA1 02f59725d968d85d855b0bcc771c99003c6e0389 t/01_validate_range.t
-SHA1 7b9ef508bc0fc1624dc81129b4014a1b9704db7e t/02_autovac_freeze.t
-SHA1 c50f069d276e44b95408fe16aefa46c24745a038 t/02_backends.t
+SHA1 d0e8919a1c1bddb6438cfd104634cff3f31a9257 t/02_autovac_freeze.t
+SHA1 a7bf685d4864f1b29447b24b1840b30225b1b8a1 t/02_backends.t
 SHA1 923acca525a528ccefd630eef8e015007a1bc5d0 t/02_bloat.t
-SHA1 58f04f98539371d9469ca93890b3f61a990fa343 t/02_checkpoint.t
+SHA1 de44d695b29b758f3dffb27f5e9ff8e8eceb8e67 t/02_checkpoint.t
 SHA1 c3e31bedea2a55b49d61874a7e4b8f6900746b22 t/02_cluster_id.t
 SHA1 e4a26b2713f0a52f31a38fb9b522a7f6e8bb9d8e t/02_commitratio.t
-SHA1 4c403c8d733fff18e8ef5b198c0f0837419b4e77 t/02_connection.t
+SHA1 e343df9f07fe39ffb5a893638180177e2aaa2348 t/02_connection.t
 SHA1 3ec5348a4125429a16e486a3850baa43954d278a t/02_custom_query.t
 SHA1 6e255ba83d65c41c9f27ec05b3c66b57f531b42e t/02_database_size.t
 SHA1 4d5d6b521ae8ec45cb14feea155858379ec77028 t/02_dbstats.t
 SHA1 f01542845070822b80cac7aaa3038eae50f8d3ae t/02_disabled_triggers.t
-SHA1 cee0a31024e2f6340a8419d71df2691ac1005e3c t/02_disk_space.t
+SHA1 2893babf851e2fb611df410b644a756ddee33520 t/02_disk_space.t
 SHA1 316cd71675cb133e0ff97e1ec27e8ab9211330af t/02_fsm_pages.t
 SHA1 770c9c0293746f10e5f48b1251e9ea5e91ee2210 t/02_fsm_relations.t
 SHA1 6294bc1dcd57a8db469deb9a69aebd1eb5998ae9 t/02_hitratio.t
@@ -54,31 +57,45 @@ SHA1 4e329549179fc8a7e3228ee9383fc4978641d6ff t/02_new_version_box.t
 SHA1 76eb1a2d2bf4f13ad5530ec6ec1431feabf2bf34 t/02_new_version_cp.t
 SHA1 61b60c4ba4b93d7813786fcec6c66c0825f08858 t/02_new_version_pg.t
 SHA1 276df93bed5f6147351dc577706dc3ab30ba0555 t/02_new_version_tnm.t
-SHA1 02091d75f8371671d85cc0be37bd76b26edcfc3e t/02_pgagent_jobs.t
+SHA1 8b3501e350cdd28af729ff59d151d5166dc3c564 t/02_pgagent_jobs.t
 SHA1 73ef3b85a5557de783c756f3eebaeac70c1bbed1 t/02_pgbouncer_checksum.t
 SHA1 5eac7fd171c118d2c358ae719f8e6397883c5a12 t/02_prepared_txns.t
 SHA1 2706f51b92149330f123e174ad009ada0124a538 t/02_query_runtime.t
 SHA1 033bb1162ad990161da1c591d5fb9f7c452ee4c9 t/02_query_time.t
-SHA1 bdd9a4a73bbce6a5450cbc04e1fe357f3bc587a7 t/02_relation_size.t
-SHA1 94fd92c8a3453e86d80114009f8a40ccb709704b t/02_replicate_row.t
-SHA1 e36d0632a32b22ebdded6ab91fd46aca7f8b2b31 t/02_same_schema.t
-SHA1 23df28d99d8799d85e7edb55ccbdcfc68fbfa22f t/02_sequence.t
+SHA1 ea4e97da03b5083404297b2ddc08a84e44e2a198 t/02_relation_size.t
+SHA1 3d9418ec2c03fb6baa4527aef380eed1d7590420 t/02_replicate_row.t
+SHA1 f025a66d3f10cb64f87bd9fb2def04e140266b37 t/02_replication_slots.t
+SHA1 1be461c4419d49b2688c66120e3e3082cf44bdcd t/02_same_schema.t
+SHA1 6f92b46fa29fe912f254f1f75736323bc79f28d6 t/02_sequence.t
 SHA1 65ea5ff56452e71fefde682bf5e874d30800bd37 t/02_settings_checksum.t
 SHA1 17ab792f132cd6fabd6fa33598b5a4d502428543 t/02_slony_status.t
 SHA1 64493100381abd82aa1eb06a46d67456f4e8486d t/02_timesync.t
-SHA1 221d3c78eece2a5fc796611e3133e5ccc8f8fad0 t/02_txn_idle.t
-SHA1 7c77be0301c936974778c7c92186088ef9b06526 t/02_txn_time.t
+SHA1 930a4609ef9136dbaa558b5cc8e49b0c66da92bc t/02_txn_idle.t
+SHA1 d02126e01343ebbde3a0e465a566e965b10ed621 t/02_txn_time.t
 SHA1 24ff2b5b0690557e1a45227d5c1131226c9ff30a t/02_txn_wraparound.t
 SHA1 2270e466a5761256be6b69cc0c7e8c03f2414e3b t/02_version.t
-SHA1 93c5da727c39f3dbb1953d061fa6f96578ba7952 t/02_wal_files.t
+SHA1 5d78b6857766e32b3de767b293d20ddd3ae2f52f t/02_wal_files.t
 SHA1 dad138868393ead7c170f24017a7c04b80fe5f87 t/03_translations.t
 SHA1 eb66336f915f77a1cd82c1b19b44acc7dc2d5038 t/04_timeout.t
-SHA1 e01ec73ad338765ee20afed29718b12c2ed83d82 t/05_docs.t
+SHA1 d2bb7c381988ce209ddf3314ceea7835c9359e20 t/05_docs.t
 SHA1 96e6e5da3e1f6753a469e7afc8cf070024b33b23 t/99_cleanup.t
-SHA1 095c6b9fdc944faf7890f13d5330b179f41710a1 t/CP_Testing.pm
+SHA1 5e44f385a1438b3703ac01b6adaa58c89df60b9d t/99_perlcritic.t
+SHA1 40fc4951a0c848117a14765ddf9a95753b457ef3 t/99_pod.t
+SHA1 9a70daf85e898379e2260b04c18493fe46191651 t/99_spellcheck.t
+SHA1 189426c9c6582c047c8200034bd832ec36aab7a6 t/CP_Testing.pm
 -----BEGIN PGP SIGNATURE-----
 
-iEYEAREDAAYFAlJB46QACgkQvJuQZxSWSshIPACgwFPjhdZ2REkyKirLaMYSwznp
-ptIAn0ttmsPV4cKBfUp/wFUumCMi/A/y
-=+efS
+iQIzBAEBCAAdFiEEXEj+YVf0kXlZcIfGTFprqxLSp64FAln4bksACgkQTFprqxLS
+p65BiA/8CjFm0sK/YdZCMUDQ5KrOXNERUn/ClANyGVgmoRf59/zEQo/zgqwEWdna
+utPW1q8mU4CA/JAXaID+XwZpbOha5IfS+ZL5pCcYERC2bf70a/rq8C/FUH1Ig/9N
+822m+VY4i8nB+cY98dSdSugW9crJ8zSC8lgCLAM75inNIyp99nma3Hcwgg41qSTG
+1slURPiBMzEkrXeAe6kNeTS3vmXMutm5oIRaGMUFVp0A/m81vLg9YYwFkMxsK7H0
+hgBENNjE2jj1Ctuxpr6dPejdYNvxvKYWgmmjyhmAYqQzjYjONKlO2BebeXkwREzs
+42/1XUsALZfVr/SxrO4tNWPJ7A3PrmNOxiQfqgqazb0iXjXETlKCseAR8I4sns75
+CYYKz99i5AGeSwbSS/kOP588I6DO/WzTRDuXRAcILHB610hgy5TPzLsmx6ZMR4xb
+dHejiY2gOjfG/Ojetepuz7RrUBgNSCUPmPQWsVWPawN4ekVn4tTWsDk4kgtjZ+k5
+jbqBHxQl71ugPo/rjBiYTswY/E31KXTCH/qwad+MVrVhnF7+D6d2Q+HZtLXpDN3f
+tDCxNVqp63q4tfVCOysKSQpKOi56xTByJrZWv151y28zM9RDxilc0aNs5jI1LnCf
+7xgxFwNeu8IZgKQoxkdWH2JVEvFRhirM+b/SU71I/sdTxohr+E4=
+=f4Z0
 -----END PGP SIGNATURE-----

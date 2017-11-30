@@ -1,17 +1,20 @@
 check_postgres.pl
 check_postgres.pl.asc
 check_postgres.pl.html
-README
+LICENSE
+README.md
 SIGNATURE
 Makefile.PL
 MANIFEST
 MANIFEST.SKIP
 perlcriticrc
 META.yml
+MYMETA.json
 MYMETA.yml
 TODO
 
 t/00_basic.t
+t/00_release.t
 t/00_signature.t
 t/00_test_tester.t
 t/01_validate_range.t
@@ -47,6 +50,7 @@ t/02_query_runtime.t
 t/02_query_time.t
 t/02_relation_size.t
 t/02_replicate_row.t
+t/02_replication_slots.t
 t/02_same_schema.t
 t/02_sequence.t
 t/02_settings_checksum.t
@@ -61,4 +65,7 @@ t/03_translations.t
 t/04_timeout.t
 t/05_docs.t
 t/99_cleanup.t
+t/99_perlcritic.t
+t/99_pod.t
+t/99_spellcheck.t
 t/CP_Testing.pm

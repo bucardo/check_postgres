@@ -9,7 +9,7 @@
 ## End Point Corporation http://www.endpoint.com/
 ## BSD licensed, see complete license at bottom of this script
 ## The latest version can be found at:
-## http://www.bucardo.org/check_postgres/
+## https://bucardo.org/check_postgres/
 ##
 ## See the HISTORY section for other contributors
 
@@ -22,6 +22,7 @@ use utf8;
 use Getopt::Long qw/GetOptions/;
 Getopt::Long::Configure(qw/ no_ignore_case pass_through  /);
 use File::Basename qw/basename/;
+use File::Spec;
 use File::Temp qw/tempfile tempdir/;
 File::Temp->safe_level( File::Temp::MEDIUM );
 use Cwd;
@@ -32,7 +33,7 @@ $Data::Dumper::Useqq = 1;
 
 binmode STDOUT, ':encoding(UTF-8)';
 
-our $VERSION = '2.21.0';
+our $VERSION = '2.23.0';
 
 use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 
@@ -186,6 +187,8 @@ our %msg = (
     'no-match-set'       => q{No matching settings found due to exclusion/inclusion options},
     'no-match-table'     => q{No matching tables found due to exclusion/inclusion options},
     'no-match-user'      => q{No matching entries found due to user exclusion/inclusion options},
+    'no-match-slot'      => q{No matching replication slots found due to exclusion/inclusion options},
+    'no-match-slotok'    => q{No replication slots found},
     'no-parse-psql'      => q{Could not parse psql output!},
     'no-time-hires'      => q{Cannot find Time::HiRes, needed if 'showtime' is true},
     'opt-output-invalid' => q{Invalid output: must be 'nagios' or 'mrtg' or 'simple' or 'cacti'},
@@ -245,6 +248,7 @@ our %msg = (
     'relsize-msg-reli'   => q{largest relation is index "$1": $2},
     'relsize-msg-relt'   => q{largest relation is table "$1": $2},
     'relsize-msg-tab'    => q{largest table is "$1": $2},
+    'relsize-msg-indexes' => q{table with largest indexes is "$1": $2},
     'rep-badarg'         => q{Invalid repinfo argument: expected 6 comma-separated values},
     'rep-duh'            => q{Makes no sense to test replication with same values},
     'rep-fail'           => q{Row not replicated to slave $1},
@@ -257,6 +261,7 @@ our %msg = (
     'rep-timeout'        => q{Row was not replicated. Timeout: $1},
     'rep-unknown'        => q{Replication check failed},
     'rep-wrongvals'      => q{Cannot test replication: values are not the right ones ('$1' not '$2' nor '$3')},
+    'repslot-version'    => q{Database must be version 9.4 or higher to check replication slots},
     'runcommand-err'     => q{Unknown error inside of the "run_command" function},
     'runcommand-nodb'    => q{No target databases could be found},
     'runcommand-nodupe'  => q{Could not dupe STDERR},
@@ -343,6 +348,265 @@ our %msg = (
     'wal-numfound'       => q{WAL files found: $1},
     'wal-numfound2'      => q{WAL "$2" files found: $1},
 },
+'es' => {
+    'address'            => q{dirección},
+    'age'                => q{edad},
+    'backends-fatal'     => q{No es posible conectar: demasiadas conexiones},
+    'backends-mrtg'      => q{DB=$1 Max conexiones=$2},
+    'backends-msg'       => q{$1 de $2 conexiones ($3%)},
+    'backends-nomax'     => q{No es posible determinar max_connections},
+    'backends-oknone'    => q{No hay conexiones},
+    'backends-po'        => q{lo siento, hay demasiados clientes},
+    'backends-users'     => q{$1 debe ser un número o porcentaje de usuarios},
+    'bloat-index'        => q{(bd $1) índice $2 filas:$3 páginas:$4 deberíaser:$5 ($6X) bytes desperdiciados:$7 ($8)},
+    'bloat-nomin'        => q{ninguna relación cumple el criterio de bloat mínimo},
+    'bloat-table'        => q{(bd $1) tabla $2.$3 filas:$4 páginas:$5 deberíaser:$6 ($7X) bytes desperdiciados:$8 ($9)},
+    'bug-report'         => q{Por favor reporte estos detalles a check_postgres@bucardo.org:},
+    'checkcluster-id'    => q{Identificador de la base de datos:},
+    'checkcluster-msg'   => q{cluster_id: $1},
+    'checkcluster-nomrtg'=> q{Debe proporcionar un número con la opción --mrtg},
+    'checkmode-prod'     => q{en producción},
+    'checkmode-recovery' => q{en recuperación de archivo},
+    'checkmode-state'    => q{Estado del clúster de base de datos:},
+    'checkpoint-baddir'  => q{Directorio de datos inválido: "$1"},
+    'checkpoint-baddir2' => q{pg_controldata no pudo leer el directorio de datos: "$1"},
+    'checkpoint-badver'  => q{Fallo al ejecutar pg_controldata - probable que la versión sea incorrecta ($1)},
+    'checkpoint-badver2' => q{Fallo al ejecutar pg_controldata - verifique que es la versión correcta},
+    'checkpoint-nodir'   => q{Debe especificar el argumento --datadir o definir la variable de ambiente PGDATA},
+    'checkpoint-nodp'    => q{Debe instalar el módulo Perl Date::Parse para usar la acción checkpoint},
+    'checkpoint-noparse' => q{No se pudo interpretar la salida de pg_controldata: "$1"},
+    'checkpoint-noregex' => q{No se pudo encontrar la expresion regular para este chequeo},
+    'checkpoint-nosys'   => q{No es posible ejecutar pg_controldata: $1},
+    'checkpoint-ok'      => q{El último checkpoint fue hace 1 segundo},
+    'checkpoint-ok2'     => q{El último checkpoint fue hace $1 segundo},
+    'checkpoint-po'      => q{Instante del último checkpoint:},
+    'checksum-msg'       => q{checksum: $1},
+    'checksum-nomd'      => q{Debe instalar el módulo Perl Digest::MD5 para usar la acción checksum},
+    'checksum-nomrtg'    => q{Debe proporcionar un checksum con la opción --mrtg},
+    'custom-invalid'     => q{Formato devuelto por la consulta personalizada es inválido},
+    'custom-norows'      => q{No se obtuvieron filas},
+    'custom-nostring'    => q{Debe proporcionar el texto con la consulta},
+    'database'           => q{base de datos},
+    'dbsize-version'     => q{La base de datos debe ser version 8.1 o superior para utilizar la acción database_size},
+    'depr-pgcontroldata' => q{PGCONTROLDATA es obsoleta, en su lugar use PGBINDIR.},
+    'die-action-version' => q{No es posible ejecutar "$1": versión del servidor debe ser >= $2, pero es $3},
+    'die-badtime'        => q{El valor de '$1' debe ser un tiempo valido. Ejemplos: -$2 1s  -$2 "10 minutes"},
+    'die-badversion'     => q{Cadena de versión no válida: $1},
+    'die-noset'          => q{No puede ejecutar "$1": la opción $2 no esta activa},
+    'die-nosetting'      => q{No fue posible obtener configuración '$1'},
+    'diskspace-fail'     => q{Resultado inválido en el comando "$1": $2},
+    'diskspace-msg'      => q{FS $1 montado en $2 esta usando $3 de $4 ($5%)},
+    'diskspace-nodata'   => q{No fue posible determinar el data_directory: se está conectando como superusuario?},
+    'diskspace-nodf'     => q{No se encuentra el ejecutable requerido /bin/df},
+    'diskspace-nodir'    => q{No fue posible encontrar el directorio de datos "$1"},
+    'file-noclose'       => q{No puedo cerrar $1: $2},
+    'files'              => q{archivos},
+    'fsm-page-highver'   => q{No se puede comprobar fsm_pages en servidores con versión 8.4 o posterior},
+    'fsm-page-msg'       => q{ranuras de páginas FSM utilizadas: $1 de $2 ($3%)},
+    'fsm-rel-highver'    => q{No se puede comprobar fsm_relations en servidores con versión 8.4 o posterior},
+    'fsm-rel-msg'        => q{relaciones FSM utilizadas: $1 de $2 ($3%)},
+    'hs-future-replica'  => q{El esclavo reporta que el reloj del maestro está adelantado, comprobar sincronización de tiempo},
+    'hs-no-role'         => q{No es un par maestro/esclavo},
+    'hs-no-location'     => q{No pude obtener ubicación actual de xlog en $1},
+    'hs-receive-delay'   => q{receive-delay},
+    'hs-replay-delay'    => q{replay_delay},
+    'hs-time-delay'      => q{time_delay},
+    'hs-time-version'    => q{La base de datos debes ser versión 9.1 or superior para comprobar el tiempo de retraso del esclavo},
+    'index'              => q{Indice},
+    'invalid-option'     => q{Opción inválida},
+    'invalid-query'      => q{Se devolvió una consulta inválida: $1},
+    'language'           => q{Idioma},
+    'listener-msg'       => q{escuchas encontrados: $1},
+    'listening'          => q{escuchado},
+    'locks-msg'          => q{total "$1" bloqueos: $2},
+    'locks-msg2'         => q{total bloqueos: $1},
+    'logfile-bad'        => q{Archivo de registro inválido "$1"},
+    'logfile-debug'      => q{Archivo de registro final: $1},
+    'logfile-dne'        => q{El archivo de registo $1 no existe!},
+    'logfile-fail'       => q{Fallo al registrar en: $1},
+    'logfile-ok'         => q{registrando en: $1},
+    'logfile-openfail'   => q{El archivo de registro "$1" no se pudo abrir: $2},
+    'logfile-opt-bad'    => q{Opción de registro inválida},
+    'logfile-seekfail'   => q{Fallo al buscar en $1: $2},
+    'logfile-stderr'     => q{La salida de registro ha sido redirigida a STDERR: por favor proporcione un nombre de archivo},
+    'logfile-syslog'     => q{La base de datos está usando syslog, por favor especifique una ruta con la opción --logfile (fac=$1)},
+    'mode-standby'       => q{Servidor en modo "standby"},
+    'mode'               => q{modo},
+    'mrtg-fail'          => q{La acción $1 fracasó: $2},
+    'new-ver-nocver'     => q{No fue posible descargar la información de versión para $1},
+    'new-ver-badver'     => q{No fue posible interpretar la información de versión para $1},
+    'new-ver-dev'        => q{No es posible comparar versiones de desarrollo: usted tiene $1 versión $2},
+    'new-ver-nolver'     => q{No fue posible determinar información de versión local para $1},
+    'new-ver-ok'         => q{La versión $1 es la última para $2},
+    'new-ver-warn'       => q{Por favor actualice a la versión $1 de $2. Usted esta ejecutando $3},
+    'new-ver-tt'         => q{Su versión de $1 ($2) parece ser más nueva que la versión actual! ($3)},
+    'no-db'              => q{No hay bases de datos},
+    'no-match-db'        => q{No hay bases de datos coincidentes debido a las opciones de exclusión/inclusión},
+    'no-match-fs'        => q{No se encuentran sistemas de archivos coincidentes debido a las opciones de exclusión/inclusión},
+    'no-match-rel'       => q{No se encuentran relaciones coincidentes debido a las opciones de exclusión/inclusión},
+    'no-match-set'       => q{No se encuentran opciones de configuración coincidentes debido a las opciones de exclusión/inclusión},
+    'no-match-table'     => q{No se encuentran tablas coincidentes debido a las opciones de exclusión/inclusión},
+    'no-match-user'      => q{No se encuentran entradas coincidentes debido a las opciones de exclusión/inclusión},
+    'no-match-slot'      => q{No se encuentran ranuras de replicación coincidentes debido a las opciones de exclusión/inclusión},
+    'no-match-slotok'    => q{No se encuentran ranuras de replicación},
+    'no-parse-psql'      => q{No se pudo interpretar la salida de psql!},
+    'no-time-hires'      => q{No se encontró Time::HiRes, necesario si 'showtime' es verdadero},
+    'opt-output-invalid' => q{Formato de salida inválido: debe ser 'nagios' o 'mrtg' o 'simple' o 'cacti'},
+    'opt-psql-badpath'   => q{Argumento psql es inválido: debe ser una ruta absoluta a un archivo con nombre psql},
+    'opt-psql-noexec'    => q{El archivo "$1" no parece ser ejecutable},
+    'opt-psql-noexist'   => q{No se puede encontrar el ejecutable psql: $1},
+    'opt-psql-nofind'    => q{No fue posible encontrar un ejecutable psql},
+    'opt-psql-nover'     => q{No fue posible determinar la versión de psql},
+    'opt-psql-restrict'  => q{No puede usar la opción --PGBINDIR o --PSQL si NO_PSQL_OPTION está habilitado},
+    'pgagent-jobs-ok'    => q{No hay trabajos fallidos},
+    'pgbouncer-pool'     => q{Pool=$1 $2=$3},
+    'pgb-backends-mrtg'  => q{BD=$1 Max conexiones=$2},
+    'pgb-backends-msg'   => q{$1 de $2 conexiones ($3%)},
+    'pgb-backends-none'  => q{No nay conexiones},
+    'pgb-backends-users' => q{$1 debe ser un número o porcentaje de usuarios},
+    'PID'                => q{PID},
+    'port'               => q{puerto},
+    'preptxn-none'       => q{No se encontraron transacciones preparadas},
+    'psa-disabled'       => q{No hay consultas - están deshabilitados stats_command_string o track_activities?},
+    'psa-noexact'        => q{Error desconocido},
+    'psa-nosuper'        => q{No hay coincidencias - por favor ejecute como superusuario},
+    'qtime-count-msg'    => q{Total de consultas: $1},
+    'qtime-count-none'   => q{no mas que $1 consultas},
+    'qtime-for-msg'      => q{$1 consultas más largas que $2s, más larga: $3s$4 $5},
+    'qtime-msg'          => q{consulta más larga: $1s$2 $3},
+    'qtime-none'         => q{no hay consultas},
+    'query'              => q{consulta},
+    'queries'            => q{consultas},
+    'query-time'         => q{query_time},
+    'range-badcs'        => q{Opción '$1' inválida: debe ser un "checksum"},
+    'range-badlock'      => q{Opción '$1' inválida: debe ser el número de bloqueos, o "type1=#:type2=#"},
+    'range-badpercent'   => q{Opción '$1' inválida: debe ser un porcentaje},
+    'range-badpercsize'  => q{Opción '$1' inválida: debe ser un tamaño o un porcentaje},
+    'range-badsize'      => q{Tamaño inválido para la opción '$1'},
+    'range-badtype'      => q{validate_range solicitado con tipo desconocido '$1'},
+    'range-badversion'   => q{Cadena inválida para la opción '$1': $2},
+    'range-cactionly'    => q{Esta acción es solo para uso en cacti y no acepta parámetros warning o critical},
+    'range-int'          => q{Valor inválido para la opción '$1': debe ser un entero},
+    'range-int-pos'      => q{Valor inválido para la opción '$1': debe ser un entero positivo},
+    'range-neg-percent'  => q{No puede especificar un porcentaje negativo!},
+    'range-none'         => q{No se requieren opciones de warning o critical},
+    'range-noopt-both'   => q{Debe especificar ambas opciones de 'warning' y 'critical'},
+    'range-noopt-one'    => q{Debe especificar una opción 'warning' o 'critical'},
+    'range-noopt-only'   => q{Puede especifiar solo una de las opciónes 'warning' o 'critical'},
+    'range-noopt-orboth' => q{Debe especificar un valor de 'warning', de 'critical', o ambos},
+    'range-noopt-size'   => q{Debe especificar un tamaño de warning y/o critical},
+    'range-nosize'       => q{Debe especificar un tamaño de warning y/o critical},
+    'range-notime'       => q{Debe especificar un tamaño de warning y/o critical},
+    'range-seconds'      => q{Valor inválido para la opción '$1': debe ser número de segundos},
+    'range-version'      => q{debe ser en el formato X.Y o X.Y.Z, donde X es el número mayor de la versión, },
+    'range-warnbig'      => q{El valor de la opción 'warning' no puede ser mayor que el de 'critical'},
+    'range-warnbigsize'  => q{El valor de la opción 'warning' ($1 bytes) no puede ser mayor que el de 'critical ($2 bytes)'},
+    'range-warnbigtime'  => q{El valor de la opción 'warning' ($1 s) no puede ser mayor que el de 'critical ($2 s)'},
+    'range-warnsmall'    => q{El valor de la opción 'warning' no puede ser menor que el de 'critical'},
+    'range-nointfortime' => q{Valor inválido para las opciones '$1': debe ser un entero o un valor de tiempo},
+    'relsize-msg-ind'    => q{el índice más grande es "$1": $2},
+    'relsize-msg-reli'   => q{la relación más grande es el índice "$1": $2},
+    'relsize-msg-relt'   => q{la relación más grande es la tabla "$1": $2},
+    'relsize-msg-tab'    => q{la tabla más grande es "$1": $2},
+    'rep-badarg'         => q{Parámetro invalido para repinfo: se esperan 6 valores separados por coma},
+    'rep-duh'            => q{No tiene sentido probar la replicación con los mismos valores},
+    'rep-fail'           => q{Fila no replicada en el esclavo $1},
+    'rep-noarg'          => q{Necesita un valor para repinfo},
+    'rep-norow'          => q{La fila del origen de la replicación no fue encontrada: $1},
+    'rep-noslaves'       => q{No se encontraron esclavos},
+    'rep-notsame'        => q{No se puede probar la replicación: los valores no coinciden},
+    'rep-ok'             => q{La fila fue replicada},
+    'rep-sourcefail'     => q{Falló la actualización del origen},
+    'rep-timeout'        => q{La fila no fue replicada. Timeout: $1},
+    'rep-unknown'        => q{Chequeo de replicación fallido},
+    'rep-wrongvals'      => q{No puedo verificar la replicación: los valores no son correctos ('$1' no '$2' ni '$3')},
+    'repslot-version'    => q{La base de datos debe ser version 9.4 o superior para ver las ranuras de replicación},
+    'runcommand-err'     => q{Error desconocido en la función "run_command"},
+    'runcommand-nodb'    => q{No se encontró ninguna base de datos buscada},
+    'runcommand-nodupe'  => q{No fue posible duplicar STDERR},
+    'runcommand-noerr'   => q{No fue posible abrir STDERR?!},
+    'runcommand-nosys'   => q{Llamada al sistema falló con $1},
+    'runcommand-pgpass'  => q{Se creo archivo temporal pgpass $1},
+    'runcommand-timeout' => q{Tiempo de espera del comando agotado! Considere incrementar --timeout a valor mayor que $1},
+    'runtime-badmrtg'    => q{valor de queryname inválido?},
+    'runtime-badname'    => q{Opción queryname inválida: debe ser el nombre de una única vista},
+    'runtime-msg'        => q{tiempo de la consulta: $1 seg},
+    'schema'             => q{Esquema},
+    'ss-createfile'      => q{Archivo creado $1},
+    'ss-different'       => q{"$1" es diferente:},
+    'ss-existson'        => q{Existe en:},
+    'ss-failed'          => q{Las bases de datos son diferentes. Elementos no coincidentes: $1},
+    'ss-matched'         => q{Todas las bases tienen los mismos elementos},
+    'ss-missingon'       => q{Desaparecido en:},
+    'ss-noexist'         => q{$1 "$2" no existe en todas las bases de datos:},
+    'ss-notset'          => q{"$1" no está definido en todas las bases de datos:},
+    'ss-suffix'          => q{Error: no puede usar sufijos a menos que este buscando esquemas basados en tiempo},
+    'seq-die'            => q{No es posible obtener información sobre la secuencia $1},
+    'seq-msg'            => q{$1=$2% (llamadas pendientes=$3)},
+    'seq-none'           => q{No se encontraron secuencias},
+    'size'               => q{tamaño},
+    'slony-noschema'     => q{No fue posible determinar el esquema para Slony},
+    'slony-nonumber'     => q{El llamado a sl_status no devolvió un número},
+    'slony-lagtime'      => q{Slony lag time: $1},
+    'symlink-create'     => q{Creado "$1"},
+    'symlink-done'       => q{No se crea "$1": El enlace $2 ya apunta a "$3"},
+    'symlink-exists'     => q{No se crea "$1": El archivo $2 ya existe},
+    'symlink-fail1'      => q{No fue posible desvincular "$1": $2},
+    'symlink-fail2'      => q{No pude crear enlace simbolico de $1 a $2: $3},
+    'symlink-name'       => q{Este comando no va a funcionar a menos que el programa tenga la palabra "postgres" en su nombre},
+    'symlink-unlink'     => q{Desvinculando "$1":$2 },
+    'table'              => q{Tabla},
+    'testmode-end'       => q{END OF TEST MODE},
+    'testmode-fail'      => q{Connexión fallida: $1 $2},
+    'testmode-norun'     => q{No puede ejecutar "$1" en $2: versión debe ser >= $3, pero es $4},
+    'testmode-noset'     => q{No puede ejecutar "$1" en $2: la opción $3 no está activa},
+    'testmode-nover'     => q{Could not find version for $1},
+    'testmode-ok'        => q{Connection ok: $1},
+    'testmode-start'     => q{BEGIN TEST MODE},
+    'time-day'           => q{día},
+    'time-days'          => q{días},
+    'time-hour'          => q{hora},
+    'time-hours'         => q{horas},
+    'time-minute'        => q{minuto},
+    'time-minutes'       => q{minutos},
+    'time-month'         => q{mes},
+    'time-months'        => q{meses},
+    'time-second'        => q{segundo},
+    'time-seconds'       => q{segundos},
+    'time-week'          => q{semana},
+    'time-weeks'         => q{semanas},
+    'time-year'          => q{año},
+    'time-years'         => q{años},
+    'timesync-diff'      => q{diff},
+    'timesync-msg'       => q{timediff=$1 BD=$2 Local=$3},
+    'transactions'       => q{transacciones},
+    'trigger-msg'        => q{Disparadores desactivados: $1},
+    'txn-time'           => q{transaction_time},
+    'txnidle-count-msg'  => q{Total transacciones inactivas: $1},
+    'txnidle-count-none' => q{no más de $1 transacciones inactivas},
+    'txnidle-for-msg'    => q{$1 transacciones inactivas mayores que $2s, más larga: $3s$4 $5},
+    'txnidle-msg'        => q{transacción inactiva más larga: $1s$2 $3},
+    'txnidle-none'       => q{no hay transacciones inactivas},
+    'txntime-count-msg'  => q{Total de transacciones: $1},
+    'txntime-count-none' => q{no más que $1 transacciones},
+    'txntime-for-msg'    => q{$1 transacciones más largas que $2s, más larga: $3s$4 $5},
+    'txntime-msg'        => q{transacción más larga: $1s$2 $3},
+    'txntime-none'       => q{No hay transacciones},
+    'txnwrap-cbig'       => q{El valor 'critical' debe ser menor a 2000 millones},
+    'txnwrap-wbig'       => q{El valor 'warning' debe ser menor a 2000 millones},
+    'unknown-error'      => q{Error desconocido},
+    'usage'              => qq{\nUso: \$1 <opciones>\n Pruebe "\$1 --help" para obtener lista completa de opciones\n Pruebe "\$1 --man" para acceder al manual completo\n},
+    'user'               => q{Usuario},
+    'username'           => q{nombre-de-usuario},
+    'vac-nomatch-a'      => q{No hay tablas coincidentes que hayan sido analizadas},
+    'vac-nomatch-v'      => q{No hay tablas coincidentes que hayan sido vaciadas},
+    'version'            => q{versión $1},
+    'version-badmrtg'    => q{Argumento de versión mrtg inválido},
+    'version-fail'       => q{versión $1, pero se esperaba $2},
+    'version-ok'         => q{versión $1},
+    'wal-numfound'       => q{Archivos WAL encontrados: $1},
+    'wal-numfound2'      => q{Archivos WAL "$2" encontrados: $1},
+},
 'fr' => {
     'address'            => q{adresse},
     'age'                => q{âge},
@@ -400,10 +664,13 @@ our %msg = (
     'fsm-page-msg'       => q{emplacements de pages utilisés par la FSM : $1 sur $2 ($3%)},
     'fsm-rel-highver'    => q{Ne peut pas vérifier fsm_relations sur des serveurs en version 8.4 ou ultérieure},
     'fsm-rel-msg'        => q{relations tracées par la FSM : $1 sur $2 ($3%)},
+'hs-future-replica'  => q{Slave reporting master server clock is ahead, check time sync},
     'hs-no-role'         => q{Pas de couple ma??tre/esclave},
     'hs-no-location'     => q{N'a pas pu obtenir l'emplacement courant dans le journal des transactions sur $1},
     'hs-receive-delay'   => q{délai de réception},
     'hs-replay-delay'    => q{délai de rejeu},
+'hs-time-delay'      => q{time_delay},
+'hs-time-version'    => q{Database must be version 9.1 or higher to check slave lag by time},
     'index'              => q{Index},
     'invalid-option'     => q{Option invalide},
     'invalid-query'      => q{Une requête invalide a renvoyé : $1},
@@ -439,6 +706,8 @@ our %msg = (
     'no-match-set'       => q{Aucun paramètre trouvé à cause des options d'exclusion/inclusion},
     'no-match-table'     => q{Aucune table trouvée à cause des options d'exclusion/inclusion},
     'no-match-user'      => q{Aucune entrée trouvée à cause options d'exclusion/inclusion},
+    'no-match-slot'      => q{Aucune fentes de réplication trouvée à cause options d'exclusion/inclusion},
+    'no-match-slotok'    => q{Pas de fentes de réplication trouvé},
     'no-parse-psql'      => q{N'a pas pu analyser la sortie de psql !},
     'no-time-hires'      => q{N'a pas trouvé le module Time::HiRes, nécessaire quand « showtime » est activé},
     'opt-output-invalid' => q{Sortie invalide : doit être 'nagios' ou 'mrtg' ou 'simple' ou 'cacti'},
@@ -498,6 +767,7 @@ our %msg = (
     'relsize-msg-reli'   => q{la plus grosse relation est l'index « $1 » : $2},
     'relsize-msg-relt'   => q{la plus grosse relation est la table « $1 » : $2},
     'relsize-msg-tab'    => q{la plus grosse table est « $1 » : $2},
+    'relsize-msg-indexes' => q{la table avec les index les plus volumineux est « $1 » : $2},
     'rep-badarg'         => q{Argument repinfo invalide : 6 valeurs séparées par des virgules attendues},
     'rep-duh'            => q{Aucun sens à tester la réplication avec les mêmes valeurs},
     'rep-fail'           => q{Ligne non répliquée sur l'esclave $1},
@@ -510,6 +780,7 @@ our %msg = (
     'rep-timeout'        => q{La ligne n'a pas été répliquée. Délai dépassé : $1},
     'rep-unknown'        => q{Échec du test de la réplication},
     'rep-wrongvals'      => q{Ne peut pas tester la réplication : les valeurs ne sont pas les bonnes (ni '$1' ni '$2' ni '$3')},
+    'repslot-version'    => q{Base de données doit être la version 9.4 ou ultérieure pour vérifier fentes de réplication},
     'runcommand-err'     => q{Erreur inconnue de la fonction « run_command »},
     'runcommand-nodb'    => q{Aucune base de données cible trouvée},
     'runcommand-nodupe'  => q{N'a pas pu dupliqué STDERR},
@@ -604,10 +875,6 @@ our %msg = (
 'de' => {
     'backends-po'   => q{tut mir leid, schon zu viele Verbindungen},
     'checkpoint-po' => q{Zeit des letzten Checkpoints:},
-},
-'es' => {
-    'backends-po'   => q{lo siento, ya tenemos demasiados clientes},
-    'checkpoint-po' => q{Instante de �ltimo checkpoint:},
 },
 'fa' => {
     'checkpoint-po' => q{زمان آخرین وارسی:},
@@ -715,24 +982,24 @@ my %catalog_info = (
 
     user => {
         SQL        => q{
-SELECT *, usename AS name, quote_ident(usename) AS safeusename
+SELECT *, usename AS name, quote_ident(usename) AS saferolname
 FROM pg_user},
         deletecols => [ qw{ passwd } ],
     },
 
     schema => {
         SQL       => q{
-SELECT n.oid, quote_ident(nspname) AS name, quote_ident(usename) AS owner, nspacl
+SELECT n.oid, quote_ident(nspname) AS name, quote_ident(rolname) AS owner, nspacl
 FROM pg_namespace n
-JOIN pg_user u ON (u.usesysid = n.nspowner)},
+JOIN pg_roles r ON (r.oid = n.nspowner)},
         deletecols => [ ],
         exclude    => 'temp_schemas',
     },
     language => {
         SQL       => q{
-SELECT l.*, lanname AS name, quote_ident(usename) AS owner
+SELECT l.*, lanname AS name, quote_ident(rolname) AS owner
 FROM pg_language l
-JOIN pg_user u ON (u.usesysid = l.lanowner)},
+JOIN pg_roles r ON (r.oid = l.lanowner)},
         SQL2       => q{
 SELECT l.*, lanname AS name
 FROM pg_language l
@@ -740,32 +1007,33 @@ FROM pg_language l
     },
     type => {
         SQL       => q{
-SELECT t.oid AS oid, t.*, quote_ident(usename) AS owner, quote_ident(nspname) AS schema,
+SELECT t.oid AS oid, t.*, quote_ident(rolname) AS owner, quote_ident(nspname) AS schema,
   nspname||'.'||typname AS name
 FROM pg_type t
-JOIN pg_user u ON (u.usesysid = t.typowner)
+JOIN pg_roles r ON (r.oid = t.typowner)
 JOIN pg_namespace n ON (n.oid = t.typnamespace)
 WHERE t.typtype NOT IN ('b','c')},
         exclude    => 'system',
     },
     sequence => {
         SQL       => q{
-SELECT c.*, nspname||'.'||relname AS name, quote_ident(usename) AS owner,
+SELECT c.*, nspname||'.'||relname AS name, quote_ident(rolname) AS owner,
   (quote_ident(nspname)||'.'||quote_ident(relname)) AS safename,
 quote_ident(nspname) AS schema
 FROM pg_class c
-JOIN pg_user u ON (u.usesysid = c.relowner)
+JOIN pg_roles r ON (r.oid = c.relowner)
 JOIN pg_namespace n ON (n.oid = c.relnamespace)
 WHERE c.relkind = 'S'},
         innerSQL   => 'SELECT * FROM ROWSAFENAME',
+        SQL10     => q{SELECT schemaname||'.'||sequencename AS name, * FROM pg_sequences},
     },
     view => {
         SQL       => q{
-SELECT c.*, nspname||'.'||relname AS name, quote_ident(usename) AS owner,
+SELECT c.*, nspname||'.'||relname AS name, quote_ident(rolname) AS owner,
   quote_ident(relname) AS safename, quote_ident(nspname) AS schema,
   TRIM(pg_get_viewdef(c.oid, TRUE)) AS viewdef, spcname AS tablespace
 FROM pg_class c
-JOIN pg_user u ON (u.usesysid = c.relowner)
+JOIN pg_roles r ON (r.oid = c.relowner)
 JOIN pg_namespace n ON (n.oid = c.relnamespace)
 LEFT JOIN pg_tablespace s ON (s.oid = c.reltablespace)
 WHERE c.relkind = 'v'},
@@ -773,11 +1041,11 @@ WHERE c.relkind = 'v'},
     },
     table => {
         SQL       => q{
-SELECT c.*, nspname||'.'||relname AS name, quote_ident(usename) AS owner,
+SELECT c.*, nspname||'.'||relname AS name, quote_ident(rolname) AS owner,
   quote_ident(relname) AS safename, quote_ident(nspname) AS schema,
   spcname AS tablespace
 FROM pg_class c
-JOIN pg_user u ON (u.usesysid = c.relowner)
+JOIN pg_roles r ON (r.oid = c.relowner)
 JOIN pg_namespace n ON (n.oid = c.relnamespace)
 LEFT JOIN pg_tablespace s ON (s.oid = c.reltablespace)
 WHERE c.relkind = 'r'},
@@ -785,12 +1053,12 @@ WHERE c.relkind = 'r'},
     },
     index => {
         SQL       => q{
-SELECT c.*, i.*, nspname||'.'||relname AS name, quote_ident(usename) AS owner,
+SELECT c.*, i.*, nspname||'.'||relname AS name, quote_ident(rolname) AS owner,
   quote_ident(relname) AS safename, quote_ident(nspname) AS schema,
   spcname AS tablespace, amname,
   pg_get_indexdef(c.oid) AS indexdef
 FROM pg_class c
-JOIN pg_user u ON (u.usesysid = c.relowner)
+JOIN pg_roles r ON (r.oid = c.relowner)
 JOIN pg_namespace n ON (n.oid = c.relnamespace)
 JOIN pg_index i ON (c.oid = i.indexrelid)
 LEFT JOIN pg_tablespace s ON (s.oid = c.reltablespace)
@@ -800,50 +1068,62 @@ WHERE c.relkind = 'i'},
     },
     operator => {
         SQL       => q{
-SELECT o.*, o.oid, nspname||'.'||o.oprname AS name, quote_ident(o.oprname) AS safename,
-  usename AS owner, nspname AS schema,
+SELECT o.*, o.oid, n.nspname||'.'||o.oprname||' ('||COALESCE(t2.typname,'NONE')||','||COALESCE(t3.typname,'NONE')||')' AS name, quote_ident(o.oprname) AS safename,
+  rolname AS owner, n.nspname AS schema,
   t1.typname AS resultname,
-  t2.typname AS leftname, t3.typname AS rightname
+  t2.typname AS leftname, t3.typname AS rightname,
+  t4.typname AS resultname,
+  nneg.nspname||'.'||neg.oprname AS negname,
+  ncom.nspname||'.'||com.oprname AS comname
 FROM pg_operator o
-JOIN pg_user u ON (u.usesysid = o.oprowner)
+JOIN pg_roles r ON (r.oid = o.oprowner)
 JOIN pg_namespace n ON (n.oid = o.oprnamespace)
 JOIN pg_proc p1 ON (p1.oid = o.oprcode)
 JOIN pg_type t1 ON (t1.oid = o.oprresult)
 LEFT JOIN pg_type t2 ON (t2.oid = o.oprleft)
-LEFT JOIN pg_type t3 ON (t3.oid = o.oprright)},
+LEFT JOIN pg_type t3 ON (t3.oid = o.oprright)
+LEFT JOIN pg_type t4 ON (t4.oid = o.oprresult)
+LEFT JOIN pg_operator neg ON (o.oprnegate = neg.oid)
+LEFT JOIN pg_namespace nneg ON (nneg.oid = neg.oprnamespace)
+LEFT JOIN pg_operator com ON (o.oprcom = com.oid)
+LEFT JOIN pg_namespace ncom ON (ncom.oid = com.oprnamespace)},
         exclude    => 'system',
     },
     trigger => {
         SQL       => q{
-SELECT t.*, n1.nspname||'.'||t.tgname AS name, quote_ident(t.tgname) AS safename, quote_ident(usename) AS owner,
+SELECT t.*, n1.nspname||'.'||c1.relname||'.'||t.tgname AS name, quote_ident(t.tgname) AS safename, quote_ident(rolname) AS owner,
   n1.nspname AS tschema, c1.relname AS tname,
   n2.nspname AS cschema, c2.relname AS cname,
-  n3.nspname AS procschema, p.proname AS procname
+  n3.nspname AS procschema, p.proname AS procname,
+  pg_get_triggerdef(t.oid) AS triggerdef
 FROM pg_trigger t
 JOIN pg_class c1 ON (c1.oid = t.tgrelid)
-JOIN pg_user u ON (u.usesysid = c1.relowner)
+JOIN pg_roles r ON (r.oid = c1.relowner)
 JOIN pg_namespace n1 ON (n1.oid = c1.relnamespace)
 JOIN pg_proc p ON (p.oid = t.tgfoid)
 JOIN pg_namespace n3 ON (n3.oid = p.pronamespace)
 LEFT JOIN pg_class c2 ON (c2.oid = t.tgconstrrelid)
 LEFT JOIN pg_namespace n2 ON (n2.oid = c2.relnamespace)
-WHERE t.tgconstrrelid = 0 AND tgname !~ '^pg_'},
+WHERE t.tgconstrrelid = 0 AND t.tgconstrindid = 0 AND tgname !~ '^pg_'},
     },
     function => {
         SQL       => q{
 SELECT p.*, p.oid, nspname||'.'||p.proname AS name, quote_ident(p.proname) AS safename,
   md5(prosrc) AS source_checksum,
-  usename AS owner, nspname AS schema
+  rolname AS owner, nspname AS schema,
+  pg_get_function_arguments(p.oid) AS function_arguments
 FROM pg_proc p
-JOIN pg_user u ON (u.usesysid = p.proowner)
+JOIN pg_roles r ON (r.oid = p.proowner)
 JOIN pg_namespace n ON (n.oid = p.pronamespace)},
         exclude    => 'system',
     },
     constraint => {
         SQL       => q{
-SELECT c.*, c.oid, n.nspname||'.'||c.conname AS name, quote_ident(c.conname) AS safename,
- n.nspname AS schema, relname AS tname
+SELECT c.*, c.oid, n.nspname||'.'||c1.relname||'.'||c.conname AS name, quote_ident(c.conname) AS safename,
+ n.nspname AS schema, r.relname AS tname,
+ pg_get_constraintdef(c.oid) AS constraintdef, translate(c.confmatchtype,'u','s') AS confmatchtype_compat
 FROM pg_constraint c
+JOIN pg_class c1 ON (c1.oid = c.conrelid)
 JOIN pg_namespace n ON (n.oid = c.connamespace)
 JOIN pg_class r ON (r.oid = c.conrelid)
 JOIN pg_namespace n2 ON (n2.oid = r.relnamespace)},
@@ -889,7 +1169,7 @@ if (defined $rcfile) {
     RCLINE:
     while (<$rc>) {
         next if /^\s*#/;
-        next unless /^\s*(\w+)\s*=\s*(.+?)\s*$/o;
+        next unless /^\s*(\w+)\s*=\s*(.+?)\s*$/;
         my ($name,$value) = ($1,$2); ## no critic (ProhibitCaptureWithoutTest)
         ## Map alternate option spellings to preferred names
         if ($name eq 'dbport' or $name eq 'p' or $name eq 'dbport1' or $name eq 'p1' or $name eq 'port1') {
@@ -905,16 +1185,16 @@ if (defined $rcfile) {
             $name = 'dbuser';
         }
         ## Now for all the additional non-1 databases
-        elsif ($name =~ /^dbport(\d+)$/o or $name eq /^p(\d+)$/o) {
+        elsif ($name =~ /^dbport(\d+)$/ or $name eq /^p(\d+)$/) {
             $name = "port$1";
         }
-        elsif ($name =~ /^dbhost(\d+)$/o or $name eq /^H(\d+)$/o) {
+        elsif ($name =~ /^dbhost(\d+)$/ or $name eq /^H(\d+)$/) {
             $name = "host$1";
         }
-        elsif ($name =~ /^db(\d)$/o) {
+        elsif ($name =~ /^db(\d)$/) {
             $name = "dbname$1";
         }
-        elsif ($name =~ /^u(\d+)$/o) {
+        elsif ($name =~ /^u(\d+)$/) {
             $name = "dbuser$1";
         }
 
@@ -953,6 +1233,7 @@ GetOptions(
     'no-check_postgresrc',
     'assume-standby-mode',
     'assume-prod',
+    'assume-async',
 
     'action=s',
     'warning=s',
@@ -973,6 +1254,7 @@ GetOptions(
     'PSQL=s',
 
     'tempdir=s',
+    'audit-file-dir=s',
     'get_method=s',
     'language=s',
     'mrtg=s',      ## used by MRTG checks only
@@ -988,6 +1270,7 @@ GetOptions(
     'filter=s@',   ## used by same_schema only
     'suffix=s',    ## used by same_schema only
     'replace',     ## used by same_schema only
+    'lsfunc=s',    ## used by wal_files and archive_ready
 );
 
 die $USAGE if ! keys %opt and ! @ARGV;
@@ -998,24 +1281,24 @@ my @badargs;
 while (my $arg = pop @ARGV) {
 
     ## These must be of the form x=y
-    if ($arg =~ /^\-?\-?(\w+)\s*=\s*(.+)/o) {
+    if ($arg =~ /^\-?\-?(\w+)\s*=\s*(.+)/) {
         my ($name,$value) = (lc $1, $2);
-        if ($name =~ /^(?:db)?port(\d+)$/o or $name =~ /^p(\d+)$/o) {
+        if ($name =~ /^(?:db)?port(\d+)$/ or $name =~ /^p(\d+)$/) {
             push @{ $opt{port} } => $value;
         }
-        elsif ($name =~ /^(?:db)?host(\d+)$/o or $name =~ /^H(\d+)$/o) {
+        elsif ($name =~ /^(?:db)?host(\d+)$/ or $name =~ /^H(\d+)$/) {
             push @{ $opt{host} } => $value;
         }
-        elsif ($name =~ /^db(?:name)?(\d+)$/o) {
+        elsif ($name =~ /^db(?:name)?(\d+)$/) {
             push @{ $opt{dbname} } => $value;
         }
-        elsif ($name =~ /^dbuser(\d+)$/o or $name =~ /^u(\d+)/o) {
+        elsif ($name =~ /^dbuser(\d+)$/ or $name =~ /^u(\d+)/) {
             push @{ $opt{dbuser} } => $value;
         }
-        elsif ($name =~ /^dbpass(\d+)$/o) {
+        elsif ($name =~ /^dbpass(\d+)$/) {
             push @{ $opt{dbpass} } => $value;
         }
-        elsif ($name =~ /^dbservice(\d+)$/o) {
+        elsif ($name =~ /^dbservice(\d+)$/) {
             push @{ $opt{dbservice} } => $value;
         }
         else {
@@ -1054,7 +1337,7 @@ our $OUTPUT = lc($opt{output} || '');
 if ($opt{get_method}) {
     my $found = 0;
     for my $meth (@get_methods) {
-        if ($meth =~ /^$opt{get_method}/io) {
+        if ($meth =~ /^$opt{get_method}/i) {
             @get_methods = ($meth);
             $found = 1;
             last;
@@ -1085,7 +1368,7 @@ our $DEBUG_INFO = '?';
 
 if (!$OUTPUT) {
     my $dir = getcwd;
-    if ($dir =~ /(nagios|mrtg|simple|cacti)/io) {
+    if ($dir =~ /(nagios|mrtg|simple|cacti)/i) {
         $OUTPUT = lc $1;
     }
     elsif ($opt{simple}) {
@@ -1102,7 +1385,7 @@ $opt{transform} = '';
 if ($OUTPUT =~ /\b(kb|mb|gb|tb|eb)\b/) {
     $opt{transform} = uc $1;
 }
-if ($OUTPUT =~ /(nagios|mrtg|simple|cacti)/io) {
+if ($OUTPUT =~ /(nagios|mrtg|simple|cacti)/i) {
     $OUTPUT = lc $1;
 }
 ## Check for a valid output setting
@@ -1147,9 +1430,11 @@ our $action_info = {
  fsm_relations       => [1, 'Checks percentage of relations used in free space map.'],
  hitratio            => [0, 'Report if the hit ratio of a database is too low.'],
  hot_standby_delay   => [1, 'Check the replication delay in hot standby setup'],
- index_size          => [0, 'Checks the size of indexes only.'],
- table_size          => [0, 'Checks the size of tables only.'],
  relation_size       => [0, 'Checks the size of tables and indexes.'],
+ index_size          => [0, 'Checks the size of indexes.'],
+ table_size          => [0, 'Checks the size of tables (including TOAST).'],
+ indexes_size        => [0, 'Checks the size of indexes on tables.'],
+ total_relation_size => [0, 'Checks the size of tables (including indexes and TOAST).'],
  last_analyze        => [0, 'Check the maximum time in seconds since any one table has been analyzed.'],
  last_vacuum         => [0, 'Check the maximum time in seconds since any one table has been vacuumed.'],
  last_autoanalyze    => [0, 'Check the maximum time in seconds since any one table has been autoanalyzed.'],
@@ -1177,6 +1462,7 @@ our $action_info = {
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
  query_time          => [1, 'Checks the maximum running time of current queries.'],
  replicate_row       => [0, 'Verify a simple update gets replicated to another server.'],
+ replication_slots   => [1, 'Check the replication delay for replication slots'],
  same_schema         => [0, 'Verify that two databases have the exact same tables, columns, etc.'],
  sequence            => [0, 'Checks remaining calls left in sequences.'],
  settings_checksum   => [0, 'Check that no settings have changed since the last check.'],
@@ -1228,6 +1514,7 @@ Limit options:
 Other options:
   --assume-standby-mode assume that server in continious WAL recovery mode
   --assume-prod         assume that server in production mode
+  --assume-async        assume that any replication is asynchronous
   --PGBINDIR=PATH       path of the postgresql binaries; avoid using if possible
   --PSQL=FILE           (deprecated) location of the psql executable; avoid using if possible
   -v, --verbose         verbosity level; can be used more than once to increase the level
@@ -1244,7 +1531,7 @@ For a complete list of options and full documentation, view the manual.
 
     $ME --man
 
-Or visit: http://bucardo.org/check_postgres/
+Or visit: https://bucardo.org/check_postgres/
 
 
 };
@@ -1356,7 +1643,7 @@ else {
 }
 -x $PSQL or ndie msg('opt-psql-noexec', $PSQL);
 $res = qx{$PSQL --version};
-$res =~ /psql\D+(\d+\.\d+)/ or ndie msg('opt-psql-nover');
+$res =~ /psql\D+(\d+(?:\.\d+)?)/ or ndie msg('opt-psql-nover');
 our $psql_version = $1;
 
 $VERBOSE >= 2 and warn qq{psql=$PSQL version=$psql_version\n};
@@ -1663,11 +1950,11 @@ sub finishup {
         ## Are we showing DEBUG_INFO?
         my $showdebug = 0;
         if ($DEBUGOUTPUT) {
-            $showdebug = 1 if $DEBUGOUTPUT =~ /a/io
-                or ($DEBUGOUTPUT =~ /c/io and $type eq 'c')
-                or ($DEBUGOUTPUT =~ /w/io and $type eq 'w')
-                or ($DEBUGOUTPUT =~ /o/io and $type eq 'o')
-                or ($DEBUGOUTPUT =~ /u/io and $type eq 'u');
+            $showdebug = 1 if $DEBUGOUTPUT =~ /a/i
+                or ($DEBUGOUTPUT =~ /c/i and $type eq 'c')
+                or ($DEBUGOUTPUT =~ /w/i and $type eq 'w')
+                or ($DEBUGOUTPUT =~ /o/i and $type eq 'o')
+                or ($DEBUGOUTPUT =~ /u/i and $type eq 'u');
         }
         for (sort keys %$info) {
             printf '%s %s%s ',
@@ -1752,6 +2039,7 @@ our %testaction = (
                   fsm_pages         => 'VERSION: 8.2 MAX: 8.3',
                   fsm_relations     => 'VERSION: 8.2 MAX: 8.3',
                   hot_standby_delay => 'VERSION: 9.0',
+                  replication_slots => 'VERSION: 9.4',
                   listener          => 'MAX: 8.4',
 );
 if ($opt{test}) {
@@ -1773,11 +2061,11 @@ if ($opt{test}) {
         my $limit = $testaction{lc $ac};
         next if ! defined $limit;
 
-        if ($limit =~ /VERSION: ((\d+)\.(\d+))/) {
+        if ($limit =~ /VERSION: ((\d+)\.?(\d+))/) {
             my ($rver,$rmaj,$rmin) = ($1,$2,$3);
             for my $db (@{$info->{db}}) {
                 next unless exists $db->{ok};
-                if ($set{server_version} !~ /((\d+)\.(\d+))/) {
+                if ($set{server_version} !~ /((\d+)\.?(\d+))/) {
                     print msgn('testmode-nover', $db->{pname});
                     next;
                 }
@@ -1793,7 +2081,7 @@ if ($opt{test}) {
             my ($rver,$rmaj,$rmin) = ($1,$2,$3);
             for my $db (@{$info->{db}}) {
                 next unless exists $db->{ok};
-                if ($set{server_version} !~ /((\d+)\.(\d+))/) {
+                if ($set{server_version} !~ /((\d+)\.?(\d+))/) {
                     print msgn('testmode-nover', $db->{pname});
                     next;
                 }
@@ -1836,10 +2124,10 @@ if ($opt{includeuser}) {
     my $safename;
     if (1 == keys %userlist) {
         ($safename = each %userlist) =~ s/'/''/g;
-        $USERWHERECLAUSE = " AND usename = '$safename'";
+        $USERWHERECLAUSE = " AND rolname = '$safename'";
     }
     else {
-        $USERWHERECLAUSE = ' AND usename IN (';
+        $USERWHERECLAUSE = ' AND rolname IN (';
         for my $user (sort keys %userlist) {
             ($safename = $user) =~ s/'/''/g;
             $USERWHERECLAUSE .= "'$safename',";
@@ -1858,10 +2146,10 @@ elsif ($opt{excludeuser}) {
     my $safename;
     if (1 == keys %userlist) {
         ($safename = each %userlist) =~ s/'/''/g;
-        $USERWHERECLAUSE = " AND usename <> '$safename'";
+        $USERWHERECLAUSE = " AND rolname <> '$safename'";
     }
     else {
-        $USERWHERECLAUSE = ' AND usename NOT IN (';
+        $USERWHERECLAUSE = ' AND rolname NOT IN (';
         for my $user (sort keys %userlist) {
             ($safename = $user) =~ s/'/''/g;
             $USERWHERECLAUSE .= "'$safename',";
@@ -1892,10 +2180,12 @@ check_database_size() if $action eq 'database_size';
 ## Check local disk_space - local means it must be run from the same box!
 check_disk_space() if $action eq 'disk_space';
 
-## Check the size of relations, or more specifically, tables and indexes
-check_index_size() if $action eq 'index_size';
-check_table_size() if $action eq 'table_size';
-check_relation_size() if $action eq 'relation_size';
+## Check the size of relations (tables, toast tables, indexes)
+check_relation_size('relation', 'rtim')     if $action eq 'relation_size';
+check_relation_size('relation', 'i')        if $action eq 'index_size';
+check_relation_size('table', 'rm')          if $action eq 'table_size';
+check_relation_size('indexes', 'rtm')       if $action eq 'indexes_size';
+check_relation_size('total_relation', 'rm') if $action eq 'total_relation_size';
 
 ## Check how long since the last full analyze
 check_last_analyze() if $action eq 'last_analyze';
@@ -1944,6 +2234,9 @@ check_archive_ready() if $action eq 'archive_ready';
 
 ## Check the replication delay in hot standby setup
 check_hot_standby_delay() if $action eq 'hot_standby_delay';
+
+## Check the delay on replication slots. warning and critical are sizes
+check_replication_slots() if $action eq 'replication_slots';
 
 ## Check the maximum transaction age of all connections
 check_txn_time() if $action eq 'txn_time';
@@ -2254,6 +2547,10 @@ sub run_command {
         if ($arg->{dbnumber} and $arg->{dbnumber} != $num) {
             next;
         }
+        ## Likewise if we have specified "target" database info and this is not our choice
+        if ($arg->{target} and $arg->{target} != $db) {
+            next;
+        }
 
         ## Just to keep things clean:
         truncate $tempfh, 0;
@@ -2262,7 +2559,7 @@ sub run_command {
         ## Store this target in the global target list
         push @{$info->{db}}, $db;
 
-        my @args = ('-q', '-t');
+        my @args = ('-X', '-q', '-t');
         if (defined $db->{dbservice} and length $db->{dbservice}) { ## XX Check for simple names
             $db->{pname} = "service=$db->{dbservice}";
             $ENV{PGSERVICE} = $db->{dbservice};
@@ -2308,7 +2605,7 @@ sub run_command {
             else {
                 $string = $arg->{oldstring} || $arg->{string};
                 for my $row (@{$arg->{version}}) {
-                    if ($row !~ s/^([<>]?)(\d+\.\d+)\s+//) {
+                    if ($row !~ s/^([<>]?)(\d+\.?\d+|1\d+)\s+//) {
                         ndie msg('die-badversion', $row);
                     }
                     my ($mod,$ver) = ($1||'',$2);
@@ -2329,7 +2626,7 @@ sub run_command {
             }
         }
 
-        local $SIG{ALRM} = sub { die 'Timed out' };
+        local $SIG{ALRM} = sub { die "Timed out\n" };
         alarm 0;
 
         push @args, '-c', $string;
@@ -2347,6 +2644,10 @@ sub run_command {
         alarm 0;
         open STDERR, '>&', $oldstderr or ndie msg('runcommand-noerr');
         close $oldstderr or ndie msg('file-noclose', 'STDERR copy', $!);
+        if ($err and $action eq 'connection') {
+            $info->{fatal} = $err;
+            return $info;
+        }
         if ($err) {
             if ($err =~ /Timed out/) {
                 ndie msg('runcommand-timeout', $timeout);
@@ -2371,8 +2672,8 @@ sub run_command {
             }
 
             ## If we are just trying to connect, failed attempts are critical
-            if ($action eq 'connection' and $db->{error} =~ /FATAL|could not connect/) {
-                $info->{fatal} = 1;
+            if ($action eq 'connection' and $db->{error}) {
+                $info->{fatal} = $db->{error};
                 return $info;
             }
 
@@ -2415,8 +2716,11 @@ sub run_command {
             ## Unfortunately, psql outputs "(No rows)" even with -t and -x
             $db->{slurp} = '' if ! defined $db->{slurp} or index($db->{slurp},'(')==0;
 
+            ## Remove carriage returns (i.e. on Win32)
+            $db->{slurp} =~ s/\r//g;
+
             ## Allow an empty query (no matching rows) if requested
-            if ($arg->{emptyok} and $db->{slurp} =~ /^\s*$/o) {
+            if ($arg->{emptyok} and $db->{slurp} =~ /^\s*$/) {
                 $arg->{emptyok2} = 1;
             }
             ## If we just want a version, grab it and redo
@@ -2424,7 +2728,7 @@ sub run_command {
                 if ($db->{error}) {
                     ndie $db->{error};
                 }
-                if ($db->{slurp} !~ /(\d+\.\d+)/) {
+                if ($db->{slurp} !~ /([789]\.\d+|1\d+)/) {
                     ndie msg('die-badversion', $db->{slurp});
                 }
                 $db->{version} = $1;
@@ -2675,8 +2979,7 @@ sub verify_version {
     my $limit = $testaction{lc $action} || '';
 
     my $versiononly = shift || 0;
-
-    return if ! $limit and ! $versiononly;
+    return if ! $limit and ! $versiononly and !defined wantarray;
 
     ## We almost always need the version, so just grab it for any limitation
     $SQL = q{SELECT setting FROM pg_settings WHERE name = 'server_version'};
@@ -2689,16 +2992,27 @@ sub verify_version {
         ndie $info->{db}[0]{error};
     }
 
-    if (!defined $info->{db}[0] or $info->{db}[0]{slurp}[0]{setting} !~ /((\d+)\.(\d+))/) {
+    if (!defined $info->{db}[0]) {
         ndie msg('die-badversion', $SQL);
     }
-    my ($sver,$smaj,$smin) = ($1,$2,$3);
+
+    my ($sver,$smaj,$smin);
+    if (
+        $info->{db}[0]{slurp}[0]{setting} !~ /^(([2-9])\.(\d+))/ &&
+        $info->{db}[0]{slurp}[0]{setting} !~ /^((1\d+)())/
+       ){
+
+        ndie msg('die-badversion', $SQL);
+    }
+    else {
+        ($sver,$smaj,$smin) = ($1,$2,$3||0);
+    }
 
     if ($versiononly) {
         return $sver;
     }
 
-    if ($limit =~ /VERSION: ((\d+)\.(\d+))/) {
+    if ($limit =~ /VERSION: ((\d+)(?:\.(\d+))?)/) {
         my ($rver,$rmaj,$rmin) = ($1,$2,$3);
         if ($smaj < $rmaj or ($smaj==$rmaj and $smin < $rmin)) {
             ndie msg('die-action-version', $action, $rver, $sver);
@@ -2725,7 +3039,7 @@ sub verify_version {
     }
 
     $db->{slurp} = $oldslurp;
-    return;
+    return $sver;
 
 } ## end of verify_version
 
@@ -2781,7 +3095,7 @@ sub skip_item {
     if (defined $opt{exclude}) {
         $stat = 1;
         for (@{$opt{exclude}}) {
-            for my $ex (split /\s*,\s*/o => $_) {
+            for my $ex (split /\s*,\s*/ => $_) {
                 if ($ex =~ s/\.$//) {
                     if ($ex =~ s/^~//) {
                         ($stat += 2 and last) if $schema =~ /$ex/;
@@ -2802,7 +3116,7 @@ sub skip_item {
     if (defined $opt{include}) {
         $stat += 4;
         for (@{$opt{include}}) {
-            for my $in (split /\s*,\s*/o => $_) {
+            for my $in (split /\s*,\s*/ => $_) {
                 if ($in =~ s/\.$//) {
                     if ($in =~ s/^~//) {
                         ($stat += 8 and last) if $schema =~ /$in/;
@@ -2883,10 +3197,10 @@ sub validate_range {
     }
     elsif ('version' eq $type) {
         my $msg = msg('range-version');
-        if (length $warning and $warning !~ /^\d+\.\d+\.?[\d\w]*$/) {
+        if (length $warning and $warning !~ /^\d+\.?\d+\.?[\d\w]*$/) {
             ndie msg('range-badversion', 'warning', $msg);
         }
-        if (length $critical and $critical !~ /^\d+\.\d+\.?[\d\w]*$/) {
+        if (length $critical and $critical !~ /^\d+\.?\d+\.?[\d\w]*$/) {
             ndie msg('range-badversion', 'critical', $msg);
         }
         if (! length $critical and ! length $warning) {
@@ -3547,12 +3861,12 @@ SELECT
   ROUND(CASE WHEN otta=0 OR sml.relpages=0 OR sml.relpages=otta THEN 0.0 ELSE sml.relpages/otta::numeric END,1) AS tbloat,
   CASE WHEN relpages < otta THEN 0 ELSE relpages::bigint - otta END AS wastedpages,
   CASE WHEN relpages < otta THEN 0 ELSE bs*(sml.relpages-otta)::bigint END AS wastedbytes,
-  CASE WHEN relpages < otta THEN '0 bytes'::text ELSE (bs*(relpages-otta))::bigint || ' bytes' END AS wastedsize,
+  CASE WHEN relpages < otta THEN '0 bytes'::text ELSE (bs*(relpages-otta))::bigint::text || ' bytes' END AS wastedsize,
   iname, ituples::bigint AS itups, ipages::bigint AS ipages, iotta,
   ROUND(CASE WHEN iotta=0 OR ipages=0 OR ipages=iotta THEN 0.0 ELSE ipages/iotta::numeric END,1) AS ibloat,
   CASE WHEN ipages < iotta THEN 0 ELSE ipages::bigint - iotta END AS wastedipages,
   CASE WHEN ipages < iotta THEN 0 ELSE bs*(ipages-iotta) END AS wastedibytes,
-  CASE WHEN ipages < iotta THEN '0 bytes' ELSE (bs*(ipages-iotta))::bigint || ' bytes' END AS wastedisize,
+  CASE WHEN ipages < iotta THEN '0 bytes' ELSE (bs*(ipages-iotta))::bigint::text || ' bytes' END AS wastedisize,
   CASE WHEN relpages < otta THEN
     CASE WHEN ipages < iotta THEN 0 ELSE bs*(ipages-iotta::bigint) END
     ELSE CASE WHEN ipages < iotta THEN bs*(relpages-otta::bigint)
@@ -3588,9 +3902,9 @@ FROM (
           FROM pg_stats s2
           WHERE null_frac<>0 AND s2.schemaname = ns.nspname AND s2.tablename = tbl.relname
         ) AS nullhdr
-      FROM pg_attribute att 
+      FROM pg_attribute att
       JOIN pg_class tbl ON att.attrelid = tbl.oid
-      JOIN pg_namespace ns ON ns.oid = tbl.relnamespace 
+      JOIN pg_namespace ns ON ns.oid = tbl.relnamespace
       LEFT JOIN pg_stats s ON s.schemaname=ns.nspname
       AND s.tablename = tbl.relname
       AND s.inherited=false
@@ -3641,7 +3955,7 @@ FROM (
 
     $db = $info->{db}[0];
 
-    if ($db->{slurp} !~ /\w+/o) {
+    if ($db->{slurp} !~ /\w+/) {
         add_ok msg('bloat-nomin') unless $MRTG;
         return;
     }
@@ -3947,10 +4261,10 @@ sub check_commitratio {
 SELECT
   round(100.*sd.xact_commit/(sd.xact_commit+sd.xact_rollback), 2) AS dcommitratio,
   d.datname,
-  u.usename
+  r.rolname AS rolname
 FROM pg_stat_database sd
 JOIN pg_database d ON (d.oid=sd.datid)
-JOIN pg_user u ON (u.usesysid=d.datdba)
+JOIN pg_roles r ON (r.oid=d.datdba)
 WHERE sd.xact_commit+sd.xact_rollback<>0
 $USERWHERECLAUSE
 };
@@ -4030,17 +4344,21 @@ sub check_connection {
     }
 
     my $info = run_command('SELECT version() AS v');
+    if ($info->{fatal}) {
+        add_critical $info->{fatal};
+        return;
+    }
 
     for $db (@{$info->{db}}) {
 
         my $err = $db->{error} || '';
-        if ($err =~ /FATAL|could not connect/) {
+        if ($err) {
             $MRTG and do_mrtg({one => 0});
             add_critical $db->{error};
             return;
         }
 
-        my $ver = ($db->{slurp}[0]{v} =~ /(\d+\.\d+\S+)/o) ? $1 : '';
+        my $ver = ($db->{slurp}[0]{v} =~ /(\d+\.\d+\S+)/) ? $1 : '';
 
         $MRTG and do_mrtg({one => $ver ? 1 : 0});
 
@@ -4162,9 +4480,9 @@ sub check_database_size {
 SELECT pg_database_size(d.oid) AS dsize,
   pg_size_pretty(pg_database_size(d.oid)) AS pdsize,
   datname,
-  usename
+  r.rolname AS rolname
 FROM pg_database d
-LEFT JOIN pg_user u ON (u.usesysid=d.datdba)$USERWHERECLAUSE
+LEFT JOIN pg_roles r ON (r.oid=d.datdba)$USERWHERECLAUSE
 };
     if ($opt{perflimit}) {
         $SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
@@ -4551,9 +4869,9 @@ sub check_fsm_pages {
     (my $c = $critical) =~ s/\D//;
     my $SQL = q{
 SELECT pages, maxx, ROUND(100*(pages/maxx)) AS percent
-FROM 
+FROM
   (SELECT (sumrequests+numrels)*chunkpages AS pages
-   FROM (SELECT SUM(CASE WHEN avgrequest IS NULL 
+   FROM (SELECT SUM(CASE WHEN avgrequest IS NULL
      THEN interestingpages/32 ELSE interestingpages/16 END) AS sumrequests,
      COUNT(relfilenode) AS numrels, 16 AS chunkpages FROM pg_freespacemap_relations) AS foo) AS foo2,
   (SELECT setting::NUMERIC AS maxx FROM pg_settings WHERE name = 'max_fsm_pages') AS foo3
@@ -4613,7 +4931,7 @@ sub check_fsm_relations {
 
     my $SQL = q{
 SELECT maxx, cur, ROUND(100*(cur/maxx)) AS percent
-FROM (SELECT 
+FROM (SELECT
     (SELECT COUNT(*) FROM pg_freespacemap_relations) AS cur,
     (SELECT setting::NUMERIC FROM pg_settings WHERE name='max_fsm_relations') AS maxx) x
 };
@@ -4671,10 +4989,10 @@ sub check_hitratio {
 SELECT
   round(100.*sd.blks_hit/(sd.blks_read+sd.blks_hit), 2) AS dhitratio,
   d.datname,
-  u.usename
+  r.rolname AS rolname
 FROM pg_stat_database sd
 JOIN pg_database d ON (d.oid=sd.datid)
-JOIN pg_user u ON (u.usesysid=d.datdba)
+JOIN pg_roles r ON (r.oid=d.datdba)
 WHERE sd.blks_read+sd.blks_hit<>0
 $USERWHERECLAUSE
 };
@@ -4754,8 +5072,10 @@ sub check_hot_standby_delay {
     ## --warning=5min
     ## --warning='1048576 and 2min' --critical='16777216 and 10min'
 
+    my $version = verify_version();
+
     my ($warning, $wtime, $critical, $ctime) = validate_integer_for_time({default_to_int => 1});
-    if ($psql_version < 9.1 and (length $wtime or length $ctime)) { # FIXME: check server version instead
+    if ($version < 9.1 and (length $wtime or length $ctime)) {
         add_unknown msg('hs-time-version');
         return;
     }
@@ -4794,8 +5114,13 @@ sub check_hot_standby_delay {
     my ($moffset, $s_rec_offset, $s_rep_offset, $time_delta);
 
     ## On slave
-    $SQL = q{SELECT pg_last_xlog_receive_location() AS receive, pg_last_xlog_replay_location() AS replay};
-    if ($psql_version >= 9.1) {
+    if ($version >= 10) {
+        $SQL = q{SELECT pg_last_wal_receive_lsn() AS receive, pg_last_wal_replay_lsn() AS replay};
+    }
+    else {
+        $SQL = q{SELECT pg_last_xlog_receive_location() AS receive, pg_last_xlog_replay_location() AS replay};
+    }
+    if ($version >= 9.1) {
         $SQL .= q{, COALESCE(ROUND(EXTRACT(epoch FROM now() - pg_last_xact_replay_timestamp())),0) AS seconds};
     }
     my $info = run_command($SQL, { dbnumber => $slave, regex => qr/\// });
@@ -4805,12 +5130,12 @@ sub check_hot_standby_delay {
         my $replay = $db->{slurp}[0]{replay};
         $time_delta = $db->{slurp}[0]{seconds};
 
-        if (defined $receive) {
+        if (defined $receive and length $receive) {
             my ($a, $b) = split(/\//, $receive);
             $s_rec_offset = (hex('ff000000') * hex($a)) + hex($b);
         }
 
-        if (defined $replay) {
+        if (defined $replay and length $replay) {
             my ($a, $b) = split(/\//, $replay);
             $s_rep_offset = (hex('ff000000') * hex($a)) + hex($b);
         }
@@ -4824,7 +5149,12 @@ sub check_hot_standby_delay {
     }
 
     ## On master
-    $SQL = q{SELECT pg_current_xlog_location() AS location};
+    if ($version >= 10) {
+        $SQL = q{SELECT pg_current_wal_lsn() AS location};
+    }
+    else {
+        $SQL = q{SELECT pg_current_xlog_location() AS location};
+    }
     $info = run_command($SQL, { dbnumber => $master });
     for $db (@{$info->{db}}) {
         my $location = $db->{slurp}[0]{location};
@@ -4842,33 +5172,38 @@ sub check_hot_standby_delay {
 
     ## Compute deltas
     $db = $saved_db;
-    my $rec_delta = $moffset - $s_rec_offset;
-    my $rep_delta = $moffset - $s_rep_offset;
+    my ($rec_delta, $rep_delta);
+    $rec_delta = $moffset - $s_rec_offset if defined $s_rec_offset;
+    $rep_delta = $moffset - $s_rep_offset if defined $s_rep_offset;
 
     # Make sure it's always positive or zero
-    $rec_delta = 0 if $rec_delta < 0;
-    $rep_delta = 0 if $rep_delta < 0;
+    $rec_delta = 0 if defined $rec_delta and $rec_delta < 0;
+    $rep_delta = 0 if defined $rep_delta and $rep_delta < 0;
     if (defined $time_delta and $time_delta < 0) {
         add_unknown msg('hs-future-replica');
         return;
     }
 
-    $MRTG and do_mrtg($psql_version >= 9.1 ?
+    $MRTG and do_mrtg($version >= 9.1 ?
         {one => $rep_delta, two => $rec_delta, three => $time_delta} :
         {one => $rep_delta, two => $rec_delta});
 
-    $db->{perf} = sprintf ' %s=%s;%s;%s ',
-        perfname(msg('hs-replay-delay')), $rep_delta, $warning, $critical;
-    $db->{perf} .= sprintf ' %s=%s;%s;%s',
-        perfname(msg('hs-receive-delay')), $rec_delta, $warning, $critical;
-    if ($psql_version >= 9.1) {
+    if (defined $rep_delta) {
+        $db->{perf} = sprintf ' %s=%s;%s;%s',
+            perfname(msg('hs-replay-delay')), $rep_delta, $warning, $critical;
+    }
+    if (defined $rec_delta) {
+        $db->{perf} .= sprintf ' %s=%s;%s;%s',
+            perfname(msg('hs-receive-delay')), $rec_delta, $warning, $critical;
+    }
+    if ($version >= 9.1) {
         $db->{perf} .= sprintf ' %s=%s;%s;%s',
             perfname(msg('hs-time-delay')), $time_delta, $wtime, $ctime;
     }
 
     ## Do the check on replay delay in case SR has disconnected because it way too far behind
     my $msg = qq{$rep_delta};
-    if ($psql_version >= 9.1) {
+    if ($version >= 9.1) {
         $msg .= qq{ and $time_delta seconds}
     }
     if ((length $critical or length $ctime) and (!length $critical or length $critical and $rep_delta > $critical) and (!length $ctime or length $ctime and $time_delta > $ctime)) {
@@ -4884,6 +5219,93 @@ sub check_hot_standby_delay {
     return;
 
 } ## end of check_hot_standby_delay
+
+sub check_replication_slots {
+
+    ## Check the delay on one or more replication slots
+    ## Supports: Nagios, MRTG
+    ## mrtg reports the largest two delays
+    ## By default, checks all replication slots
+    ## Can check specific one(s) with include
+    ## Can ignore some with exclude
+    ## Warning and critical are bytes
+    ## Valid units: b, k, m, g, t, e
+    ## All above may be written as plural or with a trailing 'b'
+
+    my ($warning, $critical) = validate_range({type => 'size'});
+
+    $SQL = qq{
+        WITH slots AS (SELECT slot_name,
+            slot_type,
+            coalesce(restart_lsn, '0/0'::pg_lsn) AS slot_lsn,
+            coalesce(pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn),0) AS delta,
+            active
+        FROM pg_replication_slots)
+        SELECT *, pg_size_pretty(delta) AS delta_pretty FROM slots;
+    };
+
+    if ($opt{perflimit}) {
+        $SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
+    }
+    my $SQL10;
+    ($SQL10 = $SQL) =~ s/xlog_location/wal_lsn/g;
+
+    my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1, version => [">9.6 $SQL10"] } );
+    my $found = 0;
+
+    for $db (@{$info->{db}}) {
+        my $max = -1;
+        $found = 1;
+        my %s;
+
+        for my $r (@{$db->{slurp}}) {
+            if (skip_item($r->{slot_name})) {
+                $max = -2 if ($max == -1 );
+                next;
+            }
+            if ($r->{delta} >= $max) {
+                $max = $r->{delta};
+            }
+            $s{$r->{slot_name}} = [$r->{delta},$r->{delta_pretty},$r->{slot_type},$r->{slot_lsn},$r->{active}];
+        }
+        if ($MRTG) {
+            do_mrtg({one => $max, msg => "SLOT: $db->{slot_name}"});
+        }
+        if ($max < 0) {
+            $stats{$db->{dbname}} = 0;
+            add_ok msg('no-match-slotok') if ($max == -1);
+            add_unknown msg('no-match-slot') if ($max == -2);
+            next;
+        }
+
+        my $msg = '';
+        for (sort {$s{$b}[0] <=> $s{$a}[0] or $a cmp $b } keys %s) {
+            $msg .= "$_: $s{$_}[1] ($s{$_}[2] $s{$_}[3] " . ($s{$_}[4] eq 't'?'active':'inactive') .") ";
+            $db->{perf} .= sprintf ' %s=%s;%s;%s',
+                perfname($_), $s{$_}[0], $warning, $critical;
+        }
+        if (length $critical and $max >= $critical) {
+            add_critical $msg;
+        }
+        elsif (length $warning and $max >= $warning) {
+            add_warning $msg;
+        }
+        else {
+            add_ok $msg;
+        }
+    }
+
+    ## If no results, probably a version problem
+    if (!$found and keys %unknown) {
+        (my $first) = values %unknown;
+        if ($first->[0][0] =~ /pg_replication_slots/) {
+            ndie msg('repslot-version');
+        }
+    }
+
+    return;
+
+} ## end of check_replication_slot_delay
 
 
 sub check_last_analyze {
@@ -4944,7 +5366,7 @@ FROM (SELECT nspname, relname, $criteria AS v
     }
 
     if ($USERWHERECLAUSE) {
-        $SQL =~ s/ WHERE/, pg_user u WHERE u.usesysid=c.relowner$USERWHERECLAUSE AND/;
+        $SQL =~ s/ WHERE/, pg_roles r WHERE r.oid=c.relowner$USERWHERECLAUSE AND/;
     }
 
     my $info = run_command($SQL, { regex => qr{\w}, emptyok => 1 } );
@@ -5355,9 +5777,14 @@ sub find_new_version {
     my $exec = shift or die;
     my $url = shift or die;
 
+
+    my $version = verify_version();
+
     ## The format is X.Y.Z [optional message]
-    my $versionre = qr{((\d+)\.(\d+)\.(\d+))\s*(.*)};
+    my $versionre = qr{((\d+)\.(\d+)(?:\.(\d+))?)(?:\s+(.*))?};
+
     my ($cversion,$cmajor,$cminor,$crevision,$cmessage) = ('','','','','');
+
     my $found = 0;
 
     ## Try to fetch the current version from the web
@@ -5369,16 +5796,21 @@ sub find_new_version {
             ## Postgres is slightly different
             if ($program eq 'Postgres') {
                 $cmajor = {};
-                while ($info =~ /<title>(\d+)\.(\d+)\.(\d+)/g) {
+                while ($info =~ /<title>(\d+)\.(\d+)(?:\.(\d+))?/g) {
                     $found = 1;
-                    $cmajor->{"$1.$2"} = $3;
+                    if (defined $3) {
+                        $cmajor->{"$1.$2"} = $3;
+                    }
+                    else {
+                        $cmajor->{$1} = $2;
+                    }
                 }
             }
             elsif ($info =~ $versionre) {
                 $found = 1;
                 ($cversion,$cmajor,$cminor,$crevision,$cmessage) = ($1, int $2, int $3, int $4, $5);
+                $info =~ s/\s+$//s;
                 if ($VERBOSE >= 1) {
-                    $info =~ s/\s+$//s;
                     warn "Remote version string: $info\n";
                     warn "Remote version: $cversion\n";
                 }
@@ -5415,16 +5847,22 @@ sub find_new_version {
         add_unknown msg('new-ver-nolver', $program);
         return;
     }
-    my ($lversion,$lmajor,$lminor,$lrevision) = ($1, int $2, int $3, int $4);
+    my ($lversion,$lmajor,$lminor,$lrevision) = ('',0,0,0);
+    if ($2 >= 10 && $program eq 'Postgres') {
+        ($lversion,$lmajor,$lrevision) = ($1, int $2, int $3);
+    } else {
+        ($lversion,$lmajor,$lminor,$lrevision) = ($1, int $2, int $3, int $4);
+    }
+
+    $output =~ s/\s+$//s;
     if ($VERBOSE >= 1) {
-        $output =~ s/\s+$//s;
         warn "Local version string: $output\n";
         warn "Local version: $lversion\n";
     }
 
     ## Postgres is a special case
     if ($program eq 'Postgres') {
-        my $lver = "$lmajor.$lminor";
+        my $lver =  $lmajor >= 10 ? $lmajor : "$lmajor.$lminor";
         if (! exists $cmajor->{$lver}) {
             add_unknown msg('new-ver-nocver', $program);
             return;
@@ -5432,7 +5870,11 @@ sub find_new_version {
         $crevision = $cmajor->{$lver};
         $cmajor = $lmajor;
         $cminor = $lminor;
-        $cversion = "$cmajor.$cminor.$crevision";
+        if ($lmajor >= 10) {
+            $cversion = "$cmajor.$crevision";
+        } else {
+            $cversion = "$cmajor.$cminor.$crevision";
+        }
     }
 
     ## Most common case: everything matches
@@ -5464,7 +5906,7 @@ sub check_new_version_bc {
 
     ## Check if a newer version of Bucardo is available
 
-    my $url = 'http://bucardo.org/bucardo/latest_version.txt';
+    my $url = 'https://bucardo.org/bucardo/latest_version.txt';
     find_new_version('Bucardo', 'bucardo_ctl', $url);
 
     return;
@@ -5476,7 +5918,7 @@ sub check_new_version_box {
 
     ## Check if a newer version of boxinfo is available
 
-    my $url = 'http://bucardo.org/boxinfo/latest_version.txt';
+    my $url = 'https://bucardo.org/boxinfo/latest_version.txt';
     find_new_version('boxinfo', 'boxinfo.pl', $url);
 
     return;
@@ -5488,7 +5930,7 @@ sub check_new_version_cp {
 
     ## Check if a new version of check_postgres.pl is available
 
-    my $url = 'http://bucardo.org/check_postgres/latest_version.txt';
+    my $url = 'https://bucardo.org/check_postgres/latest_version.txt';
     find_new_version('check_postgres', $VERSION, $url);
 
     return;
@@ -5500,13 +5942,13 @@ sub check_new_version_pg {
 
     ## Check if a new version of Postgres is available
 
-    my $url = 'http://www.postgresql.org/versions.rss';
+    my $url = 'https://www.postgresql.org/versions.rss';
 
     ## Grab the local version
     my $info = run_command('SELECT version() AS version');
     my $lversion = $info->{db}[0]{slurp}[0]{version};
     ## Make sure it is parseable and check for development versions
-    if ($lversion !~ /\d+\.\d+\.\d+/) {
+    if ($lversion !~ /1\d+\.\d+|\d+\.\d+\.\d+/) {
         if ($lversion =~ /(\d+\.\d+\S+)/) {
             add_ok msg('new-ver-dev', 'Postgres', $1);
             return;
@@ -5526,7 +5968,7 @@ sub check_new_version_tnm {
 
     ## Check if a new version of tail_n_mail is available
 
-    my $url = 'http://bucardo.org/tail_n_mail/latest_version.txt';
+    my $url = 'https://bucardo.org/tail_n_mail/latest_version.txt';
     find_new_version('tail_n_mail', 'tail_n_mail', $url);
 
     return;
@@ -5566,6 +6008,7 @@ sub check_pgagent_jobs {
           JOIN pgagent.pga_jobsteplog slog ON jlog.jlgid = slog.jsljlgid AND step.jstid = slog.jsljstid
          WHERE ((slog.jslresult = -1 AND step.jstkind='s') OR (slog.jslresult <> 0 AND step.jstkind='b'))
            AND EXTRACT('epoch' FROM NOW() - (jlog.jlgstart + jlog.jlgduration)) < $seconds
+      ORDER BY jlog.jlgstart DESC
     };
 
     my $info = run_command($SQL);
@@ -5944,7 +6387,7 @@ sub check_query_runtime {
     ## Valid units: s[econd], m[inute], h[our], d[ay]
     ## Does a "EXPLAIN ANALYZE SELECT COUNT(1) FROM xyz"
     ## where xyz is given by the option --queryname
-    ## This could also be a table or a function, or course, but must be a 
+    ## This could also be a table or a function, or course, but must be a
     ## single word. If a function, it must be empty (with "()")
     ## Examples:
     ## --warning="100s" --critical="120s" --queryname="speedtest1"
@@ -6015,7 +6458,7 @@ sub check_query_time {
 
 sub check_relation_size {
 
-    my $relkind = shift || 'relation';
+    my ($sizefct, $relkinds) = @_;
 
     ## Check the size of one or more relations
     ## Supports: Nagios, MRTG
@@ -6031,24 +6474,28 @@ sub check_relation_size {
     my ($warning, $critical) = validate_range({type => 'size'});
 
     $SQL = sprintf q{
-SELECT pg_relation_size(c.oid) AS rsize,
-  pg_size_pretty(pg_relation_size(c.oid)) AS psize,
+SELECT pg_%1$s_size(c.oid) AS rsize,
+  pg_size_pretty(pg_%1$s_size(c.oid)) AS psize,
   relkind, relname, nspname
-FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace
+FROM pg_class c JOIN pg_namespace n ON (c.relnamespace = n.oid)
+WHERE relkind IN (%2$s)
 },
-    $relkind eq 'table' ? q{'r'}
-    : $relkind eq 'index' ? q{'i'}
-    : q{'r' OR relkind = 'i'};
+    $sizefct,
+    join (',', map { "'$_'" } split (//, $relkinds));
 
     if ($opt{perflimit}) {
         $SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
     }
 
     if ($USERWHERECLAUSE) {
-        $SQL =~ s/ WHERE/, pg_user u WHERE u.usesysid=c.relowner$USERWHERECLAUSE AND/;
+        $SQL =~ s/WHERE/JOIN pg_roles r ON (c.relowner = r.oid) WHERE/;
+        $SQL .= $USERWHERECLAUSE;
     }
 
-    my $info = run_command($SQL, {emptyok => 1});
+    my $SQL8 = $SQL;
+    $SQL8 =~ s/pg_table_size/pg_relation_size/g; # 8.4 and earlier
+
+    my $info = run_command($SQL, {emptyok => 1, version => [ "<9.0 $SQL8" ] });
 
     my $found = 0;
     for $db (@{$info->{db}}) {
@@ -6089,19 +6536,22 @@ FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace
         }
 
         my $msg;
-        if ($relkind eq 'relation') {
-            if ($kmax eq 'r') {
+        if ($action eq 'relation_size') {
+            if ($kmax =~ /[rt]/) {
                 $msg = msg('relsize-msg-relt', "$smax.$nmax", $pmax);
             }
             else {
-                $msg = msg('relsize-msg-reli', $nmax, $pmax);
+                $msg = msg('relsize-msg-reli', "$smax.$nmax", $pmax);
             }
         }
-        elsif ($relkind eq 'table') {
+        elsif ($action =~ /table|total_relation/) {
             $msg = msg('relsize-msg-tab', "$smax.$nmax", $pmax);
         }
+        elsif ($action eq 'indexes_size') {
+            $msg = msg('relsize-msg-indexes', "$smax.$nmax", $pmax);
+        }
         else {
-            $msg = msg('relsize-msg-ind', $nmax, $pmax);
+            $msg = msg('relsize-msg-ind', "$smax.$nmax", $pmax);
         }
         if (length $critical and $max >= $critical) {
             add_critical $msg;
@@ -6117,14 +6567,6 @@ FROM pg_class c, pg_namespace n WHERE (relkind = %s) AND n.oid = c.relnamespace
     return;
 
 } ## end of check_relation_size
-
-
-sub check_table_size {
-    return check_relation_size('table');
-}
-sub check_index_size {
-    return check_relation_size('index');
-}
 
 
 sub check_replicate_row {
@@ -6149,7 +6591,7 @@ sub check_replicate_row {
     my ($table,$pk,$id,$col,$val1,$val2) = (@repinfo);
 
     ## Quote everything, just to be safe (e.g. columns named 'desc')
-    $table = qq{"$table"};
+    $table =~ s/([^\.]+)/\"$1\"/g;
     $pk    = qq{"$pk"};
     $col   = qq{"$col"};
 
@@ -6171,11 +6613,11 @@ sub check_replicate_row {
     if (!defined $sourcedb) {
         ndie msg('rep-norow', "$table.$col");
     }
-    my $value1 = $info1->{db}[0]{slurp}[0]{c} || '';
+    my $value1 = (defined($info1->{db}[0]{slurp}[0]{c})?$info1->{db}[0]{slurp}[0]{c}:'');
 
     my $numslaves = @{$info1->{db}} - 1;
     for my $d ( @{$info1->{db}}[1 .. $numslaves] ) {
-        my $value2 = $d->{slurp}[0]{c} || '';
+        my $value2 = (defined($d->{slurp}[0]{c})?$d->{slurp}[0]{c}:'');
         if ($value1 ne $value2) {
             ndie msg('rep-notsame');
         }
@@ -6282,12 +6724,12 @@ sub check_same_schema {
             for my $phrase (split /[\s,]+/ => $item) {
 
                 ## Can be plain (e.g. nouser) or regex based exclusion, e.g. nouser=bob
-                next if $phrase !~ /(\w+)=?\s*(.*)/o;
+                next if $phrase !~ /(\w+)=?\s*(.*)/;
                 my ($name,$regex) = (lc $1,$2||'');
 
                 ## Names are standardized with regards to plurals and casing
-                $name =~ s/([aeiou])s$/$1/o;
-                $name =~ s/s$//o;
+                $name =~ s/([aeiou])s$/$1/;
+                $name =~ s/s$//;
 
                 if (! length $regex) {
                     $filter{"$name"} = 1;
@@ -6335,7 +6777,7 @@ sub check_same_schema {
 
         my $foo = $info->{db}[0];
         my $version = $foo->{slurp}[0]{version};
-        $version =~ /\D+(\d+\.\d+)(\S+)/i or die qq{Invalid version: $version\n};
+        $version =~ /\D+(\d+\.?\d+)(\S+)/i or die qq{Invalid version: $version\n};
         my ($full,$major,$revision) = ("$1$2",$1,$2);
         $revision =~ s/^\.//;
         $dbver{$num} = {
@@ -6358,19 +6800,24 @@ sub check_same_schema {
     my @catalog_items = (
         [user       => 'usesysid',                                'useconfig' ],
         [language   => 'laninline,lanplcallfoid,lanvalidator',    ''          ],
-        [operator   => '',                                        ''          ],
+        [operator   => 'oprleft,oprright,oprresult,oprnegate,
+                        oprcom',                                  ''          ],
         [type       => '',                                        ''          ],
         [schema     => '',                                        ''          ],
-        [function   => 'source_checksum,prolang,prorettype',      ''          ],
+        [function   => 'source_checksum,prolang,prorettype,
+                        proargtypes,proallargtypes,provariadic,
+                        proargdefaults',                          ''          ],
         [table      => 'reltype,relfrozenxid,relminmxid,relpages,
                         reltuples,relnatts,relallvisible',        ''          ],
         [view       => 'reltype',                                 ''          ],
         [sequence   => 'reltype,log_cnt,relnatts,is_called',      ''          ],
         [index      => 'relpages,reltuples,indpred,indclass,
-                        indexprs,indcheckxmin',                   ''          ],
-        [trigger    => '',                                        ''          ],
-        [constraint => 'conbin',                                  ''          ],
-        [column     => 'atttypid,attnum,attbyval',                ''          ],
+                        indexprs,indcheckxmin,reltablespace,
+                        indkey',                                  ''          ],
+        [trigger    => 'tgqual,tgconstraint',                     ''          ],
+        [constraint => 'conbin,conindid,conkey,confkey,
+                        confmatchtype',                           ''          ],
+        [column     => 'atttypid,attnum,attbyval,attndims',       ''          ],
     );
 
     ## Where we store all the information, per-database
@@ -6438,7 +6885,7 @@ sub check_same_schema {
 
         ## Map the oid back to the user, for ease later on
         for my $row (values %{ $dbinfo->{user} }) {
-            $dbinfo->{useroid}{$row->{usesysid}} = $row->{usename};
+            $dbinfo->{useroid}{$row->{usesysid}} = $row->{rolname};
         }
 
         $thing{$x} = $dbinfo;
@@ -6493,7 +6940,7 @@ sub check_same_schema {
     ## Set the total time
     $db->{totaltime} = sprintf '%.2f', tv_interval($start);
 
-    ## Before we outpu any results, rewrite the audit file if needed
+    ## Before we output any results, rewrite the audit file if needed
     ## We do this if we are reading from a saved file,
     ## and the "replace" argument is set
     if ($samedb and $opt{replace}) {
@@ -6612,8 +7059,8 @@ sub check_same_schema {
                             next if $one eq '' and $two eq '-';
                         }
 
-                        ## If we are doing a historical comparison, skip some items
-                        if ($samedb) {
+                        ## If we are doing a historical comparison or checking asynchronous replicas, skip some items
+                        if ($samedb or $opt{'assume-async'}) {
                             if ($item eq 'sequence'
                                 and $col eq 'last_value') {
                                 next;
@@ -6731,6 +7178,13 @@ sub audit_filename {
     ## Got a user-supplied extension? Add it now.
     if ($opt{suffix}) {
         $filename .= ".$opt{suffix}";
+    }
+
+    ## Need to store in a separate directory?
+    my $adir = $opt{'audit-file-dir'};
+    if (defined $adir) {
+        -d $adir or die qq{Cannot write to directory "$adir": $!\n};
+        $filename = File::Spec->catfile($adir, $filename);
     }
 
     return $filename;
@@ -6864,7 +7318,7 @@ sub schema_item_exists {
             for my $name (sort keys %{ $itemhash->{$db1}{$item_class} }) {
 
                 ## Can exclude by 'filter' based regex
-                next if grep { $name eq $_ } @$exclude_regex;
+                next if grep { $name =~ $_ } @$exclude_regex;
 
                 if (! exists $itemhash->{$db2}{$item_class}{$name}) {
 
@@ -6940,7 +7394,7 @@ sub schema_item_differences {
             for my $name (sort keys %{ $itemhash->{$db1}{$item_class} }) {
 
                 ## Can exclude by 'filter' based regex
-                next if grep { $name eq $_ } @$exclude_regex;
+                next if grep { $name =~ $_ } @$exclude_regex;
 
                 ## This case has already been handled:
                 next if ! exists $itemhash->{$db2}{$item_class}{$name};
@@ -7075,6 +7529,13 @@ sub find_catalog_info {
             $SQL = $ci->{SQL2};
         }
     }
+    if ($type eq 'trigger' and $dbver->{major} <= 8.4) {
+        $SQL =~ s/t.tgconstrindid = 0 AND //;
+    }
+    if ($type eq 'sequence' and $dbver->{major} >= 10) {
+        $SQL = $ci->{SQL10};
+        delete $ci->{innerSQL};
+    }
 
     if (exists $ci->{exclude}) {
         if ('temp_schemas' eq $ci->{exclude}) {
@@ -7156,7 +7617,7 @@ sub find_catalog_info {
         if (exists $ci->{innerSQL}) {
 
             if ($type eq 'sequence') {
-                ## If this is a sequence, we want to grab them all at once to reduce 
+                ## If this is a sequence, we want to grab them all at once to reduce
                 ## the amount of round-trips we do with 'SELECT * FROM seqname'
                 if (! exists $opt{seqinfoss}{$dbnum}) {
                     $SQL = q{SELECT quote_ident(nspname)||'.'||quote_ident(relname) AS sname }
@@ -7258,9 +7719,17 @@ FROM (
 WHERE nspname !~ '^pg_temp.*'
 ORDER BY nspname, seqname, typname
 };
+    my $SQL10 = q{
+SELECT seqname, last_value, slots, used, ROUND(used/slots*100) AS percent,
+  CASE WHEN slots < used THEN 0 ELSE slots - used END AS numleft
+FROM (
+ SELECT quote_ident(schemaname)||'.'||quote_ident(sequencename) AS seqname, COALESCE(last_value,min_value) AS last_value,
+  CEIL((max_value-min_value::numeric+1)/increment_by::NUMERIC) AS slots,
+  CEIL((COALESCE(last_value,min_value)-min_value::numeric+1)/increment_by::NUMERIC) AS used
+FROM pg_sequences) foo};
     ## use critic
 
-    my $info = run_command($SQL, {regex => qr{\w}, emptyok => 1} );
+    my $info = run_command($SQL, {regex => qr{\w}, emptyok => 1, version => [">9.6 SELECT 1"]} ); # actual SQL10 is executed below
 
     my $MAXINT2 = 32767;
     my $MAXINT4 = 2147483647;
@@ -7274,12 +7743,16 @@ ORDER BY nspname, seqname, typname
         my %seqinfo;
         my %seqperf;
         my $multidb = @{$info->{db}} > 1 ? "$db->{dbname}." : '';
-        for my $r (@{$db->{slurp}}) {
+        my @seq_sql;
+        for my $r (@{$db->{slurp}}) { # for each sequence, create SQL command to inspect it
+            next if ($db->{version} >= 10); # TODO: skip loop entirely
             my ($schema, $seq, $seqname, $typename) = @$r{qw/ nspname seqname safename typname /};
             next if skip_item($seq);
             my $maxValue = $typename eq 'int2' ? $MAXINT2 : $typename eq 'int4' ? $MAXINT4 : $MAXINT8;
-            $SQL = qq{
-SELECT last_value, slots, used, ROUND(used/slots*100) AS percent,
+            my $seqname_l = $seqname;
+            $seqname_l =~ s/'/''/g; # SQL literal quoting (name is already identifier-quoted)
+            push @seq_sql, qq{
+SELECT '$seqname_l' AS seqname, last_value, slots, used, ROUND(used/slots*100) AS percent,
   CASE WHEN slots < used THEN 0 ELSE slots - used END AS numleft
 FROM (
  SELECT last_value,
@@ -7287,29 +7760,36 @@ FROM (
   CEIL((last_value-min_value::numeric+1)/increment_by::NUMERIC) AS used
 FROM $seqname) foo
 };
-
-            my $seqinfo = run_command($SQL, { target => $db });
-            my $r2 = $seqinfo->{db}[0]{slurp}[0];
-            my ($last, $slots, $used, $percent, $left) = @$r2{qw/ last_value slots used percent numleft / };
-            if (! defined $last) {
-                ndie msg('seq-die', $seqname);
-            }
-            my $msg = msg('seq-msg', $seqname, $percent, $left);
-            my $nicename = perfname("$multidb$seqname");
-            $seqperf{$percent}{$seqname} = [$left, " $nicename=$percent%;$w%;$c%"];
-            if ($percent >= $maxp) {
-                $maxp = $percent;
-                if (! exists $opt{perflimit} or $limit++ < $opt{perflimit}) {
-                    push @{$seqinfo{$percent}} => $MRTG ? [$seqname,$percent,$slots,$used,$left] : $msg;
+        }
+        if ($db->{version} >= 10) {
+            @seq_sql = ($SQL10); # inject PG10 query here (TODO: pull this out of loops)
+        }
+        # Use UNION ALL to query multiple sequences at once, however if there are too many sequences this can exceed
+        # maximum argument length; so split into chunks of 200 sequences or less and iterate over them.
+        while (my @seq_sql_chunk = splice @seq_sql, 0, 200) {
+            my $seqinfo = run_command(join("\nUNION ALL\n", @seq_sql_chunk), { target => $db }); # execute all SQL commands at once
+            for my $r2 (@{$seqinfo->{db}[0]{slurp}}) { # now look at all results
+                my ($seqname, $last, $slots, $used, $percent, $left) = @$r2{qw/ seqname last_value slots used percent numleft / };
+                if (! defined $last) {
+                    ndie msg('seq-die', $seqname);
                 }
-            }
-            next if $MRTG;
+                my $msg = msg('seq-msg', $seqname, $percent, $left);
+                my $nicename = perfname("$multidb$seqname");
+                $seqperf{$percent}{$seqname} = [$left, " $nicename=$percent%;$w%;$c%"];
+                if ($percent >= $maxp) {
+                    $maxp = $percent;
+                    if (! exists $opt{perflimit} or $limit++ < $opt{perflimit}) {
+                        push @{$seqinfo{$percent}} => $MRTG ? [$seqname,$percent,$slots,$used,$left] : $msg;
+                    }
+                }
+                next if $MRTG;
 
-            if (length $critical and $percent >= $c) {
-                push @crit => $msg;
-            }
-            elsif (length $warning and $percent >= $w) {
-                push @warn => $msg;
+                if (length $critical and $percent >= $c) {
+                    push @crit => $msg;
+                }
+                elsif (length $warning and $percent >= $w) {
+                    push @warn => $msg;
+                }
             }
         }
         if ($MRTG) {
@@ -7590,6 +8070,8 @@ sub check_txn_idle {
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
             qq{FROM pg_stat_activity WHERE ($clause)$USERWHERECLAUSE }.
             q{ORDER BY xact_start, query_start, procpid DESC};
+        # Handle usename /rolname differences
+        $SQL =~ s/rolname/usename/;
         ## Craft an alternate version for old servers that do not have the xact_start column:
         ($SQL2 = $SQL) =~ s/xact_start/query_start AS xact_start/;
         $SQL2 =~ s/BY xact_start,/BY/;
@@ -7600,6 +8082,9 @@ sub check_txn_idle {
             qq{COALESCE(ROUND(EXTRACT(epoch FROM now()-$start)),0) AS seconds }.
             qq{FROM pg_stat_activity WHERE ($clause)$USERWHERECLAUSE }.
             q{ORDER BY query_start, procpid DESC};
+            # Handle usename /rolname differences
+            $SQL =~ s/rolname/usename/;
+            $SQL2 =~ s/rolname/usename/;
     }
 
     ## Craft an alternate version for new servers which do not have procpid and current_query is split
@@ -7608,6 +8093,7 @@ sub check_txn_idle {
     $SQL3 =~ s/current_query NOT LIKE '<IDLE>%'/(state NOT LIKE 'idle%' OR state IS NULL)/; # query_time
     $SQL3 =~ s/current_query/query/g;
     $SQL3 =~ s/'' AS state/state AS state/;
+    $SQL3 =~ s/query_start/state_change/g;
 
     my $info = run_command($SQL, { emptyok => 1 , version => [ "<8.3 $SQL2", ">9.1 $SQL3" ] } );
 
@@ -7637,23 +8123,23 @@ sub check_txn_idle {
         next if skip_item($r->{datname});
 
         ## We do a lot of filtering based on the current_query or state in 9.2+
-        my $cq = $r->{query} || $r->{current_query};
-        my $st = $r->{state} || '';
+        my $cq = defined($r->{query}) ? $r->{query} : $r->{current_query};
+        my $st = defined($r->{state}) ? $r->{state} : '';
 
         ## Return unknown if we cannot see because we are a non-superuser
-        if ($cq =~ /insufficient/o) {
+        if ($cq =~ /insufficient/) {
             add_unknown msg('psa-nosuper');
             return;
         }
 
         ## Return unknown if stats_command_string / track_activities is off
-        if ($cq =~ /disabled/o or $cq =~ /<command string not enabled>/) {
+        if ($st =~ /disabled/ or $cq =~ /<command string not enabled>/) {
             add_unknown msg('psa-disabled');
             return;
         }
 
         ## Detect other cases where pg_stat_activity is not fully populated
-        if ($type ne 'qtime' and length $r->{xact_start} and $r->{xact_start} !~ /\d/o) {
+        if ($type ne 'qtime' and length $r->{xact_start} and $r->{xact_start} !~ /\d/) {
             add_unknown msg('psa-noexact');
             return;
         }
@@ -7679,6 +8165,7 @@ sub check_txn_idle {
 
     ## Extract the seconds to avoid typing out the hash each time
     my $max = $maxr->{seconds};
+    $max = 0 if $max eq '-0';
 
     ## See if we have a minimum number of matches
     my $base_count = $wcount || $ccount;
@@ -7763,7 +8250,7 @@ sub check_txn_idle {
 
 sub check_txn_time {
 
-    ## This is the same as check_txn_idle, but we want where the 
+    ## This is the same as check_txn_idle, but we want where the
     ## transaction start time is not null
 
     check_txn_idle('txntime',
@@ -7783,7 +8270,7 @@ sub check_txn_wraparound {
     ## Supports: Nagios, MRTG
     ## Warning and critical are the number of transactions performed
     ## Thus, anything *over* that number will trip the alert
-    ## See: http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND
+    ## See: https://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND
     ## It makes no sense to run this more than once on the same cluster
 
     my ($warning, $critical) = validate_range
@@ -7845,10 +8332,10 @@ sub check_version {
     ## or the major, minor, and revision (e.g. 8.2.4 or even 8.3beta4)
 
     if ($MRTG) {
-        if (!exists $opt{mrtg} or $opt{mrtg} !~ /^\d+\.\d+/) {
+        if (!exists $opt{mrtg} or $opt{mrtg} !~ /^\d+\.?\d+/) {
             ndie msg('version-badmrtg');
         }
-        if ($opt{mrtg} =~ /^\d+\.\d+$/) {
+        if ($opt{mrtg} =~ /^\d+\.?\d+$/) {
             $opt{critical} = $opt{mrtg};
         }
         else {
@@ -7858,13 +8345,13 @@ sub check_version {
 
     my ($warning, $critical) = validate_range({type => 'version', forcemrtg => 1});
 
-    my ($warnfull, $critfull) = (($warning =~ /^\d+\.\d+$/ ? 0 : 1),($critical =~ /^\d+\.\d+$/ ? 0 : 1));
+    my ($warnfull, $critfull) = (($warning =~ /^(?:1\d+|[789]\.\d+)$/ ? 0 : 1),($critical =~ /^(?:1\d+|[789]\.\d+)$/ ? 0 : 1));
 
     my $info = run_command('SELECT version() AS version');
 
     for $db (@{$info->{db}}) {
         my $row = $db->{slurp}[0];
-        if ($row->{version} !~ /((\d+\.\d+)(\w+|\.\d+))/o) {
+        if ($row->{version} !~ /((\d+\.?\d+)(\w+|\.\d+))/) {
             add_unknown msg('invalid-query', $row->{version});
             next;
         }
@@ -7924,10 +8411,15 @@ sub check_wal_files {
 
     my ($warning, $critical) = validate_range($arg);
 
-    ## Figure out where the pg_xlog directory is
-    $SQL = qq{SELECT count(*) AS count FROM pg_ls_dir('pg_xlog$subdir') WHERE pg_ls_dir ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)
+    my $lsfunc = $opt{lsfunc} || 'pg_ls_dir';
+    my $lsargs = $opt{lsfunc} ? "" : "'pg_xlog$subdir'";
 
-    my $info = run_command($SQL, {regex => qr[\d] });
+    ## Figure out where the pg_xlog directory is
+    $SQL = qq{SELECT count(*) AS count FROM $lsfunc($lsargs) WHERE $lsfunc ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)
+    my $SQL10 = $SQL;
+    $SQL10 =~ s/pg_xlog/pg_wal/g unless ($opt{lsfunc});
+
+    my $info = run_command($SQL, {regex => qr[\d], version => [">9.6 $SQL10"] });
 
     my $found = 0;
     for $db (@{$info->{db}}) {
@@ -7955,8 +8447,6 @@ sub check_wal_files {
 
 } ## end of check_wal_files
 
-
-
 =pod
 
 =encoding utf8
@@ -7965,7 +8455,7 @@ sub check_wal_files {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.21.0
+This documents describes check_postgres.pl version 2.23.0
 
 =head1 SYNOPSIS
 
@@ -7987,7 +8477,7 @@ This documents describes check_postgres.pl version 2.21.0
   ## There are many other actions and options, please keep reading.
 
   The latest news and documentation can always be found at:
-  http://bucardo.org/check_postgres/
+  https://bucardo.org/check_postgres/
 
 =head1 DESCRIPTION
 
@@ -8110,7 +8600,7 @@ This file contains a simple list of connection options. You can also pass additi
 when using this option such as --dbservice="maindatabase sslmode=require"
 
 The documentation for this file can be found at
-http://www.postgresql.org/docs/current/static/libpq-pgservice.html
+https://www.postgresql.org/docs/current/static/libpq-pgservice.html
 
 =back
 
@@ -8182,6 +8672,14 @@ Example:
 
     postgres@db$./check_postgres.pl --action=checkpoint --datadir /var/lib/postgresql/8.3/main/ --assume-prod
     POSTGRES_CHECKPOINT OK: Last checkpoint was 72 seconds ago | age=72;;300 mode=MASTER
+
+=item B<--assume-async>
+
+If specified, indicates that any replication between servers is asynchronous.
+The option is only relevant for (C<symlink: check_postgres_same_schema>). 
+
+Example:
+    postgres@db$./check_postgres.pl --action=same_schema --assume-async --dbhost=star,line
 
 =item B<-h> or B<--help>
 
@@ -8289,7 +8787,7 @@ will override any such detection.
 
 =head1 ACTIONS
 
-The script runs one or more actions. This can either be done with the --action 
+The action to be run is selected using the --action 
 flag, or by using a symlink to the main file that contains the name of the action 
 inside of it. For example, to run the action "timesync", you may either issue:
 
@@ -8300,12 +8798,12 @@ or use a program named:
   check_postgres_timesync
 
 All the symlinks are created for you in the current directory 
-if use the option --symlinks
+if use the option --symlinks:
 
   perl check_postgres.pl --symlinks
 
 If the file name already exists, it will not be overwritten. If the file exists 
-and is a symlink, you can force it to overwrite by using "--action=build_symlinks_force"
+and is a symlink, you can force it to overwrite by using "--action=build_symlinks_force".
 
 Most actions take a I<--warning> and a I<--critical> option, indicating at what 
 point we change from OK to WARNING, and what point we go to CRITICAL. Note that 
@@ -8317,8 +8815,8 @@ The current supported actions are:
 =head2 B<archive_ready>
 
 (C<symlink: check_postgres_archive_ready>) Checks how many WAL files with extension F<.ready> 
-exist in the F<pg_xlog/archive_status> directory, which is found 
-off of your B<data_directory>. This action must be run as a superuser, in order to access the 
+exist in the F<pg_xlog/archive_status> directory (PostgreSQL 10 and later: F<pg_wal/archive_status>), which is found 
+off of your B<data_directory>. If the I<--lsfunc> option is not used then this action must be run as a superuser, in order to access the
 contents of the F<pg_xlog/archive_status> directory. The minimum version to use this action is 
 Postgres 8.1. The I<--warning> and I<--critical> options are simply the number of 
 F<.ready> files in the F<pg_xlog/archive_status> directory. 
@@ -8328,9 +8826,26 @@ archive WAL files as fast as possible.
 If the archive command fail, number of WAL in your F<pg_xlog> directory will grow until
 exhausting all the disk space and force PostgreSQL to stop immediately.
 
-Example 1: Check that the number of ready WAL files is 10 or less on host "pluto"
+To avoid connecting as a database superuser, a wrapper function around
+C<pg_ls_dir()> should be defined as a superuser with SECURITY DEFINER,
+and the I<--lsfunc> option used. This example function, if defined by
+a superuser, will allow the script to connect as a normal user
+I<nagios> with I<--lsfunc=ls_archive_status_dir>
 
-  check_postgres_archive_ready --host=pluto --critical=10
+  BEGIN;
+  CREATE FUNCTION ls_archive_status_dir()
+      RETURNS SETOF TEXT
+      AS $$ SELECT pg_ls_dir('pg_xlog/archive_status') $$
+      LANGUAGE SQL
+      SECURITY DEFINER;
+  REVOKE ALL ON FUNCTION ls_archive_status_dir() FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION ls_archive_status_dir() to nagios;
+  COMMIT;
+
+Example 1: Check that the number of ready WAL files is 10 or less on host "pluto",
+using a wrapper function C<ls_archive_status_dir> to avoid the need for superuser permissions
+
+  check_postgres_archive_ready --host=pluto --critical=10 --lsfunc=ls_archive_status_dir
 
 For MRTG output, reports the number of ready WAL files on line 1.
 
@@ -8750,7 +9265,7 @@ B<data_directory> - The disk that the main data directory is on.
 
 B<log directory> - The disk that the log files are on.
 
-B<WAL file directory> - The disk that the write-ahead logs are on (e.g. symlinked pg_xlog)
+B<WAL file directory> - The disk that the write-ahead logs are on (e.g. symlinked pg_xlog or pg_wal)
 
 B<tablespaces> - Each tablespace that is on a separate disk.
 
@@ -8848,7 +9363,7 @@ between the current xlog position of a master server and the replay location of 
 to it. The slave server must be in hot_standby (e.g. read only) mode, therefore the minimum version to use
 this action is Postgres 9.0. The I<--warning> and I<--critical> options are the delta between the xlog
 locations. Since these values are byte offsets in the WAL they should match the expected transaction volume
-of your application to prevent false postives or negatives.
+of your application to prevent false positives or negatives.
 
 The first "--dbname", "--host", and "--port", etc. options are considered the
 master; the second belongs to the slave.
@@ -8860,7 +9375,7 @@ Each may be written singular or abbreviated to just the first letter. When speci
 form 'I<bytes> and I<time>', both conditions must be true for the threshold to be met.
 
 You must provide information on how to reach the databases by providing a comma separated list to the
---dbost and --dbport parameters, such as "--dbport=5432,5543". If not given, the action fails.
+--dbhost and --dbport parameters, such as "--dbport=5432,5543". If not given, the action fails.
 
 Example 1: Warn a database with a local replica on port 5433 is behind on any xlog replay at all
 
@@ -8874,16 +9389,35 @@ Example 3: Allow replica1 to be 1 WAL segment behind, if the master is momentari
 
   check_hot_standby_delay --dbhost=master,replica1 --warning='1048576 and 2 min' --critical='16777216 and 10 min'
 
+=head2 B<relation_size>
+
 =head2 B<index_size>
 
 =head2 B<table_size>
 
-=head2 B<relation_size>
+=head2 B<indexes_size>
 
-(symlinks: C<check_postgres_index_size>, C<check_postgres_table_size>, and C<check_postgres_relation_size>)
-The actions B<table_size> and B<index_size> are simply variations of the 
-B<relation_size> action, which checks for a relation that has grown too big. 
-Relations (in other words, tables and indexes) can be filtered with the 
+=head2 B<total_relation_size>
+
+(symlinks: C<check_postgres_relation_size>, C<check_postgres_index_size>,
+C<check_postgres_table_size>, C<check_postgres_indexes_size>, and
+C<check_postgres_total_relation_size>)
+
+The actions B<relation_size> and B<index_size> check for a relation (table,
+index, materialized view), respectively an index that has grown too big, using
+the B<pg_relation_size()> function.
+
+The action B<table_size> checks tables and materialized views using
+B<pg_table_size()>, i.e. including relation forks and TOAST table.
+
+The action B<indexes_size> checks tables and materialized views for
+the size of the attached indexes using B<pg_indexes_size()>.
+
+The action B<total_relation_size> checks relations using
+B<pg_total_relation_size()>, i.e. including relation forks, indexes and TOAST
+table.
+
+Relations can be filtered with the
 I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
 for more details. Relations can also be filtered by the user that owns them, 
 by using the I<--includeuser> and I<--excludeuser> options. 
@@ -8957,7 +9491,7 @@ critical at a week, for host wormwood
 
 Example 2: Same as above, but skip tables belonging to the users 'eve' or 'mallory'
 
-  check_postgres_last_vacuum --host=wormwood --warning='3d' --critical='7d' --excludeusers=eve,mallory
+  check_postgres_last_vacuum --host=wormwood --warning='3d' --critical='7d' --excludeuser=eve,mallory
 
 For MRTG output, returns (on the first line) the LEAST amount of time in seconds since a table was 
 last vacuumed or analyzed. The fourth line returns the name of the database and name of the table.
@@ -9038,7 +9572,7 @@ failure, the fourth line will provide more detail on the failure encountered.
 program is available. The current version is obtained by running C<bucardo_ctl --version>.
 If a major upgrade is available, a warning is returned. If a revision upgrade is 
 available, a critical is returned. (Bucardo is a master to slave, and master to master 
-replication system for Postgres: see http://bucardo.org for more information).
+replication system for Postgres: see https://bucardo.org/ for more information).
 See also the information on the C<--get_method> option.
 
 =head2 B<new_version_box>
@@ -9048,7 +9582,7 @@ program is available. The current version is obtained by running C<boxinfo.pl --
 If a major upgrade is available, a warning is returned. If a revision upgrade is 
 available, a critical is returned. (boxinfo is a program for grabbing important 
 information from a server and putting it into a HTML format: see 
-http://bucardo.org/wiki/boxinfo for more information). See also the information on 
+https://bucardo.org/Boxinfo/ for more information). See also the information on 
 the C<--get_method> option.
 
 =head2 B<new_version_cp>
@@ -9077,7 +9611,7 @@ tail_n_mail program is available. The current version is obtained by running
 C<tail_n_mail --version>. If a major upgrade is available, a warning is returned. If a 
 revision upgrade is available, a critical is returned. (tail_n_mail is a log monitoring 
 tool that can send mail when interesting events appear in your Postgres logs.
-See: http://bucardo.org/wiki/Tail_n_mail for more information).
+See: https://bucardo.org/tail_n_mail/ for more information).
 See also the information on the C<--get_method> option.
 
 =head2 B<pgb_pool_cl_active>
@@ -9254,7 +9788,7 @@ query with the I<--includeuser> and I<--excludeuser> options.
 See the L</"USER NAME FILTERING"> section for more details.
 
 The values for the I<--warning> and I<--critical> options are amounts of 
-time, and default to '2 minutes' and '5 minutes' respectively. Valid units 
+time, and at least one must be provided (no defaults). Valid units 
 are 'seconds', 'minutes', 'hours', or 'days'. Each may be written singular or 
 abbreviated to just the first letter. If no units are given, the unit is 
 assumed to be seconds.
@@ -9319,6 +9853,18 @@ For MRTG output, returns on the first line the time in seconds the replication t
 The maximum time is set to 4 minutes 30 seconds: if no replication has taken place in that long 
 a time, an error is thrown.
 
+=head2 B<replication_slots>
+
+(C<symlink: check_postgres_replication_slots>)  Check the quantity of WAL retained for any replication
+slots in the target database cluster.  This is handy for monitoring environments where all WAL archiving
+and replication is taking place over replication slots.
+
+Warning and critical are total bytes retained for the slot. E.g:
+
+  check_postgres_replication_slots --port=5432 --host=yellow -warning=32M -critical=64M
+
+Specific named slots can be monitored using --include/--exclude
+
 =head2 B<same_schema>
 
 (C<symlink: check_postgres_same_schema>) Verifies that two or more databases are identical as far as their 
@@ -9376,6 +9922,12 @@ becomes "database #2" and is compared to the current database.
 
 To replace the old stored file with the new version, use the --replace argument.
 
+If you need to write the stored file to a specific directory, use 
+the --audit-file-dir argument.
+
+To avoid false positives on value based checks caused by replication lag on
+asynchronous replicas, use the I<--assume-async> option.
+
 To enable snapshots at various points in time, you can use the "--suffix" 
 argument to make the filenames unique to each run. See the examples below.
 
@@ -9403,6 +9955,10 @@ Example 5: Create a daily and weekly snapshot file
 Example 6: Run a historical comparison, then replace the file
 
   check_postgres_same_schema --dbname=cylon --suffix=daily --replace
+
+Example 7: Verify that two databases on hosts star and line are the same, excluding value data (i.e. sequence last_val):
+
+  check_postgres_same_schema --dbhost=star,line --assume-async 
 
 =head2 B<sequence>
 
@@ -9498,12 +10054,17 @@ using the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING">
 section below for more details.
 
 The I<--warning> and I<--critical> options are given as units of time, signed
-integers, or integers for units of time, and both must be provided (there are
+integers, or integers for units of time, and at least one must be provided (there are
 no defaults). Valid units are 'seconds', 'minutes', 'hours', or 'days'. Each
 may be written singular or abbreviated to just the first letter. If no units
 are given and the numbers are unsigned, the units are assumed to be seconds.
 
 This action requires Postgres 8.3 or better.
+
+As of PostgreSQL 10, you can just GRANT I<pg_read_all_stats> to an unprivileged user account.  In
+all earlier versions, superuser privileges are required to see the queries of all users in the
+system; UNKNOWN is returned if queries cannot be checked. To only include queries by the connecting
+user, use I<--includeuser>.
 
 Example 1: Give a warning if any connection has been idle in transaction for more than 15 seconds:
 
@@ -9532,7 +10093,7 @@ the I<--includeuser> and I<--excludeuser> options.
 See the L</"USER NAME FILTERING"> section for more details.
 
 The values or the I<--warning> and I<--critical> options are units of time, and 
-must be provided (no default). Valid units are 'seconds', 'minutes', 'hours', 
+at least one must be provided (no default). Valid units are 'seconds', 'minutes', 'hours', 
 or 'days'. Each may be written singular or abbreviated to just the first letter. 
 If no units are given, the units are assumed to be seconds.
 
@@ -9556,7 +10117,7 @@ The I<--warning> and I<--critical> options indicate the number of transactions d
 If either option is not given, the default values of 1.3 and 1.4 billion are used. There is no need to run this command 
 more than once per database cluster. For a more detailed discussion of what this number represents and what to do about 
 it, please visit the page 
-L<http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND>
+L<https://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND>
 
 The warning and critical values can have underscores in the number for legibility, as Perl does.
 
@@ -9591,9 +10152,9 @@ fourth line indicates the current version. The version must be provided via the 
 
 =head2 B<wal_files>
 
-(C<symlink: check_postgres_wal_files>) Checks how many WAL files exist in the F<pg_xlog> directory, which is found 
+(C<symlink: check_postgres_wal_files>) Checks how many WAL files exist in the F<pg_xlog> directory (PostgreSQL 10 and later" F<pg_wal>), which is found 
 off of your B<data_directory>, sometimes as a symlink to another physical disk for 
-performance reasons. This action must be run as a superuser, in order to access the 
+performance reasons. If the I<--lsfunc> option is not used then this action must be run as a superuser, in order to access the 
 contents of the F<pg_xlog> directory. The minimum version to use this action is 
 Postgres 8.1. The I<--warning> and I<--critical> options are simply the number of 
 files in the F<pg_xlog> directory. What number to set this to will vary, but a general 
@@ -9605,9 +10166,26 @@ transaction, or a faulty B<archive_command> script, may cause Postgres to
 create too many files. Ultimately, this will cause the disk they are on to run 
 out of space, at which point Postgres will shut down.
 
-Example 1: Check that the number of WAL files is 20 or less on host "pluto"
+To avoid connecting as a database superuser, a wrapper function around
+C<pg_ls_dir()> should be defined as a superuser with SECURITY DEFINER,
+and the I<--lsfunc> option used. This example function, if defined by
+a superuser, will allow the script to connect as a normal user
+I<nagios> with I<--lsfunc=ls_xlog_dir>
 
-  check_postgres_wal_files --host=pluto --critical=20
+  BEGIN;
+  CREATE FUNCTION ls_xlog_dir()
+      RETURNS SETOF TEXT
+      AS $$ SELECT pg_ls_dir('pg_xlog') $$
+      LANGUAGE SQL
+      SECURITY DEFINER;
+  REVOKE ALL ON FUNCTION ls_xlog_dir() FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION ls_xlog_dir() to nagios;
+  COMMIT;
+
+Example 1: Check that the number of ready WAL files is 10 or less on host "pluto",
+using a wrapper function C<ls_xlog_dir> to avoid the need for superuser permissions
+
+  check_postgres_archive_ready --host=pluto --critical=10 --lsfunc=ls_xlog_dir
 
 For MRTG output, reports the number of WAL files on line 1.
 
@@ -9790,7 +10368,8 @@ is needed by the L</disk_space> action.
 
 Development happens using the git system. You can clone the latest version by doing:
 
- git clone git://bucardo.org/check_postgres.git
+ https://github.com/bucardo/check_postgres
+ git clone https://github.com/bucardo/check_postgres.git
 
 =head1 MAILING LIST
 
@@ -9815,26 +10394,105 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
-=item B<Version 2.21.1>
+=item B<Version 2.23.0> Released October 31, 2017
+
+  Support PostgreSQL 10.
+    (David Christensen, Christoph Berg)
+
+  Change table_size to use pg_table_size() on 9.0+, i.e. include the TOAST
+  table size in the numbers reported. Add new actions indexes_size and
+  total_relation_size, using the respective pg_indexes_size() and
+  pg_total_relation_size() functions. All size checks will now also check
+  materialized views where applicable.
+    (Christoph Berg)
+
+  Connection errors are now always critical, not unknown.
+    (Christoph Berg)
+
+  New action replication_slots checking if logical or physical replication
+  slots have accumulated too much data
+    (Glyn Astill)
+
+  Multiple same_schema improvements
+    (Glyn Astill)
+
+  Add Spanish message translations
+    (Luis Vazquez)
+
+  Allow a wrapper function to run wal_files and archive_ready actions as
+  non-superuser
+    (Joshua Elsasser)
+
+  Add some defensive casting to the bloat query
+    (Greg Sabino Mullane)
+
+  Invoke psql with option -X
+    (Peter Eisentraut)
+
+  Update postgresql.org URLs to use https.
+    (Magnus Hagander)
+
+  check_txn_idle: Don't fail when query contains 'disabled' word
+    (Marco Nenciarini)
+
+  check_txn_idle: Use state_change instead of query_start.
+    (Sebastian Webber)
+
+  check_hot_standby_delay: Correct extra space in perfdata
+    (Adrien Nayrat)
+
+  Remove \r from psql output as it can confuse some regexes
+    (Greg Sabino Mullane)
+
+  Sort failed jobs in check_pgagent_jobs for stable output.
+    (Christoph Berg)
+
+=item B<Version 2.22.0> June 30, 2015
+
+  Add xact timestamp support to hot_standby_delay.
+  Allow the hot_standby_delay check to accept xlog byte position or
+  timestamp lag intervals as thresholds, or even both at the same time.
+    (Josh Williams)
+
+  Query all sequences per DB in parallel for action=sequence.
+    (Christoph Berg)
 
   Fix bloat check to use correct SQL depending on the server version.
     (Adrian Vondendriesch)
 
+  Show actual long-running query in query_time output
+    (Peter Eisentraut)
+
   Add explicit ORDER BY to the slony_status check to get the most lagged server.
     (Jeff Frost)
 
-  Declare POD encoding to be utf8. (Christoph Berg)
+  Improved multi-slave support in replicate_row.
+    (Andrew Yochum)
+
+  Change the way tables are quoted in replicate_row.
+    (Glyn Astill)
+
+  Don't swallow space before the -c flag when reporting errors
+    (Jeff Janes)
+
+  Fix and extend hot_standby_delay documentation
+    (Michael Renner)
+
+  Declare POD encoding to be utf8.
+    (Christoph Berg)
 
 =item B<Version 2.21.0> September 24, 2013
 
   Fix issue with SQL steps in check_pgagent_jobs for sql steps which perform deletes
     (Rob Emery via github pull)
 
-  Install man page in section 1. (Peter Eisentraut, bug 53, github issue 26)
+  Install man page in section 1.
+    (Peter Eisentraut, bug 53, github issue 26)
 
   Order lock types in check_locks output to make the ordering predictable;
   setting SKIP_NETWORK_TESTS will skip the new_version tests; other minor test
-  suite fixes. (Christoph Berg)
+  suite fixes.
+    (Christoph Berg)
 
   Fix same_schema check on 9.3 by ignoring relminmxid differences in pg_class
     (Christoph Berg)
@@ -10544,7 +11202,7 @@ Some example Nagios configuration settings using this script:
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2007-2013 Greg Sabino Mullane <greg@endpoint.com>.
+Copyright (c) 2007-2017 Greg Sabino Mullane <greg@endpoint.com>.
 
 Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions are met:

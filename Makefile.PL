@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use 5.006001;
 
-my $VERSION = '2.21.0';
+my $VERSION = '2.23.0';
 
 if ($VERSION =~ /_/) {
     print "WARNING! This is a test version ($VERSION) and should not be used in production!\n";
@@ -56,7 +56,7 @@ my %opts = (
     ABSTRACT       => 'Postgres monitoring script',
     AUTHOR         => 'Greg Sabino Mullane <greg@endpoint.com>',
     PREREQ_PM      => {
-        'ExtUtils::MakeMaker' => '6.11',
+        'ExtUtils::MakeMaker' => '6.64',
         'Test::More'          => '0.61',
         'version'             => '0',
     },
@@ -67,6 +67,11 @@ my %opts = (
     NEEDS_LINKING  => 0,
     NORECURS       => 1,
     PM             => {},
+    TEST_REQUIRES  => {
+        'DBD::Pg'             => '2.0',
+        'DBI'                 => '1.51',
+        'Date::Parse'         => '0',
+    },
     clean          => { FILES => join ' ' => @cleanfiles },
 );
 

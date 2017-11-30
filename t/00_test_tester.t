@@ -33,8 +33,10 @@ for my $line (split /\n/ => $info) {
 my $ok = 1;
 for my $act (sort keys %action) {
     ## Special known exceptions
-    next if $act eq 'table_size' or $act eq 'index_size';
-    next if $act eq 'last_autoanalyze' or $act eq 'last_autovacuum';
+    next if grep { $act eq $_ } qw(
+        index_size table_size indexes_size total_relation_size
+        last_autoanalyze last_autovacuum
+    );
 
     my $file = "t/02_$act.t";
     if (! -e $file) {

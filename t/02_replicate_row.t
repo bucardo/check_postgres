@@ -7,7 +7,6 @@ use strict;
 use warnings;
 use Data::Dumper;
 use Test::More tests => 19;
-use Time::HiRes qw(usleep);
 use lib 't','.';
 use CP_Testing;
 
@@ -120,6 +119,7 @@ else {
     $dbh2->commit();
     exit;
 }
+wait;
 
 $t=qq{$S works when rows match, reports proper delay};
 $dbh->commit();
@@ -128,29 +128,31 @@ if (fork) {
     like ($result, qr{^$label OK:.+Row was replicated}, $t);
     $result =~ /time=(\d+)/ or die 'No time?';
     my $time = $1;
-    cmp_ok ($time, '>=', 3, $t);
+    cmp_ok ($time, '>=', 1, $t);
 }
 else {
-    sleep 3;
+    sleep 2;
     $SQL = q{UPDATE reptest SET foo = 'yang' WHERE id = 1};
     $dbh2->do($SQL);
     $dbh2->commit();
     exit;
 }
+wait;
 
 $t=qq{$S works when rows match, with MRTG output};
 $dbh->commit();
 if (fork) {
-    is ($cp->run('DB2replicate-row', '-c 20 --output=MRTG -repinfo=reptest,id,1,foo,yin,yang'),
-        qq{1\n0\n\n\n}, $t);
+    like ($cp->run('DB2replicate-row', '-c 20 --output=MRTG -repinfo=reptest,id,1,foo,yin,yang'),
+        qr{^[1-5]\n0\n\n\n}, $t);
 }
 else {
-    usleep 500_000; # 0.5s
+    sleep 2;
     $SQL = q{UPDATE reptest SET foo = 'yin' WHERE id = 1};
     $dbh2->do($SQL);
     $dbh2->commit();
     exit;
 }
+wait;
 
 $t=qq{$S works when rows match, with simple output};
 $dbh->commit();
@@ -158,15 +160,16 @@ if (fork) {
     $result = $cp->run('DB2replicate-row', '-c 20 --output=simple -repinfo=reptest,id,1,foo,yin,yang');
     $result =~ /^(\d+)/ or die 'No time?';
     my $time = $1;
-    cmp_ok ($time, '>=', 3, $t);
+    cmp_ok ($time, '>=', 1, $t);
 }
 else {
-    sleep 3;
+    sleep 2;
     $SQL = q{UPDATE reptest SET foo = 'yang' WHERE id = 1};
     $dbh2->do($SQL);
     $dbh2->commit();
     exit;
 }
+wait;
 
 $dbh2->disconnect();
 
