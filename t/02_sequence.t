@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 14;
+use Test::More tests => 16;
 use lib 't','.';
 use CP_Testing;
 
@@ -47,6 +47,7 @@ my $testtbl = 'sequence_test';
 $cp->drop_sequence_if_exists($seqname);
 $cp->drop_sequence_if_exists("${seqname}2");
 $cp->drop_sequence_if_exists("${seqname}'\"evil");
+$cp->drop_sequence_if_exists("${seqname}_cycle");
 $cp->drop_table_if_exists("$testtbl");
 
 $t=qq{$S works when no sequences exist};
@@ -100,8 +101,16 @@ $dbh->commit();
 $t=qq{$S handles SQL quoting};
 like ($cp->run(''), qr{OK:.+'public."${seqname}''""evil"'}, $t); # extra " and ' because name is both identifier+literal quoted
 
+# test CYCLE sequence skipping
+$dbh->do(qq{CREATE SEQUENCE ${seqname}_cycle MAXVALUE 5 CYCLE});
+$dbh->commit();
+$dbh->do("SELECT setval('${seqname}_cycle',5)");
+like ($cp->run('--skipcycled'), qr{OK:.+public.cp_test_sequence_cycle=0%;85%;95% }, $t);
+like ($cp->run(''), qr{CRITICAL:.+public.cp_test_sequence_cycle=100% \(calls left=0\) }, $t);
+
 $dbh->do("DROP SEQUENCE ${seqname}");
 $dbh->do("DROP SEQUENCE ${seqname}2");
+$dbh->do("DROP SEQUENCE ${seqname}_cycle");
 $dbh->do(qq{DROP SEQUENCE "${seqname}'""evil"});
 
 # test integer column where the datatype range is smaller than the serial range

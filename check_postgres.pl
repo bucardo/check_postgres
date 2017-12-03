@@ -1270,7 +1270,8 @@ GetOptions(
     'filter=s@',   ## used by same_schema only
     'suffix=s',    ## used by same_schema only
     'replace',     ## used by same_schema only
-    'lsfunc=s',    ## used by wal_files and archive_ready
+    'lsfunc=s',    ## used by wal_fles and archive_ready
+    'skipcycled',  ## used by sequence only
 );
 
 die $USAGE if ! keys %opt and ! @ARGV;
@@ -7665,6 +7666,12 @@ sub check_sequence {
     ## Warning and critical are percentages
     ## Can exclude and include sequences
 
+    my $skipcycled = $opt{'skipcycled'} || 0;
+    my $percsql = 'ROUND(used/slots*100)';
+    if($skipcycled) {
+      $percsql = 'CASE WHEN cycle THEN 0 ELSE ' . $percsql . ' END';
+    }
+
     my ($warning, $critical) = validate_range
         ({
           type              => 'percent',
@@ -7719,13 +7726,14 @@ FROM (
 WHERE nspname !~ '^pg_temp.*'
 ORDER BY nspname, seqname, typname
 };
-    my $SQL10 = q{
-SELECT seqname, last_value, slots, used, ROUND(used/slots*100) AS percent,
+    my $SQL10 = qq{
+SELECT seqname, last_value, slots, used, $percsql AS percent,
   CASE WHEN slots < used THEN 0 ELSE slots - used END AS numleft
 FROM (
  SELECT quote_ident(schemaname)||'.'||quote_ident(sequencename) AS seqname, COALESCE(last_value,min_value) AS last_value,
-  CEIL((max_value-min_value::numeric+1)/increment_by::NUMERIC) AS slots,
-  CEIL((COALESCE(last_value,min_value)-min_value::numeric+1)/increment_by::NUMERIC) AS used
+  cycle,
+  CEIL((max_value-min_value::NUMERIC+1)/increment_by::NUMERIC) AS slots,
+  CEIL((COALESCE(last_value,min_value)-min_value::NUMERIC+1)/increment_by::NUMERIC) AS used
 FROM pg_sequences) foo};
     ## use critic
 
@@ -7752,12 +7760,13 @@ FROM pg_sequences) foo};
             my $seqname_l = $seqname;
             $seqname_l =~ s/'/''/g; # SQL literal quoting (name is already identifier-quoted)
             push @seq_sql, qq{
-SELECT '$seqname_l' AS seqname, last_value, slots, used, ROUND(used/slots*100) AS percent,
+SELECT '$seqname_l' AS seqname, last_value, slots, used, $percsql AS percent,
   CASE WHEN slots < used THEN 0 ELSE slots - used END AS numleft
 FROM (
  SELECT last_value,
-  CEIL((LEAST(max_value, $maxValue)-min_value::numeric+1)/increment_by::NUMERIC) AS slots,
-  CEIL((last_value-min_value::numeric+1)/increment_by::NUMERIC) AS used
+  is_cycled AS cycle,
+  CEIL((LEAST(max_value, $maxValue)-min_value::NUMERIC+1)/increment_by::NUMERIC) AS slots,
+  CEIL((last_value-min_value::NUMERIC+1)/increment_by::NUMERIC) AS used
 FROM $seqname) foo
 };
         }
@@ -9967,7 +9976,8 @@ This is measured as the percent of total possible values that have been used for
 The I<--warning> and I<--critical> options should be expressed as percentages. The default values 
 are B<85%> for the warning and B<95%> for the critical. You may use --include and --exclude to 
 control which sequences are to be checked. Note that this check does account for unusual B<minvalue> 
-and B<increment by> values, but does not care if the sequence is set to cycle or not.
+and B<increment by> values. By default it does not care if the sequence is set to cycle or not,
+and by passing I<--skipcycled> sequenced set to cycle are reported with 0% usage.
 
 The output for Nagios gives the name of the sequence, the percentage used, and the number of 'calls' 
 left, indicating how many more times nextval can be called on that sequence before running into 
