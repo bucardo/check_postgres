@@ -1270,7 +1270,7 @@ GetOptions(
     'filter=s@',   ## used by same_schema only
     'suffix=s',    ## used by same_schema only
     'replace',     ## used by same_schema only
-    'lsfunc=s',    ## used by wal_fles and archive_ready
+    'lsfunc=s',    ## used by wal_files and archive_ready
     'skipcycled',  ## used by sequence only
 );
 
