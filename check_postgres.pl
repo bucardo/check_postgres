@@ -1743,7 +1743,7 @@ sub add_response {
         $dbport;
     $header =~ s/\s+$//;
     $header =~ s/^ //;
-    my $perf = ($opt{showtime} and $db->{totaltime} and $action ne 'bloat') ? "time=$db->{totaltime}s" : '';
+    my $perf = ($opt{showtime} and $db->{totaltime} and $action ne 'bloat' and $action !~ /^pgb_pool_/ ) ? "time=$db->{totaltime}s" : '';
     if ($db->{perf}) {
         $db->{perf} =~ s/^ +//;
         if (length $same_schema_header) {
@@ -6283,6 +6283,7 @@ sub check_pgb_pool {
             $statsmsg{$i->{database}} = msg('pgbouncer-pool', $i->{database}, $stat, $i->{$stat});
             next;
         }
+        $db->{perf} = sprintf ' %s=%s;%s;%s', $i->{database}, $i->{$stat}, $warning, $critical;
 
         if ($critical and $i->{$stat} >= $critical) {
             add_critical $msg;
