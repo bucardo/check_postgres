@@ -6034,9 +6034,6 @@ sub find_new_version {
     my $exec = shift or die;
     my $url = shift or die;
 
-
-    my $version = verify_version();
-
     ## The format is X.Y.Z [optional message]
     my $versionre = qr{((\d+)\.(\d+)(?:\.(\d+))?)(?:\s+(.*))?};
 
