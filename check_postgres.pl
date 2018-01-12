@@ -4615,7 +4615,7 @@ sub check_connection {
             return;
         }
 
-        my $ver = ($db->{slurp}[0]{v} =~ /(\d+\.\d+\S+)/) ? $1 : '';
+        my $ver = ($db->{slurp}[0]{v} =~ /((?:\b1\d\S+)|(?:\d+\.\d+\S+))/) ? $1 : '';
 
         $MRTG and do_mrtg({one => $ver ? 1 : 0});
 
