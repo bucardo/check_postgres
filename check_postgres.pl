@@ -10174,7 +10174,7 @@ Warning and critical are total bytes retained for the slot. E.g:
 
 Specific named slots can be monitored using --include/--exclude
 
-=head2 B<Replication_active_slots>
+=head2 B<replication_active_slots>
 
 (C<symlink: check_postgres_replication_active_slots>) Check all replication
 slots and raise a warning is a slot is not active and hasn't been used or a
