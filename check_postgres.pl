@@ -26,6 +26,7 @@ use File::Spec;
 use File::Temp qw/tempfile tempdir/;
 File::Temp->safe_level( File::Temp::MEDIUM );
 use Cwd;
+use Cwd 'abs_path';
 use Data::Dumper qw/Dumper/;
 $Data::Dumper::Varname = 'POSTGRES';
 $Data::Dumper::Indent = 2;
@@ -4995,6 +4996,12 @@ WHERE spclocation <> ''
             my $xlog = "$datadir/pg_xlog";
             if (-l $xlog) {
                 my $linkdir = readlink($xlog);
+
+                ## Handle relative symbolic links
+                if ($linkdir =~ m|^\.|) {
+                    $linkdir = abs_path("$datadir/$linkdir");
+                }
+
                 $dir{$linkdir} = 1 if ! exists $dir{$linkdir};
             }
         }
