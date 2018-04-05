@@ -621,8 +621,8 @@ like ($cp1->run($connect2),
       qr{^$label CRITICAL.*Items not matched: 1 .*
 \s*Index "public.valen":
 \s*"indexdef" is different:
-\s*Database 1: CREATE INDEX valen ON gkar USING btree \(garibaldi\)
-\s*Database 2: CREATE UNIQUE INDEX valen ON gkar USING btree \(garibaldi\)
+\s*Database 1: CREATE INDEX valen ON (?:public\.)?gkar USING btree \(garibaldi\)
+\s*Database 2: CREATE UNIQUE INDEX valen ON (?:public\.)?gkar USING btree \(garibaldi\)
 \s*"indisunique" is different:
 \s*Database 1: f
 \s*Database 2: t\s*$}s,
