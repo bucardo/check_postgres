@@ -8326,7 +8326,7 @@ sub check_txn_idle {
 
     ## We don't GROUP BY because we want details on every connection
     ## Someday we may even break things down by database
-    my ($SQL2, $SQL3);
+    my ($SQL2, $SQL3, $SQL4);
     if ($type ne 'qtime') {
         $SQL = q{SELECT datname, datid, procpid AS pid, usename, client_addr, xact_start, current_query AS current_query, '' AS state, }.
             q{CASE WHEN client_port < 0 THEN 0 ELSE client_port END AS client_port, }.
@@ -8358,7 +8358,10 @@ sub check_txn_idle {
     $SQL3 =~ s/'' AS state/state AS state/;
     $SQL3 =~ s/query_start/state_change/g;
 
-    my $info = run_command($SQL, { emptyok => 1 , version => [ "<8.3 $SQL2", ">9.1 $SQL3" ] } );
+    ## For Pg 10 and above, consider only client backends
+    ($SQL4 = $SQL3) =~ s/ WHERE / WHERE backend_type = 'client backend' AND /;
+
+    my $info = run_command($SQL, { emptyok => 1 , version => [ "<8.3 $SQL2", ">9.1 $SQL3", ">10 $SQL4" ] } );
 
     ## Extract the first entry
     $db = $info->{db}[0];
