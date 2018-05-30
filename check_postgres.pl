@@ -33,7 +33,7 @@ $Data::Dumper::Useqq = 1;
 
 binmode STDOUT, ':encoding(UTF-8)';
 
-our $VERSION = '2.23.0';
+our $VERSION = '2.24.0';
 
 use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 
@@ -8721,7 +8721,7 @@ sub check_wal_files {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.23.0
+This documents describes check_postgres.pl version 2.24.0
 
 =head1 SYNOPSIS
 
@@ -10660,6 +10660,23 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
+
+=item B<Version 2.24.0> Released May 30, 2018
+
+  Support new_version_pg for PG10
+    (Michael Pirogov)
+
+  Option to skip CYCLE sequences in action sequence
+    (Christoph Moench-Tegeder)
+
+  Output per-database perfdata for pgbouncer pool checks
+    (George Hansper)
+
+  German message translations
+    (Holger Jacobs)
+
+  Consider only client backends in query_time and friends
+    (David Christensen)
 
 =item B<Version 2.23.0> Released October 31, 2017
 

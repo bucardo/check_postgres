@@ -114,7 +114,7 @@
 
 <p><b>check_postgres.pl</b> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
 
-<p>This documents describes check_postgres.pl version 2.23.0</p>
+<p>This documents describes check_postgres.pl version 2.24.0</p>
 
 <h1 id="SYNOPSIS">SYNOPSIS</h1>
 
@@ -136,7 +136,7 @@
   ## There are many other actions and options, please keep reading.
 
   The latest news and documentation can always be found at:
-  https://bucardo.org/Check_postgres/</code></pre>
+  https://bucardo.org/check_postgres/</code></pre>
 
 <h1 id="DESCRIPTION">DESCRIPTION</h1>
 
@@ -1242,7 +1242,7 @@
 
 <h2 id="sequence1"><b>sequence</b></h2>
 
-<p>(<code>symlink: check_postgres_sequence</code>) Checks how much room is left on all sequences in the database. This is measured as the percent of total possible values that have been used for each sequence. The <i>--warning</i> and <i>--critical</i> options should be expressed as percentages. The default values are <b>85%</b> for the warning and <b>95%</b> for the critical. You may use --include and --exclude to control which sequences are to be checked. Note that this check does account for unusual <b>minvalue</b> and <b>increment by</b> values, but does not care if the sequence is set to cycle or not.</p>
+<p>(<code>symlink: check_postgres_sequence</code>) Checks how much room is left on all sequences in the database. This is measured as the percent of total possible values that have been used for each sequence. The <i>--warning</i> and <i>--critical</i> options should be expressed as percentages. The default values are <b>85%</b> for the warning and <b>95%</b> for the critical. You may use --include and --exclude to control which sequences are to be checked. Note that this check does account for unusual <b>minvalue</b> and <b>increment by</b> values. By default it does not care if the sequence is set to cycle or not, and by passing <i>--skipcycled</i> sequenced set to cycle are reported with 0% usage.</p>
 
 <p>The output for Nagios gives the name of the sequence, the percentage used, and the number of &#39;calls&#39; left, indicating how many more times nextval can be called on that sequence before running into the maximum value.</p>
 
@@ -1581,6 +1581,25 @@
 
 <dl>
 
+<dt id="Version-2.24.0-Released-May-30-2018"><b>Version 2.24.0</b> Released May 30, 2018</dt>
+<dd>
+
+<pre><code>  Support new_version_pg for PG10
+    (Michael Pirogov)
+
+  Option to skip CYCLE sequences in action sequence
+    (Christoph Moench-Tegeder)
+
+  Output per-database perfdata for pgbouncer pool checks
+    (George Hansper)
+
+  German message translations
+    (Holger Jacobs)
+
+  Consider only client backends in query_time and friends
+    (David Christensen)</code></pre>
+
+</dd>
 <dt id="Version-2.23.0-Released-October-31-2017"><b>Version 2.23.0</b> Released October 31, 2017</dt>
 <dd>
 
