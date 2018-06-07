@@ -8682,8 +8682,8 @@ sub check_wal_files {
 
     ## Figure out where the pg_xlog directory is
     $SQL = qq{SELECT count(*) AS count FROM $lsfunc($lsargs) WHERE $lsfunc ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)
-    my $SQL10 = $SQL;
-    $SQL10 =~ s/pg_xlog/pg_wal/g unless ($opt{lsfunc});
+    my $SQL10 = $opt{lsfunc} ? $SQL :
+        qq{SELECT count(*) AS count FROM pg_ls_waldir() WHERE name ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)
 
     my $info = run_command($SQL, {regex => qr[\d], version => [">9.6 $SQL10"] });
 

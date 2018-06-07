@@ -49,6 +49,9 @@ like ($cp->run('--critical=1'), qr{^$label CRITICAL}, $t);
 
 $cp->drop_schema_if_exists();
 $cp->create_fake_pg_table('pg_ls_dir', 'text');
+if ($ver >= 100000) {
+    $dbh->do("CREATE OR REPLACE FUNCTION cptest.pg_ls_waldir() RETURNS table(name text) AS 'SELECT * FROM cptest.pg_ls_dir' LANGUAGE SQL");
+}
 $dbh->commit();
 
 like ($cp->run('--critical=1'), qr{^$label OK}, $t);
@@ -67,7 +70,7 @@ is ($cp->run('--critical=101 --output=mrtg'), "99\n0\n\n\n", $t);
 
 # test --lsfunc
 my $xlogdir = $ver >= 100000 ? 'pg_wal' : 'pg_xlog';
-$dbh->do(qq{CREATE FUNCTION ls_xlog_dir()
+$dbh->do(qq{CREATE OR REPLACE FUNCTION ls_xlog_dir()
       RETURNS SETOF TEXT
       AS \$\$ SELECT pg_ls_dir('$xlogdir') \$\$
       LANGUAGE SQL
