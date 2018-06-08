@@ -8361,7 +8361,7 @@ sub check_txn_idle {
     ## For Pg 10 and above, consider only client backends
     ($SQL4 = $SQL3) =~ s/ WHERE / WHERE backend_type = 'client backend' AND /;
 
-    my $info = run_command($SQL, { emptyok => 1 , version => [ "<8.3 $SQL2", ">9.1 $SQL3", ">10 $SQL4" ] } );
+    my $info = run_command($SQL, { emptyok => 1 , version => [ "<8.3 $SQL2", ">9.1 $SQL3", ">9.6 $SQL4" ] } );
 
     ## Extract the first entry
     $db = $info->{db}[0];
