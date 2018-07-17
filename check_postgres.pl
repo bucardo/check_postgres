@@ -1959,7 +1959,7 @@ sub add_response {
             }
             $same_schema_header .= sprintf "\nDB %s: %s%s%s%s%s",
                 $number,
-                defined $row->{dbservice} ? qq{dbservice=$row->{dbservice} } : '',
+                (defined $row->{dbservice} and length $row->{dbservice}) ? qq{dbservice=$row->{dbservice} } : '',
                 defined $row->{port} ? qq{port=$row->{port} } : '',
                 defined $row->{host} ? qq{host=$row->{host} } : '',
                 defined $row->{dbname} ? qq{dbname=$row->{dbname} } : '',
