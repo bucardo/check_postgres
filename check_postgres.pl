@@ -7057,7 +7057,7 @@ sub check_same_schema {
         [language   => 'laninline,lanplcallfoid,lanvalidator',    ''          ],
         [operator   => 'oprleft,oprright,oprresult,oprnegate,
                         oprcom',                                  ''          ],
-        [type       => '',                                        ''          ],
+        [type       => 'typarray',                                ''          ],
         [schema     => '',                                        ''          ],
         [function   => 'source_checksum,prolang,prorettype,
                         proargtypes,proallargtypes,provariadic,
