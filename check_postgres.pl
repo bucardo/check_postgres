@@ -1312,7 +1312,7 @@ WHERE c.relkind = 'r'},
 SELECT c.*, i.*, nspname||'.'||relname AS name, quote_ident(rolname) AS owner,
   quote_ident(relname) AS safename, quote_ident(nspname) AS schema,
   spcname AS tablespace, amname,
-  pg_get_indexdef(c.oid) AS indexdef
+  pg_get_indexdef(c.oid) AS indexdef, indrelid::regclass::text AS tablename
 FROM pg_class c
 JOIN pg_roles r ON (r.oid = c.relowner)
 JOIN pg_namespace n ON (n.oid = c.relnamespace)
@@ -7262,6 +7262,9 @@ sub check_same_schema {
                 ## Show the list of the item, and a CSV of which databases have it and which don't
                 my $isthere = join ', ' => sort { $a<=>$b } keys %{ $e->{$name}{isthere} };
                 my $nothere = join ', ' => sort { $a<=>$b } keys %{ $e->{$name}{nothere} };
+                ## Extra information (e.g. tablename) may be stuffed into the hash value
+                (my $extra) = values %{ $e->{$name}{isthere} };
+                $name .= " ($extra)" if length $extra > 1;
                 $msg .= sprintf "%s\n  %-*s %s\n  %-*s %s\n",
                     msg('ss-noexist', $pitem, $name),
                     $maxsize, $msg_exists,
@@ -7578,6 +7581,8 @@ sub schema_item_exists {
 
                 if (! exists $itemhash->{$db2}{$item_class}{$name}) {
 
+                    my $one = '1';
+
                     ## Special exception for columns: do not add if the table is non-existent
                     if ($item_class eq 'column') {
                         (my $tablename = $name) =~ s/(.+)\..+/$1/;
@@ -7591,8 +7596,16 @@ sub schema_item_exists {
                         next if ! exists $itemhash->{$db2}{table}{$tablename};
                     }
 
-                    $nomatch{$name}{isthere}{$db1} = 1;
-                    $nomatch{$name}{nothere}{$db2} = 1;
+                    ## Special exception for indexes: do not add if the table is non-existent
+                    if ($item_class eq 'index') {
+                        my $it = $itemhash->{$db1}{$item_class}{$name};
+                        my $tablename = "$it->{tablename}";
+                        next if ! exists $itemhash->{$db2}{table}{$tablename};
+                        $one = $tablename;
+                    }
+
+                    $nomatch{$name}{isthere}{$db1} = $one;
+                    $nomatch{$name}{nothere}{$db2} = $one;
                 }
             }
         }
