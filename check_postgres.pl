@@ -7581,6 +7581,12 @@ sub schema_item_exists {
 
                 if (! exists $itemhash->{$db2}{$item_class}{$name}) {
 
+                    ## Skip if the schema does not match (and we have at least one schema, indicating lack of 'noschema')
+                    if ($item_class ne 'schema') {
+                        my $it = $itemhash->{$db1}{$item_class}{$name};
+                        next if exists $it->{schema} and keys %{ $itemhash->{$db1}{schema} } and ! exists $itemhash->{$db2}{schema}{ $it->{schema} };
+                    }
+
                     my $one = '1';
 
                     ## Special exception for columns: do not add if the table is non-existent
