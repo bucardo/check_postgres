@@ -1351,7 +1351,11 @@ SELECT t.*, n1.nspname||'.'||c1.relname||'.'||t.tgname AS name, quote_ident(t.tg
   n1.nspname AS tschema, c1.relname AS tname,
   n2.nspname AS cschema, c2.relname AS cname,
   n3.nspname AS procschema, p.proname AS procname,
-  pg_get_triggerdef(t.oid) AS triggerdef
+  pg_get_triggerdef(t.oid) AS triggerdef,
+  (  WITH nums AS (SELECT unnest(tgattr) AS poz)
+     SELECT string_agg(attname,',') FROM pg_attribute a JOIN nums ON 
+     (nums.poz = a.attnum AND tgrelid = a.attrelid)
+  ) AS trigger_columns
 FROM pg_trigger t
 JOIN pg_class c1 ON (c1.oid = t.tgrelid)
 JOIN pg_roles r ON (r.oid = c1.relowner)
@@ -7070,7 +7074,7 @@ sub check_same_schema {
         [index      => 'relpages,reltuples,indpred,indclass,
                         indexprs,indcheckxmin,reltablespace,
                         indkey',                                  ''          ],
-        [trigger    => 'tgqual,tgconstraint',                     ''          ],
+        [trigger    => 'tgqual,tgconstraint,tgattr',              ''          ],
         [constraint => 'conbin,conindid,conkey,confkey,
                         confmatchtype',                           ''          ],
         [column     => 'atttypid,attnum,attbyval,attndims',       ''          ],
