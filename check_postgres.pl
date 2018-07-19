@@ -1286,7 +1286,7 @@ WHERE c.relkind = 'S'},
     view => {
         SQL       => q{
 SELECT c.*, nspname||'.'||relname AS name, quote_ident(rolname) AS owner,
-  quote_ident(relname) AS safename, quote_ident(nspname) AS schema,
+  quote_ident(relname) AS safename, quote_ident(nspname) AS schemaname,
   TRIM(pg_get_viewdef(c.oid, TRUE)) AS viewdef, spcname AS tablespace
 FROM pg_class c
 JOIN pg_roles r ON (r.oid = c.relowner)
@@ -1298,7 +1298,7 @@ WHERE c.relkind = 'v'},
     table => {
         SQL       => q{
 SELECT c.*, nspname||'.'||relname AS name, quote_ident(rolname) AS owner,
-  quote_ident(relname) AS safename, quote_ident(nspname) AS schema,
+  quote_ident(relname) AS safename, quote_ident(nspname) AS schemaname,
   spcname AS tablespace
 FROM pg_class c
 JOIN pg_roles r ON (r.oid = c.relowner)
@@ -1310,7 +1310,7 @@ WHERE c.relkind = 'r'},
     index => {
         SQL       => q{
 SELECT c.*, i.*, nspname||'.'||relname AS name, quote_ident(rolname) AS owner,
-  quote_ident(relname) AS safename, quote_ident(nspname) AS schema,
+  quote_ident(relname) AS safename, quote_ident(nspname) AS schemaname,
   spcname AS tablespace, amname,
   pg_get_indexdef(c.oid) AS indexdef, indrelid::regclass::text AS tablename
 FROM pg_class c
@@ -1325,7 +1325,7 @@ WHERE c.relkind = 'i'},
     operator => {
         SQL       => q{
 SELECT o.*, o.oid, n.nspname||'.'||o.oprname||' ('||COALESCE(t2.typname,'NONE')||','||COALESCE(t3.typname,'NONE')||')' AS name, quote_ident(o.oprname) AS safename,
-  rolname AS owner, n.nspname AS schema,
+  rolname AS owner, quote_ident(n.nspname) AS schemaname,
   t1.typname AS resultname,
   t2.typname AS leftname, t3.typname AS rightname,
   t4.typname AS resultname,
@@ -1348,7 +1348,8 @@ LEFT JOIN pg_namespace ncom ON (ncom.oid = com.oprnamespace)},
     trigger => {
         SQL       => q{
 SELECT t.*, n1.nspname||'.'||c1.relname||'.'||t.tgname AS name, quote_ident(t.tgname) AS safename, quote_ident(rolname) AS owner,
-  n1.nspname AS tschema, c1.relname AS tname,
+  quote_ident(n1.nspname) AS schemaname,
+  n1.nspname||'.'||c1.relname AS tablename,
   n2.nspname AS cschema, c2.relname AS cname,
   n3.nspname AS procschema, p.proname AS procname,
   pg_get_triggerdef(t.oid) AS triggerdef,
@@ -1370,7 +1371,7 @@ WHERE t.tgconstrrelid = 0 AND t.tgconstrindid = 0 AND tgname !~ '^pg_'},
         SQL       => q{
 SELECT p.*, p.oid, nspname||'.'||p.proname AS name, quote_ident(p.proname) AS safename,
   md5(prosrc) AS source_checksum,
-  rolname AS owner, nspname AS schema,
+  rolname AS owner, quote_ident(nspname) AS schemaname,
   pg_get_function_arguments(p.oid) AS function_arguments
 FROM pg_proc p
 JOIN pg_roles r ON (r.oid = p.proowner)
@@ -1380,7 +1381,8 @@ JOIN pg_namespace n ON (n.oid = p.pronamespace)},
     constraint => {
         SQL       => q{
 SELECT c.*, c.oid, n.nspname||'.'||c1.relname||'.'||c.conname AS name, quote_ident(c.conname) AS safename,
- n.nspname AS schema, r.relname AS tname,
+ quote_ident(n.nspname) AS schemaname,
+ n.nspname||'.'||r.relname AS tablename,
  pg_get_constraintdef(c.oid) AS constraintdef, translate(c.confmatchtype,'u','s') AS confmatchtype_compat
 FROM pg_constraint c
 JOIN pg_class c1 ON (c1.oid = c.conrelid)
@@ -1392,8 +1394,8 @@ JOIN pg_namespace n2 ON (n2.oid = r.relnamespace)},
     column => {
         SQL       => q{
 SELECT a.*, n.nspname||'.'||c.relname||'.'||attname AS name, quote_ident(a.attname) AS safename,
-  n.nspname||'.'||c.relname AS tname,
-  typname, quote_ident(nspname) AS schema,
+  n.nspname||'.'||c.relname AS tablename,
+  typname, quote_ident(nspname) AS schemaname,
   pg_get_expr(d.adbin, a.attrelid, true) AS default
 FROM pg_attribute a
 JOIN pg_type t ON (t.oid = a.atttypid)
@@ -7588,30 +7590,18 @@ sub schema_item_exists {
                     ## Skip if the schema does not match (and we have at least one schema, indicating lack of 'noschema')
                     if ($item_class ne 'schema') {
                         my $it = $itemhash->{$db1}{$item_class}{$name};
-                        next if exists $it->{schema} and keys %{ $itemhash->{$db1}{schema} } and ! exists $itemhash->{$db2}{schema}{ $it->{schema} };
+                        next if exists $it->{schemaname} and keys %{ $itemhash->{$db1}{schema} } and ! exists $itemhash->{$db2}{schema}{ $it->{schemaname} };
+                    }
+                    ## Skip if this item has a table, but the table does not match
+                    if ($item_class ne 'table') {
+                        my $it = $itemhash->{$db1}{$item_class}{$name};
+                        next if exists $it->{tablename} and ! exists $itemhash->{$db2}{table}{ $it->{tablename} };
                     }
 
                     my $one = '1';
 
-                    ## Special exception for columns: do not add if the table is non-existent
-                    if ($item_class eq 'column') {
-                        (my $tablename = $name) =~ s/(.+)\..+/$1/;
-                        next if ! exists $itemhash->{$db2}{table}{$tablename};
-                    }
-
-                    ## Special exception for triggers: do not add if the table is non-existent
-                    if ($item_class eq 'trigger') {
-                        my $it = $itemhash->{$db1}{$item_class}{$name};
-                        my $tablename = "$it->{tschema}.$it->{tname}";
-                        next if ! exists $itemhash->{$db2}{table}{$tablename};
-                    }
-
-                    ## Special exception for indexes: do not add if the table is non-existent
                     if ($item_class eq 'index') {
-                        my $it = $itemhash->{$db1}{$item_class}{$name};
-                        my $tablename = "$it->{tablename}";
-                        next if ! exists $itemhash->{$db2}{table}{$tablename};
-                        $one = $tablename;
+                        $one = $itemhash->{$db1}{$item_class}{$name}{tablename};
                     }
 
                     $nomatch{$name}{isthere}{$db1} = $one;
@@ -7882,8 +7872,8 @@ sub find_catalog_info {
 
         ## For columns, reduce the attnum to a simpler canonical form without holes
         if ($type eq 'column') {
-            if ($row->{tname} ne $last_table) {
-                $last_table = $row->{tname};
+            if ($row->{tablename} ne $last_table) {
+                $last_table = $row->{tablename};
                 $colnum = 1;
             }
             $row->{column_number} = $colnum++;
