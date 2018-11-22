@@ -5506,19 +5506,19 @@ sub check_streaming_delta {
         $SQL .= "WHERE network(set_masklen(client_addr,$netmask_length)) = network(set_masklen(inet_server_addr(),$netmask_length))";
     }
     my $info = run_command($SQL);
+    my $perfdata = "";
     for $db (@{$info->{db}}) {
         for my $row (@{$db->{slurp}}) {
             my ($a, $b) = split(/\//, $row->{'master_location'});
             my $master_location = (hex('ff000000') * hex($a)) + hex($b);
 
-            for my $wal_type (qw/sent write flush replay/)
-            { 
-                ($a, $b) = split(/\//, $row->{'sent_location'});	
+            for my $wal_type (qw/sent write flush replay/) { 
+                ($a, $b) = split(/\//, $row->{$wal_type . '_location'});	
                 my $slave_position = (hex('ff000000') * hex($a)) + hex($b);
 
                 my $slave_lag = $master_location - $slave_position;
 
-                $db->{perf} .= "$row->{'client_addr'}_$wal_type=$slave_lag;$warning;$critical; ";
+                $db->{perf} .= "$row->{'client_addr'}_$wal_type=$slave_lag;$warning;$critical ";
 
                 if (length $critical and $slave_lag >= $critical) {
                     add_critical "CRITICAL for : $row->{'client_addr'} - $row->{'application_name'} - $wal_type";
@@ -5526,10 +5526,8 @@ sub check_streaming_delta {
                 elsif (length $warning and $slave_lag >= $warning) {
                     add_warning "WARNING for : $row->{'client_addr'} - $row->{'application_name'} - $wal_type";
                 }
-                else {
-                    add_ok "OK for : $row->{'client_addr'} - $row->{'application_name'} - $wal_type";
-                }
             }
+			add_ok "OK for : $row->{'client_addr'} - $row->{'application_name'}";
         }
     }
 
