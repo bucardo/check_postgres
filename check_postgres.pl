@@ -5527,7 +5527,7 @@ sub check_streaming_delta {
                     add_warning "WARNING for : $row->{'client_addr'} - $row->{'application_name'} - $wal_type";
                 }
             }
-			add_ok "OK for : $row->{'client_addr'} - $row->{'application_name'}";
+            add_ok "OK for : $row->{'client_addr'} - $row->{'application_name'}";
         }
     }
 
