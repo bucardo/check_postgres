@@ -79,19 +79,19 @@ SKIP: {
         skip 'Need Pod::Text to re-test the spelling of embedded POD', 1;
     }
 
-	my $parser = Pod::Text->new (quotes => 'none');
+    my $parser = Pod::Text->new (quotes => 'none');
 
     for my $file (qw{check_postgres.pl}) {
         if (! -e $file) {
             fail(qq{Could not find the file "$file"!});
         }
-		my $string;
-		my $tmpfile = "$file.tmp";
+        my $string;
+        my $tmpfile = "$file.tmp";
         $parser->parse_from_file($file, $tmpfile);
-		next if ! open my $fh, '<', $tmpfile;
-		{ local $/; $string = <$fh>; }
-		close $fh or warn "Could not close $tmpfile\n";
-		unlink $tmpfile;
+        next if ! open my $fh, '<', $tmpfile;
+        { local $/; $string = <$fh>; }
+        close $fh or warn "Could not close $tmpfile\n";
+        unlink $tmpfile;
         spellcheck("POD from $file" => $string, $file);
     }
 }

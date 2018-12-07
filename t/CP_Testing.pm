@@ -92,6 +92,17 @@ sub test_database_handle {
             : $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/initdb"
             :                  'initdb';
 
+        ## Grab the version for finicky items
+        if (qx{$initdb --version} !~ /(\d+)(?:\.(\d+))?/) {
+            die qq{Could not determine the version of initdb in use!\n};
+        }
+        my ($imaj,$imin) = ($1,$2);
+
+        # Speed up testing on 9.3+
+        if ($imaj > 9 or ($imaj==9 and $imin >= 3)) {
+            $initdb = "$initdb --nosync";
+        }
+
         $com = qq{LC_ALL=en LANG=C $initdb --locale=C -E UTF8 -D "$datadir" 2>&1};
         eval {
             $DEBUG and warn qq{About to run: $com\n};
@@ -108,12 +119,7 @@ sub test_database_handle {
         print $cfh qq{port = 5432\n};
         print $cfh qq{listen_addresses = ''\n};
         print $cfh qq{max_connections = 10\n};
-
-        ## Grab the version for finicky items
-        if (qx{$initdb --version} !~ /(\d+)\.(\d+)/) {
-            die qq{Could not determine the version of initdb in use!\n};
-        }
-        my ($imaj,$imin) = ($1,$2);
+        print $cfh qq{fsync = off\n};
 
         ## <= 8.0
         if ($imaj < 8 or ($imaj==8 and $imin <= 1)) {
@@ -141,6 +147,13 @@ sub test_database_handle {
         ## <= 8.3
         if ($imaj < 8 or ($imaj==8 and $imin <= 3)) {
             print $cfh qq{max_fsm_pages = 99999\n};
+        }
+
+        ## >= 9.4
+        if ($imaj > 9 or ($imaj==9 and $imin >= 4)) {
+            print $cfh qq{max_replication_slots = 2\n};
+            print $cfh qq{wal_level = logical\n};
+            print $cfh qq{max_wal_senders = 2\n};
         }
 
         print $cfh "\n";
@@ -175,7 +188,7 @@ sub test_database_handle {
         : $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/pg_ctl"
         :                  'pg_ctl';
 
-    if (qx{$pg_ctl --version} !~ /(\d+)\.(\d+)/) {
+    if (qx{$pg_ctl --version} !~ /(\d+)(?:\.(\d+))?/) {
         die qq{Could not determine the version of pg_ctl in use!\n};
     }
     my ($maj,$min) = ($1,$2);
@@ -336,11 +349,14 @@ sub test_database_handle {
             $dbh->do("CREATE USER $user2");
         }
     }
-    $dbh->do('CREATE DATABASE beedeebeedee');
-    $dbh->do('CREATE DATABASE ardala');
-    $dbh->do('CREATE LANGUAGE plpgsql');
-    $dbh->do('CREATE LANGUAGE plperlu');
-    $dbh->do("CREATE SCHEMA $fakeschema");
+
+    my $databases = $dbh->selectall_hashref('SELECT datname FROM pg_database', 'datname');
+    $dbh->do('CREATE DATABASE beedeebeedee') unless ($databases->{beedeebeedee});
+    $dbh->do('CREATE DATABASE ardala') unless ($databases->{ardala});
+    my $languages = $dbh->selectall_hashref('SELECT lanname FROM pg_language', 'lanname');
+    $dbh->do('CREATE LANGUAGE plpgsql') unless ($languages->{plpgsql});
+    my $schemas = $dbh->selectall_hashref('SELECT nspname FROM pg_namespace', 'nspname');
+    $dbh->do("CREATE SCHEMA $fakeschema") unless ($schemas->{$fakeschema});
     $dbh->{AutoCommit} = 0;
     $dbh->{RaiseError} = 1;
 
@@ -375,7 +391,7 @@ sub test_database_handle {
 
 sub recreate_database {
 
-    ## Given a database handle, comepletely recreate the current database
+    ## Given a database handle, completely recreate the current database
 
     my ($self,$dbh) = @_;
 
@@ -480,7 +496,7 @@ sub get_host {
 
 sub get_port {
     my $self = shift;
-	return 5432;
+    return 5432;
 }
 
 sub get_shorthost {
@@ -700,7 +716,8 @@ sub drop_sequence_if_exists {
     $SQL = q{SELECT count(*) FROM pg_class WHERE relkind = 'S' AND relname = } . $dbh->quote($name);
     my $count = $dbh->selectall_arrayref($SQL)->[0][0];
     if ($count) {
-        $dbh->do("DROP SEQUENCE $name");
+        $name =~ s/"/""/g;
+        $dbh->do("DROP SEQUENCE \"$name\"");
         $dbh->commit();
     }
     return;
@@ -748,6 +765,31 @@ SELECT 'PostgreSQL $version on fakefunction for check_postgres.pl testing'::text
     return;
 
 } ## end of fake version
+
+
+sub fake_version_timeout {
+
+    my $self = shift;
+    my $dbh = $self->{dbh} || die;
+    my $dbuser = $self->{testuser} || die;
+
+    if (! $self->schema_exists($dbh, $fakeschema)) {
+        $dbh->do("CREATE SCHEMA $fakeschema");
+    }
+
+    $dbh->do(qq{
+CREATE OR REPLACE FUNCTION $fakeschema.version()
+RETURNS TEXT
+LANGUAGE SQL
+AS \$\$
+SELECT pg_sleep(10)::text;
+\$\$
+});
+    $dbh->do("ALTER USER $dbuser SET search_path = $fakeschema, public, pg_catalog");
+    $dbh->commit();
+    return;
+
+} ## end of fake version timeout
 
 
 sub fake_self_version {
@@ -804,9 +846,9 @@ sub drop_all_tables {
     my $self = shift;
     my $dbh = $self->{dbh} || die;
     $dbh->{Warn} = 0;
-    my @info = $dbh->tables('','public','','TABLE');
-    for my $tab (@info) {
-        $dbh->do("DROP TABLE $tab CASCADE");
+    my $tables = $dbh->selectall_arrayref("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
+    for my $tab (@$tables) {
+        $dbh->do("DROP TABLE $tab->[0] CASCADE");
     }
     $dbh->{Warn} = 1;
     $dbh->commit();
@@ -821,6 +863,12 @@ sub database_sleep {
     my $ver = $dbh->{pg_server_version};
 
     if ($ver < 80200) {
+        $dbh->{AutoCommit} = 1;
+        $dbh->{RaiseError} = 0;
+        $dbh->do('CREATE LANGUAGE plperlu');
+        $dbh->{AutoCommit} = 0;
+        $dbh->{RaiseError} = 1;
+
         $SQL = q{CREATE OR REPLACE FUNCTION pg_sleep(float) RETURNS VOID LANGUAGE plperlu AS 'select(undef,undef,undef,shift)'};
         $dbh->do($SQL);
         $dbh->commit();

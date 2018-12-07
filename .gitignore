@@ -14,3 +14,5 @@ test_database_check_postgres*
 cover_db/
 check_postgres-
 MYMETA.*
+/Vagrantfile
+.vagrant

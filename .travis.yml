@@ -1,0 +1,45 @@
+# run the check_postgres testsuite on travis-ci.com
+---
+# versions to run on
+env:
+  - PGVERSION=10
+  - PGVERSION=9.6
+  - PGVERSION=9.5
+  - PGVERSION=9.4
+  - PGVERSION=9.3
+  - PGVERSION=9.2
+  - PGVERSION=9.1
+  - PGVERSION=9.0
+  - PGVERSION=8.4
+
+dist: trusty
+sudo: required
+language: perl
+perl:
+  - '5.8' # 5.8.8 is shipped with RHEL 5, also oldest version supported by Travis
+  - '5.24'
+
+before_install:
+  - sudo apt-get -qq update
+
+install:
+  # install PostgreSQL $PGVERSION if not there yet
+  - |
+    if [ ! -x /usr/lib/postgresql/$PGVERSION/bin/postgres ]; then
+      sudo apt-get install postgresql-common
+      sudo /etc/init.d/postgresql stop # travis wants only one version running
+      sudo apt-get install postgresql-contrib-$PGVERSION
+    fi
+  - sudo /etc/init.d/postgresql stop
+  - pg_lsclusters
+  - dpkg -l postgresql\* | cat
+  - printenv | sort
+
+script:
+  - rm -rf test_database_check_postgres*
+  - perl Makefile.PL
+  - cpanm --quiet --installdeps --notest .
+  - PGBINDIR=/usr/lib/postgresql/$PGVERSION/bin make test TEST_VERBOSE=1
+
+after_script:
+  - tail -n 200 test_database_check_postgres*/pg.log

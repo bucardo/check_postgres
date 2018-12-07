@@ -8,10 +8,15 @@ For testing PostgreSQL 9.2 and later, DBD::Pg 2.19.3 is required.
 
 Running the testsuite:
 
+* env -i make test
 * LC_ALL=C make test
 * initdb and friends not in $PATH: LC_ALL=C make test PGBINDIR=/usr/lib/postgresql/9.2/bin
 * Run a single test: LC_ALL=C make test TEST_FILES=t/02_database_size.t
 * Skip network tests: LC_ALL=C make test SKIP_NETWORK_TESTS=1
+
+The testsuite is sensitive to locale and PG environment variables such as LANG
+and PGDATABASE. Using `env -i` will unset all variables from the user
+environment for running the tests.
 
 ** RELEASE PROCESS **
 
@@ -19,7 +24,7 @@ Quick notes on the current release process:
 
 * Make sure all changes are recorded in the relevant POD section.
 * Add a release date next to the new version number
-* Change the version number everywhere (use prove -v t/00_release.t to verify)
+* Change the version number everywhere (use `RELEASE_TESTING=1 prove -v t/00_release.t` to verify)
 * git commit as needed
 * Run: perl Makefile.PL; make html
 * Run: make signature_asc
@@ -47,7 +52,7 @@ Login to the bucardo.org box, and then:
 * edit latest_version.txt
 * edit index.html
 
-* Edit the bucardo.org page and bump the version: http://bucardo.org/wiki/Check_postgres
+* Edit the bucardo.org page and bump the version: http://bucardo.org/check_postgres
 
 * Email to check_postgres-announce with summary of changes
 

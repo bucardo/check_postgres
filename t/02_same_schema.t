@@ -79,7 +79,6 @@ sub drop_language {
 
 } ## end of drop_language
 
-
 #goto TRIGGER; ## ZZZ
 
 #/////////// Languages
@@ -340,6 +339,9 @@ Sequence "wakko.yakko" does not exist on all databases:
 
 $t = qq{$S reports sequence differences};
 $dbh2->do(q{CREATE SEQUENCE wakko.yakko MINVALUE 10 MAXVALUE 100 INCREMENT BY 3});
+$dbh1->do(q{SELECT nextval('wakko.yakko')});
+$dbh2->do(q{SELECT nextval('wakko.yakko')});
+
 like ($cp1->run($connect2),
       qr{^$label CRITICAL.*Items not matched: 1 .*
 \s*Sequence "wakko.yakko":
@@ -493,7 +495,7 @@ like ($cp1->run($connect2),
 \s*"relhastriggers" is different:
 \s*Database 1: t
 \s*Database 2: f
-\s*Trigger "public.tigger" does not exist on all databases:
+\s*Trigger "public.piglet.tigger" does not exist on all databases:
 \s*Exists on:  1
 \s*Missing on: 2\s*$}s,
       $t);
@@ -509,7 +511,7 @@ $dbh2->do($SQL);
 
 like ($cp1->run($connect2),
       qr{^$label CRITICAL.*Items not matched: 1 .*
-\s*Trigger "public.tigger":
+\s*Trigger "public.piglet.tigger":
 \s*"procname" is different:
 \s*Database 1: bouncy
 \s*Database 2: trouncy\s*}s,
@@ -525,7 +527,7 @@ $dbh1->do($SQL);
 ## We leave out the details as the exact values are version-dependent
 like ($cp1->run($connect2),
       qr{^$label CRITICAL.*Items not matched: 1 .*
-\s*Trigger "public.tigger":
+\s*Trigger "public.piglet.tigger":
 \s*"tgenabled" is different:}s,
       $t);
 
@@ -559,7 +561,7 @@ like ($cp1->run($connect2),
 \s*"relchecks" is different:
 \s*Database 1: 1
 \s*Database 2: 0
-\s*Constraint "public.iscandar" does not exist on all databases:
+\s*Constraint "public.yamato.iscandar" does not exist on all databases:
 \s*Exists on:  1
 \s*Missing on: 2\s*$}s,
       $t);
@@ -568,11 +570,16 @@ $t = qq{$S reports constraint with different definitions};
 $dbh2->do(q{ALTER TABLE yamato ADD CONSTRAINT iscandar CHECK(nova > 256)});
 like ($cp1->run($connect2),
       qr{^$label CRITICAL.*Items not matched: 1 .*
-\s*Constraint "public.iscandar":
+\s*Constraint "public.yamato.iscandar":
 \s*"consrc" is different:
 \s*Database 1: \(nova > 0\)
-\s*Database 2: \(nova > 256\)\s*$}s,
+\s*Database 2: \(nova > 256\)
+\s*"constraintdef" is different:
+\s*Database 1: CHECK \(\(nova > 0\)\)
+\s*Database 2: CHECK \(\(nova > 256\)\)\s*$}s,
       $t);
+
+
 
 $t = qq{$S does not report constraint differences if the 'noconstraint' filter is given};
 like ($cp1->run("$connect3 --filter=noconstraint,notables"), qr{^$label OK}, $t);
@@ -614,8 +621,8 @@ like ($cp1->run($connect2),
       qr{^$label CRITICAL.*Items not matched: 1 .*
 \s*Index "public.valen":
 \s*"indexdef" is different:
-\s*Database 1: CREATE INDEX valen ON gkar USING btree \(garibaldi\)
-\s*Database 2: CREATE UNIQUE INDEX valen ON gkar USING btree \(garibaldi\)
+\s*Database 1: CREATE INDEX valen ON (?:public\.)?gkar USING btree \(garibaldi\)
+\s*Database 2: CREATE UNIQUE INDEX valen ON (?:public\.)?gkar USING btree \(garibaldi\)
 \s*"indisunique" is different:
 \s*Database 1: f
 \s*Database 2: t\s*$}s,
