@@ -5501,7 +5501,7 @@ sub check_replication_slots {
         WITH slots AS (SELECT slot_name,
             slot_type,
             coalesce(restart_lsn, '0/0'::pg_lsn) AS slot_lsn,
-            coalesce(pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn),0) AS delta,
+            coalesce(pg_xlog_location_diff(coalesce(pg_last_xlog_receive_location(), pg_current_xlog_location()), restart_lsn),0) AS delta,
             active
         FROM pg_replication_slots)
         SELECT *, pg_size_pretty(delta) AS delta_pretty FROM slots;
@@ -5510,8 +5510,9 @@ sub check_replication_slots {
     if ($opt{perflimit}) {
         $SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
     }
-    my $SQL10;
-    ($SQL10 = $SQL) =~ s/xlog_location/wal_lsn/g;
+    my $SQL10 = $SQL;
+    $SQL10 =~ s/xlog_location/wal_lsn/g;
+    $SQL10 =~ s/xlog_receive_location/wal_receive_lsn/g;
 
     my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1, version => [">9.6 $SQL10"] } );
     my $found = 0;
