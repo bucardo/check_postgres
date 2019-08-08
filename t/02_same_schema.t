@@ -6,7 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 76;
+use Test::More tests => 78;
 use lib 't','.';
 use CP_Testing;
 
@@ -307,6 +307,20 @@ Table "public.berri":
 \s*Database 1: r/check_postgres_testing
 \s*Database 2: wd/check_postgres_testing\s*}s,
       $t);
+$dbh2->do(q{REVOKE UPDATE,DELETE ON TABLE berri FROM alternate_owner});
+$dbh1->do(q{REVOKE SELECT ON TABLE berri FROM alternate_owner});
+
+$t = qq{$S reports tablespace differences};
+$dbh1->do(q{ALTER TABLE berri SET TABLESPACE check_postgres});
+like ($cp1->run($connect2),
+      qr{^$label CRITICAL.*Items not matched: 1 .*
+Table "public.berri":
+\s*"reltablespace" is different:.*
+\s*"tablespace" is different:.*}s,
+      $t);
+
+$t = qq{$S does not report tablespace differences if the 'notablespace' filter is given};
+like ($cp1->run("$connect2 --filter=notablespace"), qr{^$label OK}, $t); 
 
 $t = qq{$S does not report table differences if the 'notable' filter is given};
 like ($cp1->run("$connect3 --filter=notable"), qr{^$label OK}, $t);

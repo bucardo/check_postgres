@@ -7306,6 +7306,12 @@ sub check_same_schema {
                             next;
                         }
 
+                        ## Do not show tablespace differences if filtered out with "notablespace"
+                        if (($col eq 'tablespace' or $col eq 'reltablespace')
+                            and $opt{filtered}{notablespace}) {
+                            next;
+                        }
+
                         ## Do not show function body differences if filtered out with "nofuncbody"
                         ## Also skip if the equivalent 'dash' and 'empty'
                         if ($item eq 'function'
@@ -10190,6 +10196,8 @@ The filter option "nofuncbody" prevents comparison of the bodies of all
 functions.
 
 The filter option "noperm" prevents comparison of object permissions.
+
+The filter option "notablespace" prevents comparison of object tablespaces.
 
 To provide the second database, just append the differences to the first one 
 by a call to the appropriate connection argument. For example, to compare 
