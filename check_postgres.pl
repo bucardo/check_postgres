@@ -5,7 +5,8 @@
 ## Designed primarily as a Nagios script.
 ## Run with --help for a summary.
 ##
-## Greg Sabino Mullane <greg@endpoint.com>
+## Greg Sabino Mullane <greg@turnstep.com>
+##
 ## End Point Corporation http://www.endpoint.com/
 ## BSD licensed, see complete license at bottom of this script
 ## The latest version can be found at:
@@ -11467,7 +11468,7 @@ Please report any problems to check_postgres@bucardo.org
 
 =head1 AUTHOR
 
-Greg Sabino Mullane <greg@endpoint.com>
+Greg Sabino Mullane <greg@turnstep.com>
 
 
 =head1 NAGIOS EXAMPLES
@@ -11501,7 +11502,7 @@ Some example Nagios configuration settings using this script:
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2007-2017 Greg Sabino Mullane <greg@endpoint.com>.
+Copyright (c) 2007-2019 Greg Sabino Mullane <greg@turnstep.com>.
 
 Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions are met:

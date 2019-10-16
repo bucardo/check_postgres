@@ -3,7 +3,7 @@ name                        : check_postgres.pl
 version                     : 2.24.0
 abstract                    : Postgres monitoring script
 author:              
-  - Greg Sabino Mullane <greg@endpoint.com>
+  - Greg Sabino Mullane <greg@turnstep.com>
 
 license                     : bsd
 distribution_type           : script

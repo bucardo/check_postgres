@@ -54,7 +54,7 @@ print "Configuring check_postgres $VERSION\n";
 my %opts = (
     NAME           => 'check_postgres',
     ABSTRACT       => 'Postgres monitoring script',
-    AUTHOR         => 'Greg Sabino Mullane <greg@endpoint.com>',
+    AUTHOR         => 'Greg Sabino Mullane <greg@turnstep.com>',
     PREREQ_PM      => {
         'ExtUtils::MakeMaker' => '6.64',
         'Test::More'          => '0.61',
