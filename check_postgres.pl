@@ -10150,10 +10150,8 @@ Specific named slots can be monitored using --include/--exclude
 =head2 B<same_schema>
 
 (C<symlink: check_postgres_same_schema>) Verifies that two or more databases are identical as far as their 
-schema (but not the data within). This is particularly handy for making sure your slaves have not 
-been modified or corrupted in any way when using master to slave replication. Unlike most other 
-actions, this has no warning or critical criteria - the databases are either in sync, or are not. 
-If they are different, a detailed list of the differences is presented.
+schema (but not the data within). Unlike most other actions, this has no warning or critical criteria - 
+the databases are either in sync, or are not. If they are different, a detailed list of the differences is presented.
 
 You may want to exclude or filter out certain differences. The way to do this is to add strings 
 to the C<--filter> option. To exclude a type of object, use "noname", where 'name' is the type of 
