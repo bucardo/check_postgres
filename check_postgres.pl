@@ -1533,6 +1533,7 @@ GetOptions(
     'filter=s@',   ## used by same_schema only
     'suffix=s',    ## used by same_schema only
     'replace',     ## used by same_schema only
+    'skipsequencevals', ## used by same_schema only
     'lsfunc=s',    ## used by wal_files and archive_ready
     'skipcycled',  ## used by sequence only
 );
@@ -7686,6 +7687,9 @@ sub schema_item_differences {
 
                     ## Skip certain known numeric fields that have text versions:
                     next if $col =~ /.(?:namespace|owner|filenode|oid|relid)$/;
+
+                    ## We may want to skip the "data" of the sequences
+                    next if $opt{skipsequencevals} and $item_class eq 'sequence';
 
                     ## If not a list, just report on the exact match here and move on:
                     if (! exists $lists->{$col} and $col !~ /.acl$/) {
