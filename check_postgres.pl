@@ -7468,9 +7468,10 @@ sub write_audit_file {
 
     ## Create a connection information string
     my $row = $targetdb[0];
-    my $conninfo = sprintf '%s%s%s%s',
+    my $conninfo = sprintf '%s%s%s%s%s',
+        defined $row->{dbservice} ? qq{service=$row->{dbservice} } : '',
         defined $row->{port} ? qq{port=$row->{port} } : '',
-        defined $row->{host} ? qq{host=$row->{host} } : '',
+        (defined $row->{host} and $row->{host} ne '<none>') ? qq{host=$row->{host} } : '',
         defined $row->{dbname} ? qq{dbname=$row->{dbname} } : '',
         defined $row->{dbuser} ? qq{user=$row->{dbuser} } : '';
 
@@ -7480,10 +7481,10 @@ sub write_audit_file {
     print {$fh} "## PG version: $arg->{pgversion}\n";
     printf {$fh} "## Created: %s\n", scalar localtime();
     print {$fh} "## Connection: $conninfo\n";
-    print {$fh} "## Database name: $row->{dbname}\n";
-    print {$fh} "## Host: $row->{host}\n";
-    print {$fh} "## Port: $row->{port}\n";
-    print {$fh} "## User: $row->{dbuser}\n";
+    print {$fh} "## Database name: $row->{dbname}\n" if defined $row->{dbname};
+    print {$fh} "## Host: $row->{host}\n" if defined $row->{host} and $row->{host} ne '<none>';
+    print {$fh} "## Port: $row->{port}\n" if defined $row->{port};
+    print {$fh} "## User: $row->{dbuser}\n" if defined $row->{dbuser};
     if ($arg->{same_schema}) {
         print {$fh} "## Start of same_schema information:\n";
         {
