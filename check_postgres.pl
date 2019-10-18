@@ -7272,7 +7272,7 @@ sub check_same_schema {
                 my $nothere = join ', ' => sort { $a<=>$b } keys %{ $e->{$name}{nothere} };
                 ## Extra information (e.g. tablename) may be stuffed into the hash value
                 (my $extra) = values %{ $e->{$name}{isthere} };
-                $name .= " ($extra)" if length $extra > 1;
+                $name .= " ($extra)" if defined $extra and length $extra > 1;
                 $msg .= sprintf "%s\n  %-*s %s\n  %-*s %s\n",
                     msg('ss-noexist', $pitem, $name),
                     $maxsize, $msg_exists,
