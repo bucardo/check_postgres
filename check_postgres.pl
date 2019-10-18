@@ -7394,7 +7394,7 @@ sub check_same_schema {
                         $msg .= $_ for @msg;
                     }
                     else {
-                        ## No message means it was all filtered out, so we decrment the master count
+                        ## No message means it was all filtered out, so we decrement the master count
                         $opt{failcount}--;
                     }
                 }
