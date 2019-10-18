@@ -3143,13 +3143,6 @@ sub setup_target_databases {
          dbservice => [''],
           };
 
-    ## Don't set any default values if a service is being used
-    if (defined $opt{dbservice} and defined $opt{dbservice}->[0] and length $opt{dbservice}->[0]) {
-        $conn->{dbname} = [];
-        $conn->{port} = [];
-        $conn->{dbuser} = [];
-    }
-
     ## If we were passed in a target, use that and move on
     if (exists $arg->{target}) {
         ## Make a copy, in case we are passed in a ref
@@ -3187,7 +3180,7 @@ sub setup_target_databases {
                 $new =~ s/\s+//g unless $vname eq 'dbservice' or $vname eq 'host';
 
                 ## Set this as the new default for this connection var moving forward
-                $conn->{$vname} = [split /,/ => $new];
+                $conn->{$vname} = [split /,/ => $new, -1];
 
                 ## Make a note that we found something new this round
                 $found_new_var = 1;
