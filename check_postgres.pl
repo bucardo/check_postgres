@@ -274,6 +274,7 @@ our %msg = (
     'runtime-badname'    => q{Invalid queryname option: must be a simple view name},
     'runtime-msg'        => q{query runtime: $1 seconds},
     'schema'             => q{Schema},
+    'ss-badobject'       => q{Unrecognized object types: $1},
     'ss-createfile'      => q{Created file $1},
     'ss-different'       => q{"$1" is different:},
     'ss-existson'        => q{Exists on:},
@@ -1535,6 +1536,8 @@ GetOptions(
     'replace',     ## used by same_schema only
     'skipsequencevals', ## used by same_schema only
     'lsfunc=s',    ## used by wal_files and archive_ready
+    'object=s@',     ## used by same_schema for object types to include
+    'skipobject=s@', ## used by same_schema for object types to exclude
     'skipcycled',  ## used by sequence only
 );
 
@@ -7077,6 +7080,44 @@ sub check_same_schema {
                         confmatchtype',                           ''          ],
         [column     => 'atttypid,attnum,attbyval,attndims',       ''          ],
     );
+
+    ## Allow the above list to be adjusted by exclusion:
+    if (exists $opt{skipobject}) {
+        my (%skiplist, %badlist);
+        for my $item (map { split /,\s*/ => lc $_ } @{ $opt{skipobject} }) {
+            if (grep { $_->[0] eq $item  } @catalog_items) {
+                $skiplist{$item} = 1;
+            }
+            else {
+                $badlist{$item} = 1;
+            }
+        }
+        if (keys %badlist) {
+            ndie msg('ss-badobject', join ',' => sort keys %badlist);
+        }
+
+        ## Shrink the original list to remove excluded items
+        @catalog_items = grep { ! exists $skiplist{$_->[0]} } @catalog_items;
+    }
+
+    ## Allow the list to be adjusted by inclusion:
+    if (exists $opt{object}) {
+        my (%goodlist, %badlist);
+        for my $item (map { split /,\s*/ => lc $_ } @{ $opt{object} }) {
+            if (grep { $_->[0] eq $item  } @catalog_items) {
+                $goodlist{$item} = 1;
+            }
+            else {
+                $badlist{$item} = 1;
+            }
+        }
+        if (keys %badlist) {
+            ndie msg('ss-badobject', join ',' => sort keys %badlist);
+        }
+
+        ## Shrink the original list to only have the requested items
+        @catalog_items = grep { exists $goodlist{$_->[0]} } @catalog_items;
+    }
 
     ## Where we store all the information, per-database
     my %thing;
