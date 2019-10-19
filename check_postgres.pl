@@ -2841,12 +2841,14 @@ sub run_command {
             return $db->{pname};
         }
 
-        defined $db->{dbname} and push @args, '-d', $db->{dbname};
-        defined $db->{dbuser} and push @args, '-U', $db->{dbuser};
-        defined $db->{port} and push @args => '-p', $db->{port};
-        if ($db->{host} ne '<none>') {
-            push @args => '-h', $db->{host};
-            $host{$db->{host}}++; ## For the overall count
+        if ($db->{pname} !~ /service=/) {
+            defined $db->{dbname} and push @args, '-d', $db->{dbname};
+            defined $db->{dbuser} and push @args, '-U', $db->{dbuser};
+            defined $db->{port} and push @args => '-p', $db->{port};
+            if ($db->{host} ne '<none>') {
+                push @args => '-h', $db->{host};
+                $host{$db->{host}}++; ## For the overall count
+            }
         }
 
         if (defined $db->{dbpass} and length $db->{dbpass}) {
