@@ -34,7 +34,7 @@ $Data::Dumper::Useqq = 1;
 
 binmode STDOUT, ':encoding(UTF-8)';
 
-our $VERSION = '2.24.0';
+our $VERSION = '2.25.0';
 
 use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 
@@ -8778,7 +8778,7 @@ sub check_wal_files {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.24.0
+This documents describes check_postgres.pl version 2.25.0
 
 =head1 SYNOPSIS
 
@@ -10715,6 +10715,15 @@ https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
 Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
+
+=item B<Version 2.25.0> Unreleased
+
+  Allow same_schema objects to be included or excluded with --object and --skipobject
+    (Greg Sabino Mullane)
+
+  Fix to allow mixing service names and other connection paramaters for same_schema
+    (Greg Sabino Mullane)
+
 
 =item B<Version 2.24.0> Released May 30, 2018
 
