@@ -1263,6 +1263,11 @@ SELECT l.*, lanname AS name
 FROM pg_language l
     },
     },
+    aggregate => {
+        SQL       => q{
+SELECT a.*, aggfnoid AS name
+FROM pg_aggregate a},
+    },
     extension => {
         SQL       => q{
 SELECT e.*, extname AS name, quote_ident(rolname) AS owner
@@ -7068,6 +7073,7 @@ sub check_same_schema {
     my @catalog_items = (
         [user       => 'usesysid',                                'useconfig' ],
         [language   => 'laninline,lanplcallfoid,lanvalidator',    ''          ],
+        [aggregate  => '',                                        ''          ],
         [extension  => '',                                        ''          ],
         [operator   => 'oprleft,oprright,oprresult,oprnegate,
                         oprcom',                                  ''          ],
@@ -7188,8 +7194,8 @@ sub check_same_schema {
         }
 
         ## TODO:
-        ## operator class, cast, aggregate, conversion, domain, tablespace, foreign tables
-        ## foreign server, wrapper, collation, extensions, roles?
+        ## operator class, cast, conversion, domain, tablespace, foreign tables
+        ## foreign server, wrapper, collation, roles?
 
         ## Map the oid back to the user, for ease later on
         for my $row (values %{ $dbinfo->{user} }) {
