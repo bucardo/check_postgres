@@ -1420,6 +1420,25 @@ AND NOT attisdropped},
         postSQL    => q{ORDER BY n.nspname, c.relname, a.attnum},
         exclude    => 'system',
     },
+
+    foreign_server => {
+        SQL       => q{
+SELECT f.*, srvname AS name, quote_ident(rolname) AS owner
+FROM pg_foreign_server f
+JOIN pg_roles r ON (r.oid = f.srvowner)},
+    },
+    foreign_table => {
+        SQL       => q{
+SELECT srvname||':'||ftrelid::regclass AS name, ftoptions
+FROM pg_foreign_table
+JOIN pg_foreign_server f on (f.oid = ftserver)},
+    },
+    foreign_data_wrapper => {
+        SQL       => q{
+SELECT f.*, fdwname AS name, quote_ident(rolname) AS owner
+FROM pg_foreign_data_wrapper f
+JOIN pg_roles r ON (r.oid = f.fdwowner)},
+    },
 );
 
 my $rcfile;
@@ -7071,30 +7090,32 @@ sub check_same_schema {
     ## We also indicate which columns should be ignored when comparing,
     ## as well as which columns are of a 'list' nature
     my @catalog_items = (
-        [user       => 'usesysid',                                'useconfig' ],
-        [language   => 'laninline,lanplcallfoid,lanvalidator',    ''          ],
-        [aggregate  => '',                                        ''          ],
-        [extension  => '',                                        ''          ],
-        [operator   => 'oprleft,oprright,oprresult,oprnegate,
-                        oprcom',                                  ''          ],
-        [type       => 'typarray',                                ''          ],
-        [schema     => '',                                        ''          ],
-        [function   => 'source_checksum,prolang,prorettype,
-                        proargtypes,proallargtypes,provariadic,
-                        proargdefaults',                          ''          ],
-        [table      => 'reltype,relfrozenxid,relminmxid,relpages,
-                        reltuples,relnatts,relallvisible,
-                        relhaspkey',                              ''          ],
-        [view       => 'reltype',                                 ''          ],
-        [sequence   => 'reltype,log_cnt,relnatts,is_called',      ''          ],
-        [index      => 'relpages,reltuples,indpred,indclass,
-                        indexprs,indcheckxmin,reltablespace,
-                        indkey',                                  ''          ],
-        [trigger    => 'tgqual,tgconstraint,tgattr',              ''          ],
-        [constraint => 'conbin,conindid,conkey,confkey,
-                        confmatchtype',                           ''          ],
-        [column     => 'atttypid,attnum,attbyval,attndims',       ''          ],
+        [user           => 'usesysid',                                     'useconfig' ],
+        [language       => 'laninline,lanplcallfoid,lanvalidator',         ''          ],
+        [aggregate      => '',                                             ''          ],
+        [extension      => '',                                             ''          ],
+        [operator       => 'oprleft,oprright,oprresult,oprnegate,oprcom',  ''          ],
+        [type           => 'typarray',                                     ''          ],
+        [schema         => '',                                             ''          ],
+        [function       => 'source_checksum,prolang,prorettype,
+                            proargtypes,proallargtypes,provariadic,
+                            proargdefaults',                               ''          ],
+        [table          => 'reltype,relfrozenxid,relminmxid,relpages,
+                            reltuples,relnatts,relallvisible,relhaspkey',  ''          ],
+        [view           => 'reltype',                                      ''          ],
+        [sequence       => 'reltype,log_cnt,relnatts,is_called',           ''          ],
+        [index          => 'relpages,reltuples,indpred,indclass,indexprs,
+                            indcheckxmin,reltablespace,indkey',            ''          ],
+        [trigger        => 'tgqual,tgconstraint,tgattr',                   ''          ],
+        [constraint     => 'conbin,conindid,conkey,confkey,confmatchtype', ''          ],
+        [column         => 'atttypid,attnum,attbyval,attndims',            ''          ],
+        [foreign_server => '',                                             ''          ],
+        [foreign_data_wrapper  => '',                                      ''          ],
+        [foreign_table  => '',                                             ''          ],
     );
+
+    ## TODO:
+    ## operator class, cast, conversion, domain, tablespace, collation, roles?
 
     ## Allow the above list to be adjusted by exclusion:
     if (exists $opt{skipobject}) {
@@ -7192,10 +7213,6 @@ sub check_same_schema {
             my $name = $_->[0];
             $dbinfo->{$name} = find_catalog_info($name, $x, $dbver{$x});
         }
-
-        ## TODO:
-        ## operator class, cast, conversion, domain, tablespace, foreign tables
-        ## foreign server, wrapper, collation, roles?
 
         ## Map the oid back to the user, for ease later on
         for my $row (values %{ $dbinfo->{user} }) {
