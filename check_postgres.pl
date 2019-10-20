@@ -1263,6 +1263,12 @@ SELECT l.*, lanname AS name
 FROM pg_language l
     },
     },
+    extension => {
+        SQL       => q{
+SELECT e.*, extname AS name, quote_ident(rolname) AS owner
+FROM pg_extension e
+JOIN pg_roles r ON (r.oid = e.extowner)},
+    },
     type => {
         SQL       => q{
 SELECT t.oid AS oid, t.*, quote_ident(rolname) AS owner, quote_ident(nspname) AS schema,
@@ -7062,6 +7068,7 @@ sub check_same_schema {
     my @catalog_items = (
         [user       => 'usesysid',                                'useconfig' ],
         [language   => 'laninline,lanplcallfoid,lanvalidator',    ''          ],
+        [extension  => '',                                        ''          ],
         [operator   => 'oprleft,oprright,oprresult,oprnegate,
                         oprcom',                                  ''          ],
         [type       => 'typarray',                                ''          ],
