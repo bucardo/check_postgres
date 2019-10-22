@@ -1268,6 +1268,9 @@ FROM pg_language l
 SELECT a.*, aggfnoid AS name
 FROM pg_aggregate a},
     },
+    cast => {
+        SQL => q{ SELECT c.*, FORMAT('%s AS %s', format_type(castsource, NULL), format_type(casttarget, NULL)) AS name FROM pg_cast c},
+    },
     comment => {
         SQL => q{
 SELECT CASE WHEN so.name IS NULL THEN FORMAT('Unknown:%s:%s', sd.classoid, sd.objoid)
@@ -7207,6 +7210,7 @@ sub check_same_schema {
     my @catalog_items = (
         [user           => 'usesysid',                                     'useconfig' ],
         [language       => 'laninline,lanplcallfoid,lanvalidator',         ''          ],
+        [cast           => '',                                             ''          ],
         [aggregate      => '',                                             ''          ],
         [comment        => '',                                             ''          ],
         [extension      => '',                                             ''          ],
@@ -7231,7 +7235,7 @@ sub check_same_schema {
     );
 
     ## TODO:
-    ## operator class, cast, conversion, domain, tablespace, collation, roles?
+    ## operator class, cast, conversion, domain, tablespace, collation
 
     ## Allow the above list to be adjusted by exclusion:
     if (exists $opt{skipobject}) {
