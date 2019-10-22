@@ -1396,6 +1396,7 @@ SELECT e.*, extname AS name, quote_ident(rolname) AS owner
 FROM pg_extension e
 JOIN pg_roles r ON (r.oid = e.extowner)},
     },
+
     type => {
         SQL       => q{
 SELECT t.oid AS oid, t.*, quote_ident(rolname) AS owner, quote_ident(nspname) AS schema,
@@ -1457,28 +1458,13 @@ LEFT JOIN pg_am a ON (a.oid = c.relam)
 WHERE c.relkind = 'i'},
         exclude    => 'system',
     },
-    operator => {
-        SQL       => q{
-SELECT o.*, o.oid, n.nspname||'.'||o.oprname||' ('||COALESCE(t2.typname,'NONE')||','||COALESCE(t3.typname,'NONE')||')' AS name, quote_ident(o.oprname) AS safename,
-  rolname AS owner, quote_ident(n.nspname) AS schemaname,
-  t1.typname AS resultname,
-  t2.typname AS leftname, t3.typname AS rightname,
-  t4.typname AS resultname,
-  nneg.nspname||'.'||neg.oprname AS negname,
-  ncom.nspname||'.'||com.oprname AS comname
-FROM pg_operator o
-JOIN pg_roles r ON (r.oid = o.oprowner)
-JOIN pg_namespace n ON (n.oid = o.oprnamespace)
-JOIN pg_proc p1 ON (p1.oid = o.oprcode)
-JOIN pg_type t1 ON (t1.oid = o.oprresult)
-LEFT JOIN pg_type t2 ON (t2.oid = o.oprleft)
-LEFT JOIN pg_type t3 ON (t3.oid = o.oprright)
-LEFT JOIN pg_type t4 ON (t4.oid = o.oprresult)
-LEFT JOIN pg_operator neg ON (o.oprnegate = neg.oid)
-LEFT JOIN pg_namespace nneg ON (nneg.oid = neg.oprnamespace)
-LEFT JOIN pg_operator com ON (o.oprcom = com.oid)
-LEFT JOIN pg_namespace ncom ON (ncom.oid = com.oprnamespace)},
-        exclude    => 'system',
+operator => { SQL => q{
+  SELECT FORMAT('%s.%s(%s,%s)', o.oprnamespace::regnamespace, o.oprname,format_type(o.oprleft,NULL),format_type(o.oprright,NULL)) AS name,
+    rolname AS owner, quote_ident(oprnamespace::regnamespace::text) AS schemaname
+  FROM pg_operator o
+  JOIN pg_roles r ON (r.oid = o.oprowner)
+  WHERE oprnamespace::regnamespace::text <> 'pg_catalog'
+},
     },
     trigger => {
         SQL       => q{
@@ -7216,6 +7202,7 @@ sub check_same_schema {
         [language       => 'laninline,lanplcallfoid,lanvalidator',         ''          ],
         [cast           => '',                                             ''          ],
         [domain         => '',                                             ''          ],
+        [operator       => '',                                             ''          ],
         [aggregate      => '',                                             ''          ],
         [comment        => '',                                             ''          ],
         [extension      => '',                                             ''          ],
