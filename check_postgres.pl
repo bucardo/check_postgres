@@ -1386,7 +1386,11 @@ LEFT JOIN (
 
 ) AS o ON (o.oid = d.objoid AND o.tableoid = d.classoid))},
                                 },
-                    extension => {
+    domain => {
+        SQL => q{ SELECT *, FORMAT('%s.%s', typnamespace::regnamespace, typname) AS name FROM pg_type WHERE typtype = 'd'},
+    },
+
+    extension => {
         SQL       => q{
 SELECT e.*, extname AS name, quote_ident(rolname) AS owner
 FROM pg_extension e
@@ -7211,6 +7215,7 @@ sub check_same_schema {
         [user           => 'usesysid',                                     'useconfig' ],
         [language       => 'laninline,lanplcallfoid,lanvalidator',         ''          ],
         [cast           => '',                                             ''          ],
+        [domain         => '',                                             ''          ],
         [aggregate      => '',                                             ''          ],
         [comment        => '',                                             ''          ],
         [extension      => '',                                             ''          ],
@@ -7235,7 +7240,7 @@ sub check_same_schema {
     );
 
     ## TODO:
-    ## operator class, cast, conversion, domain, tablespace, collation
+    ## operator class, conversion, tablespace, collation
 
     ## Allow the above list to be adjusted by exclusion:
     if (exists $opt{skipobject}) {
