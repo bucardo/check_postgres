@@ -1268,7 +1268,122 @@ FROM pg_language l
 SELECT a.*, aggfnoid AS name
 FROM pg_aggregate a},
     },
-    extension => {
+    comment => {
+        SQL => q{
+SELECT CASE WHEN so.name IS NULL THEN FORMAT('Unknown:%s:%s', sd.classoid, sd.objoid)
+  ELSE FORMAT('%s:%s', so.object, so.name) END AS name, sd.description AS comment
+FROM pg_shdescription sd
+LEFT JOIN (
+  SELECT 'database' AS object,
+    oid, tableoid, datname AS name FROM pg_database
+  UNION ALL SELECT 'role' AS object,
+    oid, tableoid, rolname AS name FROM pg_authid
+  UNION ALL SELECT 'tablespace' AS object,
+    oid, tableoid, spcname AS name FROM pg_tablespace
+) AS so ON (so.oid = sd.objoid AND so.tableoid = sd.classoid)
+
+UNION ALL (
+SELECT CASE WHEN o.name IS NULL THEN FORMAT('Unknown:%s:%s', d.classoid, d.objoid)
+  WHEN objsubid > 0 THEN FORMAT('column:%s.%s', o.name,
+    (SELECT attname FROM pg_attribute WHERE attrelid::regclass::text = o.name AND attnum = d.objsubid)
+  )
+  ELSE FORMAT('%s:%s', COALESCE(o.object,'?'), o.name) END AS name, d.description AS comment
+FROM pg_description d
+LEFT JOIN (
+
+  SELECT CASE WHEN relkind = 'q' THEN 'sequence' WHEN relkind = 'r' THEN 'table'
+      WHEN relkind IN ('r','p','T') THEN 'table'
+      WHEN relkind = 'f' THEN 'foreign table'
+      WHEN relkind IN ('i','I') THEN 'index'
+      WHEN relkind = 'v' THEN 'view'
+      WHEN relkind = 'm' THEN 'materialized view'
+      WHEN relkind = 'S' THEN 'sequence'
+      WHEN relkind = 'c' THEN 'type'
+    END AS object,
+    oid, tableoid, FORMAT('%s.%s', relnamespace::regnamespace, relname) AS name
+  FROM pg_class
+
+  UNION ALL SELECT 'access method' AS object,
+    oid, tableoid, amname AS name FROM pg_am
+
+  UNION ALL SELECT 'aggregate' AS object,
+    oid, tableoid, FORMAT('%s.%s(%s)', pronamespace::regnamespace, proname, pg_get_function_arguments(oid) )AS name FROM pg_proc WHERE proisagg
+
+  UNION ALL SELECT 'cast' AS object,
+    oid, tableoid, FORMAT('%s AS %s', format_type(castsource, NULL), format_type(casttarget, NULL)) AS name FROM pg_cast
+
+  UNION ALL SELECT 'collation' AS object,
+    oid, tableoid, FORMAT('%s.%s', collnamespace::regnamespace, collname) AS name FROM pg_collation
+
+  UNION ALL SELECT 'constraint' AS object,
+    oid, tableoid, FORMAT('%s.%s on %s', connamespace::regnamespace, conname, conrelid::regclass) AS name FROM pg_constraint
+
+  UNION ALL SELECT 'conversion' AS object,
+    oid, tableoid, FORMAT('%s.%s', connamespace::regnamespace, conname) AS name FROM pg_conversion
+
+  UNION ALL SELECT 'domain' AS object,
+    oid, tableoid, FORMAT('%s.%s', typnamespace::regnamespace, typname) AS name FROM pg_type WHERE typtype = 'd'
+
+  UNION ALL SELECT 'extension' AS object,
+    oid, tableoid, FORMAT('%s.%s', extnamespace::regnamespace, extname) AS name FROM pg_extension
+
+  UNION ALL SELECT 'event trigger' AS object,
+    oid, tableoid, evtname AS name FROM pg_event_trigger
+
+  UNION ALL SELECT 'foreign data wrapper' AS object,
+    oid, tableoid, fdwname AS name FROM pg_foreign_data_wrapper
+
+  UNION ALL SELECT 'function' AS object,
+    oid, tableoid, FORMAT('%s.%s(%s)', pronamespace::regnamespace, proname, pg_get_function_arguments(oid) )AS name FROM pg_proc WHERE NOT proisagg
+
+  UNION ALL SELECT 'large object' AS object,
+    loid, tableoid, loid::text AS name FROM pg_largeobject
+
+  UNION ALL SELECT 'operator' AS object,
+    oid, tableoid, FORMAT('%s.%s(%s,%s)', oprnamespace::regnamespace, oprname,format_type(oprleft,NULL),format_type(oprright,NULL)) AS name FROM pg_operator
+
+  UNION ALL SELECT 'operator class' AS object,
+    oid, tableoid, FORMAT('%s.%s using %s', opcnamespace::regnamespace, opcname, (SELECT amname FROM pg_am WHERE oid = opcmethod)) AS name FROM pg_opclass
+
+  UNION ALL SELECT 'operator family' AS object,
+    oid, tableoid, FORMAT('%s.%s using %s', opfnamespace::regnamespace, opfname, (SELECT amname FROM pg_am WHERE oid = opfmethod)) AS name FROM pg_opfamily
+
+  UNION ALL SELECT 'policy' AS object,
+    oid, tableoid, FORMAT('%s ON %s', polname, polrelid::regclass) AS named FROM pg_policy
+
+  UNION ALL SELECT 'language' AS object,
+    oid, tableoid, lanname AS name FROM pg_language
+
+  UNION ALL SELECT 'rule' AS object,
+    oid, tableoid, FORMAT('%s ON %s', rulename, ev_class::regclass) AS name FROM pg_rewrite
+
+  UNION ALL SELECT 'schema' AS object,
+    oid, tableoid, nspname AS name FROM pg_namespace
+
+  UNION ALL SELECT 'server' AS object,
+    oid, tableoid, srvname AS name FROM pg_foreign_server
+
+  UNION ALL SELECT 'text search configuration',
+    oid, tableoid, FORMAT('%s.%s', cfgnamespace::regnamespace, cfgname) AS name FROM pg_ts_config
+
+  UNION ALL SELECT 'text search dictionary',
+    oid, tableoid, FORMAT('%s.%s', dictnamespace::regnamespace, dictname) AS name FROM pg_ts_dict
+
+  UNION ALL SELECT 'text search parser',
+    oid, tableoid, FORMAT('%s.%s', prsnamespace::regnamespace, prsname) AS name FROM pg_ts_parser
+
+  UNION ALL SELECT 'text search template',
+    oid, tableoid, FORMAT('%s.%s', tmplnamespace::regnamespace, tmplname) AS name FROM pg_ts_template
+
+  UNION ALL SELECT 'trigger' AS object,
+    oid, tableoid, FORMAT('%s on %s', tgname, tgrelid::regclass) AS name FROM pg_trigger
+
+  UNION ALL SELECT 'type' AS object,
+    oid, tableoid, FORMAT('%s.%s', typnamespace::regnamespace, typname) AS name FROM pg_type
+
+) AS o ON (o.oid = d.objoid AND o.tableoid = d.classoid))},
+                                },
+                    extension => {
         SQL       => q{
 SELECT e.*, extname AS name, quote_ident(rolname) AS owner
 FROM pg_extension e
@@ -7093,6 +7208,7 @@ sub check_same_schema {
         [user           => 'usesysid',                                     'useconfig' ],
         [language       => 'laninline,lanplcallfoid,lanvalidator',         ''          ],
         [aggregate      => '',                                             ''          ],
+        [comment        => '',                                             ''          ],
         [extension      => '',                                             ''          ],
         [operator       => 'oprleft,oprright,oprresult,oprnegate,oprcom',  ''          ],
         [type           => 'typarray',                                     ''          ],
