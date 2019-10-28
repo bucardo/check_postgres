@@ -56,6 +56,9 @@ sub cleanup {
         if (-l $symlink) {
             unlink $symlink;
         }
+        my $datadir = "$dbdir$dirnum";
+        system("rm -fr $datadir");
+
     }
 
     return;
