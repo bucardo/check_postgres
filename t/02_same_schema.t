@@ -610,7 +610,7 @@ like ($cp1->run($connect2),
 \s*"relhasindex" is different:
 \s*Database 1: t
 \s*Database 2: f
-\s*Index "public.valen" does not exist on all databases:
+\s*Index "public.valen \(gkar\)" does not exist on all databases:
 \s*Exists on:  1
 \s*Missing on: 2\s*$}s,
       $t);
