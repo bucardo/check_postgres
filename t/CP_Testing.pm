@@ -103,7 +103,7 @@ sub test_database_handle {
             $initdb = "$initdb --nosync";
         }
 
-        $com = qq{LC_ALL=en LANG=C $initdb --locale=C -E UTF8 -D "$datadir" 2>&1};
+        $com = qq{LANG=C $initdb --locale C -E UTF8 -D "$datadir" 2>&1};
         eval {
             $DEBUG and warn qq{About to run: $com\n};
             $info = qx{$com};
@@ -206,7 +206,7 @@ sub test_database_handle {
             $sockdir = qq{"$dbdir/data space/socket"};
         }
 
-        $com = qq{LC_ALL=en LANG=C $pg_ctl -o '-k $sockdir' -l $logfile -D "$dbdir/data space" start};
+        $com = qq{LANG=C $pg_ctl -o '-k $sockdir' -l $logfile -D "$dbdir/data space" start};
         eval {
             $DEBUG and warn qq{About to run: $com\n};
             $info = qx{$com};
