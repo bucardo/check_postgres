@@ -7775,12 +7775,13 @@ sub schema_item_exists {
                         next if exists $it->{schemaname} and keys %{ $itemhash->{$db1}{schema} } and ! exists $itemhash->{$db2}{schema}{ $it->{schemaname} };
                     }
 
-                    ## Skip if this item has a table, but the table does not match
+                    ## Skip if this item has a table, but the table does not match (or if 'notables' is set)
                     if ($item_class ne 'table') {
                         my $it = $itemhash->{$db1}{$item_class}{$name};
                         next if exists $it->{tablename}
                           and exists $itemhash->{$db1}{table}{ $it->{tablename} }
-                          and exists $itemhash->{$db2}{table}{ $it->{tablename} };
+                          and ! exists $itemhash->{$db2}{table}{ $it->{tablename} };
+                        next if exists $it->{tablename} and $opt{filtered}{notable};
                     }
 
                     my $one = '1';
