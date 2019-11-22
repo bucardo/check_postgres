@@ -39,6 +39,9 @@ use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 ## Which user to connect as if --dbuser is not given
 $opt{defaultuser} = 'postgres';
 
+## Number of seconds that slave can go without receiving a write from master before alerting if  --maxidlemasterdelay is not given
+$opt{defaultidlemasterdelay} = 3600;
+
 ## Which port to connect to if --dbport is not given
 $opt{defaultport} = 5432;
 
@@ -975,19 +978,20 @@ GetOptions(
     'tempdir=s',
     'get_method=s',
     'language=s',
-    'mrtg=s',      ## used by MRTG checks only
-    'logfile=s',   ## used by check_logfile only
-    'queryname=s', ## used by query_runtime only
-    'query=s',     ## used by custom_query only
-    'valtype=s',   ## used by custom_query only
-    'reverse',     ## used by custom_query only
-    'repinfo=s',   ## used by replicate_row only
-    'noidle',      ## used by backends only
-    'datadir=s',   ## used by checkpoint only
-    'schema=s@',   ## used by slony_status only
-    'filter=s@',   ## used by same_schema only
-    'suffix=s',    ## used by same_schema only
-    'replace',     ## used by same_schema only
+    'mrtg=s',               ## used by MRTG checks only
+    'logfile=s',            ## used by check_logfile only
+    'queryname=s',          ## used by query_runtime only
+    'query=s',              ## used by custom_query only
+    'valtype=s',            ## used by custom_query only
+    'reverse',              ## used by custom_query only
+    'repinfo=s',            ## used by replicate_row only
+    'noidle',               ## used by backends only
+    'datadir=s',            ## used by checkpoint only
+    'schema=s@',            ## used by slony_status only
+    'filter=s@',            ## used by same_schema only
+    'suffix=s',             ## used by same_schema only
+    'replace',              ## used by same_schema only
+    'maxidlemasterdelay=i', ## used by check_replay_delay only
 );
 
 die $USAGE if ! keys %opt and ! @ARGV;
@@ -1017,6 +1021,9 @@ while (my $arg = pop @ARGV) {
         }
         elsif ($name =~ /^dbservice(\d+)$/o) {
             push @{ $opt{dbservice} } => $value;
+        }
+        elsif ($name =~ /^maxidlemasterdelay(\d+)$/o) {
+            push @{ $opt{maxidlemasterdelay} } => $value;
         }
         else {
             push @badargs => $arg;
@@ -1208,12 +1215,12 @@ Returns with an exit code of 0 (success), 1 (warning), 2 (critical), or 3 (unkno
 This is version $VERSION.
 
 Common connection options:
- -H,  --host=NAME       hostname(s) to connect to; defaults to none (Unix socket)
- -p,  --port=NUM        port(s) to connect to; defaults to $opt{defaultport}.
- -db, --dbname=NAME     database name(s) to connect to; defaults to 'postgres' or 'template1'
- -u   --dbuser=NAME     database user(s) to connect as; defaults to '$opt{defaultuser}'
-      --dbpass=PASS     database password(s); use a .pgpass file instead when possible
-      --dbservice=NAME  service name to use inside of pg_service.conf
+ -H,  --host=NAME         hostname(s) to connect to; defaults to none (Unix socket)
+ -p,  --port=NUM          port(s) to connect to; defaults to $opt{defaultport}.
+ -db, --dbname=NAME       database name(s) to connect to; defaults to 'postgres' or 'template1'
+ -u   --dbuser=NAME       database user(s) to connect as; defaults to '$opt{defaultuser}'
+      --dbpass=PASS       database password(s); use a .pgpass file instead when possible
+      --dbservice=NAME    service name to use inside of pg_service.conf
 
 Connection options can be grouped: --host=a,b --host=c --port=1234 --port=3344
 would connect to a-1234, b-1234, and c-3344
@@ -1225,6 +1232,7 @@ Limit options:
   --exclude=name(s) items to specifically exclude (e.g. tables), depends on the action
   --includeuser=include objects owned by certain users
   --excludeuser=exclude objects owned by certain users
+  --maxidlemasterdelay number of seconds slave can go without receiving a write from master; defaults to '$opt{defaultidlemasterdelay}'
 
 Other options:
   --assume-standby-mode assume that server in continious WAL recovery mode
@@ -4756,6 +4764,9 @@ sub check_replay_delay {
 
     my ($warning, $critical) = validate_range({type => 'integer', leastone => 1});
 
+    # set max idle master delay to override or the default
+    my $maxidlemasterdelay = $opt{maxidlemasterdelay} || $opt{defaultidlemasterdelay};
+
     # check if we are in recovery using pg_is_in_recovery()
     $SQL = q{SELECT pg_is_in_recovery() AS recovery;};
 
@@ -4774,11 +4785,13 @@ sub check_replay_delay {
     # This is also why I renamed this check to replay_delay from hot_standby_delay_slave.
     #
     # It only tells you the replication delay IF the master is active (i.e. receiving updates).
-#    $SQL = q{SELECT CASE WHEN pg_last_xlog_receive_location() = pg_last_xlog_replay_location()
-#              THEN 0
-#            ELSE EXTRACT (EPOCH FROM now() - pg_last_xact_replay_timestamp())
-#       END AS log_delay;};
-    $SQL = q{select EXTRACT (EPOCH FROM now() - pg_last_xact_replay_timestamp()) as log_delay;};
+    # If the master is not active, if it exceeds the threshold specified it will also alert.
+    $SQL = qq{SELECT CASE
+      WHEN pg_last_xlog_receive_location() = pg_last_xlog_replay_location()
+        AND EXTRACT (EPOCH FROM now() - pg_last_xact_replay_timestamp()) < $maxidlemasterdelay
+      THEN 0
+      ELSE
+        EXTRACT (EPOCH FROM now() - pg_last_xact_replay_timestamp()) END AS log_delay;};
     $info = run_command($SQL);
 
     for $db (@{$info->{db}}) {
