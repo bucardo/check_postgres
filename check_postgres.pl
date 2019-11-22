@@ -1215,12 +1215,12 @@ Returns with an exit code of 0 (success), 1 (warning), 2 (critical), or 3 (unkno
 This is version $VERSION.
 
 Common connection options:
- -H,  --host=NAME         hostname(s) to connect to; defaults to none (Unix socket)
- -p,  --port=NUM          port(s) to connect to; defaults to $opt{defaultport}.
- -db, --dbname=NAME       database name(s) to connect to; defaults to 'postgres' or 'template1'
- -u   --dbuser=NAME       database user(s) to connect as; defaults to '$opt{defaultuser}'
-      --dbpass=PASS       database password(s); use a .pgpass file instead when possible
-      --dbservice=NAME    service name to use inside of pg_service.conf
+ -H,  --host=NAME       hostname(s) to connect to; defaults to none (Unix socket)
+ -p,  --port=NUM        port(s) to connect to; defaults to $opt{defaultport}.
+ -db, --dbname=NAME     database name(s) to connect to; defaults to 'postgres' or 'template1'
+ -u   --dbuser=NAME     database user(s) to connect as; defaults to '$opt{defaultuser}'
+      --dbpass=PASS     database password(s); use a .pgpass file instead when possible
+      --dbservice=NAME  service name to use inside of pg_service.conf
 
 Connection options can be grouped: --host=a,b --host=c --port=1234 --port=3344
 would connect to a-1234, b-1234, and c-3344
