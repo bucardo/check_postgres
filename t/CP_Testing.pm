@@ -66,6 +66,18 @@ sub cleanup {
 }
 
 sub test_database_handle {
+    my $self = shift;
+    my $dbh;
+    eval { $dbh = $self->_test_database_handle(@ARGV) };
+    if (!defined $dbh) {
+        Test::More::diag $@;
+        Test::More::BAIL_OUT 'Cannot continue without a test database';
+        return undef;
+    }
+    return $dbh;
+}
+
+sub _test_database_handle {
 
     ## Request for a database handle: create and startup DB as needed
 
