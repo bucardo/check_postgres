@@ -456,6 +456,7 @@ sub run {
         $com .= qq{ --dbuser=$dbuser};
     }
     if ($extra =~ s/--nodbname//) {
+        $ENV{PGDATABASE} = '';
     }
     elsif ($extra !~ /dbname=/) {
         $com .= " --dbname=$dbname";
