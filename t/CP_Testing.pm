@@ -1,4 +1,4 @@
-package CP_Testing;
+package CP_Testing; ## -*- mode: CPerl; indent-tabs-mode: nil; cperl-indent-level: 4 -*-
 
 ## Common methods used by the other tests for check_postgres.pl
 
