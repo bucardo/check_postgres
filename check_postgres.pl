@@ -23,7 +23,7 @@ use utf8;
 use Getopt::Long qw/GetOptions/;
 Getopt::Long::Configure(qw/ no_ignore_case pass_through  /);
 use File::Basename qw/basename/;
-use File::Spec;
+use File::Spec::Functions;
 use File::Temp qw/tempfile tempdir/;
 File::Temp->safe_level( File::Temp::MEDIUM );
 use Cwd;
@@ -113,6 +113,7 @@ our %msg = (
     'checkpoint-baddir2' => q{pg_controldata could not read the given data directory: "$1"},
     'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version ($1)},
     'checkpoint-badver2' => q{Failed to run pg_controldata - is it the correct version?},
+    'checkpoint-nobin'   => q{Could not find a suitable pg_controldata executable},
     'checkpoint-nodir'   => q{Must supply a --datadir argument or set the PGDATA environment variable},
     'checkpoint-nodp'    => q{Must install the Perl module Date::Parse to use the checkpoint action},
     'checkpoint-noparse' => q{Unable to parse pg_controldata output: "$1"},
@@ -373,6 +374,7 @@ our %msg = (
     'checkpoint-baddir2' => q{pg_controldata no pudo leer el directorio de datos: "$1"},
     'checkpoint-badver'  => q{Fallo al ejecutar pg_controldata - probable que la versión sea incorrecta ($1)},
     'checkpoint-badver2' => q{Fallo al ejecutar pg_controldata - verifique que es la versión correcta},
+'checkpoint-nobin'   => q{Could not find a suitable pg_controldata executable},
     'checkpoint-nodir'   => q{Debe especificar el argumento --datadir o definir la variable de ambiente PGDATA},
     'checkpoint-nodp'    => q{Debe instalar el módulo Perl Date::Parse para usar la acción checkpoint},
     'checkpoint-noparse' => q{No se pudo interpretar la salida de pg_controldata: "$1"},
@@ -631,6 +633,7 @@ our %msg = (
     'checkpoint-baddir2' => q{pg_controldata n'a pas pu lire le répertoire des données indiqué : « $1 »},
     'checkpoint-badver'  => q{Échec lors de l'exécution de pg_controldata - probablement la mauvaise version ($1)},
     'checkpoint-badver2' => q{Échec lors de l'exécution de pg_controldata - est-ce la bonne version ?},
+'checkpoint-nobin'   => q{Could not find a suitable pg_controldata executable},
     'checkpoint-nodir'   => q{Vous devez fournir un argument --datadir ou configurer la variable d'environnement PGDATA},
     'checkpoint-nodp'    => q{Vous devez installer le module Perl Date::Parse pour utiliser l'action checkpoint},
     'checkpoint-noparse' => q{Incapable d'analyser le résultat de la commande pg_controldata : "$1"},
@@ -895,6 +898,7 @@ our %msg = (
     'checkpoint-baddir2' => q{pg_controldata konnte das angebene Verzeichnis lesen: "$1"},
     'checkpoint-badver'  => q{Kann pg_controldata nicht starten - vielleicht die falsche Version ($1)},
     'checkpoint-badver2' => q{Fehler beim Start von pg_controldata - ist es die richtige Version?},
+'checkpoint-nobin'   => q{Could not find a suitable pg_controldata executable},
     'checkpoint-nodir'   => q{Entweder muss die Option --datadir als Argument angegebn werden, oder die Umgebungsvariable PGDATA muss gesetzt sein},
     'checkpoint-nodp'    => q{Das Perl-Modul Date::Parse muss installiert sein für die Verwendung der checkpoint-Aktion},
     'checkpoint-noparse' => q{Kann die Ausgabe von pg_controldata nicht lesen: "$1"},
@@ -3912,16 +3916,40 @@ sub open_controldata {
     }
 
     ## Run pg_controldata
-    ## We still catch deprecated option
     my $pgc;
     if (defined $ENV{PGCONTROLDATA} and length $ENV{PGCONTROLDATA}) {
         $pgc = "$ENV{PGCONTROLDATA}";
     }
-    else {
-        $pgc = (defined $PGBINDIR) ? "$PGBINDIR/pg_controldata" : 'pg_controldata';
-        chomp($pgc = qx{which "$pgc"});
+    elsif (defined $ENV{PGBINDIR} and length $ENV{PGBINDIR}) {
+        $pgc = "$PGBINDIR/pg_controldata";
     }
-    -x $pgc or ndie msg('opt-psql-noexec', $pgc);
+    else {
+        my $pgctry = 'pg_controldata';
+        my $result = qx{$pgctry --version 2>/dev/null};
+        if ($result =~ /\d/) {
+            $pgc = $pgctry;
+        }
+        else {
+            ## Need to refactor this someday
+            my $basedir = '/usr/lib/postgresql/';
+            if (opendir my $dh, $basedir) {
+                for my $subdir (sort { $b <=> $a } grep { /^\d+[\d\.]+$/ } readdir $dh) {
+                    $pgctry = catfile($basedir, $subdir, 'bin', 'pg_controldata');
+                    next if ! -e $pgctry;
+                    $result = qx{$pgctry --version 2>/dev/null};
+                    if ($result =~ /\d/) {
+                        $pgc = $pgctry;
+                        last;
+                    }
+                }
+                closedir $dh;
+            }
+            if (! defined $pgc) {
+                ndie msg('checkpoint-nobin');
+            }
+        }
+    }
+    -x $pgc or ndie msg('checkpoint-nobin');
 
     $COM = qq{$pgc "$dir"};
     eval {
@@ -7625,7 +7653,7 @@ sub audit_filename {
     my $adir = $opt{'audit-file-dir'};
     if (defined $adir) {
         -d $adir or die qq{Cannot write to directory "$adir": $!\n};
-        $filename = File::Spec->catfile($adir, $filename);
+        $filename = catfile($adir, $filename);
     }
 
     return $filename;
