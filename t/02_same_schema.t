@@ -26,6 +26,7 @@ eval { $dbh2->do(q{CREATE USER alternate_owner}, { RaiseError => 0, PrintError =
 $dbh3 = $cp3->test_database_handle();
 $dbh3->{AutoCommit} = 1;
 eval { $dbh3->do(q{CREATE USER alternate_owner}, { RaiseError => 0, PrintError => 0 }); };
+$dbh3->do(q{SET client_min_messages = 'WARNING'});
 $dbh3->do('DROP LANGUAGE IF EXISTS plperlu');
 
 my $connect1 = qq{--dbuser=$cp1->{testuser} --dbhost=$cp1->{shorthost}};
@@ -79,7 +80,6 @@ sub drop_language {
 
 } ## end of drop_language
 
-#goto TRIGGER; ## ZZZ
 
 #/////////// Languages
 
@@ -117,7 +117,6 @@ drop_language('plpgsql', $dbh3);
 
 $t = qq{$S reports on language differences};
 like ($cp1->run($connect3), qr{^$label OK}, $t);
-
 
 #/////////// Users
 
