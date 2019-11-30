@@ -129,7 +129,6 @@ our %msg = (
     'custom-nostring'    => q{Must provide a query string},
     'database'           => q{database},
     'dbsize-version'     => q{Target database must be version 8.1 or higher to run the database_size action},
-    'depr-pgcontroldata' => q{PGCONTROLDATA is deprecated, use PGBINDIR instead.},
     'die-action-version' => q{Cannot run "$1": server version must be >= $2, but is $3},
     'die-badtime'        => q{Value for '$1' must be a valid time. Examples: -$2 1s  -$2 "10 minutes"},
     'die-badversion'     => q{Invalid version string: $1},
@@ -390,7 +389,6 @@ our %msg = (
     'custom-nostring'    => q{Debe proporcionar el texto con la consulta},
     'database'           => q{base de datos},
     'dbsize-version'     => q{La base de datos debe ser version 8.1 o superior para utilizar la acción database_size},
-    'depr-pgcontroldata' => q{PGCONTROLDATA es obsoleta, en su lugar use PGBINDIR.},
     'die-action-version' => q{No es posible ejecutar "$1": versión del servidor debe ser >= $2, pero es $3},
     'die-badtime'        => q{El valor de '$1' debe ser un tiempo valido. Ejemplos: -$2 1s  -$2 "10 minutes"},
     'die-badversion'     => q{Cadena de versión no válida: $1},
@@ -649,7 +647,6 @@ our %msg = (
     'custom-nostring'    => q{Vous devez fournir une requête},
     'database'           => q{base de données},
     'dbsize-version'     => q{La base de données cible doit être une version 8.1 ou ultérieure pour exécuter l'action database_size},
-'depr-pgcontroldata' => q{PGCONTROLDATA is deprecated, use PGBINDIR instead.},
     'die-action-version' => q{Ne peut pas exécuter « $1 » : la version du serveur doit être supérieure ou égale à $2, alors qu'elle est $3},
     'die-badtime'        => q{La valeur de « $1 » doit être une heure valide. Par exemple, -$2 1s  -$2 « 10 minutes »},
     'die-badversion'     => q{Version invalide : $1},
@@ -914,7 +911,6 @@ our %msg = (
     'custom-nostring'    => q{Es muss eine Abfrage (Query) mitgegeben werde},
     'database'           => q{Datenbank},
     'dbsize-version'     => q{Die Zieldatenbank muss Version 8.1 oder höher sein für die Verwendung der database_size-Aktion},
-    'depr-pgcontroldata' => q{PGCONTROLDATA ist missbilligt (veraltet), verwende PGBINDIR statt dessen.},
     'die-action-version' => q{Kann "$1" nicht starten: Die Serverversion muss >= $2 sein, ist aber $3},
     'die-badtime'        => q{Wert für '$1' muss eine gültige Zeit sein. Beispiele: -$2 1s -$2 "10 minutes"},
     'die-badversion'     => q{Ungültiger Versionsstring: $1},
@@ -3919,7 +3915,6 @@ sub open_controldata {
     ## We still catch deprecated option
     my $pgc;
     if (defined $ENV{PGCONTROLDATA} and length $ENV{PGCONTROLDATA}) {
-        # ndie msg('depr-pgcontroldata');
         $pgc = "$ENV{PGCONTROLDATA}";
     }
     else {

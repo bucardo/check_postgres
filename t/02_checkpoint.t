@@ -41,6 +41,7 @@ like ($cp->run('-c 10 --datadir=foobar'), qr{^ERROR: Invalid data_directory}, $t
 my $host = $cp->get_dbhost();
 $t=qq{$S fails when called against a non datadir datadir};
 like ($cp->run(qq{-c 10 --datadir="$host"}), qr{^ERROR:.+could not read the given data directory}, $t);
+exit;
 
 $t=qq{$S works when called for a recent checkpoint};
 my $dbh = $cp->get_dbh();
