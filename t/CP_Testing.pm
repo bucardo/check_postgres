@@ -418,6 +418,7 @@ sub _test_database_handle {
     ## Sanity check
     $dbh->do("ALTER USER $dbuser SET search_path = public");
     $dbh->do('SET search_path = public');
+    $dbh->do('SET client_min_messages = WARNING');
     $dbh->do('COMMIT');
 
     return $dbh;
