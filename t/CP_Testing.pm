@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use Time::HiRes qw/sleep/;
+use File::Spec::Functions;
 use DBI;
 use Cwd;
 
@@ -99,26 +100,47 @@ sub _test_database_handle {
         mkdir $dbdir;
     }
 
+    ## Find a working initdb (which also helps us find other binaries)
+    my $initdb =
+      $ENV{PGINITDB} ? $ENV{PGINITDB}
+      : $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/initdb"
+      : 'initdb';
+
+    my ($imaj,$imin);
+
+    my $initversion = qx{$initdb --version 2>/dev/null};
+    if ($initversion =~ /(\d+)(?:\.(\d+))?/) {
+        ($imaj,$imin) = ($1,$2);
+    }
+    else {
+        ## Work harder to find initdb. First check Debian area
+        my $basedir = '/usr/lib/postgresql/';
+        if (opendir my $dh, $basedir) {
+            for my $subdir (sort { $b <=> $a } grep { /^\d+[\d\.]+$/ } readdir $dh) {
+                $initdb = catfile($basedir, $subdir, 'bin', 'initdb');
+                if (-e $initdb) {
+                    $initversion = qx{$initdb --version 2>/dev/null};
+                    if ($initversion =~ /(\d+)(?:\.(\d+))?/) {
+                        ($imaj,$imin) = ($1,$2);
+                        last;
+                    }
+                }
+            }
+            closedir $dh;
+        }
+        if (!defined $imaj) {
+            die qq{Could not determine the version of initdb in use!\n};
+        }
+    }
+
     my $datadir = "$dbdir/data space";
     if (! -e $datadir) {
 
-        my $initdb
-            = $ENV{PGINITDB} ? $ENV{PGINITDB}
-            : $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/initdb"
-            :                  'initdb';
-
-        ## Grab the version for finicky items
-        if (qx{$initdb --version} !~ /(\d+)(?:\.(\d+))?/) {
-            die qq{Could not determine the version of initdb in use!\n};
-        }
-        my ($imaj,$imin) = ($1,$2);
-
-        # Speed up testing on 9.3+
-        if ($imaj > 9 or ($imaj==9 and $imin >= 3)) {
-            $initdb = "$initdb --nosync";
-        }
-
-        $com = qq{LANG=C $initdb --locale C -E UTF8 -D "$datadir" 2>&1};
+        $com = sprintf q{LANG=C %s %s --locale C -E UTF8 -D "%s" 2>&1},
+          $initdb,
+          # Speed up testing on 9.3+
+          ($imaj > 9 or ($imaj==9 and $imin >= 3)) ? ' --nosync' : '',
+          $datadir;
         eval {
             $DEBUG and warn qq{About to run: $com\n};
             $info = qx{$com};
@@ -201,7 +223,7 @@ sub _test_database_handle {
     my $pg_ctl
         = $ENV{PG_CTL}   ? $ENV{PG_CTL}
         : $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/pg_ctl"
-        :                  'pg_ctl';
+        : $initdb =~ s/initdb$/pg_ctl/r;
 
     if (qx{$pg_ctl --version} !~ /(\d+)(?:\.(\d+))?/) {
         die qq{Could not determine the version of pg_ctl in use!\n};
