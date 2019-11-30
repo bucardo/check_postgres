@@ -95,8 +95,6 @@ sub _test_database_handle {
 
         -e $dbdir and die qq{Oops: I cannot create "$dbdir", there is already a file there!\n};
 
-        Test::More::diag qq{Creating database in directory "$dbdir"\n};
-
         mkdir $dbdir;
     }
 
@@ -327,7 +325,7 @@ sub _test_database_handle {
             $newname .= $1;
         }
         if (! -e $newname) {
-            warn "Creating new symlink socket at $newname\n";
+            $DEBUG and warn "Creating new symlink socket at $newname\n";
             (my $oldname = $dbhost) =~ s/\\//g;
             symlink $oldname => $newname;
         }
