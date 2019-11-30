@@ -185,4 +185,8 @@ for my $num (1..8) {
 $t=qq{$S returns critical when too many clients to even connect};
 like ($cp->run('-w -10'), qr{^$label CRITICAL: .+too many connections}, $t);
 
+for my $num (1..8) {
+    $dbh{$num}->disconnect();
+}
+
 exit;
