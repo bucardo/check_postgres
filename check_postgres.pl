@@ -1235,6 +1235,11 @@ for my $arg (@ARGV) {
     }
 }
 
+## When were things introduced?
+## pg_get_userbyid(): 7.2
+## obj_description(?,?): 7.2
+## array_to_string: 7.4
+
 ## Used by same_schema in the find_catalog_info sub
 my %catalog_info = (
 
@@ -1247,9 +1252,12 @@ FROM pg_user},
 
     schema => {
         SQL       => q{
-SELECT n.oid, quote_ident(nspname) AS name, quote_ident(rolname) AS owner, nspacl
-FROM pg_namespace n
-JOIN pg_roles r ON (r.oid = n.nspowner)},
+SELECT nspname AS name, quote_ident(nspname) AS qname
+,pg_get_userbyid(nspowner) AS "Owner"
+,nspacl AS "Permissions"
+,obj_description(oid, 'pg_namespace') AS "Comment"
+FROM pg_namespace
+},
         deletecols => [ ],
         exclude    => 'temp_schemas',
     },
@@ -2375,6 +2383,7 @@ sub finishup {
                 $pmsg .= $m;
             }
             $pmsg =~ s/^\s+//;
+            $pmsg =~ s/\s+$//;
             $pmsg and print "| $pmsg";
         }
         print "\n";
@@ -7138,7 +7147,8 @@ sub check_same_schema {
 
     ## We override the usual $db->{totaltime} with our own counter
     my $start = [gettimeofday()];
-
+    $VERBOSE = 1;
+    
     ## Check for filtering rules, then store inside opt{filtered}
     my %filter;
     if (exists $opt{filter}) {
@@ -7231,7 +7241,7 @@ sub check_same_schema {
         [extension      => '',                                             ''          ],
         [operator       => 'oprleft,oprright,oprresult,oprnegate,oprcom',  ''          ],
         [type           => 'typarray',                                     ''          ],
-        [schema         => '',                                             ''          ],
+        [schema         => '',                                             'Permissions' ],
         [function       => 'source_checksum,prolang,prorettype,
                             proargtypes,proallargtypes,provariadic,
                             proargdefaults',                               ''          ],
@@ -7538,13 +7548,12 @@ sub check_same_schema {
 
                         push @msg => sprintf " %s\n", msg('ss-different', $col);
                         for my $db (sort keys %{ $tdiff->{coldiff}{$col} }) {
-                            push @msg => sprintf "    %s %s: %s\n",
+                            push @msg => sprintf " %s %s: %s\n",
                                 ucfirst msg('database'),
                                 $db,
                                 $tdiff->{coldiff}{$col}{$db};
                         }
                     }
-
                     if (@msg) {
                         $msg .= qq{$pitem "$name":\n};
                         $msg .= $_ for @msg;
@@ -7562,7 +7571,7 @@ sub check_same_schema {
                     for my $col (sort keys %{ $tdiff->{list} }) {
 
                         ## Exclude permissions if 'noperm' filter is set
-                        if ($col =~ /.acl$/ and $opt{filtered}{noperm}) {
+                        if (($col =~ /.acl$/ or $col eq 'Permissions') and $opt{filtered}{noperm}) {
                             next;
                         }
 
@@ -7904,7 +7913,7 @@ sub schema_item_differences {
                     next if $opt{skipsequencevals} and $item_class eq 'sequence';
 
                     ## If not a list, just report on the exact match here and move on:
-                    if (! exists $lists->{$col} and $col !~ /.acl$/) {
+                    if (! exists $lists->{$col}) {# and $col !~ /.acl$/) {
                         $nomatch{$name}{coldiff}{$col}{$db1} = $one->{$col};
                         $nomatch{$name}{coldiff}{$col}{$db2} = $two->{$col};
                         next;
