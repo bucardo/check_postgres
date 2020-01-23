@@ -3949,7 +3949,6 @@ sub open_controldata {
             }
         }
     }
-    -x $pgc or ndie msg('checkpoint-nobin');
 
     $COM = qq{$pgc "$dir"};
     eval {
