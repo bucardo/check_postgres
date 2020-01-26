@@ -743,10 +743,3 @@ $dbh1->do('DROP USER user_d');
 
 exit;
 
-__DATA__
-
-
-FINAL: 
-Bump version high
-show number key
-good key for historical
