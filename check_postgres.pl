@@ -1310,7 +1310,7 @@ LEFT JOIN (
     oid, tableoid, amname AS name FROM pg_am
 
   UNION ALL SELECT 'aggregate' AS object,
-    oid, tableoid, FORMAT('%s.%s(%s)', pronamespace::regnamespace, proname, pg_get_function_arguments(oid) )AS name FROM pg_proc WHERE proisagg
+    oid, tableoid, FORMAT('%s.%s(%s)', pronamespace::regnamespace, proname, pg_get_function_arguments(oid) )AS name FROM pg_proc WHERE prokind='a'
 
   UNION ALL SELECT 'cast' AS object,
     oid, tableoid, FORMAT('%s AS %s', format_type(castsource, NULL), format_type(casttarget, NULL)) AS name FROM pg_cast
@@ -1337,7 +1337,7 @@ LEFT JOIN (
     oid, tableoid, fdwname AS name FROM pg_foreign_data_wrapper
 
   UNION ALL SELECT 'function' AS object,
-    oid, tableoid, FORMAT('%s.%s(%s)', pronamespace::regnamespace, proname, pg_get_function_arguments(oid) )AS name FROM pg_proc WHERE NOT proisagg
+    oid, tableoid, FORMAT('%s.%s(%s)', pronamespace::regnamespace, proname, pg_get_function_arguments(oid) )AS name FROM pg_proc WHERE prokind IN ('f','p')
 
   UNION ALL SELECT 'large object' AS object,
     loid, tableoid, loid::text AS name FROM pg_largeobject
@@ -8015,6 +8015,11 @@ sub find_catalog_info {
     if ($type eq 'sequence' and $dbver->{major} >= 10) {
         $SQL = $ci->{SQL10};
         delete $ci->{innerSQL};
+    }
+
+    if ($type eq 'comment' and $dbver->{major} < 11) {
+        $SQL =~ s/prokind='a'/proisagg/g;
+        $SQL =~ s/\Qprokind IN ('f','p')/NOT proisagg/g;
     }
 
     if (exists $ci->{exclude}) {
