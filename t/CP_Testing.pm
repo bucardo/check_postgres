@@ -221,7 +221,7 @@ sub _test_database_handle {
     my $pg_ctl
         = $ENV{PG_CTL}   ? $ENV{PG_CTL}
         : $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/pg_ctl"
-        : $initdb =~ s/initdb$/pg_ctl/r;
+        : do { ($_ = $initdb) =~ s/initdb/pg_ctl/; $_ };
 
     if (qx{$pg_ctl --version} !~ /(\d+)(?:\.(\d+))?/) {
         die qq{Could not determine the version of pg_ctl in use!\n};
@@ -341,11 +341,12 @@ sub _test_database_handle {
         $dbh = DBI->connect(@superdsn);
     };
     if ($@) {
+        my (@tempdsn, $tempdbh);
         if ($@ =~ /role .+ does not exist/) {
             ## We want the current user, not whatever this is set to:
             delete $ENV{PGUSER};
-            my @tempdsn = ($dsn, '', '', {AutoCommit=>1,RaiseError=>1,PrintError=>0});
-            my $tempdbh = DBI->connect(@tempdsn);
+            @tempdsn = ($dsn, '', '', {AutoCommit=>1,RaiseError=>1,PrintError=>0});
+            $tempdbh = DBI->connect(@tempdsn);
             $tempdbh->do("CREATE USER $dbuser SUPERUSER");
             $tempdbh->disconnect();
             $dbh = DBI->connect(@superdsn);
@@ -353,8 +354,8 @@ sub _test_database_handle {
         elsif ($@ =~ /database "postgres" does not exist/) {
             ## We want the current user, not whatever this is set to:
             (my $tempdsn = $dsn) =~ s/postgres/template1/;
-            my @tempdsn = ($tempdsn, '', '', {AutoCommit=>1,RaiseError=>1,PrintError=>0});
-            my $tempdbh = DBI->connect(@tempdsn);
+            @tempdsn = ($tempdsn, '', '', {AutoCommit=>1,RaiseError=>1,PrintError=>0});
+            $tempdbh = DBI->connect(@tempdsn);
             $tempdbh->do('CREATE DATABASE postgres');
             $tempdbh->disconnect();
             $dbh = DBI->connect(@superdsn);
