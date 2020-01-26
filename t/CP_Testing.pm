@@ -454,6 +454,7 @@ sub recreate_database {
     $dsn = "DBI:Pg:dbname=$dbname;port=$port;host=$host";
 
     $dbh = DBI->connect($dsn, $user, '', {AutoCommit=>0, RaiseError=>1, PrintError=>0});
+    $dbh->do('SET client_min_messages = WARNING');
 
     return $dbh;
 
