@@ -18,6 +18,7 @@ my $cp3 = CP_Testing->new({ default_action => 'same_schema', dbnum => 3});
 
 ## Setup all database handles, and create a testing user
 $dbh1 = $cp1->test_database_handle();
+my $ver = $dbh1->{pg_server_version};
 $dbh1->{AutoCommit} = 1;
 eval { $dbh1->do(q{CREATE USER alternate_owner}, { RaiseError => 0, PrintError => 0 }); };
 $dbh2 = $cp2->test_database_handle();
@@ -566,18 +567,20 @@ like ($cp1->run($connect2),
 
 $t = qq{$S reports constraint with different definitions};
 $dbh2->do(q{ALTER TABLE yamato ADD CONSTRAINT iscandar CHECK(nova > 256)});
-like ($cp1->run($connect2),
-      qr{^$label CRITICAL.*Items not matched: 1 .*
-\s*Constraint "public.yamato.iscandar":
+
+## Version 12 removed the pg_constraint.consrc column
+my $extra = $ver >= 120000 ? '' : q{
 \s*"consrc" is different:
 \s*Database 1: \(nova > 0\)
-\s*Database 2: \(nova > 256\)
+\s*Database 2: \(nova > 256\)};
+
+like ($cp1->run($connect2),
+      qr{^$label CRITICAL.*Items not matched: 1 .*
+\s*Constraint "public.yamato.iscandar":$extra
 \s*"constraintdef" is different:
 \s*Database 1: CHECK \(\(nova > 0\)\)
 \s*Database 2: CHECK \(\(nova > 256\)\)\s*$}s,
       $t);
-
-
 
 $t = qq{$S does not report constraint differences if the 'noconstraint' filter is given};
 like ($cp1->run("$connect3 --filter=noconstraint,notables"), qr{^$label OK}, $t);
