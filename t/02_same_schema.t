@@ -273,16 +273,22 @@ Table "public.berri" does not exist on all databases:
 \s*Missing on: 1, 3\s*$}s,
       $t);
 
-$t = qq{$S reports table attribute differences};
-$dbh1->do(q{CREATE TABLE berri(bfd int) WITH OIDS});
-like ($cp1->run($connect2),
-      qr{^$label CRITICAL.*Items not matched: 1 .*
+$t = qq{$S reports table attribute (WITH OIDS) differences};
+if ($ver < 120000) {
+    $dbh1->do(q{CREATE TABLE berri(bfd int) WITH OIDS});
+    like ($cp1->run($connect2),
+        qr{^$label CRITICAL.*Items not matched: 1 .*
 Table "public.berri":
 \s*"relhasoids" is different:
 \s*Database 1: t
 \s*Database 2: f\s*$}s,
-      $t);
-$dbh1->do(q{ALTER TABLE berri SET WITHOUT OIDS});
+    $t);
+    $dbh1->do(q{ALTER TABLE berri SET WITHOUT OIDS});
+}
+else {
+    $dbh1->do(q{CREATE TABLE berri(bfd int)});
+    pass ('No need to test relhasoids on modern databases');
+}
 
 $t = qq{$S reports simple table acl differences};
 $dbh1->do(q{GRANT SELECT ON TABLE berri TO alternate_owner});
