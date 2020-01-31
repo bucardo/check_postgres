@@ -92,7 +92,7 @@ SKIP: {
         { local $/; $string = <$fh>; }
         close $fh or warn "Could not close $tmpfile\n";
         unlink $tmpfile;
-        spellcheck("POD from $file" => $string, $file);
+        spellcheck("POD inside $file" => $string, $file);
     }
 }
 
@@ -141,6 +141,7 @@ bucardo
 checksum
 chroot
 commitratio
+consrc
 cp
 dbh
 dbstats
@@ -338,6 +339,7 @@ Guettler
 Guillaume
 Gurjeet
 Hagander
+Hansper
 hardcode
 Henrik
 Henrik
