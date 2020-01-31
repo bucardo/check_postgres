@@ -64,6 +64,7 @@ $t = qq{$S succeeds with two empty databases};
 like ($cp1->run($connect2),
       qr{^$label OK}, $t);
 
+
 sub drop_language {
 
     my ($name, $dbhx) = @_;
@@ -246,7 +247,6 @@ $dbh2->do(q{DROP SCHEMA schema_a});
 
 $t = qq{$S reports on schema differences};
 like ($cp1->run($connect3), qr{^$label OK}, $t);
-
 
 #/////////// Tables
 TABLE:
@@ -494,6 +494,11 @@ $dbh1->do($SQL); $dbh2->do($SQL); $dbh3->do($SQL);
 $SQL = 'CREATE TRIGGER tigger BEFORE INSERT ON piglet EXECUTE PROCEDURE bouncy()';
 $dbh1->do($SQL);
 
+SKIP: {
+
+  skip 'Cannot test trigger differences on versions of Postgres older than 9.0', 3
+      if $ver < 90000;
+
 like ($cp1->run($connect2),
       qr{^$label CRITICAL.*Items not matched: 2 .*
 \s*Table "public.piglet":
@@ -535,6 +540,8 @@ like ($cp1->run($connect2),
 \s*Trigger "public.piglet.tigger":
 \s*"tgenabled" is different:}s,
       $t);
+
+}
 
 ## We have to also turn off table differences
 $t = qq{$S does not report trigger differences if the 'notrigger' filter is given};

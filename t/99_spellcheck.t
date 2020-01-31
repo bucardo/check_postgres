@@ -6,6 +6,7 @@ use 5.006;
 use strict;
 use warnings;
 use Test::More;
+use utf8;
 
 my (@testfiles, $fh);
 
@@ -79,22 +80,23 @@ SKIP: {
         skip 'Need Pod::Text to re-test the spelling of embedded POD', 1;
     }
 
-    my $parser = Pod::Text->new (quotes => 'none', width => 400);
+    my $parser = Pod::Text->new (quotes => 'none', width => 400, utf8 => 1);
 
     for my $file (qw{check_postgres.pl}) {
         if (! -e $file) {
             fail(qq{Could not find the file "$file"!});
         }
         my $string;
-        my $tmpfile = "$file.tmp";
+        my $tmpfile = "$file.spellcheck.tmp";
         $parser->parse_from_file($file, $tmpfile);
-        next if ! open my $fh, '<', $tmpfile;
+        next if ! open my $fh, '<:encoding(UTF-8)', $tmpfile;
         { local $/; $string = <$fh>; }
         close $fh or warn "Could not close $tmpfile\n";
         unlink $tmpfile;
         spellcheck("POD inside $file" => $string, $file);
     }
 }
+
 
 ## Now the comments
 SKIP: {
@@ -247,6 +249,7 @@ baz
 bigint
 Blasco
 Blasco
+Brüssel
 blks
 Boes
 boxinfo
@@ -260,6 +263,7 @@ checkpostgresrc
 checksum
 checksums
 checktype
+Cédric
 Christoph
 commitratio
 commitratio
@@ -372,6 +376,7 @@ Jacobo
 Janes
 Jehan
 Jens
+Jürgen
 Kabalin
 Kirkwood
 klatch

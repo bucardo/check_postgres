@@ -1269,12 +1269,13 @@ SELECT a.*, aggfnoid AS name
 FROM pg_aggregate a},
     },
     cast => {
-        SQL => q{ SELECT c.*, FORMAT('%s AS %s', format_type(castsource, NULL), format_type(casttarget, NULL)) AS name FROM pg_cast c},
+        SQL => q{ SELECT c.*, FORMAT('%s AS %s', format_type(castsource,NULL), format_type(casttarget,NULL)) AS name FROM pg_cast c},
     },
     comment => {
         SQL => q{
-SELECT CASE WHEN so.name IS NULL THEN FORMAT('Unknown:%s:%s', sd.classoid, sd.objoid)
-  ELSE FORMAT('%s:%s', so.object, so.name) END AS name, sd.description AS comment
+SELECT CASE WHEN so.name IS NULL THEN 'Unknown:' || sd.classoid || ':' || sd.objoid
+  ELSE so.object || ';' || so.name
+END AS name, sd.description AS comment
 FROM pg_shdescription sd
 LEFT JOIN (
   SELECT 'database' AS object,
@@ -1286,11 +1287,9 @@ LEFT JOIN (
 ) AS so ON (so.oid = sd.objoid AND so.tableoid = sd.classoid)
 
 UNION ALL (
-SELECT CASE WHEN o.name IS NULL THEN FORMAT('Unknown:%s:%s', d.classoid, d.objoid)
-  WHEN objsubid > 0 THEN FORMAT('column:%s.%s', o.name,
-    (SELECT attname FROM pg_attribute WHERE attrelid::regclass::text = o.name AND attnum = d.objsubid)
-  )
-  ELSE FORMAT('%s:%s', COALESCE(o.object,'?'), o.name) END AS name, d.description AS comment
+SELECT CASE WHEN o.name IS NULL THEN 'Unknown:' || d.classoid || ':' || d.objoid
+  WHEN objsubid > 0 THEN 'column:' || o.name || ':' || (SELECT attname FROM pg_attribute WHERE attrelid::regclass::text = o.name AND attnum = d.objsubid)
+  ELSE COALESCE(o.object,'?') || ';' || o.name END AS name, d.description AS comment
 FROM pg_description d
 LEFT JOIN (
 
@@ -1310,13 +1309,12 @@ LEFT JOIN (
     oid, tableoid, amname AS name FROM pg_am
 
   UNION ALL SELECT 'aggregate' AS object,
-    oid, tableoid, FORMAT('%s.%s(%s)', pronamespace::regnamespace, proname, pg_get_function_arguments(oid) )AS name FROM pg_proc WHERE prokind='a'
+    oid, tableoid, FORMAT('%s.%s(%s) ', pronamespace::regnamespace, proname, pg_get_function_arguments(oid) ) AS name FROM pg_proc WHERE prokind='a'
 
   UNION ALL SELECT 'cast' AS object,
-    oid, tableoid, FORMAT('%s AS %s', format_type(castsource, NULL), format_type(casttarget, NULL)) AS name FROM pg_cast
+    oid, tableoid, FORMAT('%s AS %s', format_type(castsource,NULL), format_type(casttarget,NULL)) AS name FROM pg_cast
 
-  UNION ALL SELECT 'collation' AS object,
-    oid, tableoid, FORMAT('%s.%s', collnamespace::regnamespace, collname) AS name FROM pg_collation
+  UNION ALL SELECT 'collation' AS object, oid, tableoid, FORMAT('%s.%s', collnamespace::regnamespace, collname) AS name FROM pg_collation
 
   UNION ALL SELECT 'constraint' AS object,
     oid, tableoid, FORMAT('%s.%s on %s', connamespace::regnamespace, conname, conrelid::regclass) AS name FROM pg_constraint
@@ -1327,23 +1325,21 @@ LEFT JOIN (
   UNION ALL SELECT 'domain' AS object,
     oid, tableoid, FORMAT('%s.%s', typnamespace::regnamespace, typname) AS name FROM pg_type WHERE typtype = 'd'
 
-  UNION ALL SELECT 'extension' AS object,
-    oid, tableoid, FORMAT('%s.%s', extnamespace::regnamespace, extname) AS name FROM pg_extension
+  UNION ALL SELECT 'extension' AS object, oid, tableoid, FORMAT('%s.%s', extnamespace::regnamespace, extname) AS name FROM pg_extension
 
-  UNION ALL SELECT 'event trigger' AS object,
-    oid, tableoid, evtname AS name FROM pg_event_trigger
+  UNION ALL SELECT 'event trigger' AS object, oid, tableoid, evtname AS name FROM pg_event_trigger
 
   UNION ALL SELECT 'foreign data wrapper' AS object,
     oid, tableoid, fdwname AS name FROM pg_foreign_data_wrapper
 
   UNION ALL SELECT 'function' AS object,
-    oid, tableoid, FORMAT('%s.%s(%s)', pronamespace::regnamespace, proname, pg_get_function_arguments(oid) )AS name FROM pg_proc WHERE prokind IN ('f','p')
+    oid, tableoid, FORMAT('%s.%s(%s)', pronamespace::regnamespace, proname, pg_get_function_arguments(oid)) AS name FROM pg_proc WHERE prokind IN ('f','p')
 
   UNION ALL SELECT 'large object' AS object,
     loid, tableoid, loid::text AS name FROM pg_largeobject
 
   UNION ALL SELECT 'operator' AS object,
-    oid, tableoid, FORMAT('%s.%s(%s,%s)', oprnamespace::regnamespace, oprname,format_type(oprleft,NULL),format_type(oprright,NULL)) AS name FROM pg_operator
+    oid, tableoid, FORMAT('%s.%s(%s,%s)', oprnamespace::regnamespace, oprname, format_type(oprleft,NULL), format_type(oprright,NULL)) AS name FROM pg_operator
 
   UNION ALL SELECT 'operator class' AS object,
     oid, tableoid, FORMAT('%s.%s using %s', opcnamespace::regnamespace, opcname, (SELECT amname FROM pg_am WHERE oid = opcmethod)) AS name FROM pg_opclass
@@ -1351,8 +1347,7 @@ LEFT JOIN (
   UNION ALL SELECT 'operator family' AS object,
     oid, tableoid, FORMAT('%s.%s using %s', opfnamespace::regnamespace, opfname, (SELECT amname FROM pg_am WHERE oid = opfmethod)) AS name FROM pg_opfamily
 
-  UNION ALL SELECT 'policy' AS object,
-    oid, tableoid, FORMAT('%s ON %s', polname, polrelid::regclass) AS named FROM pg_policy
+  UNION ALL SELECT 'policy' AS object, oid, tableoid, FORMAT('%s ON %s', polname, polrelid::regclass) AS name FROM pg_policy
 
   UNION ALL SELECT 'language' AS object,
     oid, tableoid, lanname AS name FROM pg_language
@@ -1459,8 +1454,8 @@ WHERE c.relkind = 'i'},
         exclude    => 'system',
     },
 operator => { SQL => q{
-  SELECT FORMAT('%s.%s(%s,%s)', o.oprnamespace::regnamespace, o.oprname,format_type(o.oprleft,NULL),format_type(o.oprright,NULL)) AS name,
-    rolname AS owner, quote_ident(oprnamespace::regnamespace::text) AS schemaname
+  SELECT FORMAT('%s.%s(%s,%s)', oprnamespace::regnamespace, oprname, format_type(oprleft,NULL), format_type(oprright,NULL)) AS name,
+    rolname AS owner, quote_ideNT(oprnamespace::regnamespace::text) AS schemaname
   FROM pg_operator o
   JOIN pg_roles r ON (r.oid = o.oprowner)
   WHERE oprnamespace::regnamespace::text <> 'pg_catalog'
@@ -8000,6 +7995,16 @@ sub find_catalog_info {
     ## The version information
     my $dbver = shift or die;
 
+    ## Cannot check extensions if we are before 9.4
+    if ('extension' eq $type and $dbver->{major} < 9.4) {
+        return {};
+    }
+
+    ## Foreign tables arrived in 9.1
+    if ($type =~ /foreign/ and $dbver->{major} < 9.1) {
+        return {};
+    }
+
     ## The SQL we use
     my $SQL = $ci->{SQL} or die "No SQL found for type '$type'\n";
 
@@ -8020,6 +8025,48 @@ sub find_catalog_info {
     if ($type eq 'comment' and $dbver->{major} < 11) {
         $SQL =~ s/prokind='a'/proisagg/g;
         $SQL =~ s/\Qprokind IN ('f','p')/NOT proisagg/g;
+    }
+
+    if ($dbver->{major} < 9.1) {
+        if ($SQL =~ /FORMAT/) {
+           #warn $SQL;
+           $SQL =~ s{FORMAT\('(.+?)', (.+)\) AS name}{
+               my ($format, @args) = ($1, split /, / => $2);
+               $format =~ s/ (\w+) / || ' $1 ' || /g;
+               $format =~ s/([,.\(\)])/ || '$1' || /g;
+               $format =~ s/%s/shift @args/ge;
+               $format =~ s/\|\|\s*$//;
+               "$format As name";
+           }ge;
+
+            #warn $SQL;
+        }
+    }
+
+
+    ## The regnamespace shortcut arrived with version 9.5
+    if ($dbver->{major} < 9.5) {
+        $SQL =~ s{(\w+)::regnamespace}{(SELECT nspname FROM pg_namespace WHERE oid=$1)}g;
+    }
+
+    ## The string_agg function appeared in 9.0. For now, we return nothing.
+    return {} if $dbver->{major} < 9.0 and $SQL =~ /string_agg/;
+
+    ## Many new tables showed up in version 9.4
+    if ($dbver->{major} < 9.4) {
+        $SQL =~ s{UNION ALL.+pg_collation}{};
+        $SQL =~ s{UNION ALL.+pg_extension}{};
+        $SQL =~ s{UNION ALL.+pg_event_trigger}{};
+    }
+
+    ## Tables appearing in version 9.5
+    if ($dbver->{major} < 9.5) {
+        $SQL =~ s{UNION ALL.+pg_policy}{};
+    }
+
+    ## Tables appearing in version 9.1
+    if ($dbver->{major} < 9.1) {
+        $SQL =~ s{UNION ALL.+pg_extension}{};
     }
 
     if (exists $ci->{exclude}) {
@@ -10894,7 +10941,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Allow same_schema objects to be included or excluded with --object and --skipobject
     (Greg Sabino Mullane)
 
-  Fix to allow mixing service names and other connection paramaters for same_schema
+  Fix to allow mixing service names and other connection parameters for same_schema
     (Greg Sabino Mullane)
 
 
