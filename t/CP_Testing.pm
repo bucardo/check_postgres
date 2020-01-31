@@ -127,7 +127,7 @@ sub _test_database_handle {
             closedir $dh;
         }
         if (!defined $imaj) {
-            die qq{Could not determine the version of initdb in use!\n};
+            die qq{Could not determine the version of initdb in use! Got ($initversion) from ($initdb --version)\n};
         }
     }
 
