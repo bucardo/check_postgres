@@ -79,7 +79,7 @@ SKIP: {
         skip 'Need Pod::Text to re-test the spelling of embedded POD', 1;
     }
 
-    my $parser = Pod::Text->new (quotes => 'none');
+    my $parser = Pod::Text->new (quotes => 'none', width => 400);
 
     for my $file (qw{check_postgres.pl}) {
         if (! -e $file) {
@@ -132,22 +132,27 @@ __DATA__
 ## Common:
 
 arrayref
+async
 autovac
 Backends
 backends
 bc
 bucardo
 checksum
+chroot
 commitratio
 cp
 dbh
 dbstats
+df
 DBI
 DSN
 ENV
+filesystem
 fsm
 goto
 hitratio
+lsfunc
 Mullane
 Nagios
 ok
@@ -169,14 +174,18 @@ Pre
 runtime
 Schemas
 selectall
+skipcycled
+skipobject
 Slony
 slony
 stderr
 syslog
 tcl
+timestamp
 tnm
 txn
 txns
+turnstep
 tuples
 wal
 www
@@ -214,6 +223,7 @@ xmlns
 ## check_postgres.pl:
 
 Abrigo
+Adrien
 Ahlgren
 Ahlgren
 Albe
@@ -239,6 +249,7 @@ Blasco
 blks
 Boes
 boxinfo
+Boxinfo
 Bracht
 Bracht
 Bucardo
@@ -287,6 +298,7 @@ EB
 Eisentraut
 Eloranta
 Eloranta
+Elsasser
 emma
 endcrypt
 EnterpriseDB
@@ -325,6 +337,7 @@ gtld
 Guettler
 Guillaume
 Gurjeet
+Hagander
 hardcode
 Henrik
 Henrik
@@ -332,6 +345,7 @@ HiRes
 hitratio
 hitratio
 hitratio
+Holger
 hong
 HOSTADDRESS
 html
@@ -353,6 +367,7 @@ Ioannis
 ioguix
 Jacobo
 Jacobo
+Janes
 Jehan
 Jens
 Kabalin
@@ -372,6 +387,7 @@ localtime
 Logfile
 logtime
 Mager
+Magnus
 maindatabase
 Makefile
 Mallett
@@ -386,6 +402,7 @@ Mika
 MINIPAGES
 MINPAGES
 minvalue
+Moench
 morpork
 mrtg
 MRTG
@@ -393,6 +410,8 @@ msg
 multi
 nagios
 NAGIOS
+Nayrat
+Nenciarini
 nextval
 nnx
 nofuncbody
@@ -444,6 +463,7 @@ PGSERVICE
 pgsql
 PGUSER
 pid
+Pirogov
 plasmid
 plugin
 pluto
@@ -475,8 +495,8 @@ Renner
 repinfo
 RequireInterpolationOfMetachars
 ret
-rgen
 ritical
+rgen
 robert
 Rorthais
 runtime
@@ -492,6 +512,7 @@ seqscan
 seqscan
 seqtupread
 seqtupread
+SETOF
 showperf
 Sijmons
 Singh
@@ -521,6 +542,7 @@ tablespaces
 Tambouras
 tardis
 Taveira
+Tegeder
 tempdir
 tgisconstraint
 Thauvin
@@ -543,11 +565,13 @@ utf
 valtype
 Villemain
 Vitkovsky
+Vondendriesch
 Waisbrot
 Waisbrot
 wal
 WAL
 watson
+Webber
 Westwood
 wget
 wiki
@@ -556,4 +580,5 @@ wilkins
 xact
 xlog
 Yamada
+Yochum
 Zwerschke
