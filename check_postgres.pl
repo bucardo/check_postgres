@@ -16,7 +16,7 @@
 
 package check_postgres;
 
-use 5.006001;
+use 5.008;
 use strict;
 use warnings;
 use utf8;
@@ -2815,15 +2815,15 @@ sub pretty_time {
 
     ## Just seconds (< 2:00)
     if ($sec < 120 or $tweak =~ /s/) {
-        return sprintf "$sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+        return sprintf "$sec %s", 1==$sec ? msg('time-second') : msg('time-seconds');
     }
 
     ## Minutes and seconds (< 60:00)
     if ($sec < 60*60 or $tweak =~ /m/) {
         my $min = int $sec / 60;
         $sec %= 60;
-        my $ret = sprintf "$min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
-        $sec and $tweak !~ /S/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+        my $ret = sprintf "$min %s", 1==$min ? msg('time-minute') : msg('time-minutes');
+        $sec and $tweak !~ /S/ and $ret .= sprintf " $sec %s", 1==$sec ? msg('time-second') : msg('time-seconds');
         return $ret;
     }
 
@@ -2833,9 +2833,9 @@ sub pretty_time {
         $sec -= ($hour*60*60);
         my $min = int $sec / 60;
         $sec -= ($min*60);
-        my $ret = sprintf "$hour %s", $hour==1 ? msg('time-hour') : msg('time-hours');
-        $min and $tweak !~ /M/ and $ret .= sprintf " $min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
-        $sec and $tweak !~ /[SM]/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+        my $ret = sprintf "$hour %s", 1==$hour ? msg('time-hour') : msg('time-hours');
+        $min and $tweak !~ /M/ and $ret .= sprintf " $min %s", 1==$min ? msg('time-minute') : msg('time-minutes');
+        $sec and $tweak !~ /[SM]/ and $ret .= sprintf " $sec %s", 1==$sec ? msg('time-second') : msg('time-seconds');
         return $ret;
     }
 
@@ -2847,10 +2847,10 @@ sub pretty_time {
         $sec -= ($our*60*60);
         my $min = int $sec / 60;
         $sec -= ($min*60);
-        my $ret = sprintf "$day %s", $day==1 ? msg('time-day') : msg('time-days');
-        $our and $tweak !~ /H/     and $ret .= sprintf " $our %s", $our==1 ? msg('time-hour')   : msg('time-hours');
-        $min and $tweak !~ /[HM]/  and $ret .= sprintf " $min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
-        $sec and $tweak !~ /[HMS]/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+        my $ret = sprintf "$day %s", 1==$day ? msg('time-day') : msg('time-days');
+        $our and $tweak !~ /H/     and $ret .= sprintf " $our %s", 1==$our ? msg('time-hour')   : msg('time-hours');
+        $min and $tweak !~ /[HM]/  and $ret .= sprintf " $min %s", 1==$min ? msg('time-minute') : msg('time-minutes');
+        $sec and $tweak !~ /[HMS]/ and $ret .= sprintf " $sec %s", 1==$sec ? msg('time-second') : msg('time-seconds');
         return $ret;
     }
 
@@ -2863,11 +2863,11 @@ sub pretty_time {
     $sec -= ($our*60*60);
     my $min = int $sec / 60;
     $sec -= ($min*60);
-    my $ret = sprintf "$week %s", $week==1 ? msg('time-week') : msg('time-weeks');
-    $day and $tweak !~ /D/      and $ret .= sprintf " $day %s", $day==1 ? msg('time-day')    : msg('time-days');
-    $our and $tweak !~ /[DH]/   and $ret .= sprintf " $our %s", $our==1 ? msg('time-hour')   : msg('time-hours');
-    $min and $tweak !~ /[DHM]/  and $ret .= sprintf " $min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
-    $sec and $tweak !~ /[DHMS]/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+    my $ret = sprintf "$week %s", 1==$week ? msg('time-week') : msg('time-weeks');
+    $day and $tweak !~ /D/      and $ret .= sprintf " $day %s", 1==$day ? msg('time-day')    : msg('time-days');
+    $our and $tweak !~ /[DH]/   and $ret .= sprintf " $our %s", 1==$our ? msg('time-hour')   : msg('time-hours');
+    $min and $tweak !~ /[DHM]/  and $ret .= sprintf " $min %s", 1==$min ? msg('time-minute') : msg('time-minutes');
+    $sec and $tweak !~ /[DHMS]/ and $ret .= sprintf " $sec %s", 1==$sec ? msg('time-second') : msg('time-seconds');
     return $ret;
 
 } ## end of pretty_time
@@ -3117,7 +3117,7 @@ sub run_command {
             $db->{ok} = 1;
 
             ## Unfortunately, psql outputs "(No rows)" even with -t and -x
-            $db->{slurp} = '' if ! defined $db->{slurp} or index($db->{slurp},'(')==0;
+            $db->{slurp} = '' if ! defined $db->{slurp} or 0 == index($db->{slurp},'(');
 
             ## Remove carriage returns (i.e. on Win32)
             $db->{slurp} =~ s/\r//g;
@@ -3162,7 +3162,7 @@ sub run_command {
             my $lastval;
             for my $line (split /\n/ => $db->{slurp}) {
 
-                if (index($line,'-')==0) {
+                if (0 == index($line,'-')) {
                     $lnum++;
                     next;
                 }
@@ -3573,7 +3573,7 @@ sub validate_range {
         }
         if (length $critical) {
             if ($critical !~ $timesecre) {
-                ndie msg('range-seconds', 'critical')
+                ndie msg('range-seconds', 'critical');
             }
             $critical = $1;
             if (!$arg->{any_warning} and length $warning and $warning > $critical) {
@@ -4174,7 +4174,7 @@ ORDER BY datname
             $nwarn = $limit-$w2;
         }
         elsif ($w3) {
-            $nwarn = (int $w2*$limit/100)
+            $nwarn = (int $w2*$limit/100);
         }
 
         if (! skip_item($r->{datname})) {
@@ -4404,7 +4404,7 @@ FROM (
             qw/ iname irows ipages iotta ibloat wastedipgaes wastedibytes wastedisize/};
 
         ## Made it past the exclusions
-        $max = -2 if $max == -1;
+        $max = -2 if -1 == $max;
 
         ## Do the table first if we haven't seen it
         if (! $seenit{"$dbname.$schema.$table"}++) {
@@ -4475,10 +4475,10 @@ FROM (
         $db->{perf} = '';
     }
 
-    if ($max == -1) {
+    if (-1 == $max) {
         add_unknown msg('no-match-rel');
     }
-    elsif ($max != -1) {
+    elsif (-1 != $max) {
         add_ok $maxmsg;
     }
 
@@ -4560,7 +4560,7 @@ sub check_checkpoint {
         ndie msg('checkpoint-noparse', $last);
     }
     my $diff = time - $dt;
-    my $msg = $diff==1 ? msg('checkpoint-ok') : msg('checkpoint-ok2', $diff);
+    my $msg = 1==$diff ? msg('checkpoint-ok') : msg('checkpoint-ok2', $diff);
     $db->{perf} = sprintf '%s=%s;%s;%s',
         perfname(msg('age')), $diff, $warning, $critical;
 
@@ -5622,7 +5622,7 @@ sub check_hot_standby_delay {
     ## Do the check on replay delay in case SR has disconnected because it way too far behind
     my $msg = qq{$rep_delta};
     if ($version >= 9.1) {
-        $msg .= qq{ and $time_delta seconds}
+        $msg .= qq{ and $time_delta seconds};
     }
     if ((length $critical or length $ctime) and (!length $critical or length $critical and $rep_delta > $critical) and (!length $ctime or length $ctime and $time_delta > $ctime)) {
         add_critical $msg;
@@ -5652,7 +5652,7 @@ sub check_replication_slots {
 
     my ($warning, $critical) = validate_range({type => 'size'});
 
-    $SQL = qq{
+    $SQL = q{
         WITH slots AS (SELECT slot_name,
             slot_type,
             coalesce(restart_lsn, '0/0'::pg_lsn) AS slot_lsn,
@@ -5679,7 +5679,7 @@ sub check_replication_slots {
 
         for my $r (@{$db->{slurp}}) {
             if (skip_item($r->{slot_name})) {
-                $max = -2 if ($max == -1 );
+                $max = -2 if -1 == $max;
                 next;
             }
             if ($r->{delta} >= $max) {
@@ -5692,14 +5692,14 @@ sub check_replication_slots {
         }
         if ($max < 0) {
             $stats{$db->{dbname}} = 0;
-            add_ok msg('no-match-slotok') if ($max == -1);
-            add_unknown msg('no-match-slot') if ($max == -2);
+            add_ok msg('no-match-slotok') if -1 == $max;
+            add_unknown msg('no-match-slot') if -2 == $max;
             next;
         }
 
         my $msg = '';
         for (sort {$s{$b}[0] <=> $s{$a}[0] or $a cmp $b } keys %s) {
-            $msg .= "$_: $s{$_}[1] ($s{$_}[2] $s{$_}[3] " . ($s{$_}[4] eq 't'?'active':'inactive') .") ";
+            $msg .= "$_: $s{$_}[1] ($s{$_}[2] $s{$_}[3] " . ($s{$_}[4] eq 't' ? 'active' : 'inactive') .') ';
             $db->{perf} .= sprintf ' %s=%s;%s;%s',
                 perfname($_), $s{$_}[0], $warning, $critical;
         }
@@ -5836,7 +5836,7 @@ FROM (SELECT nspname, relname, $criteria AS v
             do_mrtg({one => $mintime, msg => $maxrel});
             return;
         }
-        if ($maxtime == -2) {
+        if (-2 == $maxtime) {
             add_unknown (
                 $found ? $type eq 'vacuum' ? msg('vac-nomatch-v')
                 : msg('vac-nomatch-a')
@@ -6178,7 +6178,7 @@ ORDER BY name
         }
         close $logfh or ndie msg('file-noclose', $logfile, $!);
 
-        if ($found == 1) {
+        if (1 == $found) {
             $MRTG and do_mrtg({one => 1});
             add_ok msg('logfile-ok', $logfile);
         }
@@ -6607,7 +6607,7 @@ sub check_pgbouncer_backends {
             $nwarn = $limit-$w2;
         }
         elsif ($w3) {
-            $nwarn = (int $w2*$limit/100)
+            $nwarn = (int $w2*$limit/100);
         }
 
         if (! skip_item($r->{database})) {
@@ -6890,6 +6890,7 @@ sub check_relation_size {
 
     my ($warning, $critical) = validate_range({type => 'size'});
 
+    ## no critic
     $SQL = sprintf q{
 SELECT pg_%1$s_size(c.oid) AS rsize,
   pg_size_pretty(pg_%1$s_size(c.oid)) AS psize,
@@ -6897,8 +6898,9 @@ SELECT pg_%1$s_size(c.oid) AS rsize,
 FROM pg_class c JOIN pg_namespace n ON (c.relnamespace = n.oid)
 WHERE relkind IN (%2$s)
 },
-    $sizefct,
-    join (',', map { "'$_'" } split (//, $relkinds));
+    $sizefct, ## no critic
+    join (',', map { "'$_'" } split (//, $relkinds)); ## no critic
+    ## use critic
 
     if ($opt{perflimit}) {
         $SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
@@ -6934,7 +6936,7 @@ WHERE relkind IN (%2$s)
             my $nicename = $kind eq 'r' ? "$schema.$name" : $name;
 
             $db->{perf} .= sprintf '%s%s=%sB;%s;%s',
-                $VERBOSE==1 ? "\n" : ' ',
+                1 == $VERBOSE ? "\n" : ' ',
                 perfname($nicename), $size, $warning, $critical;
             ($max=$size, $pmax=$psize, $kmax=$kind, $nmax=$name, $smax=$schema) if $size > $max;
         }
@@ -8268,7 +8270,7 @@ FROM (
 FROM pg_sequences) foo};
     ## use critic
 
-    my $info = run_command($SQL, {regex => qr{\w}, emptyok => 1, version => [">9.6 SELECT 1"]} ); # actual SQL10 is executed below
+    my $info = run_command($SQL, {regex => qr{\w}, emptyok => 1, version => ['>9.6 SELECT 1']} ); # actual SQL10 is executed below
 
     my $MAXINT2 = 32767;
     my $MAXINT4 = 2147483647;
@@ -8955,7 +8957,7 @@ sub check_wal_files {
     my ($warning, $critical) = validate_range($arg);
 
     my $lsfunc = $opt{lsfunc} || 'pg_ls_dir';
-    my $lsargs = $opt{lsfunc} ? "" : "'pg_xlog$subdir'";
+    my $lsargs = $opt{lsfunc} ? q{} : "'pg_xlog$subdir'";
 
     ## Figure out where the pg_xlog directory is
     $SQL = qq{SELECT count(*) AS count FROM $lsfunc($lsargs) WHERE $lsfunc ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)
@@ -9135,7 +9137,7 @@ Instead, one should use a .pgpass or pg_service.conf file.
 =item B<--dbservice=NAME>
 
 The name of a service inside of the pg_service.conf file. Before version 9.0 of Postgres, this is 
-a global file, usually found in /etc/pg_service.conf. If you are using version 9.0 or higher of 
+a global file, usually found in F</etc/pg_service.conf>. If you are using version 9.0 or higher of 
 Postgres, you can use the file ".pg_service.conf" in the home directory of the user running 
 the script, e.g. nagios.
 
@@ -9143,9 +9145,9 @@ This file contains a simple list of connection options. You can also pass additi
 when using this option such as --dbservice="maindatabase sslmode=require"
 
 The documentation for this file can be found at
-https://www.postgresql.org/docs/current/static/libpq-pgservice.html
+L<https://www.postgresql.org/docs/current/static/libpq-pgservice.html>
 
-=back
+
 
 The database connection options can be grouped: I<--host=a,b --host=c --port=1234 --port=3344>
 would connect to a-1234, b-1234, and c-3344. Note that once set, an option 
@@ -9821,7 +9823,7 @@ Example 1: Make sure that no file system is over 90% for the database on port 54
 
   check_postgres_disk_space --port=5432 --warning='90%' --critical='90%'
 
-Example 2: Check that all file systems starting with /dev/sda are smaller than 10 GB and 11 GB (warning and critical)
+Example 2: Check that all file systems starting with F</dev/sda> are smaller than 10 GB and 11 GB (warning and critical)
 
   check_postgres_disk_space --port=5432 --warning='10 GB' --critical='11 GB' --include="~^/dev/sda"
 
@@ -10115,7 +10117,7 @@ failure, the fourth line will provide more detail on the failure encountered.
 program is available. The current version is obtained by running C<bucardo_ctl --version>.
 If a major upgrade is available, a warning is returned. If a revision upgrade is 
 available, a critical is returned. (Bucardo is a master to slave, and master to master 
-replication system for Postgres: see https://bucardo.org/ for more information).
+replication system for Postgres: see L<https://bucardo.org/> for more information).
 See also the information on the C<--get_method> option.
 
 =head2 B<new_version_box>
@@ -10125,7 +10127,7 @@ program is available. The current version is obtained by running C<boxinfo.pl --
 If a major upgrade is available, a warning is returned. If a revision upgrade is 
 available, a critical is returned. (boxinfo is a program for grabbing important 
 information from a server and putting it into a HTML format: see 
-https://bucardo.org/Boxinfo/ for more information). See also the information on 
+L<https://bucardo.org/Boxinfo/> for more information). See also the information on 
 the C<--get_method> option.
 
 =head2 B<new_version_cp>
@@ -10154,7 +10156,7 @@ tail_n_mail program is available. The current version is obtained by running
 C<tail_n_mail --version>. If a major upgrade is available, a warning is returned. If a 
 revision upgrade is available, a critical is returned. (tail_n_mail is a log monitoring 
 tool that can send mail when interesting events appear in your Postgres logs.
-See: https://bucardo.org/tail_n_mail/ for more information).
+See: L<https://bucardo.org/tail_n_mail/> for more information).
 See also the information on the C<--get_method> option.
 
 =head2 B<pgb_pool_cl_active>
@@ -10861,7 +10863,7 @@ of Postgres is new enough, and if stats_row_level is enabled.
 
 In addition to command-line configurations, you can put any options inside of a file. The file 
 F<.check_postgresrc> in the current directory will be used if found. If not found, then the file 
-F<~/.check_postgresrc> will be used. Finally, the file /etc/check_postgresrc will be used if available. 
+F<~/.check_postgresrc> will be used. Finally, the file F</etc/check_postgresrc> will be used if available. 
 The format of the file is option = value, one per line. Any line starting with a '#' will be skipped. 
 Any values loaded from a check_postgresrc file will be overwritten by command-line options. All 
 check_postgresrc files can be ignored by supplying a C<--no-checkpostgresrc> argument.
@@ -10918,17 +10920,17 @@ Development happens using the git system. You can clone the latest version by do
 Three mailing lists are available. For discussions about the program, bug reports, 
 feature requests, and commit notices, send email to check_postgres@bucardo.org
 
-https://mail.endcrypt.com/mailman/listinfo/check_postgres
+L<https://mail.endcrypt.com/mailman/listinfo/check_postgres>
 
 A low-volume list for announcement of new versions and important notices is the 
 'check_postgres-announce' list:
 
-https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
+L<https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce>
 
 Source code changes (via git-commit) are sent to the 
 'check_postgres-commit' list:
 
-https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
+L<https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit>
 
 =head1 HISTORY
 

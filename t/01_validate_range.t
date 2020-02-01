@@ -2,7 +2,7 @@
 
 ## Test the "validate_range" function
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Test::More tests => 144;

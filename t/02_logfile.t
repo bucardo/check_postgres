@@ -3,7 +3,7 @@
 ## Test the "logfile" action
 ## this does not test $S for syslog or stderr output
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;

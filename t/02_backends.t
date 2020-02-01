@@ -2,7 +2,7 @@
 
 ## Test the "backends" action
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -29,7 +29,7 @@ my $pg10 = $ver >= 100000 ? 1 : 0;
 
 ## Check current number of connections: should be 1 (for recent versions of PG)
 $SQL = 'SELECT count(*) FROM pg_stat_activity';
-$SQL .= " WHERE backend_type = 'client backend'" if $pg10;
+$SQL .= q{ WHERE backend_type = 'client backend'} if $pg10;
 $count = $dbh->selectall_arrayref($SQL)->[0][0];
 
 $t=q{Current number of backends is one (ourselves)};

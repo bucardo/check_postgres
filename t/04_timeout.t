@@ -2,7 +2,7 @@
 
 ## Test the timeout functionality
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;

@@ -2,7 +2,7 @@
 
 ## Test the "new_version_cp" action
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -41,7 +41,7 @@ like ($cp->run(''), qr{$label OK:  Version $current_version is the latest for ch
 
 $t=qq{$S returns critical for mismatched revision};
 my $warncrit;
-if ($crev==0) {
+if (0 == $crev) {
     $crev = 99;
     $cmaj--;
     $warncrit = 'WARNING';

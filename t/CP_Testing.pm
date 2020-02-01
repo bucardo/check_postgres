@@ -2,7 +2,7 @@ package CP_Testing; ## -*- mode: CPerl; indent-tabs-mode: nil; cperl-indent-leve
 
 ## Common methods used by the other tests for check_postgres.pl
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -73,7 +73,7 @@ sub test_database_handle {
     if (!defined $dbh) {
         Test::More::diag $@;
         Test::More::BAIL_OUT 'Cannot continue without a test database';
-        return undef;
+        return undef; ## no critic (Subroutines::ProhibitExplicitReturnUndef)
     }
     return $dbh;
 }
@@ -137,7 +137,7 @@ sub _test_database_handle {
         $com = sprintf q{LANG=C %s %s --locale C -E UTF8 -D "%s" 2>&1},
           $initdb,
           # Speed up testing on 9.3+
-          ($imaj > 9 or ($imaj==9 and $imin >= 3)) ? ' --nosync' : '',
+          ($imaj > 9 or (9 == $imaj and $imin >= 3)) ? ' --nosync' : '',
           $datadir;
         eval {
             $DEBUG and warn qq{About to run: $com\n};
@@ -157,35 +157,35 @@ sub _test_database_handle {
         print $cfh qq{fsync = off\n};
 
         ## <= 8.0
-        if ($imaj < 8 or ($imaj==8 and $imin <= 1)) {
+        if ($imaj < 8 or (8 == $imaj and $imin <= 1)) {
             print $cfh qq{stats_command_string = on\n};
         }
 
         ## >= 8.1
-        if ($imaj > 8 or ($imaj==8 and $imin >= 1)) {
+        if ($imaj > 8 or (8 == $imaj and $imin >= 1)) {
             print $cfh qq{autovacuum = off\n};
             print $cfh qq{max_prepared_transactions = 5\n};
         }
 
         ## >= 8.3
-        if ($imaj > 8 or ($imaj==8 and $imin >= 3)) {
+        if ($imaj > 8 or (8 == $imaj and $imin >= 3)) {
             print $cfh qq{logging_collector = off\n};
         }
 
         ## <= 8.2
-        if ($imaj < 8 or ($imaj==8 and $imin <= 2)) {
+        if ($imaj < 8 or (8 == $imaj and $imin <= 2)) {
             print $cfh qq{redirect_stderr = off\n};
             print $cfh qq{stats_block_level = on\n};
             print $cfh qq{stats_row_level = on\n};
         }
 
         ## <= 8.3
-        if ($imaj < 8 or ($imaj==8 and $imin <= 3)) {
+        if ($imaj < 8 or (8 == $imaj and $imin <= 3)) {
             print $cfh qq{max_fsm_pages = 99999\n};
         }
 
         ## >= 9.4
-        if ($imaj > 9 or ($imaj==9 and $imin >= 4)) {
+        if ($imaj > 9 or (9 == $imaj and $imin >= 4)) {
             print $cfh qq{max_replication_slots = 2\n};
             print $cfh qq{wal_level = logical\n};
             print $cfh qq{max_wal_senders = 2\n};
@@ -211,7 +211,7 @@ sub _test_database_handle {
         close $fh or die qq{Could not open "$pidfile": $!\n};
         ## Send a signal to see if this PID is alive
         $count = kill 0 => $pid;
-        if ($count == 0) {
+        if (0 == $count) {
             Test::More::diag qq{Found a PID file, but no postmaster. Removing file "$pidfile"\n};
             unlink $pidfile;
             $needs_startup = 1;
@@ -237,7 +237,7 @@ sub _test_database_handle {
         unlink $logfile;
 
         my $sockdir = 'socket';
-        if ($maj < 8 or ($maj==8 and $min < 1)) {
+        if ($maj < 8 or (8 == $maj and $min < 1)) {
             $sockdir = qq{"$dbdir/data space/socket"};
         }
 
@@ -268,7 +268,7 @@ sub _test_database_handle {
         }
         close $logfh or die qq{Could not close "$logfile": $!\n};
 
-        if ($maj < 8 or ($maj==8 and $min < 1)) {
+        if ($maj < 8 or (8 == $maj and $min < 1)) {
             my $host = "$here/$dbdir/data space/socket";
             my $COM;
 
@@ -370,7 +370,7 @@ sub _test_database_handle {
 
     $dbh->{AutoCommit} = 1;
     $dbh->{RaiseError} = 0;
-    if ($maj > 8 or ($maj==8 and $min >= 1)) {
+    if ($maj > 8 or (8 == $maj and $min >= 1)) {
         $SQL = q{SELECT count(*) FROM pg_user WHERE usename = ?};
         $sth = $dbh->prepare($SQL);
         $sth->execute($dbuser);
@@ -885,7 +885,7 @@ sub drop_all_tables {
     my $self = shift;
     my $dbh = $self->{dbh} || die;
     $dbh->{Warn} = 0;
-    my $tables = $dbh->selectall_arrayref("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
+    my $tables = $dbh->selectall_arrayref(q{SELECT tablename FROM pg_tables WHERE schemaname = 'public'});
     for my $tab (@$tables) {
         $dbh->do("DROP TABLE $tab->[0] CASCADE");
     }

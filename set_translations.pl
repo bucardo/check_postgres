@@ -7,7 +7,7 @@
 ## Greg Sabino Mullane <greg@turnstep.com>
 ## BSD licensed
 
-use 5.006001;
+use 5.008;
 use strict;
 use warnings;
 use utf8;

@@ -2,7 +2,7 @@
 
 ## Test the "replication_slots" action
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -60,7 +60,7 @@ for my $arg (
    like ($cp->run(qq{-w "$arg"}), qr{^ERROR: Invalid size}, "$t ($arg)");
 }
 
-$dbh->do ("SELECT * FROM pg_create_physical_replication_slot('cp_testing_slot')");
+$dbh->do (q{SELECT * FROM pg_create_physical_replication_slot('cp_testing_slot')});
 
 $t = qq{$S reports physical replication slots};
 $result = $cp->run(q{-w 0});
@@ -74,15 +74,15 @@ $t=qq{$S reports ok on physical replication slots when critical level is specifi
 $result = $cp->run(q{-c 1MB});
 like ($result, qr{^$label OK:}, $t);
 
-$dbh->do ("SELECT pg_drop_replication_slot('cp_testing_slot')");
+$dbh->do (q{SELECT pg_drop_replication_slot('cp_testing_slot')});
 
 SKIP: {
 
-    skip qq{Waiting for test_decoding plugin}, 10;
+    skip q{Waiting for test_decoding plugin}, 10;
 
 # To do more tests on physical slots we'd actually have to kick off some activity by performing a connection to them (.. use pg_receivexlog or similar??)
 
-$dbh->do ("SELECT * FROM pg_create_logical_replication_slot('cp_testing_slot', 'test_decoding')");
+$dbh->do (q{SELECT * FROM pg_create_logical_replication_slot('cp_testing_slot', 'test_decoding')});
 
 $t = qq{$S reports logical replication slots};
 $result = $cp->run(q{-w 0});
@@ -96,7 +96,7 @@ $t=qq{$S reports ok on logical replication slots when critical level is specifie
 $result = $cp->run(q{-c 1MB});
 like ($result, qr{^$label OK:}, $t);
 
-$dbh->do ("CREATE TABLE cp_testing_table (a text); INSERT INTO cp_testing_table SELECT a || repeat('A',1024) FROM generate_series(1,1024) a; DROP TABLE cp_testing_table;");
+$dbh->do (q{CREATE TABLE cp_testing_table (a text); INSERT INTO cp_testing_table SELECT a || repeat('A',1024) FROM generate_series(1,1024) a; DROP TABLE cp_testing_table;});
 
 $t=qq{$S reports warning on logical replication slots when warning level is specified and is exceeded};
 $result = $cp->run(q{-w 1MB});
@@ -126,7 +126,7 @@ $t=qq{$S works when exclude excludes all replication slots};
 $result = $cp->run(q{-w 10MB --exclude=cp_testing_slot});
 like ($result, qr{^$label UNKNOWN:.*No matching replication slots}, $t);
 
-$dbh->do ("SELECT pg_drop_replication_slot('cp_testing_slot')");
+$dbh->do (q{SELECT pg_drop_replication_slot('cp_testing_slot')});
 
 }
 

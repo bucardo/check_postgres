@@ -4,7 +4,7 @@
 ## 1. Make sure the version number is consistent in all places
 ## 2. Make sure we have a valid tag for this release
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;

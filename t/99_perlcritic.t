@@ -3,7 +3,7 @@
 ## Run Perl::Critic against the source code and the tests
 ## This is highly customized, so take with a grain of salt
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Test::More;

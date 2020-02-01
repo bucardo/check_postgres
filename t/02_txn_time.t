@@ -2,7 +2,7 @@
 
 ## Test the "txn_time" action
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -76,7 +76,7 @@ sleep(1);
 like ($cp->run(q{-w 0}), qr{longest txn: [12]s}, $t);
 
 $t .= ' (MRTG)';
-my $query_patten = ($ver >= 90200) ? "SELECT 1" : "<IDLE> in transaction";
+my $query_patten = ($ver >= 90200) ? 'SELECT 1' : '<IDLE> in transaction';
 like ($cp->run(q{--output=mrtg -w 0}), qr{\d+\n0\n\nPID:\d+ database:$dbname username:\w+ query:$query_patten\n}, $t);
 
 $idle_dbh->commit;

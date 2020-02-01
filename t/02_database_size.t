@@ -2,7 +2,7 @@
 
 ## Test the "database_size" action
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;

@@ -4,7 +4,7 @@ use ExtUtils::MakeMaker qw/WriteMakefile/;
 use Config;
 use strict;
 use warnings;
-use 5.006001;
+use 5.008;
 
 my $VERSION = '2.25.0';
 
