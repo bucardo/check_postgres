@@ -35,6 +35,7 @@ $Data::Dumper::Useqq = 1;
 binmode STDOUT, ':encoding(UTF-8)';
 
 our $VERSION = '2.25.0';
+our $COMMA = ',';
 
 use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 
@@ -89,6 +90,7 @@ our @get_methods = (
 ## Items without a leading tab still need translating
 ## no critic (RequireInterpolationOfMetachars)
 our %msg = (
+## English
 'en' => {
     'address'            => q{address},
     'age'                => q{age},
@@ -350,6 +352,8 @@ our %msg = (
     'wal-numfound'       => q{WAL files found: $1},
     'wal-numfound2'      => q{WAL "$2" files found: $1},
 },
+
+## Spanish
 'es' => {
     'address'            => q{dirección},
     'age'                => q{edad},
@@ -609,6 +613,8 @@ our %msg = (
     'wal-numfound'       => q{Archivos WAL encontrados: $1},
     'wal-numfound2'      => q{Archivos WAL "$2" encontrados: $1},
 },
+
+## French
 'fr' => {
     'address'            => q{adresse},
     'age'                => q{âge},
@@ -869,11 +875,13 @@ our %msg = (
     'wal-numfound'       => q{Fichiers WAL trouvés : $1},
     'wal-numfound2'      => q{Fichiers WAL "$2" trouvés : $1},
 },
-'af' => {
-},
+
+## Czech
 'cs' => {
     'checkpoint-po' => q{�as posledn�ho kontroln�ho bodu:},
 },
+
+## German
 'de' => {
     'address'            => q{Adresse},
     'age'                => q{Alter},
@@ -1134,69 +1142,107 @@ our %msg = (
     'wal-numfound'       => q{WAL-Dateien gefunden: $1},
     'wal-numfound2'      => q{WAL "$2" Dateien gefunden: $1},
 },
+
+## Persian
 'fa' => {
     'checkpoint-po' => q{زمان آخرین وارسی:},
 },
+
+## Croation
 'hr' => {
     'backends-po' => q{nažalost, već je otvoreno previše klijentskih veza},
 },
+
+## Hungarian
 'hu' => {
     'checkpoint-po' => q{A legut�bbi ellen�rz�pont ideje:},
 },
+
+## Italian
 'it' => {
     'checkpoint-po' => q{Orario ultimo checkpoint:},
 },
+
+## Japanese
 'ja' => {
     'backends-po'   => q{現在クライアント数が多すぎます},
     'checkpoint-po' => q{最終チェックポイント時刻:},
 },
+
+## Korean
 'ko' => {
     'backends-po'   => q{최대 동시 접속자 수를 초과했습니다.},
     'checkpoint-po' => q{������ üũ����Ʈ �ð�:},
 },
+
+## Norwegian bokmål
 'nb' => {
     'backends-po'   => q{beklager, for mange klienter},
     'checkpoint-po' => q{Tidspunkt for nyeste kontrollpunkt:},
 },
+
+## Dutch
 'nl' => {
 },
+
+## Polish
 'pl' => {
     'checkpoint-po' => q{Czas najnowszego punktu kontrolnego:},
 },
+
+## Portuguese
 'pt_BR' => {
     'backends-po'   => q{desculpe, muitos clientes conectados},
     'checkpoint-po' => q{Hora do último ponto de controle:},
 },
+
+## Romanian
 'ro' => {
     'checkpoint-po' => q{Timpul ultimului punct de control:},
 },
+
+## Russian
 'ru' => {
     'backends-po'   => q{��������, ��� ������� ����� ��������},
     'checkpoint-po' => q{����� ��������� checkpoint:},
 },
+
+## Slovak
 'sk' => {
     'backends-po'   => q{je mi ��to, je u� pr�li� ve�a klientov},
     'checkpoint-po' => q{Čas posledného kontrolného bodu:},
 },
+
+## Slovenian
 'sl' => {
     'backends-po'   => q{povezanih je �e preve� odjemalcev},
     'checkpoint-po' => q{�as zadnje kontrolne to�ke ............},
 },
+
+## Swedish
 'sv' => {
     'backends-po'   => q{ledsen, f�r m�nga klienter},
     'checkpoint-po' => q{Tidpunkt f�r senaste kontrollpunkt:},
 },
+
+## Tamil
 'ta' => {
     'checkpoint-po' => q{நவீன சோதனை மையத்தின் நேரம்:},
 },
+
+## Turkish
 'tr' => {
     'backends-po'   => q{üzgünüm, istemci sayısı çok fazla},
     'checkpoint-po' => q{En son checkpoint'in zamanı:},
 },
+
+## Chinese (simplified)
 'zh_CN' => {
     'backends-po'   => q{�Բ���, �Ѿ���̫���Ŀͻ�},
     'checkpoint-po' => q{���¼�������ʱ��:},
 },
+
+## Chinese (traditional)
 'zh_TW' => {
     'backends-po'   => q{對不起，用戶端過多},
     'checkpoint-po' => q{最新的檢查點時間:},
@@ -7260,7 +7306,7 @@ sub check_same_schema {
             }
         }
         if (keys %badlist) {
-            ndie msg('ss-badobject', join ',' => sort keys %badlist);
+            ndie msg('ss-badobject', join $COMMA => sort keys %badlist);
         }
 
         ## Shrink the original list to remove excluded items
@@ -7279,7 +7325,7 @@ sub check_same_schema {
             }
         }
         if (keys %badlist) {
-            ndie msg('ss-badobject', join ',' => sort keys %badlist);
+            ndie msg('ss-badobject', join $COMMA => sort keys %badlist);
         }
 
         ## Shrink the original list to only have the requested items
