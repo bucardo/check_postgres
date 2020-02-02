@@ -5971,7 +5971,7 @@ sub check_locks {
             }
             if ($critical) {
                 for my $l (keys %{$critical}) {
-                    #$dblock{$k}{$l} = 0 if ! exists $dblock{$k}{$l};
+                    $dblock{$k}{$l} = 0 if ! exists $dblock{$k}{$l};
                 }
             }
             for my $m (keys %{$dblock{$k}}){
@@ -9147,7 +9147,7 @@ when using this option such as --dbservice="maindatabase sslmode=require"
 The documentation for this file can be found at
 L<https://www.postgresql.org/docs/current/static/libpq-pgservice.html>
 
-
+=back
 
 The database connection options can be grouped: I<--host=a,b --host=c --port=1234 --port=3344>
 would connect to a-1234, b-1234, and c-3344. Note that once set, an option 
