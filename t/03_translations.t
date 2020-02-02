@@ -11,6 +11,7 @@ BEGIN {
     %complete_langs = (
         'en' => 'English',
         'fr' => 'French',
+        'es' => 'Spanish',
         );
 }
 use Test::More;
@@ -178,13 +179,17 @@ for my $l (sort keys %complete_langs) {
         my $lval = $msg{$l}{$msg}->[1];
         my $indent = $msg{$l}{$msg}->[0];
         next if 'French' eq $language and (
-            'PID' eq $msg
-             or 'port' eq $msg
-             or 'pgbouncer-pool' eq $msg
-             or 'index' eq $msg
-             or 'table' eq $msg
-             or 'transactions' eq $msg
-             or 'mode' eq $msg
+           'PID' eq $msg
+            or 'port' eq $msg
+            or 'pgbouncer-pool' eq $msg
+            or 'index' eq $msg
+            or 'table' eq $msg
+            or 'transactions' eq $msg
+            or 'mode' eq $msg
+        );
+        next if 'Spanish' eq $language and (
+           'checksum-msg' eq $msg
+           or 'pgbouncer-pool' eq $msg
         );
         if ($val eq $lval and $indent) {
             fail qq{Message '$msg' in language $language appears to not be translated, but it not marked as such};
