@@ -27,8 +27,6 @@ $dbh->{AutoCommit} = 1;
 $dbh->do('DROP SCHEMA IF EXISTS pgagent CASCADE');
 
 $dbh->do(q{
-    SET client_min_messages TO warning;
-
     CREATE SCHEMA pgagent;
 
     CREATE TABLE pgagent.pga_job (
@@ -56,7 +54,6 @@ $dbh->do(q{
         jslresult  int4      NULL,
         jsloutput  text
     );
-    RESET client_min_messages;
 });
 END { $dbh->do('DROP SCHEMA IF EXISTS pgagent CASCADE'); }
 
