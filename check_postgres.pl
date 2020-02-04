@@ -10987,7 +10987,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
-=item B<Version 2.25.0> Unreleased
+=item B<Version 2.25.0> Released February 3, 2020
 
   Allow same_schema objects to be included or excluded with --object and --skipobject
     (Greg Sabino Mullane)
