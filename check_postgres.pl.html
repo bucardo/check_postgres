@@ -2,7 +2,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>check_postgres.pl>
+<title>check_postgres.pl</title>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 
 </head>
@@ -229,11 +229,11 @@
 <dt id="dbservice-NAME"><b>--dbservice=NAME</b></dt>
 <dd>
 
-<p>The name of a service inside of the pg_service.conf file. Before version 9.0 of Postgres, this is a global file, usually found in /etc/pg_service.conf. If you are using version 9.0 or higher of Postgres, you can use the file &quot;.pg_service.conf&quot; in the home directory of the user running the script, e.g. nagios.</p>
+<p>The name of a service inside of the pg_service.conf file. Before version 9.0 of Postgres, this is a global file, usually found in <i>/etc/pg_service.conf</i>. If you are using version 9.0 or higher of Postgres, you can use the file &quot;.pg_service.conf&quot; in the home directory of the user running the script, e.g. nagios.</p>
 
 <p>This file contains a simple list of connection options. You can also pass additional information when using this option such as --dbservice=&quot;maindatabase sslmode=require&quot;</p>
 
-<p>The documentation for this file can be found at https://www.postgresql.org/docs/current/static/libpq-pgservice.html</p>
+<p>The documentation for this file can be found at <a href="https://www.postgresql.org/docs/current/static/libpq-pgservice.html">https://www.postgresql.org/docs/current/static/libpq-pgservice.html</a></p>
 
 </dd>
 </dl>
@@ -792,7 +792,7 @@
 
 <pre><code>  check_postgres_disk_space --port=5432 --warning=&#39;90%&#39; --critical=&#39;90%&#39;</code></pre>
 
-<p>Example 2: Check that all file systems starting with /dev/sda are smaller than 10 GB and 11 GB (warning and critical)</p>
+<p>Example 2: Check that all file systems starting with <i>/dev/sda</i> are smaller than 10 GB and 11 GB (warning and critical)</p>
 
 <pre><code>  check_postgres_disk_space --port=5432 --warning=&#39;10 GB&#39; --critical=&#39;11 GB&#39; --include=&quot;~^/dev/sda&quot;</code></pre>
 
@@ -976,11 +976,11 @@
 
 <h2 id="new_version_bc"><b>new_version_bc</b></h2>
 
-<p>(<code>symlink: check_postgres_new_version_bc</code>) Checks if a newer version of the Bucardo program is available. The current version is obtained by running <code>bucardo_ctl --version</code>. If a major upgrade is available, a warning is returned. If a revision upgrade is available, a critical is returned. (Bucardo is a master to slave, and master to master replication system for Postgres: see https://bucardo.org/ for more information). See also the information on the <code>--get_method</code> option.</p>
+<p>(<code>symlink: check_postgres_new_version_bc</code>) Checks if a newer version of the Bucardo program is available. The current version is obtained by running <code>bucardo_ctl --version</code>. If a major upgrade is available, a warning is returned. If a revision upgrade is available, a critical is returned. (Bucardo is a master to slave, and master to master replication system for Postgres: see <a href="https://bucardo.org/">https://bucardo.org/</a> for more information). See also the information on the <code>--get_method</code> option.</p>
 
 <h2 id="new_version_box"><b>new_version_box</b></h2>
 
-<p>(<code>symlink: check_postgres_new_version_box</code>) Checks if a newer version of the boxinfo program is available. The current version is obtained by running <code>boxinfo.pl --version</code>. If a major upgrade is available, a warning is returned. If a revision upgrade is available, a critical is returned. (boxinfo is a program for grabbing important information from a server and putting it into a HTML format: see https://bucardo.org/Boxinfo/ for more information). See also the information on the <code>--get_method</code> option.</p>
+<p>(<code>symlink: check_postgres_new_version_box</code>) Checks if a newer version of the boxinfo program is available. The current version is obtained by running <code>boxinfo.pl --version</code>. If a major upgrade is available, a warning is returned. If a revision upgrade is available, a critical is returned. (boxinfo is a program for grabbing important information from a server and putting it into a HTML format: see <a href="https://bucardo.org/Boxinfo/">https://bucardo.org/Boxinfo/</a> for more information). See also the information on the <code>--get_method</code> option.</p>
 
 <h2 id="new_version_cp"><b>new_version_cp</b></h2>
 
@@ -992,7 +992,7 @@
 
 <h2 id="new_version_tnm"><b>new_version_tnm</b></h2>
 
-<p>(<code>symlink: check_postgres_new_version_tnm</code>) Checks if a newer version of the tail_n_mail program is available. The current version is obtained by running <code>tail_n_mail --version</code>. If a major upgrade is available, a warning is returned. If a revision upgrade is available, a critical is returned. (tail_n_mail is a log monitoring tool that can send mail when interesting events appear in your Postgres logs. See: https://bucardo.org/tail_n_mail/ for more information). See also the information on the <code>--get_method</code> option.</p>
+<p>(<code>symlink: check_postgres_new_version_tnm</code>) Checks if a newer version of the tail_n_mail program is available. The current version is obtained by running <code>tail_n_mail --version</code>. If a major upgrade is available, a warning is returned. If a revision upgrade is available, a critical is returned. (tail_n_mail is a log monitoring tool that can send mail when interesting events appear in your Postgres logs. See: <a href="https://bucardo.org/tail_n_mail/">https://bucardo.org/tail_n_mail/</a> for more information). See also the information on the <code>--get_method</code> option.</p>
 
 <h2 id="pgb_pool_cl_active"><b>pgb_pool_cl_active</b></h2>
 
@@ -1147,7 +1147,7 @@
 
 <h2 id="same_schema"><b>same_schema</b></h2>
 
-<p>(<code>symlink: check_postgres_same_schema</code>) Verifies that two or more databases are identical as far as their schema (but not the data within). This is particularly handy for making sure your slaves have not been modified or corrupted in any way when using master to slave replication. Unlike most other actions, this has no warning or critical criteria - the databases are either in sync, or are not. If they are different, a detailed list of the differences is presented.</p>
+<p>(<code>symlink: check_postgres_same_schema</code>) Verifies that two or more databases are identical as far as their schema (but not the data within). Unlike most other actions, this has no warning or critical criteria - the databases are either in sync, or are not. If they are different, a detailed list of the differences is presented.</p>
 
 <p>You may want to exclude or filter out certain differences. The way to do this is to add strings to the <code>--filter</code> option. To exclude a type of object, use &quot;noname&quot;, where &#39;name&#39; is the type of object, for example, &quot;noschema&quot;. To exclude objects of a certain type by a regular expression against their name, use &quot;noname=regex&quot;. See the examples below for a better understanding.</p>
 
@@ -1508,7 +1508,7 @@
 
 <h1 id="FILES">FILES</h1>
 
-<p>In addition to command-line configurations, you can put any options inside of a file. The file <i>.check_postgresrc</i> in the current directory will be used if found. If not found, then the file <i>~/.check_postgresrc</i> will be used. Finally, the file /etc/check_postgresrc will be used if available. The format of the file is option = value, one per line. Any line starting with a &#39;#&#39; will be skipped. Any values loaded from a check_postgresrc file will be overwritten by command-line options. All check_postgresrc files can be ignored by supplying a <code>--no-checkpostgresrc</code> argument.</p>
+<p>In addition to command-line configurations, you can put any options inside of a file. The file <i>.check_postgresrc</i> in the current directory will be used if found. If not found, then the file <i>~/.check_postgresrc</i> will be used. Finally, the file <i>/etc/check_postgresrc</i> will be used if available. The format of the file is option = value, one per line. Any line starting with a &#39;#&#39; will be skipped. Any values loaded from a check_postgresrc file will be overwritten by command-line options. All check_postgresrc files can be ignored by supplying a <code>--no-checkpostgresrc</code> argument.</p>
 
 <h1 id="ENVIRONMENT-VARIABLES">ENVIRONMENT VARIABLES</h1>
 
@@ -1565,15 +1565,15 @@
 
 <p>Three mailing lists are available. For discussions about the program, bug reports, feature requests, and commit notices, send email to check_postgres@bucardo.org</p>
 
-<p>https://mail.endcrypt.com/mailman/listinfo/check_postgres</p>
+<p><a href="https://mail.endcrypt.com/mailman/listinfo/check_postgres">https://mail.endcrypt.com/mailman/listinfo/check_postgres</a></p>
 
 <p>A low-volume list for announcement of new versions and important notices is the &#39;check_postgres-announce&#39; list:</p>
 
-<p>https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce</p>
+<p><a href="https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce">https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce</a></p>
 
 <p>Source code changes (via git-commit) are sent to the &#39;check_postgres-commit&#39; list:</p>
 
-<p>https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit</p>
+<p><a href="https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit">https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit</a></p>
 
 <h1 id="HISTORY">HISTORY</h1>
 
@@ -1581,6 +1581,16 @@
 
 <dl>
 
+<dt id="Version-2.25.0-Released-February-3-2020"><b>Version 2.25.0</b> Released February 3, 2020</dt>
+<dd>
+
+<pre><code>  Allow same_schema objects to be included or excluded with --object and --skipobject
+    (Greg Sabino Mullane)
+
+  Fix to allow mixing service names and other connection parameters for same_schema
+    (Greg Sabino Mullane)</code></pre>
+
+</dd>
 <dt id="Version-2.24.0-Released-May-30-2018"><b>Version 2.24.0</b> Released May 30, 2018</dt>
 <dd>
 
