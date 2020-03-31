@@ -2972,9 +2972,11 @@ sub run_command {
 
     $tempdir = tempdir(@tempdirargs);
     ($tempfh,$tempfile) = tempfile('check_postgres_psql.XXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
+    binmode($tempfh, ':utf8');
 
     ## Create another one to catch any errors
     ($errfh,$errorfile) = tempfile('check_postgres_psql_stderr.XXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
+    binmode($errfh, ':utf8');
 
     ## Mild cleanup of the query
     $string =~ s/^\s*(.+?)\s*$/$1/s;
