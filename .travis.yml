@@ -2,6 +2,9 @@
 ---
 # versions to run on
 env:
+  - PGVERSION=13
+  - PGVERSION=12
+  - PGVERSION=11
   - PGVERSION=10
   - PGVERSION=9.6
   - PGVERSION=9.5
@@ -12,25 +15,20 @@ env:
   - PGVERSION=9.0
   - PGVERSION=8.4
 
-dist: trusty
+dist: focal
 sudo: required
 language: perl
 perl:
-  - '5.8' # 5.8.8 is shipped with RHEL 5, also oldest version supported by Travis
-  - '5.24'
+  - '5.30'
+  - '5.14' # 5.14 is shipped with Ubuntu precise (12.04), also oldest version supported by Travis on focal
 
 before_install:
   - sudo apt-get -qq update
 
 install:
-  # install PostgreSQL $PGVERSION if not there yet
-  - |
-    if [ ! -x /usr/lib/postgresql/$PGVERSION/bin/postgres ]; then
-      sudo apt-get install postgresql-common
-      sudo /etc/init.d/postgresql stop # travis wants only one version running
-      sudo apt-get install postgresql-contrib-$PGVERSION
-    fi
-  - sudo /etc/init.d/postgresql stop
+  # upgrade postgresql-common for new apt.postgresql.org.sh
+  - sudo apt-get install -y postgresql-common
+  - sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -p -v $PGVERSION -i
   - pg_lsclusters
   - dpkg -l postgresql\* | cat
   - printenv | sort
