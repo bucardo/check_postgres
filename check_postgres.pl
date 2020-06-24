@@ -5707,7 +5707,11 @@ sub check_replication_slots {
         WITH slots AS (SELECT slot_name,
             slot_type,
             coalesce(restart_lsn, '0/0'::pg_lsn) AS slot_lsn,
-            coalesce(pg_xlog_location_diff(coalesce(pg_last_xlog_receive_location(), pg_current_xlog_location()), restart_lsn),0) AS delta,
+            coalesce(
+              pg_xlog_location_diff(
+                case when pg_is_in_recovery() then pg_last_xlog_receive_location() else pg_current_xlog_location() end,
+                restart_lsn),
+            0) AS delta,
             active
         FROM pg_replication_slots)
         SELECT *, pg_size_pretty(delta) AS delta_pretty FROM slots;
@@ -10988,6 +10992,10 @@ L<https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit>
 Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
+
+=item B<Version 2.25.1> Released ??, 2020
+
+  Fix check_replication_slots on recently promoted servers (Christoph Berg)
 
 =item B<Version 2.25.0> Released February 3, 2020
 
