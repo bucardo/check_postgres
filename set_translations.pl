@@ -4,11 +4,10 @@
 ## This only needs to be run by developers of check_postgres, and only rarely
 ## Usage: $0 --pgsrc=path to top of Postgres source tree
 ##
-## Greg Sabino Mullane <greg@endpoint.com>
-## End Point Corporation http://www.endpoint.com/
+## Greg Sabino Mullane <greg@turnstep.com>
 ## BSD licensed
 
-use 5.006001;
+use 5.008;
 use strict;
 use warnings;
 use utf8;

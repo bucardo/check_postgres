@@ -2,7 +2,7 @@
 
 ## Test the "wal_files" action
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -50,7 +50,7 @@ like ($cp->run('--critical=1'), qr{^$label CRITICAL}, $t);
 $cp->drop_schema_if_exists();
 $cp->create_fake_pg_table('pg_ls_dir', 'text');
 if ($ver >= 100000) {
-    $dbh->do("CREATE OR REPLACE FUNCTION cptest.pg_ls_waldir() RETURNS table(name text) AS 'SELECT * FROM cptest.pg_ls_dir' LANGUAGE SQL");
+    $dbh->do(q{CREATE OR REPLACE FUNCTION cptest.pg_ls_waldir() RETURNS table(name text) AS 'SELECT * FROM cptest.pg_ls_dir' LANGUAGE SQL});
 }
 $dbh->commit();
 

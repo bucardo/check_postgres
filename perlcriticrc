@@ -4,8 +4,9 @@ verbose = 8
 profile-strictness = quiet
 
 [Documentation::PodSpelling]
-stop_words = Mullane Nagios Slony Slony's nols salesrep psql dbname postgres USERNAME usernames dbuser pgpass nagios stderr showperf symlinked timesync criticals quirm lancre exabytes sami includeuser excludeuser flagg tardis WAL tablespaces tablespace perflimit burrick mallory grimm oskar ExclusiveLock garrett artemus queryname speedtest checksum checksums morpork klatch pluto faceoff slon greg watson franklin wilkins scott Sabino Seklecki dbpass autovacuum Astill refactoring NAGIOS localhost cronjob symlink symlinks backends snazzo logfile syslog parens plugin Cwd Ioannis Tambouras schemas SQL MRTG mrtg uptime datallowconn dbhost dbport ok contrib pageslots robert dylan emma fsm minvalue nextval dbstats del ret upd Bucardo noidle bucardo petabytes zettabytes tuples noobjectnames noposition nofuncbody slony noperms nolanguage battlestar pgbouncer pgBouncer datadir wget PostgreSQL commitratio idxscan idxtupread idxtupfetch idxblksread idxblkshit seqscan seqtupread hitratio xlog boxinfo pgbouncer's login maxwait noname noschema noperm filenames GSM EB executables plasmid unlinked pgAgent MERCHANTABILITY
+stop_words = artemus Astill autovacuum backends battlestar boxinfo Bucardo bucardo burrick checksum checksums commitratio contrib criticals cronjob Cwd datadir datallowconn dbhost dbname dbpass dbport dbstats dbuser del dir dylan EB emma exabytes excludeuser ExclusiveLock executables faceoff filenames flagg franklin fsm garrett greg grimm GSM hitratio idxblkshit idxblksread idxscan idxtupfetch idxtupread includeuser Ioannis klatch lancre localhost logfile login lsfunc mallory maxwait MERCHANTABILITY minvalue morpork MRTG mrtg Mullane NAGIOS Nagios nagios nextval nofuncbody noidle nolanguage nols noname noobjectnames noperm noperms noposition noschema ok oskar pageslots parens perflimit petabytes pgAgent pgBouncer pgbouncer pgbouncer's pgpass plasmid plugin pluto postgres PostgreSQL psql queryname quirm refactoring ret robert Sabino salesrep sami schemas scott Seklecki seqscan seqtupread showperf skipcycled slon Slony slony Slony's snazzo speedtest SQL stderr symlink symlinked symlinks syslog tablespace tablespaces Tambouras tardis timesync tuples unlinked upd uptime USERNAME usernames WAL watson wget wilkins xlog zettabytes
 
+[-Bangs::ProhibitDebuggingModules]
 [-Bangs::ProhibitFlagComments]
 [-Bangs::ProhibitNumberedNames]
 [-Bangs::ProhibitVagueNames]
@@ -13,7 +14,9 @@ stop_words = Mullane Nagios Slony Slony's nols salesrep psql dbname postgres USE
 [-BuiltinFunctions::ProhibitBooleanGrep]
 [-BuiltinFunctions::ProhibitComplexMappings]
 [-BuiltinFunctions::ProhibitReverseSortBlock]
+[-BuiltinFunctions::ProhibitUselessTopic]
 
+[-CodeLayout::ProhibitHashBarewords]
 [-CodeLayout::ProhibitParensWithBuiltins]
 [-CodeLayout::ProhibitQuotedWordLists]
 [-CodeLayout::RequireASCII]
@@ -65,6 +68,7 @@ stop_words = Mullane Nagios Slony Slony's nols salesrep psql dbname postgres USE
 [-RegularExpressions::ProhibitComplexRegexes]
 [-RegularExpressions::ProhibitEnumeratedClasses]
 [-RegularExpressions::ProhibitEscapedMetacharacters]
+[-RegularExpressions::ProhibitUnusedCapture]
 [-RegularExpressions::ProhibitUnusualDelimiters]
 [-RegularExpressions::RequireDotMatchAnything]
 [-RegularExpressions::RequireExtendedFormatting]
@@ -76,6 +80,9 @@ stop_words = Mullane Nagios Slony Slony's nols salesrep psql dbname postgres USE
 [-Subroutines::ProhibitNestedSubs]
 [-Subroutines::RequireFinalReturn]
 
+
+[-TestingAndDebugging::ProhibitNoWarnings]
+
 [-Tics::ProhibitLongLines]
 
 [-ValuesAndExpressions::ProhibitAccessOfPrivateData]
@@ -86,6 +93,7 @@ stop_words = Mullane Nagios Slony Slony's nols salesrep psql dbname postgres USE
 [-ValuesAndExpressions::ProhibitMixedBooleanOperators]
 [-ValuesAndExpressions::ProhibitNoisyQuotes]
 [-ValuesAndExpressions::ProhibitVersionStrings]
+[-ValuesAndExpressions::RequireConstantOnLeftSideOfEquality]
 [-ValuesAndExpressions::RequireNumberSeparators]
 [-ValuesAndExpressions::RequireNumericVersion]
 [-ValuesAndExpressions::RestrictLongStrings]

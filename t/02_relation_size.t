@@ -2,7 +2,7 @@
 
 ## Test the "relation_size" action
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -129,7 +129,7 @@ SKIP: {
                                 ? 'index'
                                 : 'table');
     like ($cp->run($S, qq{-w 1 --includeuser=$user $include $exclude}),
-                   qr|$label.*$message|, $t)
+                   qr|$label.*$message|, $t);
 }
 }
 

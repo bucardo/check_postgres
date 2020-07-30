@@ -2,10 +2,11 @@
 
 ## Spellcheck as much as we can
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Test::More;
+use utf8;
 
 my (@testfiles, $fh);
 
@@ -79,22 +80,23 @@ SKIP: {
         skip 'Need Pod::Text to re-test the spelling of embedded POD', 1;
     }
 
-    my $parser = Pod::Text->new (quotes => 'none');
+    my $parser = Pod::Text->new (quotes => 'none', width => 400, utf8 => 1);
 
     for my $file (qw{check_postgres.pl}) {
         if (! -e $file) {
             fail(qq{Could not find the file "$file"!});
         }
         my $string;
-        my $tmpfile = "$file.tmp";
+        my $tmpfile = "$file.spellcheck.tmp";
         $parser->parse_from_file($file, $tmpfile);
-        next if ! open my $fh, '<', $tmpfile;
+        next if ! open my $fh, '<:encoding(UTF-8)', $tmpfile;
         { local $/; $string = <$fh>; }
         close $fh or warn "Could not close $tmpfile\n";
         unlink $tmpfile;
-        spellcheck("POD from $file" => $string, $file);
+        spellcheck("POD inside $file" => $string, $file);
     }
 }
+
 
 ## Now the comments
 SKIP: {
@@ -132,22 +134,28 @@ __DATA__
 ## Common:
 
 arrayref
+async
 autovac
 Backends
 backends
 bc
 bucardo
 checksum
+chroot
 commitratio
+consrc
 cp
 dbh
 dbstats
+df
 DBI
 DSN
 ENV
+filesystem
 fsm
 goto
 hitratio
+lsfunc
 Mullane
 Nagios
 ok
@@ -169,14 +177,18 @@ Pre
 runtime
 Schemas
 selectall
+skipcycled
+skipobject
 Slony
 slony
 stderr
 syslog
 tcl
+timestamp
 tnm
 txn
 txns
+turnstep
 tuples
 wal
 www
@@ -214,6 +226,7 @@ xmlns
 ## check_postgres.pl:
 
 Abrigo
+Adrien
 Ahlgren
 Ahlgren
 Albe
@@ -236,9 +249,11 @@ baz
 bigint
 Blasco
 Blasco
+Brüssel
 blks
 Boes
 boxinfo
+Boxinfo
 Bracht
 Bracht
 Bucardo
@@ -248,6 +263,7 @@ checkpostgresrc
 checksum
 checksums
 checktype
+Cédric
 Christoph
 commitratio
 commitratio
@@ -287,6 +303,7 @@ EB
 Eisentraut
 Eloranta
 Eloranta
+Elsasser
 emma
 endcrypt
 EnterpriseDB
@@ -325,6 +342,8 @@ gtld
 Guettler
 Guillaume
 Gurjeet
+Hagander
+Hansper
 hardcode
 Henrik
 Henrik
@@ -332,6 +351,7 @@ HiRes
 hitratio
 hitratio
 hitratio
+Holger
 hong
 HOSTADDRESS
 html
@@ -353,8 +373,10 @@ Ioannis
 ioguix
 Jacobo
 Jacobo
+Janes
 Jehan
 Jens
+Jürgen
 Kabalin
 Kirkwood
 klatch
@@ -372,6 +394,7 @@ localtime
 Logfile
 logtime
 Mager
+Magnus
 maindatabase
 Makefile
 Mallett
@@ -386,6 +409,7 @@ Mika
 MINIPAGES
 MINPAGES
 minvalue
+Moench
 morpork
 mrtg
 MRTG
@@ -393,6 +417,8 @@ msg
 multi
 nagios
 NAGIOS
+Nayrat
+Nenciarini
 nextval
 nnx
 nofuncbody
@@ -444,6 +470,7 @@ PGSERVICE
 pgsql
 PGUSER
 pid
+Pirogov
 plasmid
 plugin
 pluto
@@ -475,8 +502,8 @@ Renner
 repinfo
 RequireInterpolationOfMetachars
 ret
-rgen
 ritical
+rgen
 robert
 Rorthais
 runtime
@@ -492,6 +519,7 @@ seqscan
 seqscan
 seqtupread
 seqtupread
+SETOF
 showperf
 Sijmons
 Singh
@@ -521,6 +549,7 @@ tablespaces
 Tambouras
 tardis
 Taveira
+Tegeder
 tempdir
 tgisconstraint
 Thauvin
@@ -543,11 +572,13 @@ utf
 valtype
 Villemain
 Vitkovsky
+Vondendriesch
 Waisbrot
 Waisbrot
 wal
 WAL
 watson
+Webber
 Westwood
 wget
 wiki
@@ -556,4 +587,5 @@ wilkins
 xact
 xlog
 Yamada
+Yochum
 Zwerschke

@@ -1,11 +1,12 @@
 #!/usr/bin/env perl
-# -*-mode:cperl; indent-tabs-mode: nil-*-
+# -*-mode:cperl; indent-tabs-mode: nil; cperl-indent-level: 4 -*-
 
 ## Perform many different checks against Postgres databases.
 ## Designed primarily as a Nagios script.
 ## Run with --help for a summary.
 ##
-## Greg Sabino Mullane <greg@endpoint.com>
+## Greg Sabino Mullane <greg@turnstep.com>
+##
 ## End Point Corporation http://www.endpoint.com/
 ## BSD licensed, see complete license at bottom of this script
 ## The latest version can be found at:
@@ -15,14 +16,14 @@
 
 package check_postgres;
 
-use 5.006001;
+use 5.008;
 use strict;
 use warnings;
 use utf8;
 use Getopt::Long qw/GetOptions/;
 Getopt::Long::Configure(qw/ no_ignore_case pass_through  /);
 use File::Basename qw/basename/;
-use File::Spec;
+use File::Spec::Functions;
 use File::Temp qw/tempfile tempdir/;
 File::Temp->safe_level( File::Temp::MEDIUM );
 use Cwd;
@@ -33,7 +34,8 @@ $Data::Dumper::Useqq = 1;
 
 binmode STDOUT, ':encoding(UTF-8)';
 
-our $VERSION = '2.24.0';
+our $VERSION = '2.25.0';
+our $COMMA = ',';
 
 use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
 
@@ -88,6 +90,7 @@ our @get_methods = (
 ## Items without a leading tab still need translating
 ## no critic (RequireInterpolationOfMetachars)
 our %msg = (
+## English
 'en' => {
     'address'            => q{address},
     'age'                => q{age},
@@ -112,6 +115,7 @@ our %msg = (
     'checkpoint-baddir2' => q{pg_controldata could not read the given data directory: "$1"},
     'checkpoint-badver'  => q{Failed to run pg_controldata - probably the wrong version ($1)},
     'checkpoint-badver2' => q{Failed to run pg_controldata - is it the correct version?},
+    'checkpoint-nobin'   => q{Could not find a suitable pg_controldata executable},
     'checkpoint-nodir'   => q{Must supply a --datadir argument or set the PGDATA environment variable},
     'checkpoint-nodp'    => q{Must install the Perl module Date::Parse to use the checkpoint action},
     'checkpoint-noparse' => q{Unable to parse pg_controldata output: "$1"},
@@ -128,7 +132,6 @@ our %msg = (
     'custom-nostring'    => q{Must provide a query string},
     'database'           => q{database},
     'dbsize-version'     => q{Target database must be version 8.1 or higher to run the database_size action},
-    'depr-pgcontroldata' => q{PGCONTROLDATA is deprecated, use PGBINDIR instead.},
     'die-action-version' => q{Cannot run "$1": server version must be >= $2, but is $3},
     'die-badtime'        => q{Value for '$1' must be a valid time. Examples: -$2 1s  -$2 "10 minutes"},
     'die-badversion'     => q{Invalid version string: $1},
@@ -273,6 +276,7 @@ our %msg = (
     'runtime-badname'    => q{Invalid queryname option: must be a simple view name},
     'runtime-msg'        => q{query runtime: $1 seconds},
     'schema'             => q{Schema},
+    'ss-badobject'       => q{Unrecognized object types: $1},
     'ss-createfile'      => q{Created file $1},
     'ss-different'       => q{"$1" is different:},
     'ss-existson'        => q{Exists on:},
@@ -348,6 +352,8 @@ our %msg = (
     'wal-numfound'       => q{WAL files found: $1},
     'wal-numfound2'      => q{WAL "$2" files found: $1},
 },
+
+## Spanish
 'es' => {
     'address'            => q{dirección},
     'age'                => q{edad},
@@ -363,7 +369,7 @@ our %msg = (
     'bloat-table'        => q{(bd $1) tabla $2.$3 filas:$4 páginas:$5 deberíaser:$6 ($7X) bytes desperdiciados:$8 ($9)},
     'bug-report'         => q{Por favor reporte estos detalles a check_postgres@bucardo.org:},
     'checkcluster-id'    => q{Identificador de la base de datos:},
-    'checkcluster-msg'   => q{cluster_id: $1},
+'checkcluster-msg'   => q{cluster_id: $1},
     'checkcluster-nomrtg'=> q{Debe proporcionar un número con la opción --mrtg},
     'checkmode-prod'     => q{en producción},
     'checkmode-recovery' => q{en recuperación de archivo},
@@ -372,6 +378,7 @@ our %msg = (
     'checkpoint-baddir2' => q{pg_controldata no pudo leer el directorio de datos: "$1"},
     'checkpoint-badver'  => q{Fallo al ejecutar pg_controldata - probable que la versión sea incorrecta ($1)},
     'checkpoint-badver2' => q{Fallo al ejecutar pg_controldata - verifique que es la versión correcta},
+'checkpoint-nobin'   => q{Could not find a suitable pg_controldata executable},
     'checkpoint-nodir'   => q{Debe especificar el argumento --datadir o definir la variable de ambiente PGDATA},
     'checkpoint-nodp'    => q{Debe instalar el módulo Perl Date::Parse para usar la acción checkpoint},
     'checkpoint-noparse' => q{No se pudo interpretar la salida de pg_controldata: "$1"},
@@ -388,7 +395,6 @@ our %msg = (
     'custom-nostring'    => q{Debe proporcionar el texto con la consulta},
     'database'           => q{base de datos},
     'dbsize-version'     => q{La base de datos debe ser version 8.1 o superior para utilizar la acción database_size},
-    'depr-pgcontroldata' => q{PGCONTROLDATA es obsoleta, en su lugar use PGBINDIR.},
     'die-action-version' => q{No es posible ejecutar "$1": versión del servidor debe ser >= $2, pero es $3},
     'die-badtime'        => q{El valor de '$1' debe ser un tiempo valido. Ejemplos: -$2 1s  -$2 "10 minutes"},
     'die-badversion'     => q{Cadena de versión no válida: $1},
@@ -408,9 +414,9 @@ our %msg = (
     'hs-future-replica'  => q{El esclavo reporta que el reloj del maestro está adelantado, comprobar sincronización de tiempo},
     'hs-no-role'         => q{No es un par maestro/esclavo},
     'hs-no-location'     => q{No pude obtener ubicación actual de xlog en $1},
-    'hs-receive-delay'   => q{receive-delay},
-    'hs-replay-delay'    => q{replay_delay},
-    'hs-time-delay'      => q{time_delay},
+'hs-receive-delay'   => q{receive-delay},
+'hs-replay-delay'    => q{replay_delay},
+'hs-time-delay'      => q{time_delay},
     'hs-time-version'    => q{La base de datos debes ser versión 9.1 or superior para comprobar el tiempo de retraso del esclavo},
     'index'              => q{Indice},
     'invalid-option'     => q{Opción inválida},
@@ -464,7 +470,7 @@ our %msg = (
     'pgb-backends-msg'   => q{$1 de $2 conexiones ($3%)},
     'pgb-backends-none'  => q{No nay conexiones},
     'pgb-backends-users' => q{$1 debe ser un número o porcentaje de usuarios},
-    'PID'                => q{PID},
+'PID'                => q{PID},
     'port'               => q{puerto},
     'preptxn-none'       => q{No se encontraron transacciones preparadas},
     'psa-disabled'       => q{No hay consultas - están deshabilitados stats_command_string o track_activities?},
@@ -477,7 +483,7 @@ our %msg = (
     'qtime-none'         => q{no hay consultas},
     'query'              => q{consulta},
     'queries'            => q{consultas},
-    'query-time'         => q{query_time},
+'query-time'         => q{query_time},
     'range-badcs'        => q{Opción '$1' inválida: debe ser un "checksum"},
     'range-badlock'      => q{Opción '$1' inválida: debe ser el número de bloqueos, o "type1=#:type2=#"},
     'range-badpercent'   => q{Opción '$1' inválida: debe ser un porcentaje},
@@ -508,6 +514,7 @@ our %msg = (
     'relsize-msg-reli'   => q{la relación más grande es el índice "$1": $2},
     'relsize-msg-relt'   => q{la relación más grande es la tabla "$1": $2},
     'relsize-msg-tab'    => q{la tabla más grande es "$1": $2},
+'relsize-msg-indexes' => q{table with largest indexes is "$1": $2},
     'rep-badarg'         => q{Parámetro invalido para repinfo: se esperan 6 valores separados por coma},
     'rep-duh'            => q{No tiene sentido probar la replicación con los mismos valores},
     'rep-fail'           => q{Fila no replicada en el esclavo $1},
@@ -532,6 +539,7 @@ our %msg = (
     'runtime-badname'    => q{Opción queryname inválida: debe ser el nombre de una única vista},
     'runtime-msg'        => q{tiempo de la consulta: $1 seg},
     'schema'             => q{Esquema},
+'ss-badobject'       => q{Unrecognized object types: $1},
     'ss-createfile'      => q{Archivo creado $1},
     'ss-different'       => q{"$1" es diferente:},
     'ss-existson'        => q{Existe en:},
@@ -547,7 +555,7 @@ our %msg = (
     'size'               => q{tamaño},
     'slony-noschema'     => q{No fue posible determinar el esquema para Slony},
     'slony-nonumber'     => q{El llamado a sl_status no devolvió un número},
-    'slony-lagtime'      => q{Slony lag time: $1},
+'slony-lagtime'      => q{Slony lag time: $1},
     'symlink-create'     => q{Creado "$1"},
     'symlink-done'       => q{No se crea "$1": El enlace $2 ya apunta a "$3"},
     'symlink-exists'     => q{No se crea "$1": El archivo $2 ya existe},
@@ -556,13 +564,13 @@ our %msg = (
     'symlink-name'       => q{Este comando no va a funcionar a menos que el programa tenga la palabra "postgres" en su nombre},
     'symlink-unlink'     => q{Desvinculando "$1":$2 },
     'table'              => q{Tabla},
-    'testmode-end'       => q{END OF TEST MODE},
+'testmode-end'       => q{END OF TEST MODE},
     'testmode-fail'      => q{Connexión fallida: $1 $2},
     'testmode-norun'     => q{No puede ejecutar "$1" en $2: versión debe ser >= $3, pero es $4},
     'testmode-noset'     => q{No puede ejecutar "$1" en $2: la opción $3 no está activa},
-    'testmode-nover'     => q{Could not find version for $1},
-    'testmode-ok'        => q{Connection ok: $1},
-    'testmode-start'     => q{BEGIN TEST MODE},
+'testmode-nover'     => q{Could not find version for $1},
+'testmode-ok'        => q{Connection ok: $1},
+'testmode-start'     => q{BEGIN TEST MODE},
     'time-day'           => q{día},
     'time-days'          => q{días},
     'time-hour'          => q{hora},
@@ -577,11 +585,11 @@ our %msg = (
     'time-weeks'         => q{semanas},
     'time-year'          => q{año},
     'time-years'         => q{años},
-    'timesync-diff'      => q{diff},
+'timesync-diff'      => q{diff},
     'timesync-msg'       => q{timediff=$1 BD=$2 Local=$3},
     'transactions'       => q{transacciones},
     'trigger-msg'        => q{Disparadores desactivados: $1},
-    'txn-time'           => q{transaction_time},
+'txn-time'           => q{transaction_time},
     'txnidle-count-msg'  => q{Total transacciones inactivas: $1},
     'txnidle-count-none' => q{no más de $1 transacciones inactivas},
     'txnidle-for-msg'    => q{$1 transacciones inactivas mayores que $2s, más larga: $3s$4 $5},
@@ -607,6 +615,8 @@ our %msg = (
     'wal-numfound'       => q{Archivos WAL encontrados: $1},
     'wal-numfound2'      => q{Archivos WAL "$2" encontrados: $1},
 },
+
+## French
 'fr' => {
     'address'            => q{adresse},
     'age'                => q{âge},
@@ -631,6 +641,7 @@ our %msg = (
     'checkpoint-baddir2' => q{pg_controldata n'a pas pu lire le répertoire des données indiqué : « $1 »},
     'checkpoint-badver'  => q{Échec lors de l'exécution de pg_controldata - probablement la mauvaise version ($1)},
     'checkpoint-badver2' => q{Échec lors de l'exécution de pg_controldata - est-ce la bonne version ?},
+'checkpoint-nobin'   => q{Could not find a suitable pg_controldata executable},
     'checkpoint-nodir'   => q{Vous devez fournir un argument --datadir ou configurer la variable d'environnement PGDATA},
     'checkpoint-nodp'    => q{Vous devez installer le module Perl Date::Parse pour utiliser l'action checkpoint},
     'checkpoint-noparse' => q{Incapable d'analyser le résultat de la commande pg_controldata : "$1"},
@@ -647,7 +658,6 @@ our %msg = (
     'custom-nostring'    => q{Vous devez fournir une requête},
     'database'           => q{base de données},
     'dbsize-version'     => q{La base de données cible doit être une version 8.1 ou ultérieure pour exécuter l'action database_size},
-'depr-pgcontroldata' => q{PGCONTROLDATA is deprecated, use PGBINDIR instead.},
     'die-action-version' => q{Ne peut pas exécuter « $1 » : la version du serveur doit être supérieure ou égale à $2, alors qu'elle est $3},
     'die-badtime'        => q{La valeur de « $1 » doit être une heure valide. Par exemple, -$2 1s  -$2 « 10 minutes »},
     'die-badversion'     => q{Version invalide : $1},
@@ -792,6 +802,7 @@ our %msg = (
     'runtime-badname'    => q{Option invalide pour queryname option : doit être le nom d'une vue},
     'runtime-msg'        => q{durée d'exécution de la requête : $1 secondes},
     'schema'             => q{Schéma},
+'ss-badobject'       => q{Unrecognized object types: $1},
     'ss-createfile'      => q{Création du fichier $1},
     'ss-different'       => q{"$1" est différent:},
     'ss-existson'        => q{Existe sur :},
@@ -867,11 +878,13 @@ our %msg = (
     'wal-numfound'       => q{Fichiers WAL trouvés : $1},
     'wal-numfound2'      => q{Fichiers WAL "$2" trouvés : $1},
 },
-'af' => {
-},
+
+## Czech
 'cs' => {
     'checkpoint-po' => q{�as posledn�ho kontroln�ho bodu:},
 },
+
+## German
 'de' => {
     'address'            => q{Adresse},
     'age'                => q{Alter},
@@ -896,6 +909,7 @@ our %msg = (
     'checkpoint-baddir2' => q{pg_controldata konnte das angebene Verzeichnis lesen: "$1"},
     'checkpoint-badver'  => q{Kann pg_controldata nicht starten - vielleicht die falsche Version ($1)},
     'checkpoint-badver2' => q{Fehler beim Start von pg_controldata - ist es die richtige Version?},
+'checkpoint-nobin'   => q{Could not find a suitable pg_controldata executable},
     'checkpoint-nodir'   => q{Entweder muss die Option --datadir als Argument angegebn werden, oder die Umgebungsvariable PGDATA muss gesetzt sein},
     'checkpoint-nodp'    => q{Das Perl-Modul Date::Parse muss installiert sein für die Verwendung der checkpoint-Aktion},
     'checkpoint-noparse' => q{Kann die Ausgabe von pg_controldata nicht lesen: "$1"},
@@ -912,7 +926,6 @@ our %msg = (
     'custom-nostring'    => q{Es muss eine Abfrage (Query) mitgegeben werde},
     'database'           => q{Datenbank},
     'dbsize-version'     => q{Die Zieldatenbank muss Version 8.1 oder höher sein für die Verwendung der database_size-Aktion},
-    'depr-pgcontroldata' => q{PGCONTROLDATA ist missbilligt (veraltet), verwende PGBINDIR statt dessen.},
     'die-action-version' => q{Kann "$1" nicht starten: Die Serverversion muss >= $2 sein, ist aber $3},
     'die-badtime'        => q{Wert für '$1' muss eine gültige Zeit sein. Beispiele: -$2 1s -$2 "10 minutes"},
     'die-badversion'     => q{Ungültiger Versionsstring: $1},
@@ -1132,69 +1145,107 @@ our %msg = (
     'wal-numfound'       => q{WAL-Dateien gefunden: $1},
     'wal-numfound2'      => q{WAL "$2" Dateien gefunden: $1},
 },
+
+## Persian
 'fa' => {
     'checkpoint-po' => q{زمان آخرین وارسی:},
 },
+
+## Croation
 'hr' => {
     'backends-po' => q{nažalost, već je otvoreno previše klijentskih veza},
 },
+
+## Hungarian
 'hu' => {
     'checkpoint-po' => q{A legut�bbi ellen�rz�pont ideje:},
 },
+
+## Italian
 'it' => {
     'checkpoint-po' => q{Orario ultimo checkpoint:},
 },
+
+## Japanese
 'ja' => {
     'backends-po'   => q{現在クライアント数が多すぎます},
     'checkpoint-po' => q{最終チェックポイント時刻:},
 },
+
+## Korean
 'ko' => {
     'backends-po'   => q{최대 동시 접속자 수를 초과했습니다.},
     'checkpoint-po' => q{������ üũ����Ʈ �ð�:},
 },
+
+## Norwegian bokmål
 'nb' => {
     'backends-po'   => q{beklager, for mange klienter},
     'checkpoint-po' => q{Tidspunkt for nyeste kontrollpunkt:},
 },
+
+## Dutch
 'nl' => {
 },
+
+## Polish
 'pl' => {
     'checkpoint-po' => q{Czas najnowszego punktu kontrolnego:},
 },
+
+## Portuguese
 'pt_BR' => {
     'backends-po'   => q{desculpe, muitos clientes conectados},
     'checkpoint-po' => q{Hora do último ponto de controle:},
 },
+
+## Romanian
 'ro' => {
     'checkpoint-po' => q{Timpul ultimului punct de control:},
 },
+
+## Russian
 'ru' => {
     'backends-po'   => q{��������, ��� ������� ����� ��������},
     'checkpoint-po' => q{����� ��������� checkpoint:},
 },
+
+## Slovak
 'sk' => {
     'backends-po'   => q{je mi ��to, je u� pr�li� ve�a klientov},
     'checkpoint-po' => q{Čas posledného kontrolného bodu:},
 },
+
+## Slovenian
 'sl' => {
     'backends-po'   => q{povezanih je �e preve� odjemalcev},
     'checkpoint-po' => q{�as zadnje kontrolne to�ke ............},
 },
+
+## Swedish
 'sv' => {
     'backends-po'   => q{ledsen, f�r m�nga klienter},
     'checkpoint-po' => q{Tidpunkt f�r senaste kontrollpunkt:},
 },
+
+## Tamil
 'ta' => {
     'checkpoint-po' => q{நவீன சோதனை மையத்தின் நேரம்:},
 },
+
+## Turkish
 'tr' => {
     'backends-po'   => q{üzgünüm, istemci sayısı çok fazla},
     'checkpoint-po' => q{En son checkpoint'in zamanı:},
 },
+
+## Chinese (simplified)
 'zh_CN' => {
     'backends-po'   => q{�Բ���, �Ѿ���̫���Ŀͻ�},
     'checkpoint-po' => q{���¼�������ʱ��:},
 },
+
+## Chinese (traditional)
 'zh_TW' => {
     'backends-po'   => q{對不起，用戶端過多},
     'checkpoint-po' => q{最新的檢查點時間:},
@@ -1261,6 +1312,135 @@ SELECT l.*, lanname AS name
 FROM pg_language l
     },
     },
+    aggregate => {
+        SQL       => q{
+SELECT a.*, aggfnoid AS name
+FROM pg_aggregate a},
+    },
+    cast => {
+        SQL => q{ SELECT c.*, FORMAT('%s AS %s', format_type(castsource,NULL), format_type(casttarget,NULL)) AS name FROM pg_cast c},
+    },
+    comment => {
+        SQL => q{
+SELECT CASE WHEN so.name IS NULL THEN 'Unknown:' || sd.classoid || ':' || sd.objoid
+  ELSE so.object || ';' || so.name
+END AS name, sd.description AS comment
+FROM pg_shdescription sd
+LEFT JOIN (
+  SELECT 'database' AS object,
+    oid, tableoid, datname AS name FROM pg_database
+  UNION ALL SELECT 'role' AS object,
+    oid, tableoid, rolname AS name FROM pg_authid
+  UNION ALL SELECT 'tablespace' AS object,
+    oid, tableoid, spcname AS name FROM pg_tablespace
+) AS so ON (so.oid = sd.objoid AND so.tableoid = sd.classoid)
+
+UNION ALL (
+SELECT CASE WHEN o.name IS NULL THEN 'Unknown:' || d.classoid || ':' || d.objoid
+  WHEN objsubid > 0 THEN 'column:' || o.name || ':' || (SELECT attname FROM pg_attribute WHERE attrelid::regclass::text = o.name AND attnum = d.objsubid)
+  ELSE COALESCE(o.object,'?') || ';' || o.name END AS name, d.description AS comment
+FROM pg_description d
+LEFT JOIN (
+
+  SELECT CASE WHEN relkind = 'q' THEN 'sequence' WHEN relkind = 'r' THEN 'table'
+      WHEN relkind IN ('r','p','T') THEN 'table'
+      WHEN relkind = 'f' THEN 'foreign table'
+      WHEN relkind IN ('i','I') THEN 'index'
+      WHEN relkind = 'v' THEN 'view'
+      WHEN relkind = 'm' THEN 'materialized view'
+      WHEN relkind = 'S' THEN 'sequence'
+      WHEN relkind = 'c' THEN 'type'
+    END AS object,
+    oid, tableoid, FORMAT('%s.%s', relnamespace::regnamespace, relname) AS name
+  FROM pg_class
+
+  UNION ALL SELECT 'access method' AS object,
+    oid, tableoid, amname AS name FROM pg_am
+
+  UNION ALL SELECT 'aggregate' AS object,
+    oid, tableoid, FORMAT('%s.%s(%s) ', pronamespace::regnamespace, proname, pg_get_function_arguments(oid) ) AS name FROM pg_proc WHERE prokind='a'
+
+  UNION ALL SELECT 'cast' AS object,
+    oid, tableoid, FORMAT('%s AS %s', format_type(castsource,NULL), format_type(casttarget,NULL)) AS name FROM pg_cast
+
+  UNION ALL SELECT 'collation' AS object, oid, tableoid, FORMAT('%s.%s', collnamespace::regnamespace, collname) AS name FROM pg_collation
+
+  UNION ALL SELECT 'constraint' AS object,
+    oid, tableoid, FORMAT('%s.%s on %s', connamespace::regnamespace, conname, conrelid::regclass) AS name FROM pg_constraint
+
+  UNION ALL SELECT 'conversion' AS object,
+    oid, tableoid, FORMAT('%s.%s', connamespace::regnamespace, conname) AS name FROM pg_conversion
+
+  UNION ALL SELECT 'domain' AS object,
+    oid, tableoid, FORMAT('%s.%s', typnamespace::regnamespace, typname) AS name FROM pg_type WHERE typtype = 'd'
+
+  UNION ALL SELECT 'extension' AS object, oid, tableoid, FORMAT('%s.%s', extnamespace::regnamespace, extname) AS name FROM pg_extension
+
+  UNION ALL SELECT 'event trigger' AS object, oid, tableoid, evtname AS name FROM pg_event_trigger
+
+  UNION ALL SELECT 'foreign data wrapper' AS object,
+    oid, tableoid, fdwname AS name FROM pg_foreign_data_wrapper
+
+  UNION ALL SELECT 'function' AS object,
+    oid, tableoid, FORMAT('%s.%s(%s)', pronamespace::regnamespace, proname, pg_get_function_arguments(oid)) AS name FROM pg_proc WHERE prokind IN ('f','p')
+
+  UNION ALL SELECT 'large object' AS object,
+    loid, tableoid, loid::text AS name FROM pg_largeobject
+
+  UNION ALL SELECT 'operator' AS object,
+    oid, tableoid, FORMAT('%s.%s(%s,%s)', oprnamespace::regnamespace, oprname, format_type(oprleft,NULL), format_type(oprright,NULL)) AS name FROM pg_operator
+
+  UNION ALL SELECT 'operator class' AS object,
+    oid, tableoid, FORMAT('%s.%s using %s', opcnamespace::regnamespace, opcname, (SELECT amname FROM pg_am WHERE oid = opcmethod)) AS name FROM pg_opclass
+
+  UNION ALL SELECT 'operator family' AS object,
+    oid, tableoid, FORMAT('%s.%s using %s', opfnamespace::regnamespace, opfname, (SELECT amname FROM pg_am WHERE oid = opfmethod)) AS name FROM pg_opfamily
+
+  UNION ALL SELECT 'policy' AS object, oid, tableoid, FORMAT('%s ON %s', polname, polrelid::regclass) AS name FROM pg_policy
+
+  UNION ALL SELECT 'language' AS object,
+    oid, tableoid, lanname AS name FROM pg_language
+
+  UNION ALL SELECT 'rule' AS object,
+    oid, tableoid, FORMAT('%s ON %s', rulename, ev_class::regclass) AS name FROM pg_rewrite
+
+  UNION ALL SELECT 'schema' AS object,
+    oid, tableoid, nspname AS name FROM pg_namespace
+
+  UNION ALL SELECT 'server' AS object,
+    oid, tableoid, srvname AS name FROM pg_foreign_server
+
+  UNION ALL SELECT 'text search configuration',
+    oid, tableoid, FORMAT('%s.%s', cfgnamespace::regnamespace, cfgname) AS name FROM pg_ts_config
+
+  UNION ALL SELECT 'text search dictionary',
+    oid, tableoid, FORMAT('%s.%s', dictnamespace::regnamespace, dictname) AS name FROM pg_ts_dict
+
+  UNION ALL SELECT 'text search parser',
+    oid, tableoid, FORMAT('%s.%s', prsnamespace::regnamespace, prsname) AS name FROM pg_ts_parser
+
+  UNION ALL SELECT 'text search template',
+    oid, tableoid, FORMAT('%s.%s', tmplnamespace::regnamespace, tmplname) AS name FROM pg_ts_template
+
+  UNION ALL SELECT 'trigger' AS object,
+    oid, tableoid, FORMAT('%s on %s', tgname, tgrelid::regclass) AS name FROM pg_trigger
+
+  UNION ALL SELECT 'type' AS object,
+    oid, tableoid, FORMAT('%s.%s', typnamespace::regnamespace, typname) AS name FROM pg_type
+
+) AS o ON (o.oid = d.objoid AND o.tableoid = d.classoid))},
+                                },
+    domain => {
+        SQL => q{ SELECT *, FORMAT('%s.%s', typnamespace::regnamespace, typname) AS name FROM pg_type WHERE typtype = 'd'},
+    },
+
+    extension => {
+        SQL       => q{
+SELECT e.*, extname AS name, quote_ident(rolname) AS owner
+FROM pg_extension e
+JOIN pg_roles r ON (r.oid = e.extowner)},
+    },
+
     type => {
         SQL       => q{
 SELECT t.oid AS oid, t.*, quote_ident(rolname) AS owner, quote_ident(nspname) AS schema,
@@ -1322,28 +1502,13 @@ LEFT JOIN pg_am a ON (a.oid = c.relam)
 WHERE c.relkind = 'i'},
         exclude    => 'system',
     },
-    operator => {
-        SQL       => q{
-SELECT o.*, o.oid, n.nspname||'.'||o.oprname||' ('||COALESCE(t2.typname,'NONE')||','||COALESCE(t3.typname,'NONE')||')' AS name, quote_ident(o.oprname) AS safename,
-  rolname AS owner, quote_ident(n.nspname) AS schemaname,
-  t1.typname AS resultname,
-  t2.typname AS leftname, t3.typname AS rightname,
-  t4.typname AS resultname,
-  nneg.nspname||'.'||neg.oprname AS negname,
-  ncom.nspname||'.'||com.oprname AS comname
-FROM pg_operator o
-JOIN pg_roles r ON (r.oid = o.oprowner)
-JOIN pg_namespace n ON (n.oid = o.oprnamespace)
-JOIN pg_proc p1 ON (p1.oid = o.oprcode)
-JOIN pg_type t1 ON (t1.oid = o.oprresult)
-LEFT JOIN pg_type t2 ON (t2.oid = o.oprleft)
-LEFT JOIN pg_type t3 ON (t3.oid = o.oprright)
-LEFT JOIN pg_type t4 ON (t4.oid = o.oprresult)
-LEFT JOIN pg_operator neg ON (o.oprnegate = neg.oid)
-LEFT JOIN pg_namespace nneg ON (nneg.oid = neg.oprnamespace)
-LEFT JOIN pg_operator com ON (o.oprcom = com.oid)
-LEFT JOIN pg_namespace ncom ON (ncom.oid = com.oprnamespace)},
-        exclude    => 'system',
+operator => { SQL => q{
+  SELECT FORMAT('%s.%s(%s,%s)', oprnamespace::regnamespace, oprname, format_type(oprleft,NULL), format_type(oprright,NULL)) AS name,
+    rolname AS owner, quote_ideNT(oprnamespace::regnamespace::text) AS schemaname
+  FROM pg_operator o
+  JOIN pg_roles r ON (r.oid = o.oprowner)
+  WHERE oprnamespace::regnamespace::text <> 'pg_catalog'
+},
     },
     trigger => {
         SQL       => q{
@@ -1406,6 +1571,25 @@ WHERE attnum >= 1
 AND NOT attisdropped},
         postSQL    => q{ORDER BY n.nspname, c.relname, a.attnum},
         exclude    => 'system',
+    },
+
+    foreign_server => {
+        SQL       => q{
+SELECT f.*, srvname AS name, quote_ident(rolname) AS owner
+FROM pg_foreign_server f
+JOIN pg_roles r ON (r.oid = f.srvowner)},
+    },
+    foreign_table => {
+        SQL       => q{
+SELECT srvname||':'||ftrelid::regclass AS name, ftoptions
+FROM pg_foreign_table
+JOIN pg_foreign_server f on (f.oid = ftserver)},
+    },
+    foreign_data_wrapper => {
+        SQL       => q{
+SELECT f.*, fdwname AS name, quote_ident(rolname) AS owner
+FROM pg_foreign_data_wrapper f
+JOIN pg_roles r ON (r.oid = f.fdwowner)},
     },
 );
 
@@ -1532,7 +1716,10 @@ GetOptions(
     'filter=s@',   ## used by same_schema only
     'suffix=s',    ## used by same_schema only
     'replace',     ## used by same_schema only
+    'skipsequencevals', ## used by same_schema only
     'lsfunc=s',    ## used by wal_files and archive_ready
+    'object=s@',     ## used by same_schema for object types to include
+    'skipobject=s@', ## used by same_schema for object types to exclude
     'skipcycled',  ## used by sequence only
 );
 
@@ -2677,15 +2864,15 @@ sub pretty_time {
 
     ## Just seconds (< 2:00)
     if ($sec < 120 or $tweak =~ /s/) {
-        return sprintf "$sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+        return sprintf "$sec %s", 1==$sec ? msg('time-second') : msg('time-seconds');
     }
 
     ## Minutes and seconds (< 60:00)
     if ($sec < 60*60 or $tweak =~ /m/) {
         my $min = int $sec / 60;
         $sec %= 60;
-        my $ret = sprintf "$min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
-        $sec and $tweak !~ /S/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+        my $ret = sprintf "$min %s", 1==$min ? msg('time-minute') : msg('time-minutes');
+        $sec and $tweak !~ /S/ and $ret .= sprintf " $sec %s", 1==$sec ? msg('time-second') : msg('time-seconds');
         return $ret;
     }
 
@@ -2695,9 +2882,9 @@ sub pretty_time {
         $sec -= ($hour*60*60);
         my $min = int $sec / 60;
         $sec -= ($min*60);
-        my $ret = sprintf "$hour %s", $hour==1 ? msg('time-hour') : msg('time-hours');
-        $min and $tweak !~ /M/ and $ret .= sprintf " $min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
-        $sec and $tweak !~ /[SM]/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+        my $ret = sprintf "$hour %s", 1==$hour ? msg('time-hour') : msg('time-hours');
+        $min and $tweak !~ /M/ and $ret .= sprintf " $min %s", 1==$min ? msg('time-minute') : msg('time-minutes');
+        $sec and $tweak !~ /[SM]/ and $ret .= sprintf " $sec %s", 1==$sec ? msg('time-second') : msg('time-seconds');
         return $ret;
     }
 
@@ -2709,10 +2896,10 @@ sub pretty_time {
         $sec -= ($our*60*60);
         my $min = int $sec / 60;
         $sec -= ($min*60);
-        my $ret = sprintf "$day %s", $day==1 ? msg('time-day') : msg('time-days');
-        $our and $tweak !~ /H/     and $ret .= sprintf " $our %s", $our==1 ? msg('time-hour')   : msg('time-hours');
-        $min and $tweak !~ /[HM]/  and $ret .= sprintf " $min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
-        $sec and $tweak !~ /[HMS]/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+        my $ret = sprintf "$day %s", 1==$day ? msg('time-day') : msg('time-days');
+        $our and $tweak !~ /H/     and $ret .= sprintf " $our %s", 1==$our ? msg('time-hour')   : msg('time-hours');
+        $min and $tweak !~ /[HM]/  and $ret .= sprintf " $min %s", 1==$min ? msg('time-minute') : msg('time-minutes');
+        $sec and $tweak !~ /[HMS]/ and $ret .= sprintf " $sec %s", 1==$sec ? msg('time-second') : msg('time-seconds');
         return $ret;
     }
 
@@ -2725,11 +2912,11 @@ sub pretty_time {
     $sec -= ($our*60*60);
     my $min = int $sec / 60;
     $sec -= ($min*60);
-    my $ret = sprintf "$week %s", $week==1 ? msg('time-week') : msg('time-weeks');
-    $day and $tweak !~ /D/      and $ret .= sprintf " $day %s", $day==1 ? msg('time-day')    : msg('time-days');
-    $our and $tweak !~ /[DH]/   and $ret .= sprintf " $our %s", $our==1 ? msg('time-hour')   : msg('time-hours');
-    $min and $tweak !~ /[DHM]/  and $ret .= sprintf " $min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
-    $sec and $tweak !~ /[DHMS]/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+    my $ret = sprintf "$week %s", 1==$week ? msg('time-week') : msg('time-weeks');
+    $day and $tweak !~ /D/      and $ret .= sprintf " $day %s", 1==$day ? msg('time-day')    : msg('time-days');
+    $our and $tweak !~ /[DH]/   and $ret .= sprintf " $our %s", 1==$our ? msg('time-hour')   : msg('time-hours');
+    $min and $tweak !~ /[DHM]/  and $ret .= sprintf " $min %s", 1==$min ? msg('time-minute') : msg('time-minutes');
+    $sec and $tweak !~ /[DHMS]/ and $ret .= sprintf " $sec %s", 1==$sec ? msg('time-second') : msg('time-seconds');
     return $ret;
 
 } ## end of pretty_time
@@ -2785,9 +2972,11 @@ sub run_command {
 
     $tempdir = tempdir(@tempdirargs);
     ($tempfh,$tempfile) = tempfile('check_postgres_psql.XXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
+    binmode($tempfh, ':utf8');
 
     ## Create another one to catch any errors
     ($errfh,$errorfile) = tempfile('check_postgres_psql_stderr.XXXXXXX', SUFFIX => '.tmp', DIR => $tempdir);
+    binmode($errfh, ':utf8');
 
     ## Mild cleanup of the query
     $string =~ s/^\s*(.+?)\s*$/$1/s;
@@ -2836,12 +3025,14 @@ sub run_command {
             return $db->{pname};
         }
 
-        defined $db->{dbname} and push @args, '-d', $db->{dbname};
-        defined $db->{dbuser} and push @args, '-U', $db->{dbuser};
-        defined $db->{port} and push @args => '-p', $db->{port};
-        if ($db->{host} ne '<none>') {
-            push @args => '-h', $db->{host};
-            $host{$db->{host}}++; ## For the overall count
+        if ($db->{pname} !~ /service=/) {
+            defined $db->{dbname} and push @args, '-d', $db->{dbname};
+            defined $db->{dbuser} and push @args, '-U', $db->{dbuser};
+            defined $db->{port} and push @args => '-p', $db->{port};
+            if ($db->{host} ne '<none>') {
+                push @args => '-h', $db->{host};
+                $host{$db->{host}}++; ## For the overall count
+            }
         }
 
         if (defined $db->{dbpass} and length $db->{dbpass}) {
@@ -2977,7 +3168,7 @@ sub run_command {
             $db->{ok} = 1;
 
             ## Unfortunately, psql outputs "(No rows)" even with -t and -x
-            $db->{slurp} = '' if ! defined $db->{slurp} or index($db->{slurp},'(')==0;
+            $db->{slurp} = '' if ! defined $db->{slurp} or 0 == index($db->{slurp},'(');
 
             ## Remove carriage returns (i.e. on Win32)
             $db->{slurp} =~ s/\r//g;
@@ -3022,7 +3213,7 @@ sub run_command {
             my $lastval;
             for my $line (split /\n/ => $db->{slurp}) {
 
-                if (index($line,'-')==0) {
+                if (0 == index($line,'-')) {
                     $lnum++;
                     next;
                 }
@@ -3142,13 +3333,6 @@ sub setup_target_databases {
          dbservice => [''],
           };
 
-    ## Don't set any default values if a service is being used
-    if (defined $opt{dbservice} and defined $opt{dbservice}->[0] and length $opt{dbservice}->[0]) {
-        $conn->{dbname} = [];
-        $conn->{port} = [];
-        $conn->{dbuser} = [];
-    }
-
     ## If we were passed in a target, use that and move on
     if (exists $arg->{target}) {
         ## Make a copy, in case we are passed in a ref
@@ -3186,7 +3370,7 @@ sub setup_target_databases {
                 $new =~ s/\s+//g unless $vname eq 'dbservice' or $vname eq 'host';
 
                 ## Set this as the new default for this connection var moving forward
-                $conn->{$vname} = [split /,/ => $new];
+                $conn->{$vname} = [split /,/ => $new, -1];
 
                 ## Make a note that we found something new this round
                 $found_new_var = 1;
@@ -3440,7 +3624,7 @@ sub validate_range {
         }
         if (length $critical) {
             if ($critical !~ $timesecre) {
-                ndie msg('range-seconds', 'critical')
+                ndie msg('range-seconds', 'critical');
             }
             $critical = $1;
             if (!$arg->{any_warning} and length $warning and $warning > $critical) {
@@ -3778,17 +3962,39 @@ sub open_controldata {
     }
 
     ## Run pg_controldata
-    ## We still catch deprecated option
     my $pgc;
     if (defined $ENV{PGCONTROLDATA} and length $ENV{PGCONTROLDATA}) {
-        # ndie msg('depr-pgcontroldata');
         $pgc = "$ENV{PGCONTROLDATA}";
     }
-    else {
-        $pgc = (defined $PGBINDIR) ? "$PGBINDIR/pg_controldata" : 'pg_controldata';
-        chomp($pgc = qx{which "$pgc"});
+    elsif (defined $ENV{PGBINDIR} and length $ENV{PGBINDIR}) {
+        $pgc = "$PGBINDIR/pg_controldata";
     }
-    -x $pgc or ndie msg('opt-psql-noexec', $pgc);
+    else {
+        my $pgctry = 'pg_controldata';
+        my $result = qx{$pgctry --version 2>/dev/null};
+        if ($result =~ /\d/) {
+            $pgc = $pgctry;
+        }
+        else {
+            ## Need to refactor this someday
+            my $basedir = '/usr/lib/postgresql/';
+            if (opendir my $dh, $basedir) {
+                for my $subdir (sort { $b <=> $a } grep { /^\d+[\d\.]+$/ } readdir $dh) {
+                    $pgctry = catfile($basedir, $subdir, 'bin', 'pg_controldata');
+                    next if ! -e $pgctry;
+                    $result = qx{$pgctry --version 2>/dev/null};
+                    if ($result =~ /\d/) {
+                        $pgc = $pgctry;
+                        last;
+                    }
+                }
+                closedir $dh;
+            }
+            if (! defined $pgc) {
+                ndie msg('checkpoint-nobin');
+            }
+        }
+    }
 
     $COM = qq{$pgc "$dir"};
     eval {
@@ -4019,7 +4225,7 @@ ORDER BY datname
             $nwarn = $limit-$w2;
         }
         elsif ($w3) {
-            $nwarn = (int $w2*$limit/100)
+            $nwarn = (int $w2*$limit/100);
         }
 
         if (! skip_item($r->{datname})) {
@@ -4249,7 +4455,7 @@ FROM (
             qw/ iname irows ipages iotta ibloat wastedipgaes wastedibytes wastedisize/};
 
         ## Made it past the exclusions
-        $max = -2 if $max == -1;
+        $max = -2 if -1 == $max;
 
         ## Do the table first if we haven't seen it
         if (! $seenit{"$dbname.$schema.$table"}++) {
@@ -4320,10 +4526,10 @@ FROM (
         $db->{perf} = '';
     }
 
-    if ($max == -1) {
+    if (-1 == $max) {
         add_unknown msg('no-match-rel');
     }
-    elsif ($max != -1) {
+    elsif (-1 != $max) {
         add_ok $maxmsg;
     }
 
@@ -4405,7 +4611,7 @@ sub check_checkpoint {
         ndie msg('checkpoint-noparse', $last);
     }
     my $diff = time - $dt;
-    my $msg = $diff==1 ? msg('checkpoint-ok') : msg('checkpoint-ok2', $diff);
+    my $msg = 1==$diff ? msg('checkpoint-ok') : msg('checkpoint-ok2', $diff);
     $db->{perf} = sprintf '%s=%s;%s;%s',
         perfname(msg('age')), $diff, $warning, $critical;
 
@@ -5467,7 +5673,7 @@ sub check_hot_standby_delay {
     ## Do the check on replay delay in case SR has disconnected because it way too far behind
     my $msg = qq{$rep_delta};
     if ($version >= 9.1) {
-        $msg .= qq{ and $time_delta seconds}
+        $msg .= qq{ and $time_delta seconds};
     }
     if ((length $critical or length $ctime) and (!length $critical or length $critical and $rep_delta > $critical) and (!length $ctime or length $ctime and $time_delta > $ctime)) {
         add_critical $msg;
@@ -5497,7 +5703,7 @@ sub check_replication_slots {
 
     my ($warning, $critical) = validate_range({type => 'size'});
 
-    $SQL = qq{
+    $SQL = q{
         WITH slots AS (SELECT slot_name,
             slot_type,
             COALESCE(restart_lsn, '0/0'::pg_lsn) AS slot_lsn,
@@ -5564,7 +5770,7 @@ sub check_replication_slots {
 
         my $msg = '';
         for (sort {$s{$b}[0] <=> $s{$a}[0] or $a cmp $b } keys %s) {
-            $msg .= "$_: $s{$_}[1] ($s{$_}[2] $s{$_}[3] " . ($s{$_}[4] eq 't'?'active':'inactive') .") ";
+            $msg .= "$_: $s{$_}[1] ($s{$_}[2] $s{$_}[3] " . ($s{$_}[4] eq 't' ? 'active' : 'inactive') .') ';
             $db->{perf} .= sprintf ' %s=%s;%s;%s',
                 perfname($_), $s{$_}[0], $warning, $critical;
         }
@@ -5701,7 +5907,7 @@ FROM (SELECT nspname, relname, $criteria AS v
             do_mrtg({one => $mintime, msg => $maxrel});
             return;
         }
-        if ($maxtime == -2) {
+        if (-2 == $maxtime) {
             add_unknown (
                 $found ? $type eq 'vacuum' ? msg('vac-nomatch-v')
                 : msg('vac-nomatch-a')
@@ -5836,7 +6042,7 @@ sub check_locks {
             }
             if ($critical) {
                 for my $l (keys %{$critical}) {
-                    #$dblock{$k}{$l} = 0 if ! exists $dblock{$k}{$l};
+                    $dblock{$k}{$l} = 0 if ! exists $dblock{$k}{$l};
                 }
             }
             for my $m (keys %{$dblock{$k}}){
@@ -6043,7 +6249,7 @@ ORDER BY name
         }
         close $logfh or ndie msg('file-noclose', $logfile, $!);
 
-        if ($found == 1) {
+        if (1 == $found) {
             $MRTG and do_mrtg({one => 1});
             add_ok msg('logfile-ok', $logfile);
         }
@@ -6472,7 +6678,7 @@ sub check_pgbouncer_backends {
             $nwarn = $limit-$w2;
         }
         elsif ($w3) {
-            $nwarn = (int $w2*$limit/100)
+            $nwarn = (int $w2*$limit/100);
         }
 
         if (! skip_item($r->{database})) {
@@ -6755,6 +6961,7 @@ sub check_relation_size {
 
     my ($warning, $critical) = validate_range({type => 'size'});
 
+    ## no critic
     $SQL = sprintf q{
 SELECT pg_%1$s_size(c.oid) AS rsize,
   pg_size_pretty(pg_%1$s_size(c.oid)) AS psize,
@@ -6762,8 +6969,9 @@ SELECT pg_%1$s_size(c.oid) AS rsize,
 FROM pg_class c JOIN pg_namespace n ON (c.relnamespace = n.oid)
 WHERE relkind IN (%2$s)
 },
-    $sizefct,
-    join (',', map { "'$_'" } split (//, $relkinds));
+    $sizefct, ## no critic
+    join (',', map { "'$_'" } split (//, $relkinds)); ## no critic
+    ## use critic
 
     if ($opt{perflimit}) {
         $SQL .= " ORDER BY 1 DESC LIMIT $opt{perflimit}";
@@ -6799,7 +7007,7 @@ WHERE relkind IN (%2$s)
             my $nicename = $kind eq 'r' ? "$schema.$name" : $name;
 
             $db->{perf} .= sprintf '%s%s=%sB;%s;%s',
-                $VERBOSE==1 ? "\n" : ' ',
+                1 == $VERBOSE ? "\n" : ' ',
                 perfname($nicename), $size, $warning, $critical;
             ($max=$size, $pmax=$psize, $kmax=$kind, $nmax=$name, $smax=$schema) if $size > $max;
         }
@@ -7080,28 +7288,74 @@ sub check_same_schema {
     ## We also indicate which columns should be ignored when comparing,
     ## as well as which columns are of a 'list' nature
     my @catalog_items = (
-        [user       => 'usesysid',                                'useconfig' ],
-        [language   => 'laninline,lanplcallfoid,lanvalidator',    ''          ],
-        [operator   => 'oprleft,oprright,oprresult,oprnegate,
-                        oprcom',                                  ''          ],
-        [type       => 'typarray',                                ''          ],
-        [schema     => '',                                        ''          ],
-        [function   => 'source_checksum,prolang,prorettype,
-                        proargtypes,proallargtypes,provariadic,
-                        proargdefaults',                          ''          ],
-        [table      => 'reltype,relfrozenxid,relminmxid,relpages,
-                        reltuples,relnatts,relallvisible,
-                        relhaspkey',                              ''          ],
-        [view       => 'reltype',                                 ''          ],
-        [sequence   => 'reltype,log_cnt,relnatts,is_called',      ''          ],
-        [index      => 'relpages,reltuples,indpred,indclass,
-                        indexprs,indcheckxmin,reltablespace,
-                        indkey',                                  ''          ],
-        [trigger    => 'tgqual,tgconstraint,tgattr',              ''          ],
-        [constraint => 'conbin,conindid,conkey,confkey,
-                        confmatchtype',                           ''          ],
-        [column     => 'atttypid,attnum,attbyval,attndims',       ''          ],
+        [user           => 'usesysid',                                     'useconfig' ],
+        [language       => 'laninline,lanplcallfoid,lanvalidator',         ''          ],
+        [cast           => '',                                             ''          ],
+        [domain         => '',                                             ''          ],
+        [operator       => '',                                             ''          ],
+        [aggregate      => '',                                             ''          ],
+        [comment        => '',                                             ''          ],
+        [extension      => '',                                             ''          ],
+        [operator       => 'oprleft,oprright,oprresult,oprnegate,oprcom',  ''          ],
+        [type           => 'typarray',                                     ''          ],
+        [schema         => '',                                             ''          ],
+        [function       => 'source_checksum,prolang,prorettype,
+                            proargtypes,proallargtypes,provariadic,
+                            proargdefaults',                               ''          ],
+        [table          => 'reltype,relfrozenxid,relminmxid,relpages,
+                            reltuples,relnatts,relallvisible,relhaspkey',  ''          ],
+        [view           => 'reltype',                                      ''          ],
+        [sequence       => 'reltype,log_cnt,relnatts,is_called',           ''          ],
+        [index          => 'relpages,reltuples,indpred,indclass,indexprs,
+                            indcheckxmin,reltablespace,indkey',            ''          ],
+        [trigger        => 'tgqual,tgconstraint,tgattr',                   ''          ],
+        [constraint     => 'conbin,conindid,conkey,confkey,confmatchtype', ''          ],
+        [column         => 'atttypid,attnum,attbyval,attndims',            ''          ],
+        [foreign_server => '',                                             ''          ],
+        [foreign_data_wrapper  => '',                                      ''          ],
+        [foreign_table  => '',                                             ''          ],
     );
+
+    ## TODO:
+    ## operator class, conversion, tablespace, collation
+
+    ## Allow the above list to be adjusted by exclusion:
+    if (exists $opt{skipobject}) {
+        my (%skiplist, %badlist);
+        for my $item (map { split /,\s*/ => lc $_ } @{ $opt{skipobject} }) {
+            if (grep { $_->[0] eq $item  } @catalog_items) {
+                $skiplist{$item} = 1;
+            }
+            else {
+                $badlist{$item} = 1;
+            }
+        }
+        if (keys %badlist) {
+            ndie msg('ss-badobject', join $COMMA => sort keys %badlist);
+        }
+
+        ## Shrink the original list to remove excluded items
+        @catalog_items = grep { ! exists $skiplist{$_->[0]} } @catalog_items;
+    }
+
+    ## Allow the list to be adjusted by inclusion:
+    if (exists $opt{object}) {
+        my (%goodlist, %badlist);
+        for my $item (map { split /,\s*/ => lc $_ } @{ $opt{object} }) {
+            if (grep { $_->[0] eq $item  } @catalog_items) {
+                $goodlist{$item} = 1;
+            }
+            else {
+                $badlist{$item} = 1;
+            }
+        }
+        if (keys %badlist) {
+            ndie msg('ss-badobject', join $COMMA => sort keys %badlist);
+        }
+
+        ## Shrink the original list to only have the requested items
+        @catalog_items = grep { exists $goodlist{$_->[0]} } @catalog_items;
+    }
 
     ## Where we store all the information, per-database
     my %thing;
@@ -7161,10 +7415,6 @@ sub check_same_schema {
             my $name = $_->[0];
             $dbinfo->{$name} = find_catalog_info($name, $x, $dbver{$x});
         }
-
-        ## TODO:
-        ## operator class, cast, aggregate, conversion, domain, tablespace, foreign tables
-        ## foreign server, wrapper, collation, extensions, roles?
 
         ## Map the oid back to the user, for ease later on
         for my $row (values %{ $dbinfo->{user} }) {
@@ -7291,7 +7541,7 @@ sub check_same_schema {
                 my $nothere = join ', ' => sort { $a<=>$b } keys %{ $e->{$name}{nothere} };
                 ## Extra information (e.g. tablename) may be stuffed into the hash value
                 (my $extra) = values %{ $e->{$name}{isthere} };
-                $name .= " ($extra)" if length $extra > 1;
+                $name .= " ($extra)" if defined $extra and length $extra > 1;
                 $msg .= sprintf "%s\n  %-*s %s\n  %-*s %s\n",
                     msg('ss-noexist', $pitem, $name),
                     $maxsize, $msg_exists,
@@ -7420,7 +7670,7 @@ sub check_same_schema {
                         $msg .= $_ for @msg;
                     }
                     else {
-                        ## No message means it was all filtered out, so we decrment the master count
+                        ## No message means it was all filtered out, so we decrement the master count
                         $opt{failcount}--;
                     }
                 }
@@ -7470,7 +7720,7 @@ sub audit_filename {
     my $adir = $opt{'audit-file-dir'};
     if (defined $adir) {
         -d $adir or die qq{Cannot write to directory "$adir": $!\n};
-        $filename = File::Spec->catfile($adir, $filename);
+        $filename = catfile($adir, $filename);
     }
 
     return $filename;
@@ -7487,9 +7737,10 @@ sub write_audit_file {
 
     ## Create a connection information string
     my $row = $targetdb[0];
-    my $conninfo = sprintf '%s%s%s%s',
+    my $conninfo = sprintf '%s%s%s%s%s',
+        defined $row->{dbservice} ? qq{service=$row->{dbservice} } : '',
         defined $row->{port} ? qq{port=$row->{port} } : '',
-        defined $row->{host} ? qq{host=$row->{host} } : '',
+        (defined $row->{host} and $row->{host} ne '<none>') ? qq{host=$row->{host} } : '',
         defined $row->{dbname} ? qq{dbname=$row->{dbname} } : '',
         defined $row->{dbuser} ? qq{user=$row->{dbuser} } : '';
 
@@ -7499,10 +7750,10 @@ sub write_audit_file {
     print {$fh} "## PG version: $arg->{pgversion}\n";
     printf {$fh} "## Created: %s\n", scalar localtime();
     print {$fh} "## Connection: $conninfo\n";
-    print {$fh} "## Database name: $row->{dbname}\n";
-    print {$fh} "## Host: $row->{host}\n";
-    print {$fh} "## Port: $row->{port}\n";
-    print {$fh} "## User: $row->{dbuser}\n";
+    print {$fh} "## Database name: $row->{dbname}\n" if defined $row->{dbname};
+    print {$fh} "## Host: $row->{host}\n" if defined $row->{host} and $row->{host} ne '<none>';
+    print {$fh} "## Port: $row->{port}\n" if defined $row->{port};
+    print {$fh} "## User: $row->{dbuser}\n" if defined $row->{dbuser};
     if ($arg->{same_schema}) {
         print {$fh} "## Start of same_schema information:\n";
         {
@@ -7613,10 +7864,14 @@ sub schema_item_exists {
                         my $it = $itemhash->{$db1}{$item_class}{$name};
                         next if exists $it->{schemaname} and keys %{ $itemhash->{$db1}{schema} } and ! exists $itemhash->{$db2}{schema}{ $it->{schemaname} };
                     }
-                    ## Skip if this item has a table, but the table does not match
+
+                    ## Skip if this item has a table, but the table does not match (or if 'notables' is set)
                     if ($item_class ne 'table') {
                         my $it = $itemhash->{$db1}{$item_class}{$name};
-                        next if exists $it->{tablename} and ! exists $itemhash->{$db2}{table}{ $it->{tablename} };
+                        next if exists $it->{tablename}
+                          and exists $itemhash->{$db1}{table}{ $it->{tablename} }
+                          and ! exists $itemhash->{$db2}{table}{ $it->{tablename} };
+                        next if exists $it->{tablename} and $opt{filtered}{notable};
                     }
 
                     my $one = '1';
@@ -7711,6 +7966,9 @@ sub schema_item_differences {
 
                     ## Skip certain known numeric fields that have text versions:
                     next if $col =~ /.(?:namespace|owner|filenode|oid|relid)$/;
+
+                    ## We may want to skip the "data" of the sequences
+                    next if $opt{skipsequencevals} and $item_class eq 'sequence';
 
                     ## If not a list, just report on the exact match here and move on:
                     if (! exists $lists->{$col} and $col !~ /.acl$/) {
@@ -7810,6 +8068,16 @@ sub find_catalog_info {
     ## The version information
     my $dbver = shift or die;
 
+    ## Cannot check extensions if we are before 9.4
+    if ('extension' eq $type and $dbver->{major} < 9.4) {
+        return {};
+    }
+
+    ## Foreign tables arrived in 9.1
+    if ($type =~ /foreign/ and $dbver->{major} < 9.1) {
+        return {};
+    }
+
     ## The SQL we use
     my $SQL = $ci->{SQL} or die "No SQL found for type '$type'\n";
 
@@ -7825,6 +8093,53 @@ sub find_catalog_info {
     if ($type eq 'sequence' and $dbver->{major} >= 10) {
         $SQL = $ci->{SQL10};
         delete $ci->{innerSQL};
+    }
+
+    if ($type eq 'comment' and $dbver->{major} < 11) {
+        $SQL =~ s/prokind='a'/proisagg/g;
+        $SQL =~ s/\Qprokind IN ('f','p')/NOT proisagg/g;
+    }
+
+    if ($dbver->{major} < 9.1) {
+        if ($SQL =~ /FORMAT/) {
+           #warn $SQL;
+           $SQL =~ s{FORMAT\('(.+?)', (.+)\) AS name}{
+               my ($format, @args) = ($1, split /, / => $2);
+               $format =~ s/ (\w+) / || ' $1 ' || /g;
+               $format =~ s/([,.\(\)])/ || '$1' || /g;
+               $format =~ s/%s/shift @args/ge;
+               $format =~ s/\|\|\s*$//;
+               "$format As name";
+           }ge;
+
+            #warn $SQL;
+        }
+    }
+
+
+    ## The regnamespace shortcut arrived with version 9.5
+    if ($dbver->{major} < 9.5) {
+        $SQL =~ s{(\w+)::regnamespace}{(SELECT nspname FROM pg_namespace WHERE oid=$1)}g;
+    }
+
+    ## The string_agg function appeared in 9.0. For now, we return nothing.
+    return {} if $dbver->{major} < 9.0 and $SQL =~ /string_agg/;
+
+    ## Many new tables showed up in version 9.4
+    if ($dbver->{major} < 9.4) {
+        $SQL =~ s{UNION ALL.+pg_collation}{};
+        $SQL =~ s{UNION ALL.+pg_extension}{};
+        $SQL =~ s{UNION ALL.+pg_event_trigger}{};
+    }
+
+    ## Tables appearing in version 9.5
+    if ($dbver->{major} < 9.5) {
+        $SQL =~ s{UNION ALL.+pg_policy}{};
+    }
+
+    ## Tables appearing in version 9.1
+    if ($dbver->{major} < 9.1) {
+        $SQL =~ s{UNION ALL.+pg_extension}{};
     }
 
     if (exists $ci->{exclude}) {
@@ -8026,7 +8341,7 @@ FROM (
 FROM pg_sequences) foo};
     ## use critic
 
-    my $info = run_command($SQL, {regex => qr{\w}, emptyok => 1, version => [">9.6 SELECT 1"]} ); # actual SQL10 is executed below
+    my $info = run_command($SQL, {regex => qr{\w}, emptyok => 1, version => ['>9.6 SELECT 1']} ); # actual SQL10 is executed below
 
     my $MAXINT2 = 32767;
     my $MAXINT4 = 2147483647;
@@ -8713,7 +9028,7 @@ sub check_wal_files {
     my ($warning, $critical) = validate_range($arg);
 
     my $lsfunc = $opt{lsfunc} || 'pg_ls_dir';
-    my $lsargs = $opt{lsfunc} ? "" : "'pg_xlog$subdir'";
+    my $lsargs = $opt{lsfunc} ? q{} : "'pg_xlog$subdir'";
 
     ## Figure out where the pg_xlog directory is
     $SQL = qq{SELECT count(*) AS count FROM $lsfunc($lsargs) WHERE $lsfunc ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)
@@ -8756,7 +9071,7 @@ sub check_wal_files {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.24.0
+This documents describes check_postgres.pl version 2.25.0
 
 =head1 SYNOPSIS
 
@@ -8893,7 +9208,7 @@ Instead, one should use a .pgpass or pg_service.conf file.
 =item B<--dbservice=NAME>
 
 The name of a service inside of the pg_service.conf file. Before version 9.0 of Postgres, this is 
-a global file, usually found in /etc/pg_service.conf. If you are using version 9.0 or higher of 
+a global file, usually found in F</etc/pg_service.conf>. If you are using version 9.0 or higher of 
 Postgres, you can use the file ".pg_service.conf" in the home directory of the user running 
 the script, e.g. nagios.
 
@@ -8901,7 +9216,7 @@ This file contains a simple list of connection options. You can also pass additi
 when using this option such as --dbservice="maindatabase sslmode=require"
 
 The documentation for this file can be found at
-https://www.postgresql.org/docs/current/static/libpq-pgservice.html
+L<https://www.postgresql.org/docs/current/static/libpq-pgservice.html>
 
 =back
 
@@ -9579,7 +9894,7 @@ Example 1: Make sure that no file system is over 90% for the database on port 54
 
   check_postgres_disk_space --port=5432 --warning='90%' --critical='90%'
 
-Example 2: Check that all file systems starting with /dev/sda are smaller than 10 GB and 11 GB (warning and critical)
+Example 2: Check that all file systems starting with F</dev/sda> are smaller than 10 GB and 11 GB (warning and critical)
 
   check_postgres_disk_space --port=5432 --warning='10 GB' --critical='11 GB' --include="~^/dev/sda"
 
@@ -9873,7 +10188,7 @@ failure, the fourth line will provide more detail on the failure encountered.
 program is available. The current version is obtained by running C<bucardo_ctl --version>.
 If a major upgrade is available, a warning is returned. If a revision upgrade is 
 available, a critical is returned. (Bucardo is a master to slave, and master to master 
-replication system for Postgres: see https://bucardo.org/ for more information).
+replication system for Postgres: see L<https://bucardo.org/> for more information).
 See also the information on the C<--get_method> option.
 
 =head2 B<new_version_box>
@@ -9883,7 +10198,7 @@ program is available. The current version is obtained by running C<boxinfo.pl --
 If a major upgrade is available, a warning is returned. If a revision upgrade is 
 available, a critical is returned. (boxinfo is a program for grabbing important 
 information from a server and putting it into a HTML format: see 
-https://bucardo.org/Boxinfo/ for more information). See also the information on 
+L<https://bucardo.org/Boxinfo/> for more information). See also the information on 
 the C<--get_method> option.
 
 =head2 B<new_version_cp>
@@ -9912,7 +10227,7 @@ tail_n_mail program is available. The current version is obtained by running
 C<tail_n_mail --version>. If a major upgrade is available, a warning is returned. If a 
 revision upgrade is available, a critical is returned. (tail_n_mail is a log monitoring 
 tool that can send mail when interesting events appear in your Postgres logs.
-See: https://bucardo.org/tail_n_mail/ for more information).
+See: L<https://bucardo.org/tail_n_mail/> for more information).
 See also the information on the C<--get_method> option.
 
 =head2 B<pgb_pool_cl_active>
@@ -10169,10 +10484,8 @@ Specific named slots can be monitored using --include/--exclude
 =head2 B<same_schema>
 
 (C<symlink: check_postgres_same_schema>) Verifies that two or more databases are identical as far as their 
-schema (but not the data within). This is particularly handy for making sure your slaves have not 
-been modified or corrupted in any way when using master to slave replication. Unlike most other 
-actions, this has no warning or critical criteria - the databases are either in sync, or are not. 
-If they are different, a detailed list of the differences is presented.
+schema (but not the data within). Unlike most other actions, this has no warning or critical criteria - 
+the databases are either in sync, or are not. If they are different, a detailed list of the differences is presented.
 
 You may want to exclude or filter out certain differences. The way to do this is to add strings 
 to the C<--filter> option. To exclude a type of object, use "noname", where 'name' is the type of 
@@ -10621,7 +10934,7 @@ of Postgres is new enough, and if stats_row_level is enabled.
 
 In addition to command-line configurations, you can put any options inside of a file. The file 
 F<.check_postgresrc> in the current directory will be used if found. If not found, then the file 
-F<~/.check_postgresrc> will be used. Finally, the file /etc/check_postgresrc will be used if available. 
+F<~/.check_postgresrc> will be used. Finally, the file F</etc/check_postgresrc> will be used if available. 
 The format of the file is option = value, one per line. Any line starting with a '#' will be skipped. 
 Any values loaded from a check_postgresrc file will be overwritten by command-line options. All 
 check_postgresrc files can be ignored by supplying a C<--no-checkpostgresrc> argument.
@@ -10678,23 +10991,36 @@ Development happens using the git system. You can clone the latest version by do
 Three mailing lists are available. For discussions about the program, bug reports, 
 feature requests, and commit notices, send email to check_postgres@bucardo.org
 
-https://mail.endcrypt.com/mailman/listinfo/check_postgres
+L<https://mail.endcrypt.com/mailman/listinfo/check_postgres>
 
 A low-volume list for announcement of new versions and important notices is the 
 'check_postgres-announce' list:
 
-https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
+L<https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce>
 
 Source code changes (via git-commit) are sent to the 
 'check_postgres-commit' list:
 
-https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit
+L<https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit>
 
 =head1 HISTORY
 
 Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
+
+=item B<Version 2.25.1> Released ??, 2020
+
+  Fix check_replication_slots on recently promoted servers (Christoph Berg)
+
+=item B<Version 2.25.0> Released February 3, 2020
+
+  Allow same_schema objects to be included or excluded with --object and --skipobject
+    (Greg Sabino Mullane)
+
+  Fix to allow mixing service names and other connection parameters for same_schema
+    (Greg Sabino Mullane)
+
 
 =item B<Version 2.24.0> Released May 30, 2018
 
@@ -11487,7 +11813,7 @@ Please report any problems to check_postgres@bucardo.org
 
 =head1 AUTHOR
 
-Greg Sabino Mullane <greg@endpoint.com>
+Greg Sabino Mullane <greg@turnstep.com>
 
 
 =head1 NAGIOS EXAMPLES
@@ -11521,7 +11847,7 @@ Some example Nagios configuration settings using this script:
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2007-2017 Greg Sabino Mullane <greg@endpoint.com>.
+Copyright (c) 2007-2020 Greg Sabino Mullane <greg@turnstep.com>.
 
 Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions are met:

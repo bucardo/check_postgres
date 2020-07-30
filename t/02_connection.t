@@ -2,7 +2,7 @@
 
 ## Test the "connection" action
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -60,6 +60,6 @@ like ($cp->run('--timeout 1'), qr{^$label CRITICAL:.*Timed out}, $t);
 $cp->reset_path();
 
 $t=qq{$S fails on nonexisting socket};
-like ($cp->run('--port=1023'), qr{^$label CRITICAL:  could not connect to server}, $t);
+like ($cp->run('--port=1023'), qr{^$label CRITICAL:.*could not connect to server}, $t);
 
 exit;

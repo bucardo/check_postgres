@@ -2,7 +2,7 @@
 
 ## Run some sanity checks on the translations
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -11,6 +11,7 @@ BEGIN {
     %complete_langs = (
         'en' => 'English',
         'fr' => 'French',
+        'es' => 'Spanish',
         );
 }
 use Test::More;
@@ -128,7 +129,7 @@ $ok and pass $t;
 
 for my $l (sort keys %complete_langs) {
     my $language = $complete_langs{$l};
-    next if $language eq 'English';
+    next if 'English' eq $language;
 
     $ok = 1;
     $t=qq{Language $language contains all valid message strings};
@@ -177,8 +178,19 @@ for my $l (sort keys %complete_langs) {
         my $val = $msg{'en'}{$msg}->[1];
         my $lval = $msg{$l}{$msg}->[1];
         my $indent = $msg{$l}{$msg}->[0];
-        next if $language eq 'French' and ($msg eq 'PID' or $msg eq 'port' or $msg eq 'pgbouncer-pool'
-            or $msg eq 'index' or $msg eq 'table' or $msg eq 'transactions' or $msg eq 'mode');
+        next if 'French' eq $language and (
+           'PID' eq $msg
+            or 'port' eq $msg
+            or 'pgbouncer-pool' eq $msg
+            or 'index' eq $msg
+            or 'table' eq $msg
+            or 'transactions' eq $msg
+            or 'mode' eq $msg
+        );
+        next if 'Spanish' eq $language and (
+           'checksum-msg' eq $msg
+           or 'pgbouncer-pool' eq $msg
+        );
         if ($val eq $lval and $indent) {
             fail qq{Message '$msg' in language $language appears to not be translated, but it not marked as such};
             $ok = 0;

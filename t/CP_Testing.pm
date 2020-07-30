@@ -1,12 +1,13 @@
-package CP_Testing;
+package CP_Testing; ## -*- mode: CPerl; indent-tabs-mode: nil; cperl-indent-level: 4 -*-
 
 ## Common methods used by the other tests for check_postgres.pl
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;
 use Time::HiRes qw/sleep/;
+use File::Spec::Functions;
 use DBI;
 use Cwd;
 
@@ -56,6 +57,9 @@ sub cleanup {
         if (-l $symlink) {
             unlink $symlink;
         }
+        my $datadir = "$dbdir$dirnum";
+        system("rm -fr $datadir");
+
     }
 
     return;
@@ -63,6 +67,18 @@ sub cleanup {
 }
 
 sub test_database_handle {
+    my $self = shift;
+    my $dbh;
+    eval { $dbh = $self->_test_database_handle(@ARGV) };
+    if (!defined $dbh) {
+        Test::More::diag $@;
+        Test::More::BAIL_OUT 'Cannot continue without a test database';
+        return undef; ## no critic (Subroutines::ProhibitExplicitReturnUndef)
+    }
+    return $dbh;
+}
+
+sub _test_database_handle {
 
     ## Request for a database handle: create and startup DB as needed
 
@@ -79,31 +95,50 @@ sub test_database_handle {
 
         -e $dbdir and die qq{Oops: I cannot create "$dbdir", there is already a file there!\n};
 
-        Test::More::diag qq{Creating database in directory "$dbdir"\n};
-
         mkdir $dbdir;
+    }
+
+    ## Find a working initdb (which also helps us find other binaries)
+    my $initdb =
+      $ENV{PGINITDB} ? $ENV{PGINITDB}
+      : $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/initdb"
+      : 'initdb';
+
+    my ($imaj,$imin);
+
+    my $initversion = qx{$initdb --version 2>/dev/null};
+    if ($initversion =~ /(\d+)(?:\.(\d+))?/) {
+        ($imaj,$imin) = ($1,$2);
+    }
+    else {
+        ## Work harder to find initdb. First check Debian area
+        my $basedir = '/usr/lib/postgresql/';
+        if (opendir my $dh, $basedir) {
+            for my $subdir (sort { $b <=> $a } grep { /^\d+[\d\.]+$/ } readdir $dh) {
+                $initdb = catfile($basedir, $subdir, 'bin', 'initdb');
+                if (-e $initdb) {
+                    $initversion = qx{$initdb --version 2>/dev/null};
+                    if ($initversion =~ /(\d+)(?:\.(\d+))?/) {
+                        ($imaj,$imin) = ($1,$2);
+                        last;
+                    }
+                }
+            }
+            closedir $dh;
+        }
+        if (!defined $imaj) {
+            die qq{Could not determine the version of initdb in use! Got ($initversion) from ($initdb --version)\n};
+        }
     }
 
     my $datadir = "$dbdir/data space";
     if (! -e $datadir) {
 
-        my $initdb
-            = $ENV{PGINITDB} ? $ENV{PGINITDB}
-            : $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/initdb"
-            :                  'initdb';
-
-        ## Grab the version for finicky items
-        if (qx{$initdb --version} !~ /(\d+)(?:\.(\d+))?/) {
-            die qq{Could not determine the version of initdb in use!\n};
-        }
-        my ($imaj,$imin) = ($1,$2);
-
-        # Speed up testing on 9.3+
-        if ($imaj > 9 or ($imaj==9 and $imin >= 3)) {
-            $initdb = "$initdb --nosync";
-        }
-
-        $com = qq{LC_ALL=en LANG=C $initdb --locale=C -E UTF8 -D "$datadir" 2>&1};
+        $com = sprintf q{LANG=C %s %s --locale C -E UTF8 -D "%s" 2>&1},
+          $initdb,
+          # Speed up testing on 9.3+
+          ($imaj > 9 or (9 == $imaj and $imin >= 3)) ? ' --nosync' : '',
+          $datadir;
         eval {
             $DEBUG and warn qq{About to run: $com\n};
             $info = qx{$com};
@@ -122,35 +157,35 @@ sub test_database_handle {
         print $cfh qq{fsync = off\n};
 
         ## <= 8.0
-        if ($imaj < 8 or ($imaj==8 and $imin <= 1)) {
+        if ($imaj < 8 or (8 == $imaj and $imin <= 1)) {
             print $cfh qq{stats_command_string = on\n};
         }
 
         ## >= 8.1
-        if ($imaj > 8 or ($imaj==8 and $imin >= 1)) {
+        if ($imaj > 8 or (8 == $imaj and $imin >= 1)) {
             print $cfh qq{autovacuum = off\n};
             print $cfh qq{max_prepared_transactions = 5\n};
         }
 
         ## >= 8.3
-        if ($imaj > 8 or ($imaj==8 and $imin >= 3)) {
+        if ($imaj > 8 or (8 == $imaj and $imin >= 3)) {
             print $cfh qq{logging_collector = off\n};
         }
 
         ## <= 8.2
-        if ($imaj < 8 or ($imaj==8 and $imin <= 2)) {
+        if ($imaj < 8 or (8 == $imaj and $imin <= 2)) {
             print $cfh qq{redirect_stderr = off\n};
             print $cfh qq{stats_block_level = on\n};
             print $cfh qq{stats_row_level = on\n};
         }
 
         ## <= 8.3
-        if ($imaj < 8 or ($imaj==8 and $imin <= 3)) {
+        if ($imaj < 8 or (8 == $imaj and $imin <= 3)) {
             print $cfh qq{max_fsm_pages = 99999\n};
         }
 
         ## >= 9.4
-        if ($imaj > 9 or ($imaj==9 and $imin >= 4)) {
+        if ($imaj > 9 or (9 == $imaj and $imin >= 4)) {
             print $cfh qq{max_replication_slots = 2\n};
             print $cfh qq{wal_level = logical\n};
             print $cfh qq{max_wal_senders = 2\n};
@@ -176,7 +211,7 @@ sub test_database_handle {
         close $fh or die qq{Could not open "$pidfile": $!\n};
         ## Send a signal to see if this PID is alive
         $count = kill 0 => $pid;
-        if ($count == 0) {
+        if (0 == $count) {
             Test::More::diag qq{Found a PID file, but no postmaster. Removing file "$pidfile"\n};
             unlink $pidfile;
             $needs_startup = 1;
@@ -186,7 +221,7 @@ sub test_database_handle {
     my $pg_ctl
         = $ENV{PG_CTL}   ? $ENV{PG_CTL}
         : $ENV{PGBINDIR} ? "$ENV{PGBINDIR}/pg_ctl"
-        :                  'pg_ctl';
+        : do { ($_ = $initdb) =~ s/initdb/pg_ctl/; $_ };
 
     if (qx{$pg_ctl --version} !~ /(\d+)(?:\.(\d+))?/) {
         die qq{Could not determine the version of pg_ctl in use!\n};
@@ -202,11 +237,11 @@ sub test_database_handle {
         unlink $logfile;
 
         my $sockdir = 'socket';
-        if ($maj < 8 or ($maj==8 and $min < 1)) {
+        if ($maj < 8 or (8 == $maj and $min < 1)) {
             $sockdir = qq{"$dbdir/data space/socket"};
         }
 
-        $com = qq{LC_ALL=en LANG=C $pg_ctl -o '-k $sockdir' -l $logfile -D "$dbdir/data space" start};
+        $com = qq{LANG=C $pg_ctl -o '-k $sockdir' -l $logfile -D "$dbdir/data space" start};
         eval {
             $DEBUG and warn qq{About to run: $com\n};
             $info = qx{$com};
@@ -233,7 +268,7 @@ sub test_database_handle {
         }
         close $logfh or die qq{Could not close "$logfile": $!\n};
 
-        if ($maj < 8 or ($maj==8 and $min < 1)) {
+        if ($maj < 8 or (8 == $maj and $min < 1)) {
             my $host = "$here/$dbdir/data space/socket";
             my $COM;
 
@@ -290,7 +325,7 @@ sub test_database_handle {
             $newname .= $1;
         }
         if (! -e $newname) {
-            warn "Creating new symlink socket at $newname\n";
+            $DEBUG and warn "Creating new symlink socket at $newname\n";
             (my $oldname = $dbhost) =~ s/\\//g;
             symlink $oldname => $newname;
         }
@@ -306,11 +341,12 @@ sub test_database_handle {
         $dbh = DBI->connect(@superdsn);
     };
     if ($@) {
+        my (@tempdsn, $tempdbh);
         if ($@ =~ /role .+ does not exist/) {
             ## We want the current user, not whatever this is set to:
             delete $ENV{PGUSER};
-            my @tempdsn = ($dsn, '', '', {AutoCommit=>1,RaiseError=>1,PrintError=>0});
-            my $tempdbh = DBI->connect(@tempdsn);
+            @tempdsn = ($dsn, '', '', {AutoCommit=>1,RaiseError=>1,PrintError=>0});
+            $tempdbh = DBI->connect(@tempdsn);
             $tempdbh->do("CREATE USER $dbuser SUPERUSER");
             $tempdbh->disconnect();
             $dbh = DBI->connect(@superdsn);
@@ -318,8 +354,8 @@ sub test_database_handle {
         elsif ($@ =~ /database "postgres" does not exist/) {
             ## We want the current user, not whatever this is set to:
             (my $tempdsn = $dsn) =~ s/postgres/template1/;
-            my @tempdsn = ($tempdsn, '', '', {AutoCommit=>1,RaiseError=>1,PrintError=>0});
-            my $tempdbh = DBI->connect(@tempdsn);
+            @tempdsn = ($tempdsn, '', '', {AutoCommit=>1,RaiseError=>1,PrintError=>0});
+            $tempdbh = DBI->connect(@tempdsn);
             $tempdbh->do('CREATE DATABASE postgres');
             $tempdbh->disconnect();
             $dbh = DBI->connect(@superdsn);
@@ -334,7 +370,7 @@ sub test_database_handle {
 
     $dbh->{AutoCommit} = 1;
     $dbh->{RaiseError} = 0;
-    if ($maj > 8 or ($maj==8 and $min >= 1)) {
+    if ($maj > 8 or (8 == $maj and $min >= 1)) {
         $SQL = q{SELECT count(*) FROM pg_user WHERE usename = ?};
         $sth = $dbh->prepare($SQL);
         $sth->execute($dbuser);
@@ -383,6 +419,7 @@ sub test_database_handle {
     ## Sanity check
     $dbh->do("ALTER USER $dbuser SET search_path = public");
     $dbh->do('SET search_path = public');
+    $dbh->do('SET client_min_messages = WARNING');
     $dbh->do('COMMIT');
 
     return $dbh;
@@ -417,6 +454,7 @@ sub recreate_database {
     $dsn = "DBI:Pg:dbname=$dbname;port=$port;host=$host";
 
     $dbh = DBI->connect($dsn, $user, '', {AutoCommit=>0, RaiseError=>1, PrintError=>0});
+    $dbh->do('SET client_min_messages = WARNING');
 
     return $dbh;
 
@@ -453,6 +491,7 @@ sub run {
         $com .= qq{ --dbuser=$dbuser};
     }
     if ($extra =~ s/--nodbname//) {
+        $ENV{PGDATABASE} = '';
     }
     elsif ($extra !~ /dbname=/) {
         $com .= " --dbname=$dbname";
@@ -846,7 +885,7 @@ sub drop_all_tables {
     my $self = shift;
     my $dbh = $self->{dbh} || die;
     $dbh->{Warn} = 0;
-    my $tables = $dbh->selectall_arrayref("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
+    my $tables = $dbh->selectall_arrayref(q{SELECT tablename FROM pg_tables WHERE schemaname = 'public'});
     for my $tab (@$tables) {
         $dbh->do("DROP TABLE $tab->[0] CASCADE");
     }

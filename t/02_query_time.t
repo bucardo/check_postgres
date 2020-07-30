@@ -2,7 +2,7 @@
 
 ## Test the "query_time" action
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -59,7 +59,7 @@ if ($ver < 80200) {
 }
 
 my $child = fork();
-if ($child == 0) {
+if (0 == $child) {
     my $kiddbh = $cp->test_database_handle();
     $cp->database_sleep($kiddbh, 3);
     $kiddbh->rollback();

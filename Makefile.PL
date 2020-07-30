@@ -4,9 +4,9 @@ use ExtUtils::MakeMaker qw/WriteMakefile/;
 use Config;
 use strict;
 use warnings;
-use 5.006001;
+use 5.008;
 
-my $VERSION = '2.24.0';
+my $VERSION = '2.25.0';
 
 if ($VERSION =~ /_/) {
     print "WARNING! This is a test version ($VERSION) and should not be used in production!\n";
@@ -54,7 +54,7 @@ print "Configuring check_postgres $VERSION\n";
 my %opts = (
     NAME           => 'check_postgres',
     ABSTRACT       => 'Postgres monitoring script',
-    AUTHOR         => 'Greg Sabino Mullane <greg@endpoint.com>',
+    AUTHOR         => 'Greg Sabino Mullane <greg@turnstep.com>',
     PREREQ_PM      => {
         'ExtUtils::MakeMaker' => '6.64',
         'Test::More'          => '0.61',

@@ -2,7 +2,7 @@
 
 ## Test the "same_schema" action
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -18,6 +18,7 @@ my $cp3 = CP_Testing->new({ default_action => 'same_schema', dbnum => 3});
 
 ## Setup all database handles, and create a testing user
 $dbh1 = $cp1->test_database_handle();
+my $ver = $dbh1->{pg_server_version};
 $dbh1->{AutoCommit} = 1;
 eval { $dbh1->do(q{CREATE USER alternate_owner}, { RaiseError => 0, PrintError => 0 }); };
 $dbh2 = $cp2->test_database_handle();
@@ -63,6 +64,7 @@ $t = qq{$S succeeds with two empty databases};
 like ($cp1->run($connect2),
       qr{^$label OK}, $t);
 
+
 sub drop_language {
 
     my ($name, $dbhx) = @_;
@@ -79,7 +81,6 @@ sub drop_language {
 
 } ## end of drop_language
 
-#goto TRIGGER; ## ZZZ
 
 #/////////// Languages
 
@@ -117,7 +118,6 @@ drop_language('plpgsql', $dbh3);
 
 $t = qq{$S reports on language differences};
 like ($cp1->run($connect3), qr{^$label OK}, $t);
-
 
 #/////////// Users
 
@@ -248,7 +248,6 @@ $dbh2->do(q{DROP SCHEMA schema_a});
 $t = qq{$S reports on schema differences};
 like ($cp1->run($connect3), qr{^$label OK}, $t);
 
-
 #/////////// Tables
 TABLE:
 
@@ -274,16 +273,22 @@ Table "public.berri" does not exist on all databases:
 \s*Missing on: 1, 3\s*$}s,
       $t);
 
-$t = qq{$S reports table attribute differences};
-$dbh1->do(q{CREATE TABLE berri(bfd int) WITH OIDS});
-like ($cp1->run($connect2),
-      qr{^$label CRITICAL.*Items not matched: 1 .*
+$t = qq{$S reports table attribute (WITH OIDS) differences};
+if ($ver < 120000) {
+    $dbh1->do(q{CREATE TABLE berri(bfd int) WITH OIDS});
+    like ($cp1->run($connect2),
+        qr{^$label CRITICAL.*Items not matched: 1 .*
 Table "public.berri":
 \s*"relhasoids" is different:
 \s*Database 1: t
 \s*Database 2: f\s*$}s,
-      $t);
-$dbh1->do(q{ALTER TABLE berri SET WITHOUT OIDS});
+    $t);
+    $dbh1->do(q{ALTER TABLE berri SET WITHOUT OIDS});
+}
+else {
+    $dbh1->do(q{CREATE TABLE berri(bfd int)});
+    pass ('No need to test relhasoids on modern databases');
+}
 
 $t = qq{$S reports simple table acl differences};
 $dbh1->do(q{GRANT SELECT ON TABLE berri TO alternate_owner});
@@ -489,6 +494,11 @@ $dbh1->do($SQL); $dbh2->do($SQL); $dbh3->do($SQL);
 $SQL = 'CREATE TRIGGER tigger BEFORE INSERT ON piglet EXECUTE PROCEDURE bouncy()';
 $dbh1->do($SQL);
 
+SKIP: {
+
+  skip 'Cannot test trigger differences on versions of Postgres older than 9.0', 3
+      if $ver < 90000;
+
 like ($cp1->run($connect2),
       qr{^$label CRITICAL.*Items not matched: 2 .*
 \s*Table "public.piglet":
@@ -531,6 +541,8 @@ like ($cp1->run($connect2),
 \s*"tgenabled" is different:}s,
       $t);
 
+}
+
 ## We have to also turn off table differences
 $t = qq{$S does not report trigger differences if the 'notrigger' filter is given};
 like ($cp1->run("$connect3 --filter=notrigger,notable"), qr{^$label OK}, $t);
@@ -568,18 +580,20 @@ like ($cp1->run($connect2),
 
 $t = qq{$S reports constraint with different definitions};
 $dbh2->do(q{ALTER TABLE yamato ADD CONSTRAINT iscandar CHECK(nova > 256)});
-like ($cp1->run($connect2),
-      qr{^$label CRITICAL.*Items not matched: 1 .*
-\s*Constraint "public.yamato.iscandar":
+
+## Version 12 removed the pg_constraint.consrc column
+my $extra = $ver >= 120000 ? '' : q{
 \s*"consrc" is different:
 \s*Database 1: \(nova > 0\)
-\s*Database 2: \(nova > 256\)
+\s*Database 2: \(nova > 256\)};
+
+like ($cp1->run($connect2),
+      qr{^$label CRITICAL.*Items not matched: 1 .*
+\s*Constraint "public.yamato.iscandar":$extra
 \s*"constraintdef" is different:
 \s*Database 1: CHECK \(\(nova > 0\)\)
 \s*Database 2: CHECK \(\(nova > 256\)\)\s*$}s,
       $t);
-
-
 
 $t = qq{$S does not report constraint differences if the 'noconstraint' filter is given};
 like ($cp1->run("$connect3 --filter=noconstraint,notables"), qr{^$label OK}, $t);
@@ -610,7 +624,7 @@ like ($cp1->run($connect2),
 \s*"relhasindex" is different:
 \s*Database 1: t
 \s*Database 2: f
-\s*Index "public.valen" does not exist on all databases:
+\s*Index "public.valen \(gkar\)" does not exist on all databases:
 \s*Exists on:  1
 \s*Missing on: 2\s*$}s,
       $t);
@@ -745,10 +759,3 @@ $dbh1->do('DROP USER user_d');
 
 exit;
 
-__DATA__
-
-
-FINAL: 
-Bump version high
-show number key
-good key for historical
