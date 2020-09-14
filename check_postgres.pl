@@ -10851,6 +10851,10 @@ Exclude all items in the schema 'pg_catalog':
 
  --exclude='pg_catalog.'
 
+Exclude all items in the 'pg_temp_nnn' per-session temporary schemas:
+
+ --exclude=~^pg_temp_.
+
 Exclude all items containing the letters 'ace', but allow the item 'faceoff':
 
  --exclude=~ace --include=faceoff
