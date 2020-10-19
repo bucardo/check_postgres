@@ -139,7 +139,7 @@ our %msg = (
     'die-nosetting'      => q{Could not fetch setting '$1'},
     'diskspace-fail'     => q{Invalid result from command "$1": $2},
     'diskspace-msg'      => q{FS $1 mounted on $2 is using $3 of $4 ($5%)},
-    'diskspace-nodata'   => q{Could not determine data_directory: are you connecting as a superuser?},
+    'diskspace-nodata'   => q{Could not determine data_directory: are you running as a superuser?},
     'diskspace-nodf'     => q{Could not find required executable /bin/df},
     'diskspace-nodir'    => q{Could not find data directory "$1"},
     'file-noclose'       => q{Could not close $1: $2},
@@ -9212,6 +9212,13 @@ when using this option such as --dbservice="maindatabase sslmode=require"
 The documentation for this file can be found at
 L<https://www.postgresql.org/docs/current/static/libpq-pgservice.html>
 
+=item B<--role=ROLE>
+
+Provides the role to switch to after connecting to the database but before running the given check.
+This provides the ability to have superuser privileges assigned to a role without LOGIN access for
+the purposes of audit and other security considerations.  Requires a local `psql` version 9.6 or
+higher.
+
 =back
 
 The database connection options can be grouped: I<--host=a,b --host=c --port=1234 --port=3344>
@@ -9436,7 +9443,7 @@ archive WAL files as fast as possible.
 If the archive command fail, number of WAL in your F<pg_xlog> directory will grow until
 exhausting all the disk space and force PostgreSQL to stop immediately.
 
-To avoid connecting as a database superuser, a wrapper function around
+To avoid running as a database superuser, a wrapper function around
 C<pg_ls_dir()> should be defined as a superuser with SECURITY DEFINER,
 and the I<--lsfunc> option used. This example function, if defined by
 a superuser, will allow the script to connect as a normal user
@@ -9491,8 +9498,9 @@ is reached. The default values for I<--warning> and I<--critical> are '90%' and 
 You can also filter the databases by use of the I<--include> and I<--exclude> options.
 See the L</"BASIC FILTERING"> section for more details.
 
-To view only non-idle processes, you can use the I<--noidle> argument. Note that the 
-user you are connecting as must be a superuser for this to work properly.
+To view only non-idle processes, you can use the I<--noidle> argument. Note that the user you are
+running as (either connecting directly or switching via I<--role>) must be a superuser for this to
+work properly.
 
 Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 150.
 
@@ -9861,7 +9869,8 @@ For MRTG output, returns the number of disabled triggers on the first line.
 
 (C<symlink: check_postgres_disk_space>) Checks on the available physical disk space used by Postgres. This action requires 
 that you have the executable "/bin/df" available to report on disk sizes, and it 
-also needs to be run as a superuser, so it can examine the B<data_directory> 
+also needs to be run as a superuser (either connecting directly or switching via I<--role>),
+so it can examine the B<data_directory> 
 setting inside of Postgres. The I<--warning> and I<--critical> options are 
 given in either sizes or percentages or both. If using sizes, the standard unit types 
 are allowed: bytes, kilobytes, gigabytes, megabytes, gigabytes, terabytes, or 
@@ -10274,9 +10283,9 @@ I<--critical> are '90%' and '95%'.  You can also filter the databases by use
 of the I<--include> and I<--exclude> options.  See the L</"BASIC FILTERING">
 section for more details.
 
-To view only non-idle processes, you can use the I<--noidle> argument. Note
-that the user you are connecting as must be a superuser for this to work
-properly.
+To view only non-idle processes, you can use the I<--noidle> argument. Note that the user you are
+running as (either connecting directly or switching via I<--role>) must be a superuser for this to
+work properly.
 
 Example 1: Give a warning when the number of connections on host quirm reaches
 120, and a critical if it reaches 150.
