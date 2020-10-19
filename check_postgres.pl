@@ -193,6 +193,7 @@ our %msg = (
     'no-match-slot'      => q{No matching replication slots found due to exclusion/inclusion options},
     'no-match-slotok'    => q{No replication slots found},
     'no-parse-psql'      => q{Could not parse psql output!},
+    'no-role'            => q{Need psql 9.6 or higher to use --role},
     'no-time-hires'      => q{Cannot find Time::HiRes, needed if 'showtime' is true},
     'opt-output-invalid' => q{Invalid output: must be 'nagios' or 'mrtg' or 'simple' or 'cacti'},
     'opt-psql-badpath'   => q{Invalid psql argument: must be full path to a file named psql},
@@ -1695,6 +1696,7 @@ GetOptions(
     'dbuser|u|dbuser1|u1=s@',
     'dbpass|dbpass1=s@',
     'dbservice|dbservice1=s@',
+    'role=s',
 
     'PGBINDIR=s',
     'PSQL=s',
@@ -3083,6 +3085,14 @@ sub run_command {
         local $SIG{ALRM} = sub { die "Timed out\n" };
         alarm 0;
 
+        if ($opt{role}) {
+            if ($psql_version < 9.6) {
+                ndie msg('no-role')
+            }
+            else {
+                push @args, '-c', "SET ROLE $opt{role}";
+            }
+        }
         push @args, '-c', $string;
 
         $VERBOSE >= 3 and warn Dumper \@args;
