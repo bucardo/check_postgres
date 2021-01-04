@@ -11016,7 +11016,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
-=item B<Version 2.25.1> Released ??, 2020
+=item B<Version 2.25.1> Not yet released
 
   Fix check_replication_slots on recently promoted servers (Christoph Berg)
 
@@ -11854,7 +11854,7 @@ Some example Nagios configuration settings using this script:
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2007-2020 Greg Sabino Mullane <greg@turnstep.com>.
+Copyright 2007 - 2021 Greg Sabino Mullane <greg@turnstep.com>.
 
 Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions are met:

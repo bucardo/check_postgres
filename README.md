@@ -76,7 +76,7 @@ Development happens via git. You can check out the repository by doing:
 COPYRIGHT
 ---------
 
-  Copyright (c) 2007-2020 Greg Sabino Mullane
+  Copyright 2007 - 2021 Greg Sabino Mullane
 
 LICENSE INFORMATION
 -------------------
