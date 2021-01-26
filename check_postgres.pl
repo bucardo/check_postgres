@@ -5500,10 +5500,10 @@ sub check_streaming_delta {
     $SQL = q{SELECT application_name, client_addr, pid,
             sent_location, write_location, flush_location, replay_location,
             CASE pg_is_in_recovery() WHEN true THEN pg_last_xlog_receive_location() ELSE pg_current_xlog_location() END AS master_location
-            FROM pg_stat_replication };
+            FROM pg_stat_replication WHERE state != 'backup'};
     if ($opt{netmasklength}) { 
         my $netmask_length = $opt{netmasklength};
-        $SQL .= "WHERE network(set_masklen(client_addr,$netmask_length)) = network(set_masklen(inet_server_addr(),$netmask_length))";
+        $SQL .= " AND network(set_masklen(client_addr,$netmask_length)) = network(set_masklen(inet_server_addr(),$netmask_length))";
     }
     my $info = run_command($SQL);
     my $perfdata = "";
