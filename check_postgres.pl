@@ -9078,7 +9078,13 @@ sub check_wal_amount {
     ## Valid units: s[econd], m[inute], h[our], d[ay]
     ## All above may be written as plural as well (e.g. "2 hours")
 
-    my ($warning, $critical) = validate_range({type => 'size'});
+    my ($warning, $critical) = ('', '');
+
+    # critical and warning states are optional for this check
+    #
+    if (length($opt{warning}) || length($opt{critical})) {
+        ($warning, $critical) = validate_range({type => 'size'});
+    }
 
     ## Determine the time interval - the default is one day
     my $interval = $opt{interval} || "1 day";
@@ -10885,8 +10891,11 @@ in your B<data_directory>, sometimes as a symlink to another physical disk for
 performance reasons. If the I<--lsfunc> option is not used then this action must be run as a superuser, in order to access the 
 contents of the F<pg_xlog> directory. The minimum version to use this action is 
 Postgres 8.1. The I<--warning> and I<--critical> options are simply the amount of written 
-data in the F<pg_xlog> directory. The I<--interval> option is the past time period 
-in which changes to the WAL files are considered, the default is 24 hours.
+data in the F<pg_xlog> directory in I<bytes>, specifying with a unit up to zeta byte is supported.
+Both options are optional in case if you just want to monitor the amount.
+The I<--interval> option is the past time period in I<seconds>, in which changes to the
+WAL files are considered, the units s(econds), m(inutes), h(ours),
+d(ays), w(eek)s and y(ears) are supported, the default value for this option is "24 hours".
 
 To avoid connecting as a database superuser, a wrapper function around
 C<pg_ls_dir()> should be defined as a superuser with SECURITY DEFINER,
@@ -10904,10 +10913,15 @@ I<nagios> with I<--lsfunc=ls_xlog_dir>
   GRANT EXECUTE ON FUNCTION ls_xlog_dir() to nagios;
   COMMIT;
 
-Example 1: Check that the number of ready WAL files is 10 or less on host "pluto",
-using a wrapper function C<ls_xlog_dir> to avoid the need for superuser permissions
+Example 1: Check that the size of WAL files written in the last 90 minutes do not exceed 512MB
+on host "pluto", using a wrapper function C<ls_xlog_dir> to avoid the need for superuser permissions
 
-  check_postgres_wal_amount --host=pluto --critical=512MB --lsfunc=ls_xlog_dir --interval=60M 
+  check_postgres_wal_amount --host=pluto --critical=512MB --lsfunc=ls_xlog_dir --interval=90m
+
+Example 2: Report the size of WAL files written in the last 5 minutes on the database
+connectable on the unix socket "/tmp/cptesting_socket" as user "check_postgres_testing"
+
+  check_postgres_wal_amount --host=/tmp/cptesting_socket --dbuser=check_postgres_testing --interval=5m
 
 For MRTG output, reports the amount of data written on line 1.
 
