@@ -9101,7 +9101,10 @@ sub check_wal_amount {
 
     my $cond = qq{modification >= (now() - '$interval seconds'::interval)};
 
-    $SQL = qq{SELECT COALESCE(SUM(size), 0) AS size FROM $lsfunc($lsargs) AS filename INNER JOIN pg_stat_file('pg_xlog' || '/' || filename) ON isdir = 'f' WHERE $cond};
+    $SQL = qq{  SELECT      COALESCE(SUM(size), 0) AS size
+                FROM        $lsfunc($lsargs) AS filename
+                INNER JOIN  pg_stat_file((SELECT CASE WHEN current_setting('server_version_num')::integer >= 96000 THEN 'pg_wal' ELSE 'pg_xlog' END) || '/' || filename) ON isdir = 'f'
+                WHERE       $cond};
     my $SQL10 = $opt{lsfunc} ? $SQL :
         qq{SELECT COALESCE(SUM(size), 0) AS size FROM pg_ls_waldir() WHERE $cond};
 
