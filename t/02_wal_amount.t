@@ -14,6 +14,10 @@ use vars qw/$dbh $t/;
 
 my $cp = CP_Testing->new({default_action => 'wal_amount'});
 
+# reinitialize the test database to prevent measuring written log data by previous tests
+#
+$cp->cleanup();
+
 $dbh = $cp->test_database_handle();
 
 my $S = q{Action 'wal_amount'};
