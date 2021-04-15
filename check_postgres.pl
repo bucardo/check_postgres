@@ -10889,14 +10889,14 @@ For MRTG output, reports the number of WAL files on line 1.
 
 =head2 B<wal_amount>
 
-(C<symlink: check_postgres_wal_amount>) Checks how many data was written in a past time period to WAL files in the F<pg_xlog> directory (PostgreSQL 10 and later: F<pg_wal>), which is found 
-in your B<data_directory>, sometimes as a symlink to another physical disk for 
-performance reasons. If the I<--lsfunc> option is not used then this action must be run as a superuser, in order to access the 
+(C<symlink: check_postgres_wal_amount>) Checks how much data was written in a certain period of time to WAL files in the directory F<pg_xlog> (PostgreSQL 10 and later: F<pg_wal>), which can be found 
+in the B<data_directory>, possibly as a symlink to another physical disk for 
+performance reasons. If the I<--lsfunc> option is not given then this action must be run as superuser, in order to access the 
 contents of the F<pg_xlog> directory. The minimum version to use this action is 
-Postgres 8.1. The I<--warning> and I<--critical> options are simply the amount of written 
+Postgres 8.1. The I<--warning> and I<--critical> options simply represent the amount of written 
 data in the F<pg_xlog> directory in I<bytes>, specifying with a unit up to zeta byte is supported.
 Both options are optional in case if you just want to monitor the amount.
-The I<--interval> option is the past time period in I<seconds>, in which changes to the
+The I<--interval> option specifies the period of time in I<seconds>, in which changes to the
 WAL files are considered, the units s(econds), m(inutes), h(ours),
 d(ays), w(eek)s and y(ears) are supported, the default value for this option is "24 hours".
 
@@ -10922,7 +10922,7 @@ on host "pluto", using a wrapper function C<ls_xlog_dir> to avoid the need for s
   check_postgres_wal_amount --host=pluto --critical=512MB --lsfunc=ls_xlog_dir --interval=90m
 
 Example 2: Report the size of WAL files written in the last 5 minutes on the database
-connectable on the unix socket "/tmp/cptesting_socket" as user "check_postgres_testing"
+connected through the unix socket "/tmp/cptesting_socket" as user "check_postgres_testing"
 
   check_postgres_wal_amount --host=/tmp/cptesting_socket --dbuser=check_postgres_testing --interval=5m
 
