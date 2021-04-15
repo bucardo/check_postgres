@@ -3067,11 +3067,9 @@ sub run_command {
                     my ($mod,$ver) = ($1||'',$2);
                     if ($mod eq '>' and $db->{version} > $ver) {
                         $string = $row;
-                        last;
                     }
                     if ($mod eq '<' and $db->{version} < $ver) {
                         $string = $row;
-                        last;
                     }
                     if ($mod eq '' and $db->{version} eq $ver) {
                         $string = $row;
