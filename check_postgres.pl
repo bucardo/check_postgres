@@ -9082,7 +9082,7 @@ sub check_wal_amount {
 
     # critical and warning states are optional for this check
     #
-    if (length($opt{warning}) || length($opt{critical})) {
+    if ((defined($opt{warning}) && length($opt{warning})) || (defined($opt{critical}) && length($opt{critical}))) {
         ($warning, $critical) = validate_range({type => 'size'});
     }
 
