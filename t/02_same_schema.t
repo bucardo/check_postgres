@@ -97,10 +97,10 @@ like ($cp1->run($connect3), qr{^$label OK}, $t);
 $t = qq{$S reports language on 3 but not 1 and 2};
 $dbh3->do(q{CREATE LANGUAGE plpgsql});
 like ($cp1->run($connect3),
-      qr{^$label CRITICAL.*Items not matched: 1 .*
+      qr{^$label CRITICAL.*
 Language "plpgsql" does not exist on all databases:
 \s*Exists on:\s+3
-\s+Missing on:\s+1, 2\s*$}s,
+\s+Missing on:\s+1, 2}s,
       $t);
 
 $dbh1->do(q{CREATE LANGUAGE plpgsql});
