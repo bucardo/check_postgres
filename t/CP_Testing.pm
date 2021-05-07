@@ -41,7 +41,7 @@ sub cleanup {
     my $self = shift;
     my $dbdir = $self->{dbdir} or die;
     for my $dirnum ('', '2', '3', '4', '5') {
-        my $pidfile = "$dbdir$dirnum/data space/postmaster.pid";
+        my $pidfile = "$dbdir$dirnum/data/postmaster.pid";
         if (-e $pidfile) {
             open my $fh, '<', $pidfile or die qq{Could not open "$pidfile": $!\n};
             <$fh> =~ /^(\d+)/ or die qq{File "$pidfile" did not start with a number!\n};
@@ -131,7 +131,7 @@ sub _test_database_handle {
         }
     }
 
-    my $datadir = "$dbdir/data space";
+    my $datadir = "$dbdir/data";
     if (! -e $datadir) {
 
         $com = sprintf q{LANG=C %s %s --locale C -E UTF8 -D "%s" 2>&1},
@@ -148,7 +148,7 @@ sub _test_database_handle {
         }
 
         ## Modify the postgresql.conf
-        my $cfile = "$dbdir/data space/postgresql.conf";
+        my $cfile = "$dbdir/data/postgresql.conf";
         open my $cfh, '>>', $cfile or die qq{Could not open "$cfile": $!\n};
         print $cfh qq{\n\n## check_postgres.pl testing parameters\n};
         print $cfh qq{port = 5432\n};
@@ -194,13 +194,13 @@ sub _test_database_handle {
         print $cfh "\n";
         close $cfh or die qq{Could not close "$cfile": $!\n};
 
-        mkdir "$dbdir/data space/socket";
+        mkdir "$dbdir/data/socket";
     }
 
     ## See if the database is already running.
     my $needs_startup = 0;
 
-    my $pidfile = "$dbdir/data space/postmaster.pid";
+    my $pidfile = "$dbdir/data/postmaster.pid";
     if (! -e $pidfile) {
         $needs_startup = 1;
     }
@@ -238,10 +238,10 @@ sub _test_database_handle {
 
         my $sockdir = 'socket';
         if ($maj < 8 or (8 == $maj and $min < 1)) {
-            $sockdir = qq{"$dbdir/data space/socket"};
+            $sockdir = qq{"$dbdir/data/socket"};
         }
 
-        $com = qq{LANG=C $pg_ctl -o '-k $sockdir' -l $logfile -D "$dbdir/data space" start};
+        $com = qq{LANG=C $pg_ctl -o '-k $sockdir' -l $logfile -D "$dbdir/data" start};
         eval {
             $DEBUG and warn qq{About to run: $com\n};
             $info = qx{$com};
@@ -269,7 +269,7 @@ sub _test_database_handle {
         close $logfh or die qq{Could not close "$logfile": $!\n};
 
         if ($maj < 8 or (8 == $maj and $min < 1)) {
-            my $host = "$here/$dbdir/data space/socket";
+            my $host = "$here/$dbdir/data/socket";
             my $COM;
 
             $SQL = q{SELECT * FROM pg_database WHERE datname = 'postgres'};
@@ -314,7 +314,7 @@ sub _test_database_handle {
 
     } ## end of needs startup
 
-    my $dbhost = $self->{dbhost} = "$here/$dbdir/data space/socket";
+    my $dbhost = $self->{dbhost} = "$here/$dbdir/data/socket";
     $dbhost =~ s/^ /\\ /;
     $dbhost =~ s/([^\\]) /$1\\ /g;
 
