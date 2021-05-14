@@ -6,7 +6,7 @@ use 5.008;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 76;
+use Test::More tests => 75;
 use lib 't','.';
 use CP_Testing;
 
@@ -102,9 +102,6 @@ Language "plpgsql" does not exist on all databases:
 \s*Exists on:\s+3
 \s+Missing on:\s+1, 2\s*$}s,
       $t);
-
-$t = qq{$S does not report language differences if the 'nolanguage' filter is given};
-like ($cp1->run("$connect3 --filter=nolanguage"), qr{^$label OK}, $t);
 
 $dbh1->do(q{CREATE LANGUAGE plpgsql});
 $dbh2->do(q{CREATE LANGUAGE plpgsql});

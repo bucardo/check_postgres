@@ -425,7 +425,6 @@ nofuncbody
 nofunctions
 noidle
 noindexes
-nolanguage
 nols
 noname
 noname
