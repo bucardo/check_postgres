@@ -1,7 +1,7 @@
 check_postgres
 ==============
 
-[![Build Status](https://travis-ci.org/bucardo/check_postgres.svg?branch=master)](https://travis-ci.org/bucardo/check_postgres)
+[![Build Status](https://travis-ci.com/bucardo/check_postgres.svg?branch=master)](https://travis-ci.com/bucardo/check_postgres)
 
 This is check_postgres, a monitoring tool for Postgres.
 
