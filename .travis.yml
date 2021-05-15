@@ -10,10 +10,6 @@ env:
   - PGVERSION=9.5
   - PGVERSION=9.4
   - PGVERSION=9.3
-  - PGVERSION=9.2
-  - PGVERSION=9.1
-  - PGVERSION=9.0
-  - PGVERSION=8.4
 
 dist: focal
 sudo: required
