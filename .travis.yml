@@ -10,25 +10,23 @@ env:
   - PGVERSION=9.5
   - PGVERSION=9.4
   - PGVERSION=9.3
-  - PGVERSION=9.2
-  - PGVERSION=9.1
-  - PGVERSION=9.0
-  - PGVERSION=8.4
 
 dist: focal
 sudo: required
 language: perl
 perl:
-  - '5.30'
+  - '5.30.0'
   - '5.14' # 5.14 is shipped with Ubuntu precise (12.04), also oldest version supported by Travis on focal
 
 before_install:
   - sudo apt-get -qq update
 
 install:
-  # upgrade postgresql-common for new apt.postgresql.org.sh
-  - sudo apt-get install -y postgresql-common
-  - sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -p -v $PGVERSION -i
+  - sudo apt-get install curl ca-certificates gnupg
+  - curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+  - sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+  - sudo apt-get update
+  - sudo apt-get install postgresql-$PGVERSION
   - pg_lsclusters
   - dpkg -l postgresql\* | cat
   - printenv | sort
