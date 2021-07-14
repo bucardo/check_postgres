@@ -6125,7 +6125,7 @@ sub check_logfile {
     $SQL = q{
 SELECT name, CASE WHEN length(setting)<1 THEN '?' ELSE setting END AS s
 FROM pg_settings
-WHERE name IN ('log_destination','log_directory','log_filename','redirect_stderr','syslog_facility')
+WHERE name IN ('log_destination','log_directory','log_filename','redirect_stderr','syslog_facility','data_directory')
 ORDER BY name
 };
 
@@ -6170,6 +6170,10 @@ ORDER BY name
                 if ($i->{redirect_stderr} ne 'yes') {
                     ndie msg('logfile-stderr');
                 }
+            }
+            elseif ($i->{log_destination} eq 'csvlog') {
+                $logfile = "$i->{'data_directory'}/$i->{log_directory}/$i->{log_filename}";
+                $logfile =~ s/\.log$/\.csv/;
             }
         }
 
