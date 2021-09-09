@@ -2090,7 +2090,7 @@ if (exists $opt{PSQL}) {
 }
 else {
     my $psql = (defined $PGBINDIR) ? "$PGBINDIR/psql" : 'psql';
-    chomp($PSQL = qx{which "$psql"});
+    chomp($PSQL = qx{command -v "$psql"});
     $PSQL or ndie msg('opt-psql-nofind');
 }
 -x $PSQL or ndie msg('opt-psql-noexec', $PSQL);
