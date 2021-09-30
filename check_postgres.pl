@@ -266,6 +266,7 @@ our %msg = (
     'rep-unknown'        => q{Replication check failed},
     'rep-wrongvals'      => q{Cannot test replication: values are not the right ones ('$1' not '$2' nor '$3')},
     'repslot-version'    => q{Database must be version 9.4 or higher to check replication slots},
+    'replag-version'     => q{Database must be version 9.4 or higher to check replication slots lag},
     'runcommand-err'     => q{Unknown error inside of the "run_command" function},
     'runcommand-nodb'    => q{No target databases could be found},
     'runcommand-nodupe'  => q{Could not dupe STDERR},
@@ -1915,6 +1916,7 @@ our $action_info = {
  query_time          => [1, 'Checks the maximum running time of current queries.'],
  replicate_row       => [0, 'Verify a simple update gets replicated to another server.'],
  replication_slots   => [1, 'Check the replication delay for replication slots'],
+ replication_lag     => [1, 'Check the replication lag in seconds for replication slots'],
  same_schema         => [0, 'Verify that two databases have the exact same tables, columns, etc.'],
  sequence            => [0, 'Checks remaining calls left in sequences.'],
  settings_checksum   => [0, 'Check that no settings have changed since the last check.'],
@@ -2492,6 +2494,7 @@ our %testaction = (
                   fsm_relations     => 'VERSION: 8.2 MAX: 8.3',
                   hot_standby_delay => 'VERSION: 9.0',
                   replication_slots => 'VERSION: 9.4',
+                  replication_lag   => 'VERSION: 9.4',
                   listener          => 'MAX: 8.4',
 );
 if ($opt{test}) {
@@ -2689,6 +2692,9 @@ check_hot_standby_delay() if $action eq 'hot_standby_delay';
 
 ## Check the delay on replication slots. warning and critical are sizes
 check_replication_slots() if $action eq 'replication_slots';
+
+## Check the delay/lag on replication slots. warning and critical are seconds
+check_replication_lag() if $action eq 'replication_lag';
 
 ## Check the maximum transaction age of all connections
 check_txn_time() if $action eq 'txn_time';
@@ -5790,6 +5796,88 @@ sub check_replication_slots {
     return;
 
 } ## end of check_replication_slot_delay
+
+sub check_replication_lag {
+
+    ## Check the delay on one or more replication slots
+    ## Supports: Nagios, MRTG
+    ## mrtg reports the largest two delays
+    ## By default, checks all replication slots
+    ## Can check specific one(s) with include
+    ## Can ignore some with exclude
+    ## Warning and critical are time
+    ## Valid units:s, min, houts... (time unit)
+
+    my ($warning, $critical) = validate_range({type => 'time'});
+
+    $SQL = q{
+  select slot_name,
+         active,
+         (select (select max(coalesce(extract(epoch from v),0))
+                    from (values (write_lag),
+                                 (flush_lag),
+                                 (replay_lag)) as value(v)) as delta
+            from pg_stat_replication where pid = active_pid)
+ from pg_replication_slots
+    };
+
+
+    my $info = run_command($SQL );
+    my $found = 0;
+
+    for $db (@{$info->{db}}) {
+        my $max = -1;
+        $found = 1;
+        my %s;
+
+        for my $r (@{$db->{slurp}}) {
+            if (skip_item($r->{slot_name})) {
+                $max = -2 if -1 == $max;
+                next;
+            }
+            if (length $r->{delta} and $r->{delta} >= $max) {
+                $max = $r->{delta};
+            }
+            $s{$r->{slot_name}} = [$r->{delta},$r->{active}];
+        }
+        if ($MRTG) {
+            do_mrtg({one => $max, msg => "SLOT: $db->{slot_name}"});
+        }
+        if ($max < 0) {
+            $stats{$db->{dbname}} = 0;
+            add_critical msg('no-match-slotok') if -1 == $max;
+            add_unknown msg('no-match-slot') if -2 == $max;
+            next;
+        }
+
+        my $msg = '';
+        for (sort {$s{$b}[0] <=> $s{$a}[0] or $a cmp $b } keys %s) {
+            $msg .= "$_: $s{$_}[0] (" . ($s{$_}[1] eq 'f' ? 'inactive' : 'active') .') ';
+            $db->{perf} .= sprintf ' %s=%s;%s;%s',
+                perfname($_), $s{$_}[0], $warning, $critical;
+        }
+        if (length $critical and $max >= $critical) {
+            add_critical $msg;
+        }
+        elsif (length $warning and $max >= $warning) {
+            add_warning $msg;
+        }
+        else {
+            add_ok $msg;
+        }
+    }
+
+    ## If no results, probably a version problem
+    if (!$found and keys %unknown) {
+        (my $first) = values %unknown;
+        if ($first->[0][0] =~ /pg_replication_lag/) {
+            ndie msg('replag-version');
+        }
+    }
+
+    return;
+
+} ## end of check_replication_lag
 
 
 sub check_last_analyze {
@@ -10481,6 +10569,18 @@ and replication is taking place over replication slots.
 Warning and critical are total bytes retained for the slot. E.g:
 
   check_postgres_replication_slots --port=5432 --host=yellow -warning=32M -critical=64M
+
+Specific named slots can be monitored using --include/--exclude
+
+=head2 B<replication_lag>
+
+(C<symlink: check_postgres_replication_lag>)  Check the replication lag in seconds
+This is handy for monitoring environments where all WAL archiving and replication is
+taking place over replication slots.
+
+Warning and critical are delay retained for the slot. E.g:
+
+  check_postgres_replication_lag --port=5432 -warning=2min -critical=5min
 
 Specific named slots can be monitored using --include/--exclude
 
