@@ -192,6 +192,7 @@ our %msg = (
     'no-match-user'      => q{No matching entries found due to user exclusion/inclusion options},
     'no-match-slot'      => q{No matching replication slots found due to exclusion/inclusion options},
     'no-match-slotok'    => q{No replication slots found},
+    'no-replication'     => q{Not a primary server},
     'no-parse-psql'      => q{Could not parse psql output!},
     'no-role'            => q{Need psql 9.6 or higher to use --role},
     'no-time-hires'      => q{Cannot find Time::HiRes, needed if 'showtime' is true},
@@ -457,6 +458,7 @@ our %msg = (
     'no-match-user'      => q{No se encuentran entradas coincidentes debido a las opciones de exclusión/inclusión},
     'no-match-slot'      => q{No se encuentran ranuras de replicación coincidentes debido a las opciones de exclusión/inclusión},
     'no-match-slotok'    => q{No se encuentran ranuras de replicación},
+    'no-replication'     => q{No es un servidor primario},
     'no-parse-psql'      => q{No se pudo interpretar la salida de psql!},
     'no-time-hires'      => q{No se encontró Time::HiRes, necesario si 'showtime' es verdadero},
     'opt-output-invalid' => q{Formato de salida inválido: debe ser 'nagios' o 'mrtg' o 'simple' o 'cacti'},
@@ -720,6 +722,7 @@ our %msg = (
     'no-match-user'      => q{Aucune entrée trouvée à cause options d'exclusion/inclusion},
     'no-match-slot'      => q{Aucune fentes de réplication trouvée à cause options d'exclusion/inclusion},
     'no-match-slotok'    => q{Pas de fentes de réplication trouvé},
+    'no-replication'     => q{Ce serveur n'est pas un serveur primaire},
     'no-parse-psql'      => q{N'a pas pu analyser la sortie de psql !},
     'no-time-hires'      => q{N'a pas trouvé le module Time::HiRes, nécessaire quand « showtime » est activé},
     'opt-output-invalid' => q{Sortie invalide : doit être 'nagios' ou 'mrtg' ou 'simple' ou 'cacti'},
@@ -988,6 +991,7 @@ our %msg = (
     'no-match-user'      => q{Keine passenden Einträge gefunden gemäß den Ausschluss-/Einschluss-Optionen},
     'no-match-slot'      => q{Keine passenden Replikationen gefunden gemäß den Ausschluss-/Einschluss-Optionen},
     'no-match-slotok'    => q{Keine passenden Replikations-Slots gefunden gemäß den Ausschluss-/Einschluss-Optionen},
+    'no-replication'     => q{Not a primary server},
     'no-parse-psql'      => q{Konnte die Ausgabe von psql nicht verstehen!},
     'no-time-hires'      => q{Kann Time::HiRes nicht finden, ist aber nötig wenn 'showtime' auf 'wahr' gesetzt ist (true)},
     'opt-output-invalid' => q{Ungültige Ausgabe: Muss eines sein von 'nagios' oder 'mrtg' oder 'simple' oder 'cacti'},
@@ -5809,6 +5813,21 @@ sub check_replication_lag {
     ## Valid units:s, min, houts... (time unit)
 
     my ($warning, $critical) = validate_range({type => 'time'});
+
+    $SQL = q{
+        select pg_is_in_recovery()
+    };
+    my $is_primary = run_command($SQL );
+    for $db (@{$is_primary->{db}}) {
+        for my $r (@{$db->{slurp}}) {
+            if ($r->{pg_is_in_recovery} eq 't') {
+                # The database is a standby DB: Plugin must return unkown result
+                add_unknown msg('no-replication');
+                return;
+            }
+        }
+    }
+
 
     $SQL = q{
   select slot_name,
