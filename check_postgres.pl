@@ -208,6 +208,8 @@ our %msg = (
     'pgb-backends-msg'   => q{$1 of $2 connections ($3%)},
     'pgb-backends-none'  => q{No connections},
     'pgb-backends-users' => q{$1 for number of users must be a number or percentage},
+    'pgpool-nodes'       => q{$1 of $2 nodes up, $3 waiting, $4 down;$5},
+    'pgpool-processes'   => q{Used $1 backends of $2 ($3%)},
     'PID'                => q{PID},
     'port'               => q{port},
     'preptxn-none'       => q{No prepared transactions found},
@@ -2765,6 +2767,12 @@ check_pgb_pool('maxwait') if $action eq 'pgb_pool_maxwait';
 ## Check how many clients are connected to pgbouncer compared to max_client_conn.
 check_pgbouncer_backends() if $action eq 'pgbouncer_backends';
 
+## Check how many pgpool-ii processes are active
+check_pgpool_processes() if $action eq 'pgpool_processes';
+
+## Check how many pgpool-ii nodes are in the down state
+check_pgpool_nodes() if $action eq 'pgpool_nodes';
+
 check_pgagent_jobs() if $action eq 'pgagent_jobs';
 
 ##
@@ -2986,7 +2994,7 @@ sub run_command {
     ## Set a statement_timeout, as a last-ditch safety measure
     my $timeout = $arg->{timeout} || $opt{timeout};
     my $dbtimeout = $timeout * 1000;
-    if ($action !~ /^pgb/) {
+    if ($action !~ /^pgb|pgpool/) {
         $string = "BEGIN;SET statement_timeout=$dbtimeout;COMMIT;$string";
     }
 
@@ -6779,6 +6787,146 @@ sub check_pgb_pool {
     return;
 
 } ## end of check_pgb_pool
+
+sub check_pgpool_processes {
+
+    # Count active pgpool processes using SHOW POOL_PROCESSES ouptut
+    # caveat: needs at least one free pool connection
+
+    my $num_init_children;
+    my $info;
+    my $pool_version;
+
+    $SQL = 'SHOW pool_version;';
+    $info = run_command($SQL);
+    $db = $info->{db}[0];
+    $pool_version = $db->{slurp}[0]{pool_version};
+
+    if (substr($pool_version,0,3) < 3.6) {
+
+        $SQL = 'SHOW POOL_STATUS;';
+        $info = run_command($SQL, { regex => qr[num_init_children] });
+        $db = $info->{db}[0];
+        my $cfg = $db->{slurp};
+
+        for my $i (@$cfg) {
+            if ($i->{item} eq 'num_init_children') {
+                $num_init_children = $i->{value};
+                last;
+            }
+        }
+    }
+    else {
+        $SQL = 'PGPOOL SHOW num_init_children;';
+        $info = run_command($SQL);
+        $db = $info->{db}[0];
+        $num_init_children = $db->{slurp}[0]{num_init_children};
+    }
+
+    my $active = 0;
+    my ($w, $c);
+    my $warning  = $opt{warning}  || '90%';
+    my $critical = $opt{critical} || '95%';
+
+    if ($warning =~ /%/) {
+        ($w = $warning) =~ s/\D//;
+        undef $warning;
+    }
+    if ($critical =~ /%/) {
+        ($c = $critical) =~ s/\D//;
+        undef $critical;
+    }
+
+    $SQL = 'SHOW POOL_PROCESSES';
+    $info = run_command($SQL);
+
+    $db = $info->{db}[0];
+    my $output = $db->{slurp};
+
+    for my $i (@$output) {
+        next if skip_item($i->{database});
+        $active++ if (defined($i->{database}) && $i->{database} ne '') ;
+    }
+    $active-- if $active >= 0;
+    my $percent = (int $active / $num_init_children*100) || 1;
+
+    if ($MRTG) {
+        print "in 1\n";
+        do_mrtg({one => $active, two => $num_init_children, msg => 'processes'});
+    }
+    $db->{perf} .= sprintf ' %s=%s;%s;%s;%s;%s;%s',
+        perfname('pgpool'), $db->{port}, $db->{host}, $warning || "$w%", $critical || "$c%", $num_init_children, $active;
+
+    if ($c and $percent >= $c) {
+        add_critical msg('pgpool-processes', $active, $num_init_children, $percent);
+    }
+    elsif ($critical and $active >= $critical) {
+        add_critical msg('pgpool-processes', $active, $num_init_children, $percent);
+    }
+    if ($w and $percent >= $w) {
+        add_warning msg('pgpool-processes', $active, $num_init_children, $percent);
+    }
+    elsif ($warning and $active >= $warning) {
+        add_warning msg('pgpool-processes', $active, $num_init_children, $percent);
+    }
+    else {
+        add_ok msg('pgpool-processes', $active, $num_init_children, $percent);
+    }
+
+    return;
+
+} ## end of check_pgpool_processes
+
+sub check_pgpool_nodes {
+
+    # Report downed pgpool nodes using SHOW POOL_NODES ouptut
+    # caveat: needs at least one free pool connection
+
+    my ($warning, $critical) = validate_range
+        ({
+          type              => 'positive integer',
+          default_warning   => 1,
+          default_critical  => 1
+    });
+    my %status = qw/0 internal 1 waiting 2 up 3 down/;
+    my ($up, $down, $waiting, $tot) = (0,0,0,0);
+
+    $SQL = 'SHOW POOL_NODES';
+    my $info = run_command($SQL);
+
+    $db = $info->{db}[0];
+    my $output = $db->{slurp};
+    my %n;
+
+    for my $i (@$output) {
+        $i->{status} =~ s/(1|2|3)/$status{$1}/g;
+        $up++ if ($i->{status} eq 'up');
+        $down++ if ($i->{status} eq 'down');
+        $waiting++ if ($i->{status} eq 'waiting');
+        $tot++;
+
+        $n{$i->{node_id}} = [$i->{hostname},$i->{port},$i->{status},$i->{lb_weight},$i->{role}];
+    }
+
+    my $msg = '';
+    for (sort {lc $a cmp lc $b } keys %n) {
+        $msg .= " $_:($n{$_}[1] $n{$_}[2] $n{$_}[3] $n{$_}[4])";
+        $db->{perf} .= sprintf ' %s=%s;%s;%s;%s;%s;%s;%s',
+            perfname($_), $n{$_}[0], $n{$_}[1], $n{$_}[2], $n{$_}[3], $n{$_}[4], $warning, $critical;
+    }
+
+    if ($critical and $down >= $critical) {
+        add_critical msg('pgpool-nodes', $up, $tot, $waiting, $down, $msg);
+    }
+    if ($warning and $down >= $warning) {
+        add_critical msg('pgpool-nodes', $up, $tot, $waiting, $down, $msg);
+    }
+    else {
+        add_ok msg('pgpool-nodes', $up, $tot, $waiting, $down, $msg);
+    }
+
+    return;
+} ## end of check_pgpool_nodes
 
 
 sub check_prepared_txns {
