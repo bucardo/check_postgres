@@ -56,7 +56,7 @@ like ($cp->run(), qr{^$label UNKNOWN:.*Invalid query}, $t);
 
 $cp->fake_version_timeout();
 $t=qq{$S fails on timeout};
-like ($cp->run('--timeout 1'), qr{^$label CRITICAL:.*Timed out}, $t);
+like ($cp->run('--timeout 1'), qr{^$label CRITICAL:.*(Timed out|statement timeout)}, $t);
 $cp->reset_path();
 
 $t=qq{$S fails on nonexisting socket};
