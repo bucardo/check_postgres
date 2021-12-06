@@ -17,11 +17,11 @@ my $cp = CP_Testing->new( {default_action => 'custom_query'} );
 $dbh = $cp->test_database_handle();
 
 $t=q{Setting the --timeout flag works as expected};
-$res = $cp->run('--query="SELECT pg_sleep(2)" -w 7 --timeout=1');
+$res = $cp->run('--query="SELECT pg_sleep(10)" -w 7 --timeout=1');
 like ($res, qr{Command timed out}, $t);
 
 $t=q{Setting the --timeout flag works as expected};
-$res = $cp->run('--query="SELECT pg_sleep(1)" -w 7 --timeout=2');
+$res = $cp->run('--query="SELECT pg_sleep(1)" -w 7 --timeout=10');
 like ($res, qr{Invalid format}, $t);
 
 exit;
