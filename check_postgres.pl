@@ -202,6 +202,8 @@ our %msg = (
     'opt-psql-nofind'    => q{Could not find a suitable psql executable},
     'opt-psql-nover'     => q{Could not determine psql version},
     'opt-psql-restrict'  => q{Cannot use the --PGBINDIR or --PSQL option when NO_PSQL_OPTION is on},
+    'partman-premake-ok' => q{All premade partitions are present},
+    'partman-conf-tbl'   => q{misconfigured in partman.part_config},
     'pgagent-jobs-ok'    => q{No failed jobs},
     'pgbouncer-pool'     => q{Pool=$1 $2=$3},
     'pgb-backends-mrtg'  => q{DB=$1 Max connections=$2},
@@ -1899,6 +1901,7 @@ our $action_info = {
  new_version_cp      => [0, 'Checks if a newer version of check_postgres.pl is available.'],
  new_version_pg      => [0, 'Checks if a newer version of Postgres is available.'],
  new_version_tnm     => [0, 'Checks if a newer version of tail_n_mail is available.'],
+ partman_premake     => [1, 'Checks if premake partitions are in place.'],
  pgb_pool_cl_active  => [1, 'Check the number of active clients in each pgbouncer pool.'],
  pgb_pool_cl_waiting => [1, 'Check the number of waiting clients in each pgbouncer pool.'],
  pgb_pool_sv_active  => [1, 'Check the number of active server connections in each pgbouncer pool.'],
@@ -2734,6 +2737,9 @@ check_prepared_txns() if $action eq 'prepared_txns';
 
 ## Make sure Slony is behaving
 check_slony_status() if $action eq 'slony_status';
+
+## Make sure Partman premake is working
+check_partman_premake() if $action eq 'partman_premake';
 
 ## Verify that the pgbouncer settings are what we think they should be
 check_pgbouncer_checksum() if $action eq 'pgbouncer_checksum';
@@ -6524,6 +6530,133 @@ sub check_pgagent_jobs {
 
     return;
 }
+
+sub check_partman_premake {
+
+    ## Checks if all premade partitions are in place
+    ## Monthly and daily interval only
+    ## Supports: Nagios
+
+    my $msg = msg('partman-premake-ok');
+    my $found = 0;
+    my ($warning, $critical) = validate_range
+        ({
+          type              => 'integer', # in days
+          default_warning   => '1',
+          default_critical  => '3',
+        });
+
+    my $SQL = q{
+SELECT
+    current_database() as database,
+    parent_table
+FROM (
+    SELECT
+        parent_table,
+        retention,
+        partition_interval,
+        EXTRACT(EPOCH FROM retention::interval) / EXTRACT(EPOCH FROM partition_interval::interval) AS configured_partitions
+    FROM
+        partman.part_config) p
+WHERE
+    configured_partitions < 1;
+};
+
+    my $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
+    my (@crit,@warn,@ok);
+
+    for $db (@{$info->{db}}) {
+        my ($maxage,$maxdb) = (0,''); ## used by MRTG only
+      ROW: for my $r (@{$db->{slurp}}) {
+            my ($dbname,$parent_table) = ($r->{database},$r->{parent_table});
+            $found = 1 if ! $found;
+            next ROW if skip_item($dbname);
+            $found = 2;
+
+            $msg = "$dbname=$parent_table " . msg('partman-conf-tbl');
+            push @warn => $msg;
+        };
+     };
+
+
+    $SQL = q{
+SELECT
+    current_database() as database,
+    a.parent_table,
+    b.date - a.date::date AS missing_days
+FROM
+(
+SELECT parent_table, date
+FROM ( SELECT
+        i.inhparent::regclass as parent_table,
+        substring(pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid)::text FROM '%TO __#"_{10}#"%' FOR '#') as date,
+        rank() OVER (PARTITION BY i.inhparent ORDER BY pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid) DESC)
+    FROM pg_inherits i
+    JOIN pg_class c ON c.oid = i.inhrelid
+WHERE c.relkind = 'r'
+    AND pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid) != 'DEFAULT') p
+WHERE
+    p.rank = 1
+) a
+JOIN
+(
+SELECT
+    parent_table,
+    (now() + premake * partition_interval::interval)::date
+FROM
+    partman.part_config
+) b
+ON
+   a.parent_table::text = b.parent_table::text
+WHERE
+    b.date - a.date::date > 0
+ORDER BY 3, 2 DESC
+};
+
+    $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
+
+    for $db (@{$info->{db}}) {
+        my ($maxage,$maxdb) = (0,''); ## used by MRTG only
+      ROW: for my $r (@{$db->{slurp}}) {
+            my ($dbname,$parent_table,$missing_days) = ($r->{database},$r->{parent_table},$r->{missing_days});
+            $found = 1 if ! $found;
+            next ROW if skip_item($dbname);
+            $found = 2;
+
+            $msg = "$dbname=$parent_table ($missing_days)";
+            print "$msg";
+            $db->{perf} .= sprintf ' %s=%sd;%s;%s',
+                perfname($dbname), $missing_days, $warning, $critical;
+            if (length $critical and $missing_days >= $critical) {
+                push @crit => $msg;
+            }
+            elsif (length $warning and $missing_days >= $warning) {
+                push @warn => $msg;
+            }
+            else {
+                push @ok => $msg;
+            }
+        }
+        if (0 == $found) {
+            add_ok msg('partman-premake-ok');
+        }
+        elsif (1 == $found) {
+            add_unknown msg('no-match-db');
+        }
+        elsif (@crit) {
+            add_critical join ' ' => @crit;
+        }
+        elsif (@warn) {
+            add_warning join ' ' => @warn;
+        }
+        else {
+            add_ok join ' ' => @ok;
+        }
+    }
+
+    return;
+
+} ## end of check_partman_premake
 
 sub check_pgbouncer_checksum {
 
@@ -11019,6 +11152,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 =item B<Version 2.25.1> Not yet released
 
   Fix check_replication_slots on recently promoted servers (Christoph Berg)
+
+  Add Partman premake check (Jens Wilke)
 
 =item B<Version 2.25.0> Released February 3, 2020
 
