@@ -1901,7 +1901,7 @@ our $action_info = {
  new_version_cp      => [0, 'Checks if a newer version of check_postgres.pl is available.'],
  new_version_pg      => [0, 'Checks if a newer version of Postgres is available.'],
  new_version_tnm     => [0, 'Checks if a newer version of tail_n_mail is available.'],
- partman_premake     => [1, 'Checks if premake partitions are in place.'],
+ partman_premake     => [1, 'Checks if premake partitions are present.'],
  pgb_pool_cl_active  => [1, 'Check the number of active clients in each pgbouncer pool.'],
  pgb_pool_cl_waiting => [1, 'Check the number of waiting clients in each pgbouncer pool.'],
  pgb_pool_sv_active  => [1, 'Check the number of active server connections in each pgbouncer pool.'],
@@ -6533,7 +6533,7 @@ sub check_pgagent_jobs {
 
 sub check_partman_premake {
 
-    ## Checks if all premade partitions are in place
+    ## Checks if all premade partitions are present
     ## Monthly and daily interval only
     ## Supports: Nagios
 
