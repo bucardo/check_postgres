@@ -204,6 +204,7 @@ our %msg = (
     'opt-psql-restrict'  => q{Cannot use the --PGBINDIR or --PSQL option when NO_PSQL_OPTION is on},
     'partman-premake-ok' => q{All premade partitions are present},
     'partman-conf-tbl'   => q{misconfigured in partman.part_config},
+    'partman-conf-mis'   => q{missing table in partman.part_config},
     'pgagent-jobs-ok'    => q{No failed jobs},
     'pgbouncer-pool'     => q{Pool=$1 $2=$3},
     'pgb-backends-mrtg'  => q{DB=$1 Max connections=$2},
@@ -6546,7 +6547,46 @@ sub check_partman_premake {
           default_critical  => '3',
         });
 
+    # check missing Config for range partitioned tables
+
     my $SQL = q{
+SELECT
+    current_database() AS database,
+    c.relnamespace::regnamespace || '.' || c.relname AS parent_table
+FROM
+    pg_class c
+    JOIN pg_partitioned_table t ON t.partrelid = c.oid
+WHERE
+    c.relkind = 'p'
+    AND t.partstrat = 'r'
+    AND NOT EXISTS (
+        SELECT
+            1
+        FROM
+            partman.part_config
+        WHERE
+            parent_table = c.relnamespace::regnamespace || '.' || c.relname);
+};
+
+    my $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
+    my (@crit,@warn,@ok);
+
+    for $db (@{$info->{db}}) {
+        my ($maxage,$maxdb) = (0,''); ## used by MRTG only
+      ROW: for my $r (@{$db->{slurp}}) {
+            my ($dbname,$parent_table) = ($r->{database},$r->{parent_table});
+            $found = 1 if ! $found;
+            next ROW if skip_item($dbname);
+            $found = 2;
+
+            $msg = "$dbname=$parent_table " . msg('partman-conf-mis');
+            push @crit => $msg;
+        };
+     };
+
+    # check Config Errors
+
+    $SQL = q{
 SELECT
     current_database() as database,
     parent_table
@@ -6562,8 +6602,7 @@ WHERE
     configured_partitions < 1;
 };
 
-    my $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
-    my (@crit,@warn,@ok);
+    $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
 
     for $db (@{$info->{db}}) {
         my ($maxage,$maxdb) = (0,''); ## used by MRTG only
