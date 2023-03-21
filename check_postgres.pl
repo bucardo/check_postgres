@@ -1687,6 +1687,9 @@ GetOptions(
     'critical=s',
     'include=s@',
     'exclude=s@',
+    'alldb',
+    'includedb=s@',
+    'excludedb=s@',
     'includeuser=s@',
     'excludeuser=s@',
 
@@ -1960,6 +1963,9 @@ Limit options:
   -c value, --critical=value  the critical threshold, range depends on the action
   --include=name(s) items to specifically include (e.g. tables), depends on the action
   --exclude=name(s) items to specifically exclude (e.g. tables), depends on the action
+  --alldb  list all postgres databases and run action over them
+  --excludedb=name   regex filter for the alldb option to select only certain databases
+  --includedb=name   regex filter for the alldb option to select only certain databases
   --includeuser=include objects owned by certain users
   --excludeuser=exclude objects owned by certain users
 
@@ -2102,6 +2108,43 @@ $VERBOSE >= 2 and warn qq{psql=$PSQL version=$psql_version\n};
 
 $opt{defaultdb} = $psql_version >= 8.0 ? 'postgres' : 'template1';
 $opt{defaultdb} = 'pgbouncer' if $action =~ /^pgb/;
+
+## If alldb is set then run a psql command to find out all the databases
+if (defined $opt{alldb}){
+
+    my $pg_port = $opt{defaultport};
+    if ($opt{port}[0]){
+        $pg_port = $opt{port}[0];
+    }
+    my $psql_output = join(",", map /^([\w|-]+?)\|/, qx{$PSQL -A -l -t -p $pg_port });
+    my $pg_db;
+    # optionally exclude or include each db
+    my @psql_output_array = split(/,/, $psql_output);
+        for $pg_db (@psql_output_array) {
+            if (defined $opt{includedb}){
+                if ($pg_db =~ /$opt{includedb}[0]/) {
+                    # do nothing
+                } else {
+                    # strip the database from the listing
+                    $psql_output  =~ s/($pg_db),//;
+                }
+            }
+            if (defined $opt{excludedb}){
+                if ($pg_db =~ /$opt{excludedb}[0]/) {
+                    # strip the database from the listing
+                    $psql_output  =~ s/($pg_db),//;
+                } else {
+                    # do nothing
+                }
+            }
+        }
+    # strip out some dbs we're not interested in
+    $psql_output =~ s/(template0,)//;
+    $psql_output =~ s/(root,)//;
+    # pg8.4
+    $psql_output =~ s/(,:)//g;
+    $opt{dbname}[0] = $psql_output;
+}
 
 ## Check the current database mode
 our $STANDBY = 0;
@@ -4450,6 +4493,7 @@ FROM (
     ## The perf must be added before the add_x, so we defer the settings:
     my (@addwarn, @addcrit);
 
+    for $db (@{$info->{db}}) {
     for my $r (@{ $db->{slurp} }) {
 
         for my $v (values %$r) {
@@ -4514,6 +4558,8 @@ FROM (
             }
             ($max = $iwb, $maxmsg = $msg) if $iwb > $max and $ok;
         }
+    }
+
     }
 
     ## Set a sorted limited perf
