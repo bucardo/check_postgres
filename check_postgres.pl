@@ -211,6 +211,9 @@ our %msg = (
     'pgb-backends-msg'   => q{$1 of $2 connections ($3%)},
     'pgb-backends-none'  => q{No connections},
     'pgb-backends-users' => q{$1 for number of users must be a number or percentage},
+    'pgb-maxwait-msg'    => q{longest wait: $1s},
+    'pgb-maxwait-nomatch'=> q{No matching rows were found},
+    'pgb-maxwait-skipped'=> q{No matching rows were found (skipped rows: $1)},
     'PID'                => q{PID},
     'port'               => q{port},
     'preptxn-none'       => q{No prepared transactions found},
@@ -1913,6 +1916,7 @@ our $action_info = {
  pgb_pool_maxwait    => [1, 'Check the current maximum wait time for client connections in pgbouncer pools.'],
  pgbouncer_backends  => [0, 'Check how many clients are connected to pgbouncer compared to max_client_conn.'],
  pgbouncer_checksum  => [0, 'Check that no pgbouncer settings have changed since the last check.'],
+ pgbouncer_maxwait   => [0, 'Check how long the first (oldest) client in queue has been waiting.'],
  pgagent_jobs        => [0, 'Check for no failed pgAgent jobs within a specified period of time.'],
  prepared_txns       => [1, 'Checks number and age of prepared transactions.'],
  query_runtime       => [0, 'Check how long a specific query takes to run.'],
@@ -2768,6 +2772,9 @@ check_pgb_pool('sv_login') if $action eq 'pgb_pool_sv_login';
 
 ## Check the current maximum wait time for client connections in pgbouncer pools
 check_pgb_pool('maxwait') if $action eq 'pgb_pool_maxwait';
+
+## Check how long the first (oldest) client in queue has been waiting.
+check_pgbouncer_maxwait() if $action eq 'pgbouncer_maxwait';
 
 ## Check how many clients are connected to pgbouncer compared to max_client_conn.
 check_pgbouncer_backends() if $action eq 'pgbouncer_backends';
@@ -6758,6 +6765,107 @@ sub check_pgbouncer_checksum {
 
 } ## end of check_pgbouncer_checksum
 
+sub check_pgbouncer_maxwait {
+
+    ## Check how long the first (oldest) client in queue has waited, in
+    ## seconds.
+    ## Supports: Nagios, MRTG
+    ## Warning and critical are time limits - defaults to seconds
+    ## Valid units: s[econd], m[inute], h[our], d[ay]
+    ## All above may be written as plural as well (e.g. "2 hours")
+    ## Can also ignore databases with exclude and limit with include
+
+    my $arg = shift || {};
+
+    my ($warning, $critical) = validate_range
+    ({
+            type             => 'time',
+    });
+
+    ## Grab information from the pg_stat_activity table
+    ## Since we clobber old info on a qtime "tie", use an ORDER BY
+    $SQL = qq{SHOW POOLS};
+
+    my $info = run_command($SQL, { regex => qr{\d+}, emptyok => 1 } );
+
+    ## Default values for information gathered
+    my ($maxwait, $database, $user, $cl_active, $cl_waiting) =
+    (0,'?','?',0,0);
+
+    for $db (@{$info->{db}}) {
+
+        ## Parse the psql output and gather stats from the winning row
+        ## Read in and parse the psql output
+        my $skipped = 0;
+        ROW: for my $r (@{$db->{slurp}}) {
+
+            ## Apply --exclude and --include arguments to the database name
+            if (skip_item($r->{database})) {
+                $skipped++;
+                next ROW;
+            }
+
+            ## Assign stats if we have a new winner
+            if ($r->{maxwait} > $maxwait) {
+                $database    = $r->{database};
+                $user        = $r->{user};
+                $cl_active   = $r->{cl_active};
+                $cl_waiting  = $r->{cl_waiting};
+                $maxwait     = $r->{maxwait};
+            }
+        }
+
+        ## We don't really care why things matches as far as the final output
+        ## But it's nice to report what we can
+        if ($database eq '?') {
+            $MRTG and do_mrtg({one => 0, msg => 'No rows'});
+            $db->{perf} = "0;$warning;$critical";
+
+            if ($skipped) {
+                add_ok msg('pgb-maxwait-skipped', $skipped);
+            }
+            else {
+                add_ok msg('pgb-maxwait-nomatch', $maxwait);
+            }
+            return;
+        }
+
+        ## Details on who the offender was
+        my $whodunit = sprintf q{%s:%s %s:%s cl_active:%s cl_waiting:%s},
+        msg('database'),
+        $database,
+        msg('username'),
+        $user,
+        $cl_active,
+        $cl_waiting;
+
+        $MRTG and do_mrtg({one => $maxwait, msg => "$whodunit"});
+
+        $db->{perf} .= sprintf q{'%s'=%s;%s;%s},
+        $whodunit,
+        $maxwait,
+        $warning,
+        $critical;
+
+        my $m = msg('pgb-maxwait-msg', $maxwait);
+        my $msg = sprintf '%s (%s)', $m, $whodunit;
+
+        if (length $critical and $maxwait >= $critical) {
+            add_critical $msg;
+        }
+        elsif (length $warning and $maxwait >= $warning) {
+            add_warning $msg;
+        }
+        else {
+            add_ok $msg;
+        }
+    }
+
+    return;
+
+
+} ## end of check_pgbouncer_maxwait
+
 sub check_pgbouncer_backends {
 
     ## Check the number of connections to pgbouncer compared to
@@ -10503,6 +10611,30 @@ Example 2: Make sure no settings have changed and warn if so, using the checksum
 For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A 
 checksum must be provided as the C<--mrtg> argument. The fourth line always gives the 
 current checksum.
+
+=head2 B<pgbouncer_maxwait>
+
+(C<symlink: check_postgres_pgbouncer_maxwait>) Checks how long the first
+(oldest) client in the queue has been waiting, in seconds. If this starts
+increasing, then the current pool of servers does not handle requests quick
+enough. Reason may be either overloaded server or just too small of a
+pool_size setting in pbouncer config file.  Databases can be filtered by use
+of the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING">
+section for more details.  The values or the I<--warning> and I<--critical>
+options are units of time, and must be provided (no default). Valid units are
+'seconds', 'minutes', 'hours', or 'days'. Each may be written singular or
+abbreviated to just the first letter.  If no units are given, the units are
+assumed to be seconds.
+
+This action requires Postgres 8.3 or better.
+
+Example 1: Give a critical if any transaction has been open for more than 10
+minutes:
+
+  check_postgres_pgbouncer_maxwait -p 6432 -u pgbouncer --critical='10 minutes'
+
+For MRTG output, returns the maximum time in seconds a transaction has been
+open on the first line. The fourth line gives the name of the database.
 
 =head2 B<pgagent_jobs>
 
