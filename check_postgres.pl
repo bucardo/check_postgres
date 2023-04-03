@@ -11328,6 +11328,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Allow the check_disk_space action to handle relative log_directory paths (jacksonfoz) [Github pull #174]
 
+  Fix MINPAGES and MINIPAGES in the "check_bloat" action (Christoph Moench-Tegeder) [Github pull #82]
+
   Replace 'which' with 'command -v' (Christoph Berg)
 
   Fix check_replication_slots on recently promoted servers (Christoph Berg)
