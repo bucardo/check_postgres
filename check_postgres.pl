@@ -11368,19 +11368,22 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Add new action "pgbouncer_maxwait" (Ruslan Kabalin) [Github pull #59]
 
+  For the bloat check, add option to populate all known databases, 
+    as well as includsion and exclusion regexes. (Giles Westwood) [Github pull #86]
+
+  Add Partman premake check (Jens Wilke) [Github pull #196]
+
+  Add --role flag to explicitly set the role of the user after connecting (David Christensen)
+
   Fix check_replication_slots on recently promoted servers (Christoph Berg)
 
   Allow the check_disk_space action to handle relative log_directory paths (jacksonfoz) [Github pull #174]
 
   Fix MINPAGES and MINIPAGES in the "check_bloat" action (Christoph Moench-Tegeder) [Github pull #82]
 
-  Add Partman premake check (Jens Wilke) [Github pull #196]
-
   Replace 'which' with 'command -v' (Christoph Berg)
 
   Fix check_replication_slots on recently promoted servers (Christoph Berg)
-
-  Add --role flag to explicitly set the role of the user after connecting (David Christensen)
 
   Fix undefined variable warning (Michael van Bracht) [Github pull #158]
 
@@ -11389,7 +11392,6 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Various fixes for the CI system (Emre Hasegeli) [Github pull #181]
 
   Various improvements to the tests (Christoph Berg, Emre Hasegeli)
-
 
 =item B<Version 2.25.0> Released February 3, 2020
 
