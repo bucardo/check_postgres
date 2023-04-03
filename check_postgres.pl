@@ -9074,7 +9074,7 @@ sub check_txn_idle {
             $maxr->{client_addr} eq '' ? '' : (sprintf ' %s:%s', msg('address'), $maxr->{client_addr}),
             ($maxr->{client_port} eq '' or $maxr->{client_port} < 1)
                 ? '' : (sprintf ' %s:%s', msg('port'), $maxr->{client_port}),
-            msg('query'),  defined($maxr->{query}) ? $maxr->{query} : $maxr->{current_query};
+            msg('query'),  $maxr->{query} // $maxr->{current_query};
     }
 
     ## For MRTG, we can simply exit right now
@@ -11330,13 +11330,15 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Fix MINPAGES and MINIPAGES in the "check_bloat" action (Christoph Moench-Tegeder) [Github pull #82]
 
+  Add Partman premake check (Jens Wilke) [Github pull #196]
+
   Replace 'which' with 'command -v' (Christoph Berg)
 
   Fix check_replication_slots on recently promoted servers (Christoph Berg)
 
   Add --role flag to explicitly set the role of the user after connecting (David Christensen)
 
-  Add Partman premake check (Jens Wilke) [Github pull #196]
+  Fix undefined variable warning (Michael van Bracht) [Github pull #158]
 
   Add to docs how to exclude all items in the 'pg_temp_nnn' per-session temporary schemas (Michael Banck)
 
