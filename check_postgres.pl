@@ -11020,6 +11020,20 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Fix check_replication_slots on recently promoted servers (Christoph Berg)
 
+  Allow the check_disk_space action to handle relative log_directory paths (jacksonfoz)
+
+  Replace 'which' with 'command -v' (Christoph Berg)
+
+  Fix check_replication_slots on recently promoted servers (Christoph Berg)
+
+  Add --role flag to explicitly set the role of the user after connecting (David Christensen)
+
+  Add to docs how to exclude all items in the 'pg_temp_nnn' per-session temporary schemas (Michael Banck)
+
+  Various fixes for the CI system (Emre Hasegeli)
+
+  Various improvements to the tests (Christoph Berg, Emre Hasegeli)
+
 =item B<Version 2.25.0> Released February 3, 2020
 
   Allow same_schema objects to be included or excluded with --object and --skipobject
