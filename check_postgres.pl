@@ -11322,9 +11322,11 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =item B<Version 2.25.1> Not yet released
 
+  Add new action "pgbouncer_maxwait" (Ruslan Kabalin) [Github pull #59]
+
   Fix check_replication_slots on recently promoted servers (Christoph Berg)
 
-  Allow the check_disk_space action to handle relative log_directory paths (jacksonfoz)
+  Allow the check_disk_space action to handle relative log_directory paths (jacksonfoz) [Github pull #174]
 
   Replace 'which' with 'command -v' (Christoph Berg)
 
@@ -11332,11 +11334,11 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Add --role flag to explicitly set the role of the user after connecting (David Christensen)
 
-  Add Partman premake check (Jens Wilke)
+  Add Partman premake check (Jens Wilke) [Github pull #196]
 
   Add to docs how to exclude all items in the 'pg_temp_nnn' per-session temporary schemas (Michael Banck)
 
-  Various fixes for the CI system (Emre Hasegeli)
+  Various fixes for the CI system (Emre Hasegeli) [Github pull #181]
 
   Various improvements to the tests (Christoph Berg, Emre Hasegeli)
 
