@@ -9074,7 +9074,7 @@ sub check_txn_idle {
             $maxr->{client_addr} eq '' ? '' : (sprintf ' %s:%s', msg('address'), $maxr->{client_addr}),
             ($maxr->{client_port} eq '' or $maxr->{client_port} < 1)
                 ? '' : (sprintf ' %s:%s', msg('port'), $maxr->{client_port}),
-            msg('query'),  $maxr->{query} || $maxr->{current_query};
+            msg('query'),  defined($maxr->{query}) ? $maxr->{query} : $maxr->{current_query};
     }
 
     ## For MRTG, we can simply exit right now
