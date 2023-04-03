@@ -3426,6 +3426,17 @@ sub setup_target_databases {
         my %group;
         my $found_new_var = 0;
 
+        ## Do we have any using multiple values for non-passwords?
+        my $got_multiple = 0;
+        for my $v (keys %$conn) {
+            next if $v eq 'dbpass' or ! defined $opt{$v}[0];
+            my $num = $opt{$v}->@*;
+            if ($num > 1 or $opt{$v}[0] =~ /,/) {
+                $got_multiple = 1;
+                last;
+            }
+        }
+
         for my $v (keys %$conn) { ## For each connection var such as port, host...
             my $vname = $v;
 
@@ -3438,7 +3449,7 @@ sub setup_target_databases {
                 $new =~ s/\s+//g unless $vname eq 'dbservice' or $vname eq 'host';
 
                 ## Set this as the new default for this connection var moving forward
-                $conn->{$vname} = [split /,/ => $new, -1];
+                $conn->{$vname} = $got_multiple ? [split /,/ => $new, -1] : [$new];
 
                 ## Make a note that we found something new this round
                 $found_new_var = 1;
@@ -11363,6 +11374,11 @@ L<https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit>
 Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
+
+=item B<Version 2.26.1> not yet released
+
+  Allow commas in passwords via --dbpass for one-connection queries (Greg Sabino Mullane) [Github issue #133]
+
 
 =item B<Version 2.26.0> Released April 3, 2023
 
