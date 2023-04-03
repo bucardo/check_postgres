@@ -11387,6 +11387,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
   Fix undefined variable warning (Michael van Bracht) [Github pull #158]
 
+  In the tests, force log_destination to stderr (Christoph Moench-Tegeder) [Github pull #185]
+
   Add to docs how to exclude all items in the 'pg_temp_nnn' per-session temporary schemas (Michael Banck)
 
   Various fixes for the CI system (Emre Hasegeli) [Github pull #181]
