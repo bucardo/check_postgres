@@ -34,7 +34,7 @@ $Data::Dumper::Useqq = 1;
 
 binmode STDOUT, ':encoding(UTF-8)';
 
-our $VERSION = '2.25.0';
+our $VERSION = '2.26.0';
 our $COMMA = ',';
 
 use vars qw/ %opt $PGBINDIR $PSQL $res $COM $SQL $db /;
@@ -9345,7 +9345,7 @@ sub check_wal_files {
 
 B<check_postgres.pl> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others
 
-This documents describes check_postgres.pl version 2.25.0
+This documents describes check_postgres.pl version 2.26.0
 
 =head1 SYNOPSIS
 
@@ -11320,7 +11320,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
-=item B<Version 2.25.1> Not yet released
+=item B<Version 2.26.0> Not yet released
 
   Add new action "pgbouncer_maxwait" (Ruslan Kabalin) [Github pull #59]
 

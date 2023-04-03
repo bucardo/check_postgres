@@ -2,7 +2,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>check_postgres.pl</title>
+<title>check_postgres.pl>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 
 </head>
@@ -74,6 +74,7 @@
       <li><a href="#pgb_pool_maxwait">pgb_pool_maxwait</a></li>
       <li><a href="#pgbouncer_backends">pgbouncer_backends</a></li>
       <li><a href="#pgbouncer_checksum">pgbouncer_checksum</a></li>
+      <li><a href="#pgbouncer_maxwait">pgbouncer_maxwait</a></li>
       <li><a href="#pgagent_jobs">pgagent_jobs</a></li>
       <li><a href="#prepared_txns">prepared_txns</a></li>
       <li><a href="#query_runtime">query_runtime</a></li>
@@ -114,7 +115,7 @@
 
 <p><b>check_postgres.pl</b> - a Postgres monitoring script for Nagios, MRTG, Cacti, and others</p>
 
-<p>This documents describes check_postgres.pl version 2.25.0</p>
+<p>This documents describes check_postgres.pl version 2.26.0</p>
 
 <h1 id="SYNOPSIS">SYNOPSIS</h1>
 
@@ -234,6 +235,12 @@
 <p>This file contains a simple list of connection options. You can also pass additional information when using this option such as --dbservice=&quot;maindatabase sslmode=require&quot;</p>
 
 <p>The documentation for this file can be found at <a href="https://www.postgresql.org/docs/current/static/libpq-pgservice.html">https://www.postgresql.org/docs/current/static/libpq-pgservice.html</a></p>
+
+</dd>
+<dt id="role-ROLE"><b>--role=ROLE</b></dt>
+<dd>
+
+<p>Provides the role to switch to after connecting to the database but before running the given check. This provides the ability to have superuser privileges assigned to a role without LOGIN access for the purposes of audit and other security considerations. Requires a local `psql` version 9.6 or higher.</p>
 
 </dd>
 </dl>
@@ -443,7 +450,7 @@
 
 <p>If the archive command fail, number of WAL in your <i>pg_xlog</i> directory will grow until exhausting all the disk space and force PostgreSQL to stop immediately.</p>
 
-<p>To avoid connecting as a database superuser, a wrapper function around <code>pg_ls_dir()</code> should be defined as a superuser with SECURITY DEFINER, and the <i>--lsfunc</i> option used. This example function, if defined by a superuser, will allow the script to connect as a normal user <i>nagios</i> with <i>--lsfunc=ls_archive_status_dir</i></p>
+<p>To avoid running as a database superuser, a wrapper function around <code>pg_ls_dir()</code> should be defined as a superuser with SECURITY DEFINER, and the <i>--lsfunc</i> option used. This example function, if defined by a superuser, will allow the script to connect as a normal user <i>nagios</i> with <i>--lsfunc=ls_archive_status_dir</i></p>
 
 <pre><code>  BEGIN;
   CREATE FUNCTION ls_archive_status_dir()
@@ -475,7 +482,7 @@
 
 <p>(<code>symlink: check_postgres_backends</code>) Checks the current number of connections for one or more databases, and optionally compares it to the maximum allowed, which is determined by the Postgres configuration variable <b>max_connections</b>. The <i>--warning</i> and <i>--critical</i> options can take one of three forms. First, a simple number can be given, which represents the number of connections at which the alert will be given. This choice does not use the <b>max_connections</b> setting. Second, the percentage of available connections can be given. Third, a negative number can be given which represents the number of connections left until <b>max_connections</b> is reached. The default values for <i>--warning</i> and <i>--critical</i> are &#39;90%&#39; and &#39;95%&#39;. You can also filter the databases by use of the <i>--include</i> and <i>--exclude</i> options. See the <a href="#BASIC-FILTERING">&quot;BASIC FILTERING&quot;</a> section for more details.</p>
 
-<p>To view only non-idle processes, you can use the <i>--noidle</i> argument. Note that the user you are connecting as must be a superuser for this to work properly.</p>
+<p>To view only non-idle processes, you can use the <i>--noidle</i> argument. Note that the user you are running as (either connecting directly or switching via <i>--role</i>) must be a superuser for this to work properly.</p>
 
 <p>Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 150.</p>
 
@@ -774,7 +781,7 @@
 
 <h2 id="disk_space"><b>disk_space</b></h2>
 
-<p>(<code>symlink: check_postgres_disk_space</code>) Checks on the available physical disk space used by Postgres. This action requires that you have the executable &quot;/bin/df&quot; available to report on disk sizes, and it also needs to be run as a superuser, so it can examine the <b>data_directory</b> setting inside of Postgres. The <i>--warning</i> and <i>--critical</i> options are given in either sizes or percentages or both. If using sizes, the standard unit types are allowed: bytes, kilobytes, gigabytes, megabytes, gigabytes, terabytes, or exabytes. Each may be abbreviated to the first letter only; no units at all indicates &#39;bytes&#39;. The default values are &#39;90%&#39; and &#39;95%&#39;.</p>
+<p>(<code>symlink: check_postgres_disk_space</code>) Checks on the available physical disk space used by Postgres. This action requires that you have the executable &quot;/bin/df&quot; available to report on disk sizes, and it also needs to be run as a superuser (either connecting directly or switching via <i>--role</i>), so it can examine the <b>data_directory</b> setting inside of Postgres. The <i>--warning</i> and <i>--critical</i> options are given in either sizes or percentages or both. If using sizes, the standard unit types are allowed: bytes, kilobytes, gigabytes, megabytes, gigabytes, terabytes, or exabytes. Each may be abbreviated to the first letter only; no units at all indicates &#39;bytes&#39;. The default values are &#39;90%&#39; and &#39;95%&#39;.</p>
 
 <p>This command checks the following things to determine all of the different physical disks being used by Postgres.</p>
 
@@ -1018,7 +1025,7 @@
 
 <p>(<code>symlink: check_postgres_pgbouncer_backends</code>) Checks the current number of connections for one or more databases through pgbouncer, and optionally compares it to the maximum allowed, which is determined by the pgbouncer configuration variable <b>max_client_conn</b>. The <i>--warning</i> and <i>--critical</i> options can take one of three forms. First, a simple number can be given, which represents the number of connections at which the alert will be given. This choice does not use the <b>max_connections</b> setting. Second, the percentage of available connections can be given. Third, a negative number can be given which represents the number of connections left until <b>max_connections</b> is reached. The default values for <i>--warning</i> and <i>--critical</i> are &#39;90%&#39; and &#39;95%&#39;. You can also filter the databases by use of the <i>--include</i> and <i>--exclude</i> options. See the <a href="#BASIC-FILTERING">&quot;BASIC FILTERING&quot;</a> section for more details.</p>
 
-<p>To view only non-idle processes, you can use the <i>--noidle</i> argument. Note that the user you are connecting as must be a superuser for this to work properly.</p>
+<p>To view only non-idle processes, you can use the <i>--noidle</i> argument. Note that the user you are running as (either connecting directly or switching via <i>--role</i>) must be a superuser for this to work properly.</p>
 
 <p>Example 1: Give a warning when the number of connections on host quirm reaches 120, and a critical if it reaches 150.</p>
 
@@ -1049,6 +1056,18 @@
 <pre><code>  check_postgres_pgbouncer_checksum --port=6432 --warning=cd2f3b5e129dc2b4f5c0f6d8d2e64231</code></pre>
 
 <p>For MRTG output, returns a 1 or 0 indicating success of failure of the checksum to match. A checksum must be provided as the <code>--mrtg</code> argument. The fourth line always gives the current checksum.</p>
+
+<h2 id="pgbouncer_maxwait"><b>pgbouncer_maxwait</b></h2>
+
+<p>(<code>symlink: check_postgres_pgbouncer_maxwait</code>) Checks how long the first (oldest) client in the queue has been waiting, in seconds. If this starts increasing, then the current pool of servers does not handle requests quick enough. Reason may be either overloaded server or just too small of a pool_size setting in pbouncer config file. Databases can be filtered by use of the <i>--include</i> and <i>--exclude</i> options. See the <a href="#BASIC-FILTERING">&quot;BASIC FILTERING&quot;</a> section for more details. The values or the <i>--warning</i> and <i>--critical</i> options are units of time, and must be provided (no default). Valid units are &#39;seconds&#39;, &#39;minutes&#39;, &#39;hours&#39;, or &#39;days&#39;. Each may be written singular or abbreviated to just the first letter. If no units are given, the units are assumed to be seconds.</p>
+
+<p>This action requires Postgres 8.3 or better.</p>
+
+<p>Example 1: Give a critical if any transaction has been open for more than 10 minutes:</p>
+
+<pre><code>  check_postgres_pgbouncer_maxwait -p 6432 -u pgbouncer --critical=&#39;10 minutes&#39;</code></pre>
+
+<p>For MRTG output, returns the maximum time in seconds a transaction has been open on the first line. The fourth line gives the name of the database.</p>
 
 <h2 id="pgagent_jobs"><b>pgagent_jobs</b></h2>
 
@@ -1436,6 +1455,10 @@
 
 <pre><code> --exclude=&#39;pg_catalog.&#39;</code></pre>
 
+<p>Exclude all items in the &#39;pg_temp_nnn&#39; per-session temporary schemas:</p>
+
+<pre><code> --exclude=~^pg_temp_.</code></pre>
+
 <p>Exclude all items containing the letters &#39;ace&#39;, but allow the item &#39;faceoff&#39;:</p>
 
 <pre><code> --exclude=~ace --include=faceoff</code></pre>
@@ -1581,6 +1604,32 @@
 
 <dl>
 
+<dt id="Version-2.26.0-Not-yet-released"><b>Version 2.26.0</b> Not yet released</dt>
+<dd>
+
+<pre><code>  Add new action &quot;pgbouncer_maxwait&quot; (Ruslan Kabalin) [Github pull #59]
+
+  Fix check_replication_slots on recently promoted servers (Christoph Berg)
+
+  Allow the check_disk_space action to handle relative log_directory paths (jacksonfoz) [Github pull #174]
+
+  Fix MINPAGES and MINIPAGES in the &quot;check_bloat&quot; action (Christoph Moench-Tegeder) [Github pull #82]
+
+  Replace &#39;which&#39; with &#39;command -v&#39; (Christoph Berg)
+
+  Fix check_replication_slots on recently promoted servers (Christoph Berg)
+
+  Add --role flag to explicitly set the role of the user after connecting (David Christensen)
+
+  Add Partman premake check (Jens Wilke) [Github pull #196]
+
+  Add to docs how to exclude all items in the &#39;pg_temp_nnn&#39; per-session temporary schemas (Michael Banck)
+
+  Various fixes for the CI system (Emre Hasegeli) [Github pull #181]
+
+  Various improvements to the tests (Christoph Berg, Emre Hasegeli)</code></pre>
+
+</dd>
 <dt id="Version-2.25.0-Released-February-3-2020"><b>Version 2.25.0</b> Released February 3, 2020</dt>
 <dd>
 
@@ -2614,7 +2663,7 @@
 
 <h1 id="LICENSE-AND-COPYRIGHT">LICENSE AND COPYRIGHT</h1>
 
-<p>Copyright 2007-2023 Greg Sabino Mullane &lt;greg@turnstep.com&gt;.</p>
+<p>Copyright 2007 - 2023 Greg Sabino Mullane &lt;greg@turnstep.com&gt;.</p>
 
 <p>Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:</p>
 
