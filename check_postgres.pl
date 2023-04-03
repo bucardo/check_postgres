@@ -11364,7 +11364,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =over 4
 
-=item B<Version 2.26.0> Not yet released
+=item B<Version 2.26.0> Released April 3, 2023
 
   Add new action "pgbouncer_maxwait" (Ruslan Kabalin) [Github pull #59]
 
@@ -11394,6 +11394,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   Various fixes for the CI system (Emre Hasegeli) [Github pull #181]
 
   Various improvements to the tests (Christoph Berg, Emre Hasegeli)
+
 
 =item B<Version 2.25.0> Released February 3, 2020
 
