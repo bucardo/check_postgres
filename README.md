@@ -23,8 +23,6 @@ file by:
     cd postgres
     perl ../check_postgres.pl --symlinks
 
-Then join the announce mailing list (see below)
-
 Complete method
 ---------------
 
@@ -53,20 +51,6 @@ documentation by typing:
 The HTML version of the documentation is also available at:
 
 https://bucardo.org/check_postgres/check_postgres.pl.html
-
-Mailing lists
--------------
-
-The final step should be to subscribe to the low volume check_postgres-announce
-mailing list, so you learn of new versions and important changes. Information
-on joining can be found at:
-
-https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce
-
-General questions and development issues are discussed on the check_postgres list,
-which we recommend people join as well:
-
-https://mail.endcrypt.com/mailman/listinfo/check_postgres
 
 Development happens via git. You can check out the repository by doing:
 
