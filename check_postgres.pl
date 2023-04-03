@@ -1792,7 +1792,7 @@ for my $mv (keys %tempopt) {
 our $VERBOSE = $opt{verbose} || 0;
 $VERBOSE = 5 if $opt{vv};
 
-our $OUTPUT = lc($opt{output} || '');
+our $OUTPUT = lc($opt{output} // '');
 
 ## Allow the optimization of the get_methods list by an argument
 if ($opt{get_method}) {
@@ -11378,6 +11378,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 =item B<Version 2.26.1> not yet released
 
   Allow commas in passwords via --dbpass for one-connection queries (Greg Sabino Mullane) [Github issue #133]
+
+  Fix undefined variable error (Greg Sabino Mullane) [Github issue #141]
 
 
 =item B<Version 2.26.0> Released April 3, 2023
