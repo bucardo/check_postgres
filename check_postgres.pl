@@ -4333,8 +4333,8 @@ sub check_bloat {
     ## Can also specify percentages
 
     ## Don't bother with tables or indexes unless they have at least this many bloated pages
-    my $MINPAGES = 0;
-    my $MINIPAGES = 10;
+    my $MINPAGES = 10;
+    my $MINIPAGES = 15;
 
     my $LIMIT = 10;
     if ($opt{perflimit}) {
