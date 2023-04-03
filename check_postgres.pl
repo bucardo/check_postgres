@@ -11357,17 +11357,12 @@ Development happens using the git system. You can clone the latest version by do
 Three mailing lists are available. For discussions about the program, bug reports, 
 feature requests, and commit notices, send email to check_postgres@bucardo.org
 
-L<https://mail.endcrypt.com/mailman/listinfo/check_postgres>
+L<https://bucardo.org/mailman/listinfo/check_postgres>
 
 A low-volume list for announcement of new versions and important notices is the 
 'check_postgres-announce' list:
 
-L<https://mail.endcrypt.com/mailman/listinfo/check_postgres-announce>
-
-Source code changes (via git-commit) are sent to the 
-'check_postgres-commit' list:
-
-L<https://mail.endcrypt.com/mailman/listinfo/check_postgres-commit>
+L<https://bucardo.org/mailman/listinfo/check_postgres-announce>
 
 =head1 HISTORY
 

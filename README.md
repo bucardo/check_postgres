@@ -23,6 +23,8 @@ file by:
     cd postgres
     perl ../check_postgres.pl --symlinks
 
+Then join the announce mailing list (see below)
+
 Complete method
 ---------------
 
@@ -56,6 +58,22 @@ Development happens via git. You can check out the repository by doing:
 
     https://github.com/bucardo/check_postgres
     git clone https://github.com/bucardo/check_postgres.git
+
+
+Mailing lists
+-------------
+
+The final step should be to subscribe to the low volume check_postgres-announce 
+mailing list, so you learn of new versions and important changes. Information 
+on joining can be found at:
+
+https://bucardo.org/mailman/listinfo/check_postgres-announce
+
+General questions and development issues are discussed on the check_postgres list, 
+which we recommend people join as well:
+
+https://bucardo.org/mailman/listinfo/check_postgres
+
 
 COPYRIGHT
 ---------
