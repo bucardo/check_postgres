@@ -2,7 +2,7 @@
 
 ## Simply test that the script compiles and gives a valid version
 
-use 5.008;
+use 5.10.0;
 use strict;
 use warnings;
 use Test::More tests => 2;

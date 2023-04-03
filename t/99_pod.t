@@ -2,7 +2,7 @@
 
 ## Check our Pod, requires Test::Pod
 
-use 5.008;
+use 5.10.0;
 use strict;
 use warnings;
 use Test::More;

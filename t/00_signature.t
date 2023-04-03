@@ -2,7 +2,7 @@
 
 ## Test that our PGP signature file is valid
 
-use 5.008;
+use 5.10.0;
 use strict;
 use warnings;
 use Test::More;

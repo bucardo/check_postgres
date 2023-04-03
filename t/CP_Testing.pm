@@ -2,7 +2,7 @@ package CP_Testing; ## -*- mode: CPerl; indent-tabs-mode: nil; cperl-indent-leve
 
 ## Common methods used by the other tests for check_postgres.pl
 
-use 5.008;
+use 5.10.0;
 use strict;
 use warnings;
 use Data::Dumper;

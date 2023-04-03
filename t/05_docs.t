@@ -2,7 +2,7 @@
 
 ## Some basic checks on the documentation
 
-use 5.008;
+use 5.10.0;
 use strict;
 use warnings;
 use Data::Dumper;

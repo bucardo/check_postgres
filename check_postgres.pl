@@ -16,7 +16,7 @@
 
 package check_postgres;
 
-use 5.008;
+use 5.10.0;
 use strict;
 use warnings;
 use utf8;
@@ -11376,6 +11376,8 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 =over 4
 
 =item B<Version 2.26.1> not yet released
+
+  Raise minimum version or Perl to 5.10.0
 
   Allow commas in passwords via --dbpass for one-connection queries (Greg Sabino Mullane) [Github issue #133]
 
