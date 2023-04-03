@@ -155,6 +155,7 @@ sub _test_database_handle {
         print $cfh qq{listen_addresses = ''\n};
         print $cfh qq{max_connections = 10\n};
         print $cfh qq{fsync = off\n};
+        print $cfh qq{log_destination = 'stderr'\n};
 
         ## <= 8.0
         if ($imaj < 8 or (8 == $imaj and $imin <= 1)) {
