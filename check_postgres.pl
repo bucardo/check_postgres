@@ -11450,6 +11450,10 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
 
 =item B<Version 2.26.1> not yet released
 
+  Add new action "lockwait" showing details of blocked queries
+  (Github user miraclesvenni)
+  [Github issue #154]
+
   Raise minimum version or Perl to 5.10.0
 
   Allow commas in passwords via --dbpass for one-connection queries (Greg Sabino Mullane) [Github issue #133]
