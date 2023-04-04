@@ -163,6 +163,7 @@ our %msg = (
     'listening'          => q{listening},
     'locks-msg'          => q{total "$1" locks: $2},
     'locks-msg2'         => q{total locks: $1},
+    'lockwait-msg'       => q{$1: $2($3) blocking $4($5) for $6 blocked statement "$7"},
     'logfile-bad'        => q{Invalid logfile "$1"},
     'logfile-debug'      => q{Final logfile: $1},
     'logfile-dne'        => q{logfile $1 does not exist!},
@@ -1902,6 +1903,7 @@ our $action_info = {
  last_autovacuum     => [0, 'Check the maximum time in seconds since any one table has been autovacuumed.'],
  listener            => [0, 'Checks for specific listeners.'],
  locks               => [0, 'Checks the number of locks.'],
+ lockwait            => [0, 'Checks for blocking locks.'],
  logfile             => [1, 'Checks that the logfile is being written to correctly.'],
  new_version_bc      => [0, 'Checks if a newer version of Bucardo is available.'],
  new_version_box     => [0, 'Checks if a newer version of boxinfo is available.'],
@@ -2708,6 +2710,9 @@ check_listener() if $action eq 'listener';
 
 ## Check number and type of locks
 check_locks() if $action eq 'locks';
+
+## Check lock wait
+check_lockwait() if $action eq 'lockwait';
 
 ## Logfile is being written to
 check_logfile() if $action eq 'logfile';
@@ -6177,6 +6182,63 @@ sub check_locks {
 
 } ## end of check_locks
 
+sub check_lockwait {
+
+    ## Check lock wait
+    ## By default, checks all databases
+    ## Can check specific databases with include
+    ## Can ignore databases with exclude
+    ## Warning and critical is time
+    ## Example: --warning='1 min' --critical='2 min'
+
+    my ($warning, $critical) = validate_range
+        ({
+          type             => 'time',
+          default_warning  => '1 min',
+          default_critical => '2 min',
+          });
+
+    $SQL = qq{SELECT a.datname  AS datname,
+                     bl.pid     AS blocked_pid,
+                     a.usename  AS blocked_user,
+                     ka.pid     AS blocking_pid,
+                     ka.usename AS blocking_user,
+                     round(extract (epoch from current_timestamp - a.query_start)) AS waited_sec,
+                     a.query    AS blocked_statement
+             FROM  pg_catalog.pg_locks         bl
+             JOIN pg_catalog.pg_stat_activity a  ON a.pid = bl.pid
+             JOIN pg_catalog.pg_stat_activity ka ON (ka.pid = ANY(pg_blocking_pids(bl.pid)))
+             WHERE NOT bl.granted
+    };
+    my $info = run_command($SQL, { regex => qr{\w}, emptyok => 1 });
+    my $n = 0;
+    for $db (@{$info->{db}}) {
+      ROW: for my $r (@{$db->{slurp}}) {
+            my ($dbname,$blocked_pid,$blocked_user,$blocking_pid,$blocking_user,$waited_sec,$blocked_statement) 
+                     = ($r->{datname},$r->{blocked_pid}, $r->{blocked_user}, $r->{blocking_pid}, 
+                        $r->{blocking_user},$r->{waited_sec},$r->{blocked_statement});
+
+            ## May be forcibly skipping this database via arguments
+            next ROW if skip_item($dbname);
+
+            my $msg = msg 'lockwait-msg',$dbname,$blocking_user,$blocking_pid,$blocked_user,$blocked_pid,pretty_time($waited_sec),$blocked_statement;
+            if (length $critical and $waited_sec >= $critical) {
+                add_critical $msg;
+            }
+            elsif (length $warning and $waited_sec >= $warning) {
+                add_warning $msg;
+            }
+            else {
+                add_ok $msg;
+            }
+            $n++;
+        }
+    }
+    add_ok 'No blocking locks' if ($n==0);
+    do_mrtg( {one => $n} ) if $MRTG;
+    return;
+
+} ## end of check_lockwait
 
 sub check_logfile {
 
@@ -10492,6 +10554,22 @@ Example 2: On the host artemus, warn if 200 or more locks exist, and give a crit
   check_postgres_locks --host=artemus --warning=200 --critical="total=250:waiting=5:exclusive=20"
 
 For MRTG output, returns the number of locks on the first line, and the name of the database on the fourth line.
+
+=head2 B<lockwait>
+
+(C<symlink: check_postgres_lockwait>) Check if there are blocking blocks and for how long. There is no 
+need to run this more than once per database cluster. Databases can be filtered 
+with the I<--include> and I<--exclude> options. See the L</"BASIC FILTERING"> section 
+for more details.
+
+The I<--warning> and I<--critical> options is time, 
+which represent the time for which the lock has been blocking.
+
+Example 1: Warn if a lock has been blocking for more than a minute, critcal if for more than 2 minutes
+
+  check_postgres_lockwait --host=garrett --warning='1 min' --critical='2 min'
+
+For MRTG output, returns the number of blocked sessions.
 
 =head2 B<logfile>
 
