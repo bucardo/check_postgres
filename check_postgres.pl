@@ -204,7 +204,7 @@ our %msg = (
     'opt-psql-nover'     => q{Could not determine psql version},
     'opt-psql-restrict'  => q{Cannot use the --PGBINDIR or --PSQL option when NO_PSQL_OPTION is on},
     'partman-premake-ok' => q{All premade partitions are present},
-    'partman-conf-tbl'   => q{misconfigured in partman.part_config},
+    'partman-conf-tbl'   => q{misconfigured in partman.part_config or not a partitioned table},
     'partman-conf-mis'   => q{missing table in partman.part_config},
     'pgagent-jobs-ok'    => q{No failed jobs},
     'pgbouncer-pool'     => q{Pool=$1 $2=$3},
@@ -6721,9 +6721,16 @@ FROM (
         partition_interval,
         EXTRACT(EPOCH FROM retention::interval) / EXTRACT(EPOCH FROM partition_interval::interval) AS configured_partitions
     FROM
-        partman.part_config) p
-WHERE
-    configured_partitions < 1;
+        partman.part_config
+    JOIN
+        pg_class c
+    ON
+        c.relnamespace::regnamespace || '.' || c.relname = parent_table
+    WHERE
+        4<1
+    OR
+        c.relkind='r'
+) p;
 };
 
     $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
@@ -6737,7 +6744,8 @@ WHERE
             $found = 2;
 
             $msg = "$dbname=$parent_table " . msg('partman-conf-tbl');
-            push @warn => $msg;
+            # we consider this as critical, because even run_maintenance_proc fails at all at least in some of these cases.
+            push @crit => $msg;
         };
      };
 
