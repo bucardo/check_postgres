@@ -10646,6 +10646,12 @@ tool that can send mail when interesting events appear in your Postgres logs.
 See: L<https://bucardo.org/tail_n_mail/> for more information).
 See also the information on the C<--get_method> option.
 
+=head2 B<partman_premake>
+
+(C<symlink: check_postgres_partman_premake>) Checks if all partitions that
+B<pg_parman>'s maintenance routine should have created are actually present.
+Monthly and daily intervals are supported.
+
 =head2 B<pgb_pool_cl_active>
 
 =head2 B<pgb_pool_cl_waiting>
