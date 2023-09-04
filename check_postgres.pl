@@ -6171,7 +6171,7 @@ ORDER BY name
                     ndie msg('logfile-stderr');
                 }
             }
-            elseif ($i->{log_destination} eq 'csvlog') {
+            elsif ($i->{log_destination} eq 'csvlog') {
                 $logfile = "$i->{'data_directory'}/$i->{log_directory}/$i->{log_filename}";
                 $logfile =~ s/\.log$/\.csv/;
             }
