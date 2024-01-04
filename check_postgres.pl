@@ -11460,7 +11460,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   (Github user miraclesvenni)
   [Github issue #154]
 
-  Raise minimum version or Perl to 5.10.0
+  Raise minimum version of Perl to 5.10.0
 
   Allow commas in passwords via --dbpass for one-connection queries (Greg Sabino Mullane) [Github issue #133]
 
@@ -12333,7 +12333,7 @@ Some example Nagios configuration settings using this script:
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2007 - 2023 Greg Sabino Mullane <greg@turnstep.com>.
+Copyright 2007 - 2024 Greg Sabino Mullane <greg@turnstep.com>.
 
 Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions are met:
