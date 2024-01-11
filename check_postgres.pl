@@ -5790,15 +5790,19 @@ sub check_replication_slots {
     $SQL = q{
         WITH slots AS (SELECT slot_name,
             slot_type,
-            coalesce(restart_lsn, '0/0'::pg_lsn) AS slot_lsn,
-            coalesce(
-              pg_xlog_location_diff(
-                case when pg_is_in_recovery() then pg_last_xlog_receive_location() else pg_current_xlog_location() end,
-                restart_lsn),
-            0) AS delta,
+            COALESCE(restart_lsn, '0/0'::pg_lsn) AS slot_lsn,
+            COALESCE(pg_xlog_location_diff(
+                CASE
+                    WHEN pg_is_in_recovery() THEN
+                        pg_last_xlog_receive_location()
+                    ELSE
+                        pg_current_xlog_location()
+                END,
+                restart_lsn
+            ), 0) AS delta,
             active
         FROM pg_replication_slots)
-        SELECT *, pg_size_pretty(delta) AS delta_pretty FROM slots;
+        SELECT *, pg_size_pretty(delta) AS delta_pretty FROM slots
     };
 
     if ($opt{perflimit}) {
@@ -5812,27 +5816,39 @@ sub check_replication_slots {
     my $found = 0;
 
     for $db (@{$info->{db}}) {
-        my $max = -1;
+        my $max = 0;
+        my $total = 0;
         $found = 1;
         my %s;
 
         for my $r (@{$db->{slurp}}) {
-            if (skip_item($r->{slot_name})) {
-                $max = -2 if -1 == $max;
-                next;
-            }
-            if ($r->{delta} >= $max) {
-                $max = $r->{delta};
-            }
+            # keep track of how many slots that we found
+            ++$total;
+
+            # apply exclusion rules
+            next if skip_item($r->{slot_name});
+
+            # keep track of the largest backlog
+            $max = $r->{delta} if ($r->{delta} >= $max);
+
+            # keep track of all slots
             $s{$r->{slot_name}} = [$r->{delta},$r->{delta_pretty},$r->{slot_type},$r->{slot_lsn},$r->{active}];
         }
+
+        # record how far back our farthest back slot is
         if ($MRTG) {
-            do_mrtg({one => $max, msg => "SLOT: $db->{slot_name}"});
+            do_mrtg({one => $max, msg => "DB: $db->{dbname}"});
         }
-        if ($max < 0) {
+
+        if (!scalar(keys(%s))) {
             $stats{$db->{dbname}} = 0;
-            add_ok msg('no-match-slotok') if -1 == $max;
-            add_unknown msg('no-match-slot') if -2 == $max;
+            if ($total > 0) {
+                # found slots but they didn't match
+                add_ok msg('no-match-slot');
+            } else {
+                # found no slots
+                add_ok msg('no-match-slotok');
+            }
             next;
         }
 
