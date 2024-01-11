@@ -1733,6 +1733,7 @@ GetOptions(
     'object=s@',     ## used by same_schema for object types to include
     'skipobject=s@', ## used by same_schema for object types to exclude
     'skipcycled',  ## used by sequence only
+    'netmasklength=i'    ## used by streaming_delta only
 );
 
 die $USAGE if ! keys %opt and ! @ARGV;
@@ -2743,6 +2744,9 @@ check_archive_ready() if $action eq 'archive_ready';
 
 ## Check the replication delay in hot standby setup
 check_hot_standby_delay() if $action eq 'hot_standby_delay';
+
+# Check the delay between two standby servers (useful for cascading replication)
+check_streaming_delta() if $action eq 'streaming_delta';
 
 ## Check the delay on replication slots. warning and critical are sizes
 check_replication_slots() if $action eq 'replication_slots';
@@ -5772,6 +5776,55 @@ sub check_hot_standby_delay {
     return;
 
 } ## end of check_hot_standby_delay
+
+
+sub check_streaming_delta {
+    my ($critical, $warning) = ($opt{critical}, $opt{warning});
+
+    ## Check on the delay in PITR replication between the WAL receieved
+    ## and the WAL passed on to the cascading replicas
+    ## if the subnet mask is passed in it will only check against servers
+    ## that are in the same subnet as the postgres instance based on that
+    ## subnet mask
+
+    $SQL = q{SELECT application_name, client_addr, pid,
+            sent_location, write_location, flush_location, replay_location,
+            CASE pg_is_in_recovery() WHEN true THEN pg_last_xlog_receive_location() ELSE pg_current_xlog_location() END AS master_location
+            FROM pg_stat_replication WHERE state != 'backup'};
+    if ($opt{netmasklength}) { 
+        my $netmask_length = $opt{netmasklength};
+        $SQL .= " AND network(set_masklen(client_addr,$netmask_length)) = network(set_masklen(inet_server_addr(),$netmask_length))";
+    }
+    my $info = run_command($SQL);
+    my $perfdata = "";
+    for $db (@{$info->{db}}) {
+        for my $row (@{$db->{slurp}}) {
+            my ($a, $b) = split(/\//, $row->{'master_location'});
+            my $master_location = (hex('ff000000') * hex($a)) + hex($b);
+
+            for my $wal_type (qw/sent write flush replay/) { 
+                ($a, $b) = split(/\//, $row->{$wal_type . '_location'});	
+                my $slave_position = (hex('ff000000') * hex($a)) + hex($b);
+
+                my $slave_lag = $master_location - $slave_position;
+
+                $db->{perf} .= "$row->{'client_addr'}_$wal_type=$slave_lag;$warning;$critical ";
+
+                if (length $critical and $slave_lag >= $critical) {
+                    add_critical "CRITICAL for : $row->{'client_addr'} - $row->{'application_name'} - $wal_type";
+                }
+                elsif (length $warning and $slave_lag >= $warning) {
+                    add_warning "WARNING for : $row->{'client_addr'} - $row->{'application_name'} - $wal_type";
+                }
+            }
+        }
+        add_ok "OK for : $row->{'client_addr'} - $row->{'application_name'}";
+    }
+
+    return;
+
+} ## end of check_streaming_delta
+
 
 sub check_replication_slots {
 
