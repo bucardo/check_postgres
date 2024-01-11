@@ -359,6 +359,7 @@ our %msg = (
     'version-ok'         => q{version $1},
     'wal-numfound'       => q{WAL files found: $1},
     'wal-numfound2'      => q{WAL "$2" files found: $1},
+    'wal-amount'         => q{WAL data written in past $2: $1},
 },
 
 ## Spanish
@@ -1152,6 +1153,7 @@ our %msg = (
     'version-ok'         => q{Version $1},
     'wal-numfound'       => q{WAL-Dateien gefunden: $1},
     'wal-numfound2'      => q{WAL "$2" Dateien gefunden: $1},
+    'wal-amount'         => q{WAL Geschriebene Daten in den letzten $2: $1},
 },
 
 ## Persian
@@ -1729,10 +1731,11 @@ GetOptions(
     'suffix=s',    ## used by same_schema only
     'replace',     ## used by same_schema only
     'skipsequencevals', ## used by same_schema only
-    'lsfunc=s',    ## used by wal_files and archive_ready
+    'lsfunc=s',    ## used by wal_files, wal_amount and archive_ready
     'object=s@',     ## used by same_schema for object types to include
     'skipobject=s@', ## used by same_schema for object types to exclude
     'skipcycled',  ## used by sequence only
+    'interval=s',  ## used by wal_amount only
 );
 
 die $USAGE if ! keys %opt and ! @ARGV;
@@ -1938,6 +1941,7 @@ our $action_info = {
  txn_wraparound      => [1, 'See how close databases are getting to transaction ID wraparound.'],
  version             => [1, 'Check for proper Postgres version.'],
  wal_files           => [1, 'Check the number of WAL files in the pg_xlog directory'],
+ wal_amount          => [1, 'Check the amount of WAL data written within a specified period of time.'],
 };
 
 ## XXX Need to i18n the above
@@ -2737,6 +2741,9 @@ check_version() if $action eq 'version';
 
 ## Check the number of WAL files. warning and critical are numbers
 check_wal_files() if $action eq 'wal_files';
+
+## Check the amount of WAL data written in a given time period. warning and critical are sizes
+check_wal_amount() if $action eq 'wal_amount';
 
 ## Check the number of WAL files ready to archive. warning and critical are numbers
 check_archive_ready() if $action eq 'archive_ready';
@@ -9454,6 +9461,79 @@ sub check_wal_files {
 
 } ## end of check_wal_files
 
+
+sub check_wal_amount {
+
+    ## Check the amount of WAL data written within a specified period of time and based on file modification timestamp.
+
+    ## Critical and warning are the amount of written data
+    ## Warning and critical are bytes
+    ## Valid units: b, k, m, g, t, e
+    ## All above may be written as plural or with a trailing 'b'
+
+    ## The period under consideration is defined with the option '--interval', the default is one day
+    ## Valid units: s[econd], m[inute], h[our], d[ay]
+    ## All above may be written as plural as well (e.g. "2 hours")
+
+    my ($warning, $critical) = ('', '');
+
+    # critical and warning states are optional for this check
+    #
+    if ((defined($opt{warning}) && length($opt{warning})) || (defined($opt{critical}) && length($opt{critical}))) {
+        ($warning, $critical) = validate_range({type => 'size'});
+    }
+
+    ## Determine the time interval - the default is one day
+    my $interval = $opt{interval} || "1 day";
+    $interval = size_in_seconds($interval, 'interval');
+    if ($interval !~ /^[-+]?\d+$/) {
+        ndie msg('range-int', 'interval');
+    }
+    if (! length $interval) {
+        ndie msg('range-notime', 'interval');
+    }
+
+    my $lsfunc = $opt{lsfunc} || 'pg_ls_dir';
+    my $lsargs = $opt{lsfunc} ? q{} : "'pg_xlog'";
+
+    my $cond = qq{modification >= (now() - '$interval seconds'::interval)};
+
+    $SQL = qq{  SELECT      COALESCE(SUM(size), 0) AS size
+                FROM        $lsfunc($lsargs) AS filename
+                INNER JOIN  pg_stat_file((SELECT CASE WHEN current_setting('server_version_num')::integer >= 96000 THEN 'pg_wal' ELSE 'pg_xlog' END) || '/' || filename) ON isdir = 'f'
+                WHERE       $cond};
+    my $SQL10 = $opt{lsfunc} ? $SQL :
+        qq{SELECT COALESCE(SUM(size), 0) AS size FROM pg_ls_waldir() WHERE $cond};
+
+    my $info = run_command($SQL, {regex => qr[\d], version => [">9.6 $SQL10"] });
+
+    for $db (@{$info->{db}}) {
+        my $r = $db->{slurp}[0];
+        my $size = $r->{size};
+        if ($MRTG) {
+            do_mrtg({one => $size});
+        }
+
+        my $msg = msg('wal-amount', pretty_size($size,6), pretty_time($interval));
+
+        $db->{perf} .= sprintf '%s=%s;%s;%s',
+            perfname(msg('size')), $size,  $warning, $critical;
+
+        if (length $critical and $size > $critical) {
+            add_critical $msg;
+        }
+        elsif (length $warning and $size > $warning) {
+            add_warning $msg;
+        }
+        else {
+            add_ok $msg;
+        }
+    }
+
+    return;
+
+} ## end of check_wal_amount
+
 =pod
 
 =encoding utf8
@@ -11249,6 +11329,47 @@ using a wrapper function C<ls_xlog_dir> to avoid the need for superuser permissi
   check_postgres_archive_ready --host=pluto --critical=10 --lsfunc=ls_xlog_dir
 
 For MRTG output, reports the number of WAL files on line 1.
+
+=head2 B<wal_amount>
+
+(C<symlink: check_postgres_wal_amount>) Checks how much data was written in a certain period of time to WAL files in the directory F<pg_xlog> (PostgreSQL 10 and later: F<pg_wal>), which can be found 
+in the B<data_directory>, possibly as a symlink to another physical disk for 
+performance reasons. If the I<--lsfunc> option is not given then this action must be run as superuser, in order to access the 
+contents of the F<pg_xlog> directory. The minimum version to use this action is 
+Postgres 8.1. The I<--warning> and I<--critical> options simply represent the amount of written 
+data in the F<pg_xlog> directory in I<bytes>, specifying with a unit up to zeta byte is supported.
+Both options are optional in case if you just want to monitor the amount.
+The I<--interval> option specifies the period of time in I<seconds>, in which changes to the
+WAL files are considered, the units s(econds), m(inutes), h(ours),
+d(ays), w(eek)s and y(ears) are supported, the default value for this option is "24 hours".
+
+To avoid connecting as a database superuser, a wrapper function around
+C<pg_ls_dir()> should be defined as a superuser with SECURITY DEFINER,
+and the I<--lsfunc> option used. This example function, if defined by
+a superuser, will allow the script to connect as a normal user
+I<nagios> with I<--lsfunc=ls_xlog_dir>
+
+  BEGIN;
+  CREATE FUNCTION ls_xlog_dir()
+      RETURNS SETOF TEXT
+      AS $$ SELECT pg_ls_dir('pg_xlog') $$
+      LANGUAGE SQL
+      SECURITY DEFINER;
+  REVOKE ALL ON FUNCTION ls_xlog_dir() FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION ls_xlog_dir() to nagios;
+  COMMIT;
+
+Example 1: Check that the size of WAL files written in the last 90 minutes do not exceed 512MB
+on host "pluto", using a wrapper function C<ls_xlog_dir> to avoid the need for superuser permissions
+
+  check_postgres_wal_amount --host=pluto --critical=512MB --lsfunc=ls_xlog_dir --interval=90m
+
+Example 2: Report the size of WAL files written in the last 5 minutes on the database
+connected through the unix socket "/tmp/cptesting_socket" as user "check_postgres_testing"
+
+  check_postgres_wal_amount --host=/tmp/cptesting_socket --dbuser=check_postgres_testing --interval=5m
+
+For MRTG output, reports the amount of data written on line 1.
 
 =head2 B<rebuild_symlinks>
 
