@@ -5108,6 +5108,8 @@ sub check_dbstats {
     ## Supports: Cacti
     ## Assumes psql and target are the same version for the 8.3 check
 
+    my $msg = '';
+    my $perfdata = '';
     my ($warning, $critical) = validate_range
         ({
           type => 'cacti',
@@ -5138,6 +5140,8 @@ sub check_dbstats {
             my $dbname = $r->{datname};
 
             next ROW if skip_item($dbname);
+	    # Skip database-wide shared stats entry (see https://www.postgresql.org/docs/12/monitoring-stats.html#PG-STAT-DATABASE-VIEW)
+            next ROW if $dbname eq '';
 
             ## If dbnames were specififed, use those for filtering as well
             if (@{$opt{dbname}}) {
@@ -5150,7 +5154,7 @@ sub check_dbstats {
                 next ROW unless $keepit;
             }
 
-            my $msg = '';
+	    $msg .= "Stats for DB $dbname: ";
             for my $col (qw/
 backends commits rollbacks
 read hit
@@ -5160,11 +5164,15 @@ ret fetch ins upd del/) {
                 $msg .= "$col:";
                 $msg .= (exists $r->{$col} and length $r->{$col}) ? $r->{$col} : 0;
                 $msg .=  ' ';
+		$perfdata .= "${dbname}_$col=";
+		$perfdata .= (exists $r->{$col} and length $r->{$col}) ? $r->{$col} : 0;
+		$perfdata .=  ';;;; ';
             }
-            print "${msg}dbname:$dbname\n";
+	    $msg .= " --- ";
         }
     }
 
+    print "${msg}|${perfdata}\n";
     exit 0;
 
 } ## end of check_dbstats
