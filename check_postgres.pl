@@ -2799,28 +2799,28 @@ check_partman_premake() if $action eq 'partman_premake';
 check_pgbouncer_checksum() if $action eq 'pgbouncer_checksum';
 
 ## Check the number of active clients in each pgbouncer pool
-check_pgb_pool('cl_active') if $action eq 'pgb_pool_cl_active';
+check_pgb_pool('cl_active', 'sum') if $action eq 'pgb_pool_cl_active';
 
 ## Check the number of waiting clients in each pgbouncer pool
-check_pgb_pool('cl_waiting') if $action eq 'pgb_pool_cl_waiting';
+check_pgb_pool('cl_waiting', 'sum') if $action eq 'pgb_pool_cl_waiting';
 
 ## Check the number of active server connections in each pgbouncer pool
-check_pgb_pool('sv_active') if $action eq 'pgb_pool_sv_active';
+check_pgb_pool('sv_active', 'sum') if $action eq 'pgb_pool_sv_active';
 
 ## Check the number of idle server connections in each pgbouncer pool
-check_pgb_pool('sv_idle') if $action eq 'pgb_pool_sv_idle';
+check_pgb_pool('sv_idle', 'sum') if $action eq 'pgb_pool_sv_idle';
 
 ## Check the number of used server connections in each pgbouncer pool
-check_pgb_pool('sv_used') if $action eq 'pgb_pool_sv_used';
+check_pgb_pool('sv_used', 'sum') if $action eq 'pgb_pool_sv_used';
 
 ## Check the number of tested server connections in each pgbouncer pool
-check_pgb_pool('sv_tested') if $action eq 'pgb_pool_sv_tested';
+check_pgb_pool('sv_tested', 'sum') if $action eq 'pgb_pool_sv_tested';
 
 ## Check the number of login server connections in each pgbouncer pool
-check_pgb_pool('sv_login') if $action eq 'pgb_pool_sv_login';
+check_pgb_pool('sv_login', 'sum') if $action eq 'pgb_pool_sv_login';
 
 ## Check the current maximum wait time for client connections in pgbouncer pools
-check_pgb_pool('maxwait') if $action eq 'pgb_pool_maxwait';
+check_pgb_pool('maxwait', 'max') if $action eq 'pgb_pool_maxwait';
 
 ## Check how long the first (oldest) client in queue has been waiting.
 check_pgbouncer_maxwait() if $action eq 'pgbouncer_maxwait';
@@ -7143,6 +7143,7 @@ sub check_pgb_pool {
 
     # Check various bits of the pgbouncer SHOW POOLS ouptut
     my $stat = shift;
+    my $type = shift;
     my ($warning, $critical) = validate_range({type => 'positive integer'});
 
     $SQL = 'SHOW POOLS';
@@ -7151,21 +7152,36 @@ sub check_pgb_pool {
     $db = $info->{db}[0];
     my $output = $db->{slurp};
     my $gotone = 0;
+    my %map;
     for my $i (@$output) {
-        next if skip_item($i->{database});
-        my $msg = "$i->{database}=$i->{$stat}";
+	my $db = $i->{database};
+        next if skip_item($db);
+
+        my $val = $i->{$stat};
+        if (!exists($map{$db})) {
+            $map{$db} = $val;
+        } elsif ($type eq "sum") {
+            $map{$db} += $val;
+        } elsif ($type eq "max" && $val > $map{$db}) {
+            $map{$db} = $val;
+        }
+    }
+
+    for my $db ( keys %map ) {
+        my $val = $map{$db};
+        my $msg = "$db=$val";
 
         if ($MRTG) {
-            $stats{$i->{database}} = $i->{$stat};
-            $statsmsg{$i->{database}} = msg('pgbouncer-pool', $i->{database}, $stat, $i->{$stat});
+            $stats{$db} = $val;
+            $statsmsg{$db} = msg('pgbouncer-pool', $db, $stat, $val);
             next;
         }
         $db->{perf} = sprintf ' %s=%s;%s;%s', $i->{database}, $i->{$stat}, $warning, $critical;
 
-        if ($critical and $i->{$stat} >= $critical) {
+        if ($critical and $val >= $critical) {
             add_critical $msg;
         }
-        elsif ($warning and $i->{$stat} >= $warning) {
+        elsif ($warning and $val >= $warning) {
             add_warning $msg;
         }
         else {
