@@ -4954,9 +4954,17 @@ sub check_custom_query {
 
         my $goodrow = 0;
 
-        ## The other column tells it the name to use as the perfdata value
+        ## If there is a single row and at least 2 columns,
+        ##  the other column tells it the name to use as the perfdata value
+        ## If there are multiple rows and at least 2 columns,
+        ##   use the second column value as the perfdata name,
+        ##   use the result value as the perfdata value.
         my $perfname;
-
+        my $perfdata = '';
+        if (! defined $db->{perf}){
+            $db->{perf} = '';
+        }
+        my $grandtotal = @{$db->{slurp}};
         for my $r (@{$db->{slurp}}) {
             my $result = $r->{result};
             if (! defined $perfname) {
@@ -4969,8 +4977,16 @@ sub check_custom_query {
             }
             $goodrow++;
             if ($perfname) {
-                $db->{perf} .= sprintf ' %s=%s;%s;%s',
-                    perfname($perfname), $r->{$perfname}, $warning, $critical;
+                if ($grandtotal > 1) {
+                    $perfdata = sprintf ' %s=%s;%s;%s',
+                        perfname($r->{$perfname}), $result, $warning, $critical;
+                    if ($perfdata ne $db->{perf}){
+                        $db->{perf} .= $perfdata;
+                    }
+                } else {
+                    $db->{perf} .= sprintf ' %s=%s;%s;%s',
+                        perfname($perfname), $r->{$perfname}, $warning, $critical;
+                }
             }
             my $gotmatch = 0;
             if (! defined $result) {
