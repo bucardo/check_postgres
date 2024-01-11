@@ -6,7 +6,7 @@ use 5.10.0;
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 13;
+use Test::More tests => 15;
 use lib 't','.';
 use CP_Testing;
 
@@ -74,5 +74,54 @@ $t = qq{$S detects running query};
 like ($cp->run(q{-w 1 -vv}), qr{$label WARNING:}, $t);
 $dbh->rollback();
 $dbh->disconnect();
+
+waitpid $child, 0;
+
+## Tests for non-superuser
+
+my $cp_nosuper = CP_Testing->new( {default_action => 'query_time', testuser => 'non_superuser', testuser_is_nosuper => 1 } );
+
+# Test that a non-superuser shows the unknown data alert.
+$child = fork();
+if (0 == $child) {
+    my $kiddbh = $cp->test_database_handle();
+    $cp->database_sleep($kiddbh, 3);
+    $kiddbh->rollback();
+    $kiddbh->disconnect();
+    exit;
+}
+
+my $dbh_nosuper = $cp_nosuper->test_database_handle();
+sleep 1;
+$t = qq{$S detects non-superuser access};
+like ($cp_nosuper->run(q{-w 1 -vv}), qr{$label UNKNOWN.+superuser}, $t);
+$dbh_nosuper->rollback();
+$dbh_nosuper->disconnect();
+
+$dbh->disconnect();
+
+waitpid $child, 0;
+
+# Test that a query using the word insufficient doesn't trigger the unknown data alert.
+
+$child = fork();
+if (0 == $child) {
+    my $kiddbh = $cp->test_database_handle();
+    $kiddbh->do(qq{SELECT pg_sleep(3) AS insufficient});
+    $kiddbh->rollback();
+    $kiddbh->disconnect();
+    exit;
+}
+
+my $dbh = $cp->test_database_handle();
+sleep 1;
+$t = qq{$S non-superuser access isn't fooled by the word insufficient};
+like ($cp->run(q{-w 1 -vv}), qr{$label WARNING}, $t);
+$dbh->rollback();
+$dbh->disconnect();
+
+$dbh->disconnect();
+
+waitpid $child, 0;
 
 exit;
