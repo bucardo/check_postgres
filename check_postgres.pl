@@ -2126,7 +2126,7 @@ if (defined $opt{alldb}){
     if ($opt{port}[0]){
         $pg_port = $opt{port}[0];
     }
-    my $psql_output = join(",", map /^([\w|-]+?)\|/, qx{$PSQL -A -l -t -p $pg_port });
+    my $psql_output = join(",", map /^([\w|-]+?)\|/, qx{$PSQL -A -l -t -X -p $pg_port });
     my $pg_db;
     # optionally exclude or include each db
     my @psql_output_array = split(/,/, $psql_output);
