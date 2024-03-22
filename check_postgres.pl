@@ -5634,7 +5634,7 @@ sub check_hot_standby_delay {
     }
 
     # check if master and slave comply with the check using pg_is_in_recovery()
-    my ($master, $slave);
+    my ($master, $slave, $is_all_recovery);
     $SQL = q{SELECT pg_is_in_recovery() AS recovery;};
 
     # Check if master is online (e.g. really a master)
@@ -5661,6 +5661,12 @@ sub check_hot_standby_delay {
     ## If no slave detected, assume it is 2
     if (! defined $slave) {
         $slave = 2;
+    }
+
+    ## If no master detected, assume 1 is master is replicating to 2. The master can also be in recovery mode.
+    if (! defined $master) {
+        $master = 1;
+        $is_all_recovery = 1;
     }
 
     ## Get xlog positions
@@ -5704,6 +5710,9 @@ sub check_hot_standby_delay {
     ## On master
     if ($version >= 10) {
         $SQL = q{SELECT pg_current_wal_lsn() AS location};
+        if ($is_all_recovery) {
+            $SQL = q{SELECT pg_last_wal_replay_lsn() AS location};
+        }
     }
     else {
         $SQL = q{SELECT pg_current_xlog_location() AS location};
