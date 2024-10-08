@@ -3435,7 +3435,7 @@ sub setup_target_databases {
         my $got_multiple = 0;
         for my $v (keys %$conn) {
             next if $v eq 'dbpass' or ! defined $opt{$v}[0];
-            my $num = $opt{$v}->@*;
+            my $num = 0; # $opt{$v}->@*;
             if ($num > 1 or $opt{$v}[0] =~ /,/) {
                 $got_multiple = 1;
                 last;
@@ -6760,7 +6760,7 @@ FROM
 SELECT parent_table, date
 FROM ( SELECT
         i.inhparent::regclass as parent_table,
-        substring(pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid)::text FROM '%TO __#"_{10}#"%' FOR '#') as date,
+        substring(pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid)::text similar '%TO __#"[0-9]+-[0-9]{2}-[0-9]{2}#"%' escape '#') as date
         rank() OVER (PARTITION BY i.inhparent ORDER BY pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid) DESC)
     FROM pg_inherits i
     JOIN pg_class c ON c.oid = i.inhrelid
