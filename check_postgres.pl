@@ -204,6 +204,7 @@ our %msg = (
     'opt-psql-nover'     => q{Could not determine psql version},
     'opt-psql-restrict'  => q{Cannot use the --PGBINDIR or --PSQL option when NO_PSQL_OPTION is on},
     'partman-premake-ok' => q{All premade partitions are present},
+    'partman-premake' => q{Not all premade partitions are present},
     'partman-conf-tbl'   => q{misconfigured in partman.part_config or not a partitioned table},
     'partman-conf-mis'   => q{missing table in partman.part_config},
     'pgagent-jobs-ok'    => q{No failed jobs},
@@ -6749,6 +6750,41 @@ FROM (
         };
      };
 
+    # check, if the number of partitions is at least equal to premake
+    # retention is not taken into account
+
+    $SQL = q{
+SELECT
+    current_database() as database,
+    a.parent_table, 
+    a.count as partitions, 
+    p.premake 
+FROM ( SELECT
+        inhparent::regclass::text as parent_table, 
+        count(*)     
+    FROM pg_inherits i
+    JOIN pg_class c ON c.oid = i.inhrelid
+WHERE c.relkind = 'r'
+    AND pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid) != 'DEFAULT' 
+GROUP BY inhparent) a 
+JOIN partman.part_config p 
+ON p.parent_table=a.parent_table 
+WHERE a.count <= (p.premake )
+    };
+
+    $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
+
+    for $db (@{$info->{db}}) {
+        my ($maxage,$maxdb) = (0,''); ## used by MRTG only
+      ROW: for my $r (@{$db->{slurp}}) {
+            my ($dbname,$parent_table,$partitions,$premake) = ($r->{database},$r->{parent_table},$r->{partitions},$r->{premake});
+            $found = 1 if ! $found;
+            next ROW if skip_item($dbname);
+            $found = 2;
+            $msg = "$dbname=$parent_table " . msg('partman-premake') . " premake: $premake num partitions: $partitions";
+            push @crit => $msg;
+        };
+     };
 
     $SQL = q{
 SELECT
