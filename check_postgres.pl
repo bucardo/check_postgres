@@ -6716,22 +6716,22 @@ SELECT
     current_database() as database,
     parent_table
 FROM (
-    SELECT
-        parent_table,
-        retention,
-        partition_interval,
-        EXTRACT(EPOCH FROM retention::interval) / EXTRACT(EPOCH FROM partition_interval::interval) AS configured_partitions
+SELECT
+        p.parent_table,
+        p.retention,
+        p.premake,
+        p.partition_interval,
+        (EXTRACT(EPOCH FROM p.retention::interval) / EXTRACT(EPOCH FROM p.partition_interval::interval))::int AS configured_partitions,
+count(*) as num_partitions
     FROM
-        partman.part_config
+        partman.part_config p
     JOIN
         pg_class c
     ON
-        c.relnamespace::regnamespace || '.' || c.relname = parent_table
-    WHERE
-        4<1
-    OR
-        c.relkind='r'
-) p;
+        c.relnamespace::regnamespace || '.' || c.relname = p.parent_table JOIN pg_inherits i
+     ON c.oid = i.inhparent
+ group by p.parent_table ) a
+WHERE  configured_partitions=0
 };
 
     $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
@@ -6744,13 +6744,59 @@ FROM (
             next ROW if skip_item($dbname);
             $found = 2;
 
-            $msg = "$dbname=$parent_table " . msg('partman-conf-tbl');
+            $msg = "$dbname=$parent_table " . msg('partman-conf-tbl') . " configured_partitions=0";
             # we consider this as critical, because even run_maintenance_proc fails at all at least in some of these cases.
             push @crit => $msg;
         };
      };
 
+    # check, if the number of partitions is at least configured_partitions +  premake
+    # warning, if not, due to new partition sets
+
+    $SQL = q{
+    SELECT current_database() as database,
+           a.parent_table,
+           a.configured_partitions,
+           a.num_partitions,
+           a.premake
+    FROM (
+        SELECT
+        p.parent_table,
+        p.retention,
+        p.premake,
+        p.partition_interval,
+        (EXTRACT(EPOCH FROM p.retention::interval) / EXTRACT(EPOCH FROM p.partition_interval::interval))::int AS configured_partitions,
+        count(*) as num_partitions
+    FROM
+        partman.part_config p
+    JOIN
+        pg_class c
+    ON
+        c.relnamespace::regnamespace || '.' || c.relname = p.parent_table JOIN pg_inherits i
+     ON c.oid = i.inhparent
+ group by p.parent_table ) a
+WHERE  num_partitions < configured_partitions+premake
+-- configured_partitions=0 is handled by another check
+AND configured_partitions>0
+    };
+
+    $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
+
+    for $db (@{$info->{db}}) {
+        my ($maxage,$maxdb) = (0,''); ## used by MRTG only
+      ROW: for my $r (@{$db->{slurp}}) {
+            my ($dbname,$parent_table,$cpartitions,$npartitions,$premake) = ($r->{database},$r->{parent_table},$r->{configured_partitions},$r->{num_partitions},$r->{premake});
+            $found = 1 if ! $found;
+            next ROW if skip_item($dbname);
+            $found = 2;
+            $msg = "$dbname=$parent_table " . msg('partman-premake') . " num partitions: $npartitions configured partitions: $cpartitions premake: $premake";
+            push @warn => $msg;
+            push @crit => $msg if (@crit);
+        };
+     };
+
     # check, if the number of partitions is at least equal to premake
+    # critical, if not
     # retention is not taken into account
 
     $SQL = q{
@@ -6785,6 +6831,7 @@ WHERE a.count <= (p.premake )
             push @crit => $msg;
         };
      };
+
 
     $SQL = q{
 SELECT
