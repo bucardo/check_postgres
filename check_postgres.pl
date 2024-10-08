@@ -10654,6 +10654,12 @@ tool that can send mail when interesting events appear in your Postgres logs.
 See: L<https://bucardo.org/tail_n_mail/> for more information).
 See also the information on the C<--get_method> option.
 
+=head2 B<partman_premake>
+
+(C<symlink: check_postgres_partman_premake>) Checks if all partitions that
+B<pg_parman>'s maintenance routine should have created are actually present.
+Monthly and daily intervals are supported.
+
 =head2 B<pgb_pool_cl_active>
 
 =head2 B<pgb_pool_cl_waiting>
@@ -11462,7 +11468,7 @@ Items not specifically attributed are by GSM (Greg Sabino Mullane).
   (Github user miraclesvenni)
   [Github issue #154]
 
-  Raise minimum version or Perl to 5.10.0
+  Raise minimum version of Perl to 5.10.0
 
   Allow commas in passwords via --dbpass for one-connection queries (Greg Sabino Mullane) [Github issue #133]
 
@@ -12335,7 +12341,7 @@ Some example Nagios configuration settings using this script:
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2007 - 2023 Greg Sabino Mullane <greg@turnstep.com>.
+Copyright 2007 - 2024 Greg Sabino Mullane <greg@turnstep.com>.
 
 Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions are met:
