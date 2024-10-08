@@ -6760,7 +6760,7 @@ FROM
 SELECT parent_table, date
 FROM ( SELECT
         i.inhparent::regclass as parent_table,
-        substring(pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid)::text similar '%TO __#"[0-9]+-[0-9]{2}-[0-9]{2}#"%' escape '#') as date
+        substring(pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid)::text similar '%TO __#"[0-9]+-[0-9]{2}-[0-9]{2}#"%' escape '#') as date,
         rank() OVER (PARTITION BY i.inhparent ORDER BY pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid) DESC)
     FROM pg_inherits i
     JOIN pg_class c ON c.oid = i.inhrelid
