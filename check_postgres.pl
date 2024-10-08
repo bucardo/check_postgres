@@ -3435,7 +3435,7 @@ sub setup_target_databases {
         my $got_multiple = 0;
         for my $v (keys %$conn) {
             next if $v eq 'dbpass' or ! defined $opt{$v}[0];
-            my $num = 0; # $opt{$v}->@*;
+            my $num = $opt{$v}->@*;
             if ($num > 1 or $opt{$v}[0] =~ /,/) {
                 $got_multiple = 1;
                 last;
