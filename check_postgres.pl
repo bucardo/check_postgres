@@ -6858,48 +6858,63 @@ ORDER BY 3, 2 DESC
         }
     }
 
-    # check, if the number of partitions is at least configured_partitions +  premake
-    # warning, if not, due to new partition sets
+    # check, if the number of premade partitions from now is not lower than the premake setting
 
     $SQL = q{
-    SELECT current_database() as database,
-           a.parent_table,
-           a.configured_partitions,
-           a.num_partitions,
-           a.premake
-    FROM (
-        SELECT
-        p.parent_table,
-        p.retention,
-        p.premake,
-        p.partition_interval,
-        (EXTRACT(EPOCH FROM p.retention::interval) / EXTRACT(EPOCH FROM p.partition_interval::interval))::int AS configured_partitions,
-        count(*) as num_partitions
-    FROM
-        partman.part_config p
-    JOIN
-        pg_class c
-    ON
-        c.relnamespace::regnamespace || '.' || c.relname = p.parent_table JOIN pg_inherits i
-     ON c.oid = i.inhparent
- group by p.parent_table ) a
-WHERE  num_partitions < configured_partitions+premake
--- configured_partitions=0 is handled by another check
-AND configured_partitions>0
-    };
+    SELECT
+    current_database() as database,
+    a.parent_table, 
+    b.premake,
+    b.premake-count(*) as missing_part
+FROM
+(
+SELECT parent_table, date, prank
+FROM ( SELECT
+        i.inhparent::regclass as parent_table,
+        substring(pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid)::text similar '%TO __#"[0-9]+-[0-9]{2}-[0-9]{2}#"%' escape '#') as date,
+        rank() OVER (PARTITION BY i.inhparent ORDER BY pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid) DESC) as prank
+    FROM pg_inherits i
+    JOIN pg_class c ON c.oid = i.inhrelid
+WHERE c.relkind = 'r'
+    AND pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid) != 'DEFAULT') p
+) a
+JOIN
+(
+SELECT
+    parent_table,
+    (now() + premake * partition_interval::interval)::date, premake
+FROM
+    partman.part_config
+) b
+ON
+   a.parent_table::text = b.parent_table::text
+WHERE a.prank<=b.premake 
+AND a.date::date > now() 
+GROUP BY database, a.parent_table, b.premake 
+HAVING count(*) < b.premake;
+        };
 
     $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
 
     for $db (@{$info->{db}}) {
         my ($maxage,$maxdb) = (0,''); ## used by MRTG only
       ROW: for my $r (@{$db->{slurp}}) {
-            my ($dbname,$parent_table,$cpartitions,$npartitions,$premake) = ($r->{database},$r->{parent_table},$r->{configured_partitions},$r->{num_partitions},$r->{premake});
+            my ($dbname,$parent_table,$missing_part,$premake) = ($r->{database},$r->{parent_table},$r->{missing_part},$r->{premake});
             $found = 1 if ! $found;
             next ROW if skip_item($dbname);
             $found = 2;
-            $msg = "$dbname=$parent_table " . msg('partman-premake') . " num partitions: $npartitions configured partitions: $cpartitions premake: $premake";
-            push @warn => $msg;
-            push @crit => $msg if (@crit); # we want to see this, if there is anything else critical
+            $msg = "$dbname=$parent_table " . msg('partman-premake') . " missing partitions: $missing_part  premake: $premake ";
+
+            if (length $critical and abs($missing_part) >= $critical) {
+                push @crit => $msg;
+            }
+            elsif (length $warning and abs($missing_part) >= $warning) {
+                push @warn => $msg;
+                push @crit => $msg if (@crit); # we want to see this, if there is anything else critical
+            }
+            else {
+                push @ok => $msg;
+            };
         };
      };
 
