@@ -6787,7 +6787,8 @@ WHERE a.count <= (p.premake )
         };
      };
 
-
+    # the highest partition boundarie must not be lower than the configured premake
+    # if the highest partition boundarie is higher than the configured premake, this is a gap indicator
     $SQL = q{
 SELECT
     current_database() as database,
@@ -6818,7 +6819,11 @@ FROM
 ON
    a.parent_table::text = b.parent_table::text
 WHERE
-    b.date - a.date::date > 0
+    -- the highest partition boundarie must not be lower than the configured premake
+    b.date > a.date::date
+OR
+    -- if the highest partition boundarie is higher than the configured premake, this is a gap indicator
+    a.date::date - b.date > 100
 ORDER BY 3, 2 DESC
 };
 
@@ -6832,14 +6837,19 @@ ORDER BY 3, 2 DESC
             next ROW if skip_item($dbname);
             $found = 2;
 
-            $msg = "$dbname=$parent_table ($missing_days)";
-            print "$msg";
+            if ( $missing_days < 0 ){
+                $msg = "$dbname=$parent_table ($missing_days) gap ";
+
+            } else {
+                $msg = "$dbname=$parent_table ($missing_days) missing days ";
+            }
+            #print "$msg";
             $db->{perf} .= sprintf ' %s=%sd;%s;%s',
                 perfname($dbname), $missing_days, $warning, $critical;
-            if (length $critical and $missing_days >= $critical) {
+            if (length $critical and abs($missing_days) >= $critical) {
                 push @crit => $msg;
             }
-            elsif (length $warning and $missing_days >= $warning) {
+            elsif (length $warning and abs($missing_days) >= $warning) {
                 push @warn => $msg;
             }
             else {
