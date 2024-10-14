@@ -3066,7 +3066,7 @@ sub run_command {
             next;
         }
         ## Likewise if we have specified "target" database info and this is not our choice
-        if ($arg->{target} and $arg->{target} != $db) {
+        if ($arg->{target} and $arg->{target} ne $db) {
             next;
         }
 
@@ -6672,9 +6672,27 @@ sub check_partman_premake {
           default_critical  => '3',
         });
 
+    # check, if partman is installed in this DB
+    my $SQL = q{
+       select current_database(), true from pg_extension where extname='pg_partman';
+    };
+
+    my $info = run_command($SQL, {emptyok => 1 });
+    my @localtargetlist;
+    for my $db (@{$info->{db}}) {
+        if ( exists $db->{slurp}[0]{bool} ) {
+            # push db to a local targetlist, otherwise checks fail due to missing part_conf
+            push @localtargetlist => $db->{slurp}[0]{current_database};
+        }
+    }
+    if (!@localtargetlist) {
+        add_unknown msg('no-match-db');
+        return 1;
+    }
+
     # check missing Config for range partitioned tables
 
-    my $SQL = q{
+    $SQL = q{
 SELECT
     current_database() AS database,
     c.relnamespace::regnamespace || '.' || c.relname AS parent_table
@@ -6693,7 +6711,8 @@ WHERE
             parent_table = c.relnamespace::regnamespace || '.' || c.relname);
 };
 
-    my $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
+    $info = run_command($SQL, {target => @localtargetlist, regex => qr[\w+], emptyok => 1 } );
+
     my (@crit,@warn,@ok);
 
     for $db (@{$info->{db}}) {
@@ -6734,7 +6753,7 @@ count(*) as num_partitions
 WHERE  configured_partitions=0
 };
 
-    $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
+    $info = run_command($SQL, {target => @localtargetlist, regex => qr[\w+], emptyok => 1 } );
 
     for $db (@{$info->{db}}) {
         my ($maxage,$maxdb) = (0,''); ## used by MRTG only
@@ -6773,7 +6792,7 @@ ON p.parent_table=a.parent_table
 WHERE a.count <= (p.premake )
     };
 
-    $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
+    $info = run_command($SQL, {target => @localtargetlist, regex => qr[\w+], emptyok => 1 } );
 
     for $db (@{$info->{db}}) {
         my ($maxage,$maxdb) = (0,''); ## used by MRTG only
@@ -6827,7 +6846,7 @@ OR
 ORDER BY 3, 2 DESC
 };
 
-    $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
+    $info = run_command($SQL, {target => @localtargetlist, regex => qr[\w+], emptyok => 1 } );
 
     for $db (@{$info->{db}}) {
         my ($maxage,$maxdb) = (0,''); ## used by MRTG only
@@ -6894,7 +6913,7 @@ GROUP BY database, a.parent_table, b.premake
 HAVING count(*) < b.premake;
         };
 
-    $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
+    $info = run_command($SQL, {target => @localtargetlist, regex => qr[\w+], emptyok => 1 } );
 
     for $db (@{$info->{db}}) {
         my ($maxage,$maxdb) = (0,''); ## used by MRTG only
@@ -6970,7 +6989,6 @@ sub check_pgbouncer_checksum {
         next if skip_item($key);
         $newstring .= "$r->{key} = $r->{value}\n";
     }
-
     if (! length $newstring) {
         add_unknown msg('no-match-set');
     }
