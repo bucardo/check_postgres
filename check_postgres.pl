@@ -6674,7 +6674,7 @@ sub check_partman_premake {
 
     # check, if partman is installed in this DB
     my $SQL = q{
-       select current_database(), true from pg_extension where extname='pg_partman';
+       select current_database(), true as bool from pg_extension where extname='pg_partman';
     };
 
     my $info = run_command($SQL, {emptyok => 1 });
