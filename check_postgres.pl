@@ -6674,15 +6674,15 @@ sub check_partman_premake {
 
     # check, if partman is installed in this DB
     my $SQL = q{
-       select current_database(), true as bool from pg_extension where extname='pg_partman';
+       select current_database(), (SELECT true as bool from pg_extension where extname='pg_partman');
     };
 
     my $info = run_command($SQL, {emptyok => 1 });
     my @localtargetlist;
     for my $db (@{$info->{db}}) {
-        if ( exists $db->{slurp}[0]{bool} ) {
+        if ( $db->{slurp}[0]{bool} eq 't' ) {
             # push db to a local targetlist, otherwise checks fail due to missing part_conf
-            push @localtargetlist => $db->{slurp}[0]{current_database};
+            push @localtargetlist => $db;
         }
     }
     if (!@localtargetlist) {
@@ -6712,9 +6712,7 @@ WHERE
 };
 
     $info = run_command($SQL, {target => @localtargetlist, regex => qr[\w+], emptyok => 1 } );
-
     my (@crit,@warn,@ok);
-
     for $db (@{$info->{db}}) {
         my ($maxage,$maxdb) = (0,''); ## used by MRTG only
       ROW: for my $r (@{$db->{slurp}}) {
@@ -6729,7 +6727,6 @@ WHERE
      };
 
     # check Config Errors
-
     $SQL = q{
 SELECT
     current_database() as database,
