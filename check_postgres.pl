@@ -204,7 +204,8 @@ our %msg = (
     'opt-psql-nover'     => q{Could not determine psql version},
     'opt-psql-restrict'  => q{Cannot use the --PGBINDIR or --PSQL option when NO_PSQL_OPTION is on},
     'partman-premake-ok' => q{All premade partitions are present},
-    'partman-conf-tbl'   => q{misconfigured in partman.part_config},
+    'partman-premake' => q{Not all premade partitions are present},
+    'partman-conf-tbl'   => q{misconfigured in partman.part_config or not a partitioned table},
     'partman-conf-mis'   => q{missing table in partman.part_config},
     'pgagent-jobs-ok'    => q{No failed jobs},
     'pgbouncer-pool'     => q{Pool=$1 $2=$3},
@@ -3065,7 +3066,7 @@ sub run_command {
             next;
         }
         ## Likewise if we have specified "target" database info and this is not our choice
-        if ($arg->{target} and $arg->{target} != $db) {
+        if ($arg->{target} and $arg->{target} ne $db) {
             next;
         }
 
@@ -6671,9 +6672,27 @@ sub check_partman_premake {
           default_critical  => '3',
         });
 
+    # check, if partman is installed in this DB
+    my $SQL = q{
+       select current_database(), (SELECT true as bool from pg_extension where extname='pg_partman');
+    };
+
+    my $info = run_command($SQL, {emptyok => 1 });
+    my @localtargetlist;
+    for my $db (@{$info->{db}}) {
+        if ( $db->{slurp}[0]{bool} eq 't' ) {
+            # push db to a local targetlist, otherwise checks fail due to missing part_conf
+            push @localtargetlist => $db;
+        }
+    }
+    if (!@localtargetlist) {
+        add_unknown msg('no-match-db');
+        return 1;
+    }
+
     # check missing Config for range partitioned tables
 
-    my $SQL = q{
+    $SQL = q{
 SELECT
     current_database() AS database,
     c.relnamespace::regnamespace || '.' || c.relname AS parent_table
@@ -6692,9 +6711,8 @@ WHERE
             parent_table = c.relnamespace::regnamespace || '.' || c.relname);
 };
 
-    my $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
+    $info = run_command($SQL, {target => @localtargetlist, regex => qr[\w+], emptyok => 1 } );
     my (@crit,@warn,@ok);
-
     for $db (@{$info->{db}}) {
         my ($maxage,$maxdb) = (0,''); ## used by MRTG only
       ROW: for my $r (@{$db->{slurp}}) {
@@ -6709,24 +6727,30 @@ WHERE
      };
 
     # check Config Errors
-
     $SQL = q{
 SELECT
     current_database() as database,
     parent_table
 FROM (
-    SELECT
-        parent_table,
-        retention,
-        partition_interval,
-        EXTRACT(EPOCH FROM retention::interval) / EXTRACT(EPOCH FROM partition_interval::interval) AS configured_partitions
+SELECT
+        p.parent_table,
+        p.retention,
+        p.premake,
+        p.partition_interval,
+        (EXTRACT(EPOCH FROM p.retention::interval) / EXTRACT(EPOCH FROM p.partition_interval::interval))::int AS configured_partitions,
+count(*) as num_partitions
     FROM
-        partman.part_config) p
-WHERE
-    configured_partitions < 1;
+        partman.part_config p
+    JOIN
+        pg_class c
+    ON
+        c.relnamespace::regnamespace || '.' || c.relname = p.parent_table JOIN pg_inherits i
+     ON c.oid = i.inhparent
+ group by p.parent_table ) a
+WHERE  configured_partitions=0
 };
 
-    $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
+    $info = run_command($SQL, {target => @localtargetlist, regex => qr[\w+], emptyok => 1 } );
 
     for $db (@{$info->{db}}) {
         my ($maxage,$maxdb) = (0,''); ## used by MRTG only
@@ -6736,12 +6760,55 @@ WHERE
             next ROW if skip_item($dbname);
             $found = 2;
 
-            $msg = "$dbname=$parent_table " . msg('partman-conf-tbl');
-            push @warn => $msg;
+            $msg = "$dbname=$parent_table " . msg('partman-conf-tbl') . " configured_partitions=0";
+            # we consider this as critical, because even run_maintenance_proc fails at all at least in some of these cases.
+            push @crit => $msg;
         };
      };
 
+    # check, if the number of partitions is at least equal to premake
+    # critical, if not
+    # retention is not taken into account
 
+    $SQL = q{
+SELECT
+    current_database() as database,
+    a.parent_table, 
+    a.count as partitions, 
+    p.premake 
+FROM ( SELECT
+        inhparent::regclass::text as parent_table, 
+        count(*)     
+    FROM pg_inherits i
+    JOIN pg_class c ON c.oid = i.inhrelid
+WHERE c.relkind = 'r'
+    AND pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid) != 'DEFAULT' 
+GROUP BY inhparent) a 
+JOIN partman.part_config p 
+ON p.parent_table=a.parent_table 
+WHERE a.count <= (p.premake )
+    };
+
+    $info = run_command($SQL, {target => @localtargetlist, regex => qr[\w+], emptyok => 1 } );
+
+    for $db (@{$info->{db}}) {
+        my ($maxage,$maxdb) = (0,''); ## used by MRTG only
+      ROW: for my $r (@{$db->{slurp}}) {
+            my ($dbname,$parent_table,$partitions,$premake) = ($r->{database},$r->{parent_table},$r->{partitions},$r->{premake});
+            $found = 1 if ! $found;
+            next ROW if skip_item($dbname);
+            $found = 2;
+            $msg = "$dbname=$parent_table " . msg('partman-premake') . " premake: $premake num partitions: $partitions";
+            push @crit => $msg;
+        };
+     };
+
+    # the following checks require postgres version 14+
+    my $version = verify_version();
+    if ($version >= 14.0) {
+
+    # the highest partition boundarie must not be lower than the configured premake
+    # if the highest partition boundarie is higher than the configured premake, this is a gap indicator
     $SQL = q{
 SELECT
     current_database() as database,
@@ -6752,7 +6819,7 @@ FROM
 SELECT parent_table, date
 FROM ( SELECT
         i.inhparent::regclass as parent_table,
-        substring(pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid)::text FROM '%TO __#"_{10}#"%' FOR '#') as date,
+        substring(pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid)::text similar '%TO __#"[0-9]+-[0-9]{2}-[0-9]{2}#"%' escape '#') as date,
         rank() OVER (PARTITION BY i.inhparent ORDER BY pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid) DESC)
     FROM pg_inherits i
     JOIN pg_class c ON c.oid = i.inhrelid
@@ -6765,18 +6832,35 @@ JOIN
 (
 SELECT
     parent_table,
-    (now() + premake * partition_interval::interval)::date
+    CASE
+    WHEN partition_interval ilike '%year%' THEN
+    ((extract(year from now())||'-1-1')::timestamp + ((premake +2) * partition_interval::interval))::date
+    WHEN partition_interval ilike '%mon%' THEN
+    ((extract(year from now()) || '-' || extract(month from now()) ||'-1')::timestamp + ((premake +1) * partition_interval::interval))::date
+    WHEN partition_interval = '7 days' THEN
+    -- interval starts on Monday
+    ((extract(year from now()) || '-' || extract(month from now()) || '-' || extract(day from (now()::date-(((EXTRACT(DOW FROM now())-1) ||' days')::interval))))::timestamp + ((premake +1) * partition_interval::interval))::date
+    WHEN partition_interval ilike '%day' THEN
+    ((extract(year from now()) || '-' || extract(month from now()) || '-' || extract(day from now()))::timestamp + ((premake +1) * partition_interval::interval))::date
+    WHEN partition_interval ilike '%hour%' THEN
+    ((extract(year from now()) || '-' || extract(month from now()) || '-' || extract(day from now()) || ' ' ||  extract(hour from now()) || ':00:00')::timestamp + ((premake +2) * partition_interval::interval))::date
+    ELSE NULL
+    END as date
 FROM
     partman.part_config
 ) b
 ON
    a.parent_table::text = b.parent_table::text
 WHERE
-    b.date - a.date::date > 0
+    -- the highest partition boundarie must not be lower than the configured premake
+    b.date > a.date::date
+OR
+    -- if the highest partition boundarie is higher than the configured premake, this is a gap indicator
+    a.date::date - b.date > 100
 ORDER BY 3, 2 DESC
 };
 
-    $info = run_command($SQL, {regex => qr[\w+], emptyok => 1 } );
+    $info = run_command($SQL, {target => @localtargetlist, regex => qr[\w+], emptyok => 1 } );
 
     for $db (@{$info->{db}}) {
         my ($maxage,$maxdb) = (0,''); ## used by MRTG only
@@ -6786,35 +6870,102 @@ ORDER BY 3, 2 DESC
             next ROW if skip_item($dbname);
             $found = 2;
 
-            $msg = "$dbname=$parent_table ($missing_days)";
-            print "$msg";
+            if ( $missing_days < 0 ){
+                $msg = "$dbname=$parent_table ($missing_days) gap ";
+
+            } else {
+                $msg = "$dbname=$parent_table ($missing_days) missing days ";
+            }
+            #print "$msg";
             $db->{perf} .= sprintf ' %s=%sd;%s;%s',
                 perfname($dbname), $missing_days, $warning, $critical;
-            if (length $critical and $missing_days >= $critical) {
+            if (length $critical and abs($missing_days) >= $critical) {
                 push @crit => $msg;
             }
-            elsif (length $warning and $missing_days >= $warning) {
+            elsif (length $warning and abs($missing_days) >= $warning) {
                 push @warn => $msg;
             }
             else {
                 push @ok => $msg;
             }
         }
-        if (0 == $found) {
-            add_ok msg('partman-premake-ok');
-        }
-        elsif (1 == $found) {
-            add_unknown msg('no-match-db');
-        }
-        elsif (@crit) {
-            add_critical join ' ' => @crit;
-        }
-        elsif (@warn) {
-            add_warning join ' ' => @warn;
-        }
-        else {
-            add_ok join ' ' => @ok;
-        }
+    }
+
+    # check, if the number of premade partitions from now is not lower than the premake setting
+
+    $SQL = q{
+    SELECT
+    current_database() as database,
+    a.parent_table, 
+    b.premake,
+    b.premake-count(*) as missing_part
+FROM
+(
+SELECT parent_table, date, prank
+FROM ( SELECT
+        i.inhparent::regclass as parent_table,
+        substring(pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid)::text similar '%TO __#"[0-9]+-[0-9]{2}-[0-9]{2}#"%' escape '#') as date,
+        rank() OVER (PARTITION BY i.inhparent ORDER BY pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid) DESC) as prank
+    FROM pg_inherits i
+    JOIN pg_class c ON c.oid = i.inhrelid
+WHERE c.relkind = 'r'
+    AND pg_catalog.pg_get_expr(c.relpartbound, i.inhrelid) != 'DEFAULT') p
+) a
+JOIN
+(
+SELECT
+    parent_table,
+    (now() + premake * partition_interval::interval)::date, premake
+FROM
+    partman.part_config
+) b
+ON
+   a.parent_table::text = b.parent_table::text
+WHERE a.prank<=b.premake 
+AND a.date::date > now() 
+GROUP BY database, a.parent_table, b.premake 
+HAVING count(*) < b.premake;
+        };
+
+    $info = run_command($SQL, {target => @localtargetlist, regex => qr[\w+], emptyok => 1 } );
+
+    for $db (@{$info->{db}}) {
+        my ($maxage,$maxdb) = (0,''); ## used by MRTG only
+      ROW: for my $r (@{$db->{slurp}}) {
+            my ($dbname,$parent_table,$missing_part,$premake) = ($r->{database},$r->{parent_table},$r->{missing_part},$r->{premake});
+            $found = 1 if ! $found;
+            next ROW if skip_item($dbname);
+            $found = 2;
+            $msg = "$dbname=$parent_table " . msg('partman-premake') . " missing partitions: $missing_part  premake: $premake ";
+
+            if (length $critical and abs($missing_part) >= $critical) {
+                push @crit => $msg;
+            }
+            elsif (length $warning and abs($missing_part) >= $warning) {
+                push @warn => $msg;
+                push @crit => $msg if (@crit); # we want to see this, if there is anything else critical
+            }
+            else {
+                push @ok => $msg;
+            };
+        };
+     };
+    }; # end of version >= 14.0
+
+    if (0 == $found) {
+        add_ok msg('partman-premake-ok');
+    }
+    elsif (1 == $found) {
+        add_unknown msg('no-match-db');
+    }
+    elsif (@crit) {
+        add_critical join ' ' => @crit;
+    }
+    elsif (@warn) {
+        add_warning join ' ' => @warn;
+    }
+    else {
+        add_ok join ' ' => @ok;
     }
 
     return;
@@ -6853,7 +7004,6 @@ sub check_pgbouncer_checksum {
         next if skip_item($key);
         $newstring .= "$r->{key} = $r->{value}\n";
     }
-
     if (! length $newstring) {
         add_unknown msg('no-match-set');
     }
