@@ -6803,6 +6803,10 @@ WHERE a.count <= (p.premake )
         };
      };
 
+    # the following checks require postgres version 14+
+    my $version = verify_version();
+    if ($version >= 14.0) {
+
     # the highest partition boundarie must not be lower than the configured premake
     # if the highest partition boundarie is higher than the configured premake, this is a gap indicator
     $SQL = q{
@@ -6828,7 +6832,20 @@ JOIN
 (
 SELECT
     parent_table,
-    (now() + premake * partition_interval::interval)::date
+    CASE
+    WHEN partition_interval ilike '%year%' THEN
+    ((extract(year from now())||'-1-1')::timestamp + ((premake +2) * partition_interval::interval))::date
+    WHEN partition_interval ilike '%mon%' THEN
+    ((extract(year from now()) || '-' || extract(month from now()) ||'-1')::timestamp + ((premake +1) * partition_interval::interval))::date
+    WHEN partition_interval = '7 days' THEN
+    -- interval starts on Monday
+    ((extract(year from now()) || '-' || extract(month from now()) || '-' || extract(day from (now()::date-(((EXTRACT(DOW FROM now())-1) ||' days')::interval))))::timestamp + ((premake +1) * partition_interval::interval))::date
+    WHEN partition_interval ilike '%day' THEN
+    ((extract(year from now()) || '-' || extract(month from now()) || '-' || extract(day from now()))::timestamp + ((premake +1) * partition_interval::interval))::date
+    WHEN partition_interval ilike '%hour%' THEN
+    ((extract(year from now()) || '-' || extract(month from now()) || '-' || extract(day from now()) || ' ' ||  extract(hour from now()) || ':00:00')::timestamp + ((premake +2) * partition_interval::interval))::date
+    ELSE NULL
+    END as date
 FROM
     partman.part_config
 ) b
@@ -6933,6 +6950,7 @@ HAVING count(*) < b.premake;
             };
         };
      };
+    }; # end of version >= 14.0
 
     if (0 == $found) {
         add_ok msg('partman-premake-ok');
