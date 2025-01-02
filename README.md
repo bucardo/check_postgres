@@ -78,7 +78,7 @@ https://bucardo.org/mailman/listinfo/check_postgres
 COPYRIGHT
 ---------
 
-  Copyright 2007 - 2024 Greg Sabino Mullane
+  Copyright 2007 - 2025 Greg Sabino Mullane
 
 LICENSE INFORMATION
 -------------------
