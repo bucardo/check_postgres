@@ -25,6 +25,7 @@ sub new {
         started  => time(),
         dbdir    => $arg->{dbdir}    || 'test_database_check_postgres',
         testuser => $arg->{testuser} || 'check_postgres_testing',
+        testuser_is_nosuper => $arg->{testuser_is_nosuper},
         testuser2 => $arg->{testuser2} || 'powerless_pete',
     };
     if (exists $arg->{default_action}) {
@@ -286,7 +287,11 @@ sub _test_database_handle {
             if ($res !~ /$newuser/) {
                 $COM = qq{psql -d template1 -q -h "$host" -c "CREATE USER $newuser"};
                 system $COM;
-                $SQL = qq{UPDATE pg_shadow SET usesuper='t' WHERE usename = '$newuser'};
+                if ($self->{testuser_is_nosuper}) {
+                  $SQL = qq{UPDATE pg_shadow SET usesuper='f' WHERE usename = '$newuser'};
+                } else {
+                  $SQL = qq{UPDATE pg_shadow SET usesuper='t' WHERE usename = '$newuser'};
+                }
                 $COM = qq{psql -d postgres -q -h "$host" -c "$SQL"};
                 system $COM;
             }
@@ -348,7 +353,11 @@ sub _test_database_handle {
             delete $ENV{PGUSER};
             @tempdsn = ($dsn, '', '', {AutoCommit=>1,RaiseError=>1,PrintError=>0});
             $tempdbh = DBI->connect(@tempdsn);
-            $tempdbh->do("CREATE USER $dbuser SUPERUSER");
+            if ($self->{testuser_is_nosuper}) {
+              $tempdbh->do("CREATE USER $dbuser");
+            } else {
+              $tempdbh->do("CREATE USER $dbuser SUPERUSER");
+            }
             $tempdbh->disconnect();
             $dbh = DBI->connect(@superdsn);
         }
@@ -377,7 +386,11 @@ sub _test_database_handle {
         $sth->execute($dbuser);
         $count = $sth->fetchall_arrayref()->[0][0];
         if (!$count) {
-            $dbh->do("CREATE USER $dbuser SUPERUSER");
+            if ($self->{testuser_is_nosuper}) {
+              $dbh->do("CREATE USER $dbuser");
+            } else {
+              $dbh->do("CREATE USER $dbuser SUPERUSER");
+            }
         }
         my $user2 = $self->{testuser2};
         $sth->execute($user2);

@@ -7328,7 +7328,7 @@ sub check_query_time {
                    msg('queries'),
                    msg('query-time'),
                    'query_start',
-                   q{query_start IS NOT NULL AND current_query NOT LIKE '<IDLE>%'});
+                   q{current_query NOT LIKE '<IDLE>%'});
 
     return;
 
@@ -9100,7 +9100,7 @@ sub check_txn_idle {
     $SQL3 =~ s/query_start/state_change/g;
 
     ## For Pg 10 and above, consider only client backends
-    ($SQL4 = $SQL3) =~ s/ WHERE / WHERE backend_type = 'client backend' AND /;
+    ($SQL4 = $SQL3) =~ s/ WHERE / WHERE (backend_type = 'client backend' OR backend_type IS NULL) AND /;
 
     my $info = run_command($SQL, { emptyok => 1 , version => [ "<8.3 $SQL2", ">9.6 $SQL4", ">9.1 $SQL3" ] } );
 
@@ -9134,7 +9134,7 @@ sub check_txn_idle {
         my $st = defined($r->{state}) ? $r->{state} : '';
 
         ## Return unknown if we cannot see because we are a non-superuser
-        if ($cq =~ /insufficient/) {
+        if ($cq eq '<insufficient privilege>') {
             add_unknown msg('psa-nosuper');
             return;
         }
