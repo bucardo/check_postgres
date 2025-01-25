@@ -193,6 +193,7 @@ our %msg = (
     'no-match-user'      => q{No matching entries found due to user exclusion/inclusion options},
     'no-match-slot'      => q{No matching replication slots found due to exclusion/inclusion options},
     'no-match-slotok'    => q{No replication slots found},
+    'no-replication'     => q{Not a primary server},
     'no-parse-psql'      => q{Could not parse psql output!},
     'no-role'            => q{Need psql 9.6 or higher to use --role},
     'no-time-hires'      => q{Cannot find Time::HiRes, needed if 'showtime' is true},
@@ -273,6 +274,7 @@ our %msg = (
     'rep-unknown'        => q{Replication check failed},
     'rep-wrongvals'      => q{Cannot test replication: values are not the right ones ('$1' not '$2' nor '$3')},
     'repslot-version'    => q{Database must be version 9.4 or higher to check replication slots},
+    'replag-version'     => q{Database must be version 9.4 or higher to check replication slots lag},
     'runcommand-err'     => q{Unknown error inside of the "run_command" function},
     'runcommand-nodb'    => q{No target databases could be found},
     'runcommand-nodupe'  => q{Could not dupe STDERR},
@@ -463,6 +465,7 @@ our %msg = (
     'no-match-user'      => q{No se encuentran entradas coincidentes debido a las opciones de exclusión/inclusión},
     'no-match-slot'      => q{No se encuentran ranuras de replicación coincidentes debido a las opciones de exclusión/inclusión},
     'no-match-slotok'    => q{No se encuentran ranuras de replicación},
+    'no-replication'     => q{No es un servidor primario},
     'no-parse-psql'      => q{No se pudo interpretar la salida de psql!},
     'no-time-hires'      => q{No se encontró Time::HiRes, necesario si 'showtime' es verdadero},
     'opt-output-invalid' => q{Formato de salida inválido: debe ser 'nagios' o 'mrtg' o 'simple' o 'cacti'},
@@ -726,6 +729,7 @@ our %msg = (
     'no-match-user'      => q{Aucune entrée trouvée à cause options d'exclusion/inclusion},
     'no-match-slot'      => q{Aucune fentes de réplication trouvée à cause options d'exclusion/inclusion},
     'no-match-slotok'    => q{Pas de fentes de réplication trouvé},
+    'no-replication'     => q{Ce serveur n'est pas un serveur primaire},
     'no-parse-psql'      => q{N'a pas pu analyser la sortie de psql !},
     'no-time-hires'      => q{N'a pas trouvé le module Time::HiRes, nécessaire quand « showtime » est activé},
     'opt-output-invalid' => q{Sortie invalide : doit être 'nagios' ou 'mrtg' ou 'simple' ou 'cacti'},
@@ -994,6 +998,7 @@ our %msg = (
     'no-match-user'      => q{Keine passenden Einträge gefunden gemäß den Ausschluss-/Einschluss-Optionen},
     'no-match-slot'      => q{Keine passenden Replikationen gefunden gemäß den Ausschluss-/Einschluss-Optionen},
     'no-match-slotok'    => q{Keine passenden Replikations-Slots gefunden gemäß den Ausschluss-/Einschluss-Optionen},
+    'no-replication'     => q{Not a primary server},
     'no-parse-psql'      => q{Konnte die Ausgabe von psql nicht verstehen!},
     'no-time-hires'      => q{Kann Time::HiRes nicht finden, ist aber nötig wenn 'showtime' auf 'wahr' gesetzt ist (true)},
     'opt-output-invalid' => q{Ungültige Ausgabe: Muss eines sein von 'nagios' oder 'mrtg' oder 'simple' oder 'cacti'},
@@ -1928,6 +1933,7 @@ our $action_info = {
  query_time          => [1, 'Checks the maximum running time of current queries.'],
  replicate_row       => [0, 'Verify a simple update gets replicated to another server.'],
  replication_slots   => [1, 'Check the replication delay for replication slots'],
+ replication_lag     => [1, 'Check the replication lag in seconds for replication slots'],
  same_schema         => [0, 'Verify that two databases have the exact same tables, columns, etc.'],
  sequence            => [0, 'Checks remaining calls left in sequences.'],
  settings_checksum   => [0, 'Check that no settings have changed since the last check.'],
@@ -2546,6 +2552,7 @@ our %testaction = (
                   fsm_relations     => 'VERSION: 8.2 MAX: 8.3',
                   hot_standby_delay => 'VERSION: 9.0',
                   replication_slots => 'VERSION: 9.4',
+                  replication_lag   => 'VERSION: 9.4',
                   listener          => 'MAX: 8.4',
 );
 if ($opt{test}) {
@@ -2746,6 +2753,9 @@ check_hot_standby_delay() if $action eq 'hot_standby_delay';
 
 ## Check the delay on replication slots. warning and critical are sizes
 check_replication_slots() if $action eq 'replication_slots';
+
+## Check the delay/lag on replication slots. warning and critical are seconds
+check_replication_lag() if $action eq 'replication_lag';
 
 ## Check the maximum transaction age of all connections
 check_txn_time() if $action eq 'txn_time';
@@ -5864,6 +5874,103 @@ sub check_replication_slots {
     return;
 
 } ## end of check_replication_slot_delay
+
+sub check_replication_lag {
+
+    ## Check the delay on one or more replication slots
+    ## Supports: Nagios, MRTG
+    ## mrtg reports the largest two delays
+    ## By default, checks all replication slots
+    ## Can check specific one(s) with include
+    ## Can ignore some with exclude
+    ## Warning and critical are time
+    ## Valid units:s, min, houts... (time unit)
+
+    my ($warning, $critical) = validate_range({type => 'time'});
+
+    $SQL = q{
+        select pg_is_in_recovery()
+    };
+    my $is_primary = run_command($SQL );
+    for $db (@{$is_primary->{db}}) {
+        for my $r (@{$db->{slurp}}) {
+            if ($r->{pg_is_in_recovery} eq 't') {
+                # The database is a standby DB: Plugin must return unkown result
+                add_unknown msg('no-replication');
+                return;
+            }
+        }
+    }
+
+
+    $SQL = q{
+  select slot_name,
+         active,
+         (select (select max(coalesce(extract(epoch from v),0))
+                    from (values (write_lag),
+                                 (flush_lag),
+                                 (replay_lag)) as value(v)) as delta
+            from pg_stat_replication where pid = active_pid)
+ from pg_replication_slots
+    };
+
+
+    my $info = run_command($SQL );
+    my $found = 0;
+
+    for $db (@{$info->{db}}) {
+        my $max = -1;
+        $found = 1;
+        my %s;
+
+        for my $r (@{$db->{slurp}}) {
+            if (skip_item($r->{slot_name})) {
+                $max = -2 if -1 == $max;
+                next;
+            }
+            if (length $r->{delta} and $r->{delta} >= $max) {
+                $max = $r->{delta};
+            }
+            $s{$r->{slot_name}} = [$r->{delta},$r->{active}];
+        }
+        if ($MRTG) {
+            do_mrtg({one => $max, msg => "SLOT: $db->{slot_name}"});
+        }
+        if ($max < 0) {
+            $stats{$db->{dbname}} = 0;
+            add_critical msg('no-match-slotok') if -1 == $max;
+            add_unknown msg('no-match-slot') if -2 == $max;
+            next;
+        }
+
+        my $msg = '';
+        for (sort {$s{$b}[0] <=> $s{$a}[0] or $a cmp $b } keys %s) {
+            $msg .= "$_: $s{$_}[0] (" . ($s{$_}[1] eq 'f' ? 'inactive' : 'active') .') ';
+            $db->{perf} .= sprintf ' %s=%s;%s;%s',
+                perfname($_), $s{$_}[0], $warning, $critical;
+        }
+        if (length $critical and $max >= $critical) {
+            add_critical $msg;
+        }
+        elsif (length $warning and $max >= $warning) {
+            add_warning $msg;
+        }
+        else {
+            add_ok $msg;
+        }
+    }
+
+    ## If no results, probably a version problem
+    if (!$found and keys %unknown) {
+        (my $first) = values %unknown;
+        if ($first->[0][0] =~ /pg_replication_lag/) {
+            ndie msg('replag-version');
+        }
+    }
+
+    return;
+
+} ## end of check_replication_lag
 
 
 sub check_last_analyze {
@@ -10924,6 +11031,18 @@ and replication is taking place over replication slots.
 Warning and critical are total bytes retained for the slot. E.g:
 
   check_postgres_replication_slots --port=5432 --host=yellow -warning=32M -critical=64M
+
+Specific named slots can be monitored using --include/--exclude
+
+=head2 B<replication_lag>
+
+(C<symlink: check_postgres_replication_lag>)  Check the replication lag in seconds
+This is handy for monitoring environments where all WAL archiving and replication is
+taking place over replication slots.
+
+Warning and critical are delay retained for the slot. E.g:
+
+  check_postgres_replication_lag --port=5432 -warning=2min -critical=5min
 
 Specific named slots can be monitored using --include/--exclude
 
