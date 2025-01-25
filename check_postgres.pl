@@ -1928,6 +1928,7 @@ our $action_info = {
  query_time          => [1, 'Checks the maximum running time of current queries.'],
  replicate_row       => [0, 'Verify a simple update gets replicated to another server.'],
  replication_slots   => [1, 'Check the replication delay for replication slots'],
+ replication_active_slots   => [1, 'Check the replication active slots'],
  same_schema         => [0, 'Verify that two databases have the exact same tables, columns, etc.'],
  sequence            => [0, 'Checks remaining calls left in sequences.'],
  settings_checksum   => [0, 'Check that no settings have changed since the last check.'],
@@ -2746,6 +2747,9 @@ check_hot_standby_delay() if $action eq 'hot_standby_delay';
 
 ## Check the delay on replication slots. warning and critical are sizes
 check_replication_slots() if $action eq 'replication_slots';
+
+## Check the replication active slots
+check_replication_active_slots() if $action eq 'replication_active_slots';
 
 ## Check the maximum transaction age of all connections
 check_txn_time() if $action eq 'txn_time';
@@ -5864,6 +5868,48 @@ sub check_replication_slots {
     return;
 
 } ## end of check_replication_slot_delay
+
+
+
+sub check_replication_active_slots {
+    # Check that all replication slots are active.
+    # A warning is raised if an unused slot is found.
+    # A critical is raised if a used replication slot is not active.
+    $SQL = qq{
+        SELECT * FROM pg_replication_slots;
+    };
+
+    my $info = run_command($SQL);
+    my $warn = 0;
+    my $crit = 0;
+    my $msg = '';
+
+    for $db (@{$info->{db}}) {
+      for my $r (@{$db->{slurp}}) {
+        if (skip_item($r->{slot_name})) {
+          next;
+        }
+        if ($r->{active} eq "f") {
+          if ($r->{restart_lsn}) {
+            $crit += 1;
+          } else {
+            $warn += 1;
+          }
+          $msg .= $r->{slot_name} . ' ';
+        }
+      }
+    }
+
+    if ($crit > 0) {
+      add_critical('Not active slots: ' . $msg);
+    } elsif ($warn > 0) {
+      add_warning('Not active (unused) slots: ' . $msg);
+    } else {
+      add_ok('No unactive slot found');
+    }
+
+    return;
+} ## end of check_replication_active_slots
 
 
 sub check_last_analyze {
@@ -10924,6 +10970,16 @@ and replication is taking place over replication slots.
 Warning and critical are total bytes retained for the slot. E.g:
 
   check_postgres_replication_slots --port=5432 --host=yellow -warning=32M -critical=64M
+
+Specific named slots can be monitored using --include/--exclude
+
+=head2 B<replication_active_slots>
+
+(C<symlink: check_postgres_replication_active_slots>) Check all replication
+slots and raise a warning is a slot is not active and hasn't been used or a
+critical alert if the slot has been used.
+
+  check_postgres_replication_active_slots --port=5432 --host=yellow
 
 Specific named slots can be monitored using --include/--exclude
 
