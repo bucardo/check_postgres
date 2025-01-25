@@ -9423,8 +9423,17 @@ sub check_wal_files {
 
     ## Figure out where the pg_xlog directory is
     $SQL = qq{SELECT count(*) AS count FROM $lsfunc($lsargs) WHERE $lsfunc ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)
-    my $SQL10 = $opt{lsfunc} ? $SQL :
-        qq{SELECT count(*) AS count FROM pg_ls_waldir() WHERE name ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)
+    my $SQL10 = "";
+
+    if ($extrabit) {
+        # check_archive_ready
+        $SQL10 = $opt{lsfunc} ? $SQL :
+            qq{SELECT count(*) AS count FROM pg_ls_archive_statusdir() WHERE name ~ E'^[0-9A-F]{24}$extrabit\$'}; ## no critic (RequireInterpolationOfMetachars)
+    } else {
+        # check_wal_files
+        $SQL10 = $opt{lsfunc} ? $SQL :
+            qq{SELECT count(*) AS count FROM pg_ls_waldir() WHERE name ~ E'^[0-9A-F]{24}\$'}; ## no critic (RequireInterpolationOfMetachars)
+    }
 
     my $info = run_command($SQL, {regex => qr[\d], version => [">9.6 $SQL10"] });
 
