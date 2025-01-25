@@ -9439,10 +9439,10 @@ sub check_wal_files {
             : msg('wal-numfound', $numfiles);
         $db->{perf} .= sprintf '%s=%s;%s;%s',
             perfname(msg('files')), $numfiles, $warning, $critical;
-        if (length $critical and $numfiles > $critical) {
+        if (length $critical and $numfiles >= $critical) {
             add_critical $msg;
         }
-        elsif (length $warning and $numfiles > $warning) {
+        elsif (length $warning and $numfiles >= $warning) {
             add_warning $msg;
         }
         else {
